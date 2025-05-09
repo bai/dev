@@ -16,6 +16,7 @@ const baseSearchDir = path.join(homeDir, "src");
 function handleFzfInteractiveMode() {
   // Construct the command for fd piped to sed and then fzf.
   // fd options:
+  //   .                  : pattern to match (anything), searches in baseSearchDir.
   //   "${baseSearchDir}" : target directory for search.
   //   --type directory   : find directories.
   //   --exact-depth 3    : only directories at exactly this depth relative to baseSearchDir's items
@@ -25,13 +26,15 @@ function handleFzfInteractiveMode() {
   //   --exclude .git     : exclude .git folders.
   //   --exclude node_modules: exclude node_modules folders.
   //   --color=never      : disable colors for piping.
-  // sed 's/\\/*$//g'    : remove trailing slashes (JS string needs \\ for literal \).
+  // sed 's/\/*$//g'     : remove trailing slashes (JS string needs \\ for literal \ so sed sees \/).
   // fzf                  : interactive fuzzy finder.
-  const commandString = `fd --type directory --exact-depth 3 --follow --hidden --exclude .git --exclude node_modules --color=never "${baseSearchDir}" | sed 's/\\\\/*$//g' | fzf`;
+  const commandString = `fd --type directory --exact-depth 3 --follow --hidden --exclude .git --exclude node_modules --color=never . "${baseSearchDir}" | sed 's/\\/*$//g' | fzf`;
 
   try {
-    const proc = spawnSync({
-      cmd: ["sh", "-c", commandString],
+    // Changed spawnSync call style to resolve TypeScript lint error and align with common usage.
+    // The previous form spawnSync({ cmd: [...] }) was causing a type mismatch with some Bun versions/type definitions.
+    // This form spawnSync(cmdArray, options) is clearer and type-checks correctly.
+    const proc = spawnSync(["sh", "-c", commandString], {
       // stdin: inherit from user for fzf interaction.
       // stdout: pipe to capture fzf's selection.
       // stderr: inherit to show fzf's messages or errors from the shell pipeline.
