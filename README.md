@@ -7,6 +7,7 @@ A CLI tool for quick directory navigation within `~/src` and environment managem
 - `dev cd` - Opens fzf fuzzy search for code directories located in `~/src`, limited to third level paths (e.g., `~/src/github.com/bai/dev`). After selection, it performs `cd` into that directory.
 - `dev cd <folder_name>` - Picks the best matching directory at the third level and performs `cd` into it.
 - `dev up` - Runs `mise up` to update development tools.
+- `dev upgrade` - Updates the dev CLI tool to the latest version by running the setup script.
 
 ## Requirements
 
@@ -24,29 +25,16 @@ A CLI tool for quick directory navigation within `~/src` and environment managem
 bun install
 ```
 
-2. Add the following to your shell config (~/.bashrc, ~/.zshrc, etc.):
+2. Run the setup script:
 
 ```bash
-function dev() {
-  local result
-  result=$(bun /path/to/your/dev/index.ts "$@")
-  local exit_code=$?
-
-  if [[ $exit_code -ne 0 ]]; then
-    return $exit_code
-  fi
-
-  # Check if the output starts with CD: to handle directory changes
-  if [[ "$result" == CD:* ]]; then
-    local dir="${result#CD:}"
-    cd "$dir" || return
-  else
-    echo "$result"
-  fi
-}
+bash hack/setup.sh
 ```
 
-Replace `/path/to/your/dev/index.ts` with the actual path to the script.
+This will:
+- Install the dev CLI tool to ~/.dev
+- Install required dependencies
+- Automatically add the necessary configuration to your ~/.zshrc
 
 ## Usage
 
@@ -59,4 +47,7 @@ dev cd dev
 
 # Update development tools
 dev up
+
+# Update the dev CLI tool itself
+dev upgrade
 ```

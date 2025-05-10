@@ -161,6 +161,37 @@ function handleUpCommand() {
 }
 
 /**
+ * Handles the 'upgrade' subcommand.
+ * Runs the setup script to update the dev CLI tool.
+ */
+function handleUpgradeCommand() {
+  try {
+    console.log("Upgrading dev CLI tool...");
+    const setupScriptPath = path.join(homeDir, ".dev", "hack", "setup.sh");
+
+    const proc = spawnSync(["bash", setupScriptPath], {
+      stdio: ["inherit", "inherit", "inherit"] as any, // Inherit all IO to pass through to the user
+    });
+
+    if (proc.exitCode !== 0) {
+      console.error("Error running dev upgrade command");
+      process.exit(proc.exitCode || 1);
+    }
+
+    console.log("dev CLI tool successfully upgraded!");
+  } catch (error: any) {
+    if (error.code === "ENOENT") {
+      console.error(
+        "Error: Could not find setup script. Please ensure the dev repository is properly installed."
+      );
+    } else {
+      console.error(`Failed to execute upgrade command: ${error.message}`);
+    }
+    process.exit(1);
+  }
+}
+
+/**
  * Handles changing directory. Since Node.js/Bun can't change the parent process directory,
  * we output a special format that the shell wrapper will interpret.
  */
@@ -183,25 +214,7 @@ Usage:
 
   dev up                     Runs 'mise up' to update development tools.
 
-Setup (add to your ~/.bashrc, ~/.zshrc, etc.):
-  function dev() {
-    local result
-    result=\$(bun /path/to/your/dev/index.ts "\$@")
-    local exit_code=\$?
-
-    if [[ \$exit_code -ne 0 ]]; then
-      return \$exit_code
-    fi
-
-    # Check if the output starts with CD: to handle directory changes
-    if [[ "\$result" == CD:* ]]; then
-      local dir="\${result#CD:}"
-      cd "\$dir" || return
-    else
-      echo "\$result"
-    fi
-  }
-  # Replace /path/to/your/dev/index.ts with the actual path to this script.
+  dev upgrade                Updates the dev CLI tool to the latest version.
 `);
   process.exit(1);
 } else if (args.length === 1 && args[0] === "cd") {
@@ -224,6 +237,9 @@ Setup (add to your ~/.bashrc, ~/.zshrc, etc.):
 } else if (args.length === 1 && args[0] === "up") {
   // Handle 'dev up' command
   handleUpCommand();
+} else if (args.length === 1 && args[0] === "upgrade") {
+  // Handle 'dev upgrade' command
+  handleUpgradeCommand();
 } else {
   console.error(`dev: A CLI tool for quick directory navigation and environment management.
 
@@ -236,25 +252,7 @@ Usage:
 
   dev up                     Runs 'mise up' to update development tools.
 
-Setup (add to your ~/.bashrc, ~/.zshrc, etc.):
-  function dev() {
-    local result
-    result=\$(bun /path/to/your/dev/index.ts "\$@")
-    local exit_code=\$?
-
-    if [[ \$exit_code -ne 0 ]]; then
-      return \$exit_code
-    fi
-
-    # Check if the output starts with CD: to handle directory changes
-    if [[ "\$result" == CD:* ]]; then
-      local dir="\${result#CD:}"
-      cd "\$dir" || return
-    else
-      echo "\$result"
-    fi
-  }
-  # Replace /path/to/your/dev/index.ts with the actual path to this script.
+  dev upgrade                Updates the dev CLI tool to the latest version.
 `);
   process.exit(1);
 }

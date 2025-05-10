@@ -52,5 +52,6 @@ fi
 echo "Setup complete! Please restart your terminal or run 'source ~/.zshrc' to start using dev."
 echo "Usage examples:"
 echo "  dev cd         # Interactive fuzzy search for directories"
-echo "  dev cd <name>  # Direct navigation to best matching directory"
+echo "  dev cd <name>     # Direct navigation to best matching directory"
 echo "  dev up         # Update development tools"
+echo "  dev upgrade    # Update the dev CLI tool itself"
