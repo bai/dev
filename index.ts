@@ -88,6 +88,7 @@ function handleFzfInteractiveMode() {
 function handleDirectCdMode(folderName: string) {
   // First, limit search to exact-depth 3 directories where the last path component contains the given name
   // This matches the requirement to find things like ~/src/github.com/bai/dev
+  // Always use the absolute path to baseSearchDir (~/src) regardless of current working directory
   const commandString = `fd --type directory --exact-depth 3 --follow --hidden --exclude .git --exclude node_modules --color=never -g "*/${folderName}$" "${baseSearchDir}" | sed 's/\\/*$//g' | sort -r | head -n 1`;
 
   try {
@@ -104,7 +105,8 @@ function handleDirectCdMode(folderName: string) {
     }
 
     // If no exact match at the end path component, try to find partial matches
-    const fuzzyCommandString = `fd --type directory --exact-depth 3 --follow --hidden --exclude .git --exclude node_modules --color=never | grep -i "${folderName}" | sed 's/\\/*$//g' | sort -r | head -n 1`;
+    // Always search in baseSearchDir (~/src) regardless of current working directory
+    const fuzzyCommandString = `fd --type directory --exact-depth 3 --follow --hidden --exclude .git --exclude node_modules --color=never . "${baseSearchDir}" | grep -i "${folderName}" | sed 's/\\/*$//g' | sort -r | head -n 1`;
 
     const fuzzyProc = spawnSync(["sh", "-c", fuzzyCommandString], {
       stdio: ["ignore", "pipe", "pipe"], // stdin: ignore, stdout: capture, stderr: capture.
