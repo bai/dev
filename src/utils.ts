@@ -4,6 +4,17 @@ import path from "path";
 // Common variables
 export const homeDir = os.homedir();
 export const baseSearchDir = path.join(homeDir, "src");
+export const defaultOrg = "flywheelsoftware";
+
+// Organization to provider mapping
+export const orgToProvider: Record<string, 'github' | 'gitlab'> = {
+  "flywheelsoftware": "gitlab",
+  // Add more mappings as needed, e.g.:
+  // "otherorg": "github",
+};
+
+export const defaultGitHubUrl = `https://github.com/${defaultOrg}`;
+export const defaultGitLabUrl = `https://gitlab.com/${defaultOrg}`;
 
 // Common utility to handle errors from subprocesses
 export function handleCommandError(
@@ -38,6 +49,14 @@ Usage:
 
   dev cd <folder_name>       Finds and outputs the path to <folder_name> within ~/src.
                              (Searches for a directory named <folder_name> at depth 3)
+
+  dev clone <repo>           Clones a repository into ~/src with automatic provider detection.
+                             Examples:
+                               dev clone https://github.com/${defaultOrg}/repo
+                               dev clone repo (uses provider based on organization mapping)
+                               dev clone org/repo (provider chosen based on 'org')
+                               dev clone --gitlab repo (explicitly uses GitLab)
+                               dev clone --org customorg repo
 
   dev up                     Runs 'mise up' to update development tools.
 

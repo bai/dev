@@ -2,6 +2,7 @@ import { showUsage } from "./utils";
 import { handleCdCommand } from "./cmd/cd";
 import { handleUpCommand } from "./cmd/up";
 import { handleUpgradeCommand } from "./cmd/upgrade";
+import { handleCloneCommand } from "./cmd/clone";
 
 // Remove 'bun' and 'index.ts' / or executable name
 const args = process.argv.slice(2);
@@ -18,6 +19,9 @@ if (args.length === 0) {
 } else if (args.length === 1 && args[0] === "upgrade") {
   // Handle 'dev upgrade' command
   handleUpgradeCommand();
+} else if (args[0] === "clone") {
+  // Handle clone command with remaining arguments
+  handleCloneCommand(args.slice(1));
 } else {
   showUsage();
 }
