@@ -103,13 +103,12 @@ function handleFzfInteractiveMode(): string | null {
 /**
  * Handles the direct cd mode, e.g., `dev cd dev`.
  * It looks for directories matching the given name at the third level in ~/src and
- * picks the best matching one to cd into.
+ * picks the best matching one to cd into using fuzzy matching.
  */
 function handleDirectCdMode(folderName: string): string | null {
-  // First, limit search to exact-depth 3 directories where the last path component contains the given name
-  // This matches the requirement to find things like ~/src/github.com/bai/dev
-  // Always use the absolute path to baseSearchDir (~/src) regardless of current working directory
-  const commandString = `fd --type directory --exact-depth 3 --follow --hidden --exclude .git --exclude node_modules --color=never -g "*/${folderName}$" "${baseSearchDir}" | sed 's/\\/*$//g' | sort -r | head -n 1`;
+  // Use fzf in non-interactive mode to perform fuzzy matching
+  // This will find the best match for the given folder name at the third level
+  const commandString = `fd --type directory --exact-depth 3 --follow --hidden --exclude .git --exclude node_modules --color=never . "${baseSearchDir}" | sed 's/\\/*$//g' | fzf -f "${folderName}" | sort -r | head -n 1`;
 
   try {
     const proc = spawnSync(["sh", "-c", commandString], {
@@ -123,16 +122,16 @@ function handleDirectCdMode(folderName: string): string | null {
       }
     }
 
-    // If no exact match at the end path component, try to find partial matches
-    // Always search in baseSearchDir (~/src) regardless of current working directory
-    const fuzzyCommandString = `fd --type directory --exact-depth 3 --follow --hidden --exclude .git --exclude node_modules --color=never . "${baseSearchDir}" | grep -i "${folderName}" | sed 's/\\/*$//g' | sort -r | head -n 1`;
+    // If no match found with fzf fuzzy search, try a more lenient grep-based search
+    // This is a fallback in case fzf doesn't find anything
+    const grepCommandString = `fd --type directory --exact-depth 3 --follow --hidden --exclude .git --exclude node_modules --color=never . "${baseSearchDir}" | grep -i "${folderName}" | sed 's/\\/*$//g' | sort -r | head -n 1`;
 
-    const fuzzyProc = spawnSync(["sh", "-c", fuzzyCommandString], {
+    const grepProc = spawnSync(["sh", "-c", grepCommandString], {
       stdio: ["ignore", "pipe", "pipe"] as const, // stdin: ignore, stdout: capture, stderr: capture.
     });
 
-    if (fuzzyProc.stdout) {
-      const foundPath = fuzzyProc.stdout.toString().trim();
+    if (grepProc.stdout) {
+      const foundPath = grepProc.stdout.toString().trim();
       if (foundPath) {
         return foundPath; // Return found path.
       }
@@ -145,7 +144,7 @@ function handleDirectCdMode(folderName: string): string | null {
     return handleCommandError(
       error,
       `find folder '${folderName}'`,
-      "sh, fd, sed, grep, sort, or head"
+      "sh, fd, sed, fzf, grep, sort, or head"
     );
   }
 }
