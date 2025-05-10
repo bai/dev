@@ -8,9 +8,9 @@ const homeDir = os.homedir();
 const baseSearchDir = path.join(homeDir, "src");
 
 /**
- * Handles the interactive fzf mode when `dev` is called without arguments.
- * This function replicates the behavior of:
- * `cd $(fd . ~/src --type directory --exact-depth 3 --follow --hidden --exclude .git --exclude node_modules --color=never | sed "s/\/*$//g" | fzf)`
+ * Handles the interactive fzf mode when `dev cd` is called without additional arguments.
+ * This function uses fzf to interactively select from directories at the third level in ~/src.
+ * (e.g., ~/src/github.com/bai/dev, where "dev" is at the third level)
  * The script outputs the selected path to stdout, which is then used by a shell alias/function to `cd`.
  */
 function handleFzfInteractiveMode() {
@@ -20,7 +20,7 @@ function handleFzfInteractiveMode() {
   //   "${baseSearchDir}" : target directory for search.
   //   --type directory   : find directories.
   //   --exact-depth 3    : only directories at exactly this depth relative to baseSearchDir's items
-  //                        (e.g., ~/src/category/project/target_at_depth_3).
+  //                        (e.g., ~/src/github.com/bai/dev).
   //   --follow           : follow symlinks.
   //   --hidden           : include hidden directories.
   //   --exclude .git     : exclude .git folders.
@@ -81,53 +81,50 @@ function handleFzfInteractiveMode() {
 }
 
 /**
- * Handles the direct cd mode, e.g., `dev cd my_folder_name`.
- * It looks for `my_folder_name` within `~/src` (recursively) and prints the full path if found.
+ * Handles the direct cd mode, e.g., `dev cd dev`.
+ * It looks for directories matching the given name at the third level in ~/src and
+ * picks the best matching one to cd into.
  */
 function handleDirectCdMode(folderName: string) {
-  const fdCommandArgs = [
-    "--type",
-    "d", // Find directories.
-    "--max-results",
-    "1", // Stop after first match.
-    "--hidden", // Include hidden directories.
-    "--follow", // Follow symlinks.
-    folderName, // The name of the folder to find (fd treats this as a pattern).
-    baseSearchDir, // The directory to search within.
-  ];
+  // First, limit search to exact-depth 3 directories where the last path component contains the given name
+  // This matches the requirement to find things like ~/src/github.com/bai/dev
+  const commandString = `fd --type directory --exact-depth 3 --follow --hidden --exclude .git --exclude node_modules --color=never -g "*/${folderName}$" "${baseSearchDir}" | sed 's/\\/*$//g' | sort -r | head -n 1`;
 
   try {
-    const proc = spawnSync({
-      cmd: ["fd", ...fdCommandArgs],
+    const proc = spawnSync(["sh", "-c", commandString], {
       stdio: ["ignore", "pipe", "pipe"], // stdin: ignore, stdout: capture, stderr: capture.
     });
 
-    if (proc.success && proc.stdout) {
+    if (proc.stdout) {
       const foundPath = proc.stdout.toString().trim();
       if (foundPath) {
         process.stdout.write(foundPath + "\n"); // Output found path.
-      } else {
-        // fd succeeded but found nothing (empty stdout).
-        console.error(`Folder '${folderName}' not found in ${baseSearchDir}`);
-        process.exit(1);
+        return;
       }
-    } else {
-      // fd command failed or found nothing.
-      let errorMessage = `Folder '${folderName}' not found or error during search in ${baseSearchDir}.`;
-      if (proc.stderr && proc.stderr.length > 0) {
-        const stderrStr = proc.stderr.toString().trim();
-        if (stderrStr) {
-          // Only add stderr details if there's content.
-          errorMessage += `\nDetails: ${stderrStr}`;
-        }
-      }
-      console.error(errorMessage);
-      process.exit(1);
     }
+
+    // If no exact match at the end path component, try to find partial matches
+    const fuzzyCommandString = `fd --type directory --exact-depth 3 --follow --hidden --exclude .git --exclude node_modules --color=never | grep -i "${folderName}" | sed 's/\\/*$//g' | sort -r | head -n 1`;
+
+    const fuzzyProc = spawnSync(["sh", "-c", fuzzyCommandString], {
+      stdio: ["ignore", "pipe", "pipe"], // stdin: ignore, stdout: capture, stderr: capture.
+    });
+
+    if (fuzzyProc.stdout) {
+      const foundPath = fuzzyProc.stdout.toString().trim();
+      if (foundPath) {
+        process.stdout.write(foundPath + "\n"); // Output found path.
+        return;
+      }
+    }
+
+    // Nothing found
+    console.error(`Folder '${folderName}' not found in ${baseSearchDir}`);
+    process.exit(1);
   } catch (error: any) {
     if (error.code === "ENOENT") {
       console.error(
-        "Error: 'fd' command not found. Please install fd and ensure it's in your PATH."
+        "Error: A required command (sh, fd, sed, grep, sort, or head) could not be found. Please ensure they are installed and in your PATH."
       );
     } else {
       console.error(`Failed to find folder '${folderName}': ${error.message}`);
@@ -138,6 +135,29 @@ function handleDirectCdMode(folderName: string) {
 
 // Main CLI logic
 if (args.length === 0) {
+  console.error(`dev: A CLI tool for quick directory navigation within ~/src.
+
+Usage:
+  dev cd                     Interactively select a directory from ~/src using fzf.
+                             (Searches for directories at depth 3 in ~/src)
+
+  dev cd <folder_name>       Finds and outputs the path to <folder_name> within ~/src.
+                             (Searches for a directory named <folder_name> at depth 3)
+
+Setup (add to your ~/.bashrc, ~/.zshrc, etc.):
+  alias dev='. _dev_wrapper'
+  _dev_wrapper() {
+    local target_dir
+    target_dir="$(bun /path/to/your/dev/index.ts "$@")"
+    if [ -n "$target_dir" ]; then
+      cd "$target_dir"
+    fi
+  }
+  # Replace /path/to/your/dev/index.ts with the actual path to this script.
+`);
+  process.exit(1);
+} else if (args.length === 1 && args[0] === "cd") {
+  // When just "dev cd" is run, handle interactive fuzzy selection
   handleFzfInteractiveMode();
 } else if (args.length === 2 && args[0] === "cd") {
   const folderName = args[1];
@@ -151,11 +171,11 @@ if (args.length === 0) {
   console.error(`dev: A CLI tool for quick directory navigation within ~/src.
 
 Usage:
-  dev                       Interactively select a directory from ~/src using fzf.
-                            (Searches for directories at depth 3 in ~/src)
+  dev cd                     Interactively select a directory from ~/src using fzf.
+                             (Searches for directories at depth 3 in ~/src)
 
-  dev cd <folder_name>      Finds and outputs the path to <folder_name> within ~/src.
-                            (Searches recursively for a directory named <folder_name>)
+  dev cd <folder_name>       Finds and outputs the path to <folder_name> within ~/src.
+                             (Searches for a directory named <folder_name> at depth 3)
 
 Setup (add to your ~/.bashrc, ~/.zshrc, etc.):
   alias dev='. _dev_wrapper'
