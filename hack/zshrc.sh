@@ -7,7 +7,7 @@ export HOMEBREW_NO_ENV_HINTS=1
 
 function dev() {
   local result
-  result=$(bun "$HOME"/.dev/index.ts "$@")
+  result=$(bun "$HOME"/.dev/src/index.ts "$@")
   local exit_code=$?
 
   if [[ $exit_code -ne 0 ]]; then
