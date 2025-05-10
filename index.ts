@@ -13,7 +13,7 @@ const baseSearchDir = path.join(homeDir, "src");
  * (e.g., ~/src/github.com/bai/dev, where "dev" is at the third level)
  * The script outputs the selected path to stdout, which is then used by a shell alias/function to `cd`.
  */
-function handleFzfInteractiveMode() {
+function handleFzfInteractiveMode(): string | null {
   // Construct the command for fd piped to sed and then fzf.
   // fd options:
   //   .                  : pattern to match (anything), searches in baseSearchDir.
@@ -38,16 +38,15 @@ function handleFzfInteractiveMode() {
       // stdin: inherit from user for fzf interaction.
       // stdout: pipe to capture fzf's selection.
       // stderr: inherit to show fzf's messages or errors from the shell pipeline.
-      stdio: ["inherit", "pipe", "inherit"],
+      stdio: ["ignore", "pipe", "pipe"] as any,
     });
 
     if (proc.stdout) {
       const selectedPath = proc.stdout.toString().trim();
       if (selectedPath) {
-        process.stdout.write(selectedPath + "\n"); // Output selected path.
+        return selectedPath; // Return selected path.
       }
       // If fzf is cancelled (e.g., Esc), selectedPath is empty.
-      // Script outputs nothing to stdout, which is fine for `cd $(...)`.
     }
 
     // fzf typically exits with:
@@ -67,6 +66,8 @@ function handleFzfInteractiveMode() {
       // We might choose to exit with that error code.
       process.exit(proc.exitCode || 1);
     }
+
+    return null;
   } catch (error: any) {
     // This catch block handles errors from spawnSync itself (e.g., 'sh' not found).
     if (error.code === "ENOENT") {
@@ -85,7 +86,7 @@ function handleFzfInteractiveMode() {
  * It looks for directories matching the given name at the third level in ~/src and
  * picks the best matching one to cd into.
  */
-function handleDirectCdMode(folderName: string) {
+function handleDirectCdMode(folderName: string): string | null {
   // First, limit search to exact-depth 3 directories where the last path component contains the given name
   // This matches the requirement to find things like ~/src/github.com/bai/dev
   // Always use the absolute path to baseSearchDir (~/src) regardless of current working directory
@@ -93,14 +94,13 @@ function handleDirectCdMode(folderName: string) {
 
   try {
     const proc = spawnSync(["sh", "-c", commandString], {
-      stdio: ["ignore", "pipe", "pipe"], // stdin: ignore, stdout: capture, stderr: capture.
+      stdio: ["ignore", "pipe", "pipe"] as const, // stdin: ignore, stdout: capture, stderr: capture.
     });
 
     if (proc.stdout) {
       const foundPath = proc.stdout.toString().trim();
       if (foundPath) {
-        process.stdout.write(foundPath + "\n"); // Output found path.
-        return;
+        return foundPath; // Return found path.
       }
     }
 
@@ -109,14 +109,13 @@ function handleDirectCdMode(folderName: string) {
     const fuzzyCommandString = `fd --type directory --exact-depth 3 --follow --hidden --exclude .git --exclude node_modules --color=never . "${baseSearchDir}" | grep -i "${folderName}" | sed 's/\\/*$//g' | sort -r | head -n 1`;
 
     const fuzzyProc = spawnSync(["sh", "-c", fuzzyCommandString], {
-      stdio: ["ignore", "pipe", "pipe"], // stdin: ignore, stdout: capture, stderr: capture.
+      stdio: ["ignore", "pipe", "pipe"] as const, // stdin: ignore, stdout: capture, stderr: capture.
     });
 
     if (fuzzyProc.stdout) {
       const foundPath = fuzzyProc.stdout.toString().trim();
       if (foundPath) {
-        process.stdout.write(foundPath + "\n"); // Output found path.
-        return;
+        return foundPath; // Return found path.
       }
     }
 
@@ -135,9 +134,45 @@ function handleDirectCdMode(folderName: string) {
   }
 }
 
+/**
+ * Handles the 'up' subcommand.
+ * Runs 'mise up' command directly.
+ */
+function handleUpCommand() {
+  try {
+    const proc = spawnSync(["mise", "up"], {
+      stdio: ["inherit", "inherit", "inherit"] as any, // Inherit all IO to pass through to the user
+    });
+
+    if (proc.exitCode !== 0) {
+      console.error("Error running 'mise up' command");
+      process.exit(proc.exitCode || 1);
+    }
+  } catch (error: any) {
+    if (error.code === "ENOENT") {
+      console.error(
+        "Error: 'mise' command not found. Please ensure it's installed and in your PATH."
+      );
+    } else {
+      console.error(`Failed to execute 'mise up': ${error.message}`);
+    }
+    process.exit(1);
+  }
+}
+
+/**
+ * Handles changing directory. Since Node.js/Bun can't change the parent process directory,
+ * we output a special format that the shell wrapper will interpret.
+ */
+function handleCdToPath(targetPath: string) {
+  // Special format for the shell wrapper to interpret: "CD:<path>"
+  console.log(`CD:${targetPath}`);
+  process.exit(0);
+}
+
 // Main CLI logic
 if (args.length === 0) {
-  console.error(`dev: A CLI tool for quick directory navigation within ~/src.
+  console.error(`dev: A CLI tool for quick directory navigation and environment management.
 
 Usage:
   dev cd                     Interactively select a directory from ~/src using fzf.
@@ -146,13 +181,24 @@ Usage:
   dev cd <folder_name>       Finds and outputs the path to <folder_name> within ~/src.
                              (Searches for a directory named <folder_name> at depth 3)
 
+  dev up                     Runs 'mise up' to update development tools.
+
 Setup (add to your ~/.bashrc, ~/.zshrc, etc.):
-  alias dev='. _dev_wrapper'
-  _dev_wrapper() {
-    local target_dir
-    target_dir="$(bun /path/to/your/dev/index.ts "$@")"
-    if [ -n "$target_dir" ]; then
-      cd "$target_dir"
+  function dev() {
+    local result
+    result=\$(bun /path/to/your/dev/index.ts "\$@")
+    local exit_code=\$?
+
+    if [[ \$exit_code -ne 0 ]]; then
+      return \$exit_code
+    fi
+
+    # Check if the output starts with CD: to handle directory changes
+    if [[ "\$result" == CD:* ]]; then
+      local dir="\${result#CD:}"
+      cd "\$dir" || return
+    else
+      echo "\$result"
     fi
   }
   # Replace /path/to/your/dev/index.ts with the actual path to this script.
@@ -160,7 +206,10 @@ Setup (add to your ~/.bashrc, ~/.zshrc, etc.):
   process.exit(1);
 } else if (args.length === 1 && args[0] === "cd") {
   // When just "dev cd" is run, handle interactive fuzzy selection
-  handleFzfInteractiveMode();
+  const selectedPath = handleFzfInteractiveMode();
+  if (selectedPath) {
+    handleCdToPath(selectedPath);
+  }
 } else if (args.length === 2 && args[0] === "cd") {
   const folderName = args[1];
   // Basic check, though process.argv usually provides non-empty strings for args.
@@ -168,9 +217,15 @@ Setup (add to your ~/.bashrc, ~/.zshrc, etc.):
     console.error("Error: Folder name for 'cd' command cannot be empty.");
     process.exit(1);
   }
-  handleDirectCdMode(folderName);
+  const targetPath = handleDirectCdMode(folderName);
+  if (targetPath) {
+    handleCdToPath(targetPath);
+  }
+} else if (args.length === 1 && args[0] === "up") {
+  // Handle 'dev up' command
+  handleUpCommand();
 } else {
-  console.error(`dev: A CLI tool for quick directory navigation within ~/src.
+  console.error(`dev: A CLI tool for quick directory navigation and environment management.
 
 Usage:
   dev cd                     Interactively select a directory from ~/src using fzf.
@@ -179,13 +234,24 @@ Usage:
   dev cd <folder_name>       Finds and outputs the path to <folder_name> within ~/src.
                              (Searches for a directory named <folder_name> at depth 3)
 
+  dev up                     Runs 'mise up' to update development tools.
+
 Setup (add to your ~/.bashrc, ~/.zshrc, etc.):
-  alias dev='. _dev_wrapper'
-  _dev_wrapper() {
-    local target_dir
-    target_dir="$(bun /path/to/your/dev/index.ts "$@")"
-    if [ -n "$target_dir" ]; then
-      cd "$target_dir"
+  function dev() {
+    local result
+    result=\$(bun /path/to/your/dev/index.ts "\$@")
+    local exit_code=\$?
+
+    if [[ \$exit_code -ne 0 ]]; then
+      return \$exit_code
+    fi
+
+    # Check if the output starts with CD: to handle directory changes
+    if [[ "\$result" == CD:* ]]; then
+      local dir="\${result#CD:}"
+      cd "\$dir" || return
+    else
+      echo "\$result"
     fi
   }
   # Replace /path/to/your/dev/index.ts with the actual path to this script.
