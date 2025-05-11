@@ -1,0 +1,10 @@
+alpha
+beta
+cloud_sql_proxy
+kustomize
+kpt
+kubectl
+gke-gcloud-auth-plugin
+terraform-tools
+docker-credential-gcr
+cloud-build-local

@@ -1,0 +1,39 @@
+# This file is located in `~/.config/mise/config.toml`.
+#
+# https://mise.jdx.dev/mise-cookbook/python.html#mise-uv
+# https://mise.jdx.dev/mise-cookbook/nodejs.html#example-node-js-project
+
+[env]
+_.path = ['{{config_root}}/node_modules/.bin']
+
+[tools]
+bun = "latest"
+go = "latest"
+node = "latest"
+python = "latest"
+uv = "latest"
+ruby = "latest"
+rust = "latest"
+gcloud = "latest"
+aws-cli = "latest"
+sops = "latest"
+age = "latest"
+pulumi = "latest"
+terraform = "latest"
+golangci-lint = "latest"
+jq = "latest"
+
+"npm:@anthropic-ai/claude-code" = "latest"
+"npm:biome" = "latest"
+"npm:create-next-app" = "latest"
+"npm:eslint" = "latest"
+"npm:inngest" = "latest"
+"npm:npm-check-updates" = "latest"
+"npm:pnpm" = "latest"
+"npm:prettier" = "latest"
+"npm:turbo" = "latest"
+"npm:typescript" = "latest"
+"npm:vercel" = "latest"
+
+[settings]
+idiomatic_version_file_enable_tools = ["python", "ruby"]

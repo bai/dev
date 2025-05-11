@@ -40,6 +40,28 @@ mise install bun@latest
 echo "Installing dependencies..."
 cd "$HOME/.dev" && bun install
 
+# Create gcloud config directory if it doesn't exist
+if [ ! -d "$HOME/.config/gcloud" ]; then
+  echo "Creating gcloud config directory..."
+  mkdir -p "$HOME/.config/gcloud"
+fi
+
+# Copy default-cloud-sdk-components file
+echo "Copying default-cloud-sdk-components file..."
+cp "$HOME/.dev/hack/configs/default-cloud-sdk-components" "$HOME/.config/gcloud/.default-cloud-sdk-components"
+
+# Create mise config directory if it doesn't exist
+if [ ! -d "$HOME/.config/mise" ]; then
+  echo "Creating mise config directory..."
+  mkdir -p "$HOME/.config/mise"
+fi
+
+# Copy mise-config-global.toml if it doesn't exist
+if [ ! -f "$HOME/.config/mise/config.toml" ]; then
+  echo "Copying mise config file..."
+  cp "$HOME/.dev/hack/configs/mise-config-global.toml" "$HOME/.config/mise/config.toml"
+fi
+
 # Source the dev function from the repo's zshrc file
 if [ -f "$HOME/.zshrc" ] && ! grep -q "source \$HOME/.dev/hack/zshrc.sh" "$HOME/.zshrc"; then
   echo "Adding source reference to ~/.zshrc..."
