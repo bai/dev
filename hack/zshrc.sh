@@ -1,3 +1,12 @@
+#!/usr/bin/env bash
+#
+# Dev CLI wrapper for interactive shells
+#
+# This script is used to wrap the dev command in a way that is compatible with
+# interactive shells. It is sourced from the user's .zshrc file.
+
+export FZF_DEFAULT_COMMAND='fd --type f --hidden --exclude .git --exclude node_modules'
+
 export BUNDLE_IGNORE_MESSAGES=true
 export BUNDLE_IGNORE_FUNDING_REQUESTS=true
 

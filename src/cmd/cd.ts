@@ -1,5 +1,10 @@
 import { spawnSync } from "bun";
-import { baseSearchDir, handleCommandError, handleCdToPath, stdioPipe } from "~/utils";
+import {
+  baseSearchDir,
+  handleCommandError,
+  handleCdToPath,
+  stdioPipe,
+} from "~/utils";
 
 /**
  * Handles the cd command implementation.
@@ -63,7 +68,7 @@ function handleFzfInteractiveMode(): string | null {
       // stdin: inherit from user for fzf interaction.
       // stdout: pipe to capture fzf's selection.
       // stderr: inherit to show fzf's messages or errors from the shell pipeline.
-      stdio: ["inherit", "pipe", "pipe"],
+      stdio: ["ignore", "pipe", "inherit"],
     });
 
     if (proc.stdout) {
@@ -127,21 +132,6 @@ function handleDirectCdMode(folderName: string): string | null {
       }
     }
 
-    // If no match found with fzf fuzzy search, try a more lenient grep-based search
-    // This is a fallback in case fzf doesn't find anything
-    const grepCommandString = `fd --type directory --exact-depth 3 --follow --hidden --exclude .git --exclude node_modules --color=never . "${baseSearchDir}" | grep -i "${folderName}" | sed 's/\\/*$//g' | sort -r | head -n 1`;
-
-    const grepProc = spawnSync(["sh", "-c", grepCommandString], {
-      stdio: stdioPipe, // stdin: ignore, stdout: capture, stderr: capture.
-    });
-
-    if (grepProc.stdout) {
-      const foundPath = grepProc.stdout.toString().trim();
-      if (foundPath) {
-        return foundPath; // Return found path.
-      }
-    }
-
     // Nothing found
     console.error(`Folder '${folderName}' not found in ${baseSearchDir}`);
     process.exit(1);
@@ -149,7 +139,7 @@ function handleDirectCdMode(folderName: string): string | null {
     return handleCommandError(
       error,
       `find folder '${folderName}'`,
-      "sh, fd, sed, fzf, grep, sort, or head"
+      "sh, fd, fzf, or head"
     );
   }
 }

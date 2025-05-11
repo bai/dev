@@ -3,7 +3,7 @@ import path from "path";
 import { SpawnSyncOptions } from "bun";
 
 // Provider type
-export type GitProvider = 'github' | 'gitlab';
+export type GitProvider = "github" | "gitlab";
 
 // Common variables
 export const homeDir = os.homedir();
@@ -12,7 +12,7 @@ export const defaultOrg = "flywheelsoftware";
 
 // Organization to provider mapping
 export const orgToProvider: Record<string, GitProvider> = {
-  "flywheelsoftware": "gitlab",
+  flywheelsoftware: "gitlab",
   // Add more mappings as needed, e.g.:
   // "otherorg": "github",
 };
@@ -21,7 +21,11 @@ export const defaultGitHubUrl = `https://github.com/${defaultOrg}`;
 export const defaultGitLabUrl = `https://gitlab.com/${defaultOrg}`;
 
 // Standardized stdio configuration for spawn calls
-export const stdioInherit: SpawnSyncOptions["stdio"] = ["inherit", "inherit", "inherit"];
+export const stdioInherit: SpawnSyncOptions["stdio"] = [
+  "inherit",
+  "inherit",
+  "inherit",
+];
 export const stdioPipe: SpawnSyncOptions["stdio"] = ["ignore", "pipe", "pipe"];
 
 // Common utility to handle errors from subprocesses
