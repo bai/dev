@@ -9,6 +9,7 @@ A CLI tool for quick directory navigation within `~/src` and environment managem
 - `dev clone <repo>` - Clones a repository into `~/src` with automatic provider detection. Supports both full URLs and shorthand formats.
 - `dev up` - Installs development tools for the current repo.
 - `dev upgrade` - Updates the dev CLI tool to the latest version by running the setup script.
+- `dev help` - Shows the help message.
 
 ## Requirements
 
@@ -61,6 +62,9 @@ dev up
 
 # Update the dev CLI tool itself
 dev upgrade
+
+# Show help message
+dev help
 ```
 
 ## Development
