@@ -6,7 +6,8 @@ A CLI tool for quick directory navigation within `~/src` and environment managem
 
 - `dev cd` - Opens fzf fuzzy search for code directories located in `~/src`, limited to third level paths (e.g., `~/src/github.com/bai/dev`). After selection, it performs `cd` into that directory.
 - `dev cd <folder_name>` - Picks the best matching directory at the third level and performs `cd` into it.
-- `dev up` - Runs `mise up` to update development tools.
+- `dev clone <repo>` - Clones a repository into `~/src` with automatic provider detection. Supports both full URLs and shorthand formats.
+- `dev up` - Installs development tools for the current repo.
 - `dev upgrade` - Updates the dev CLI tool to the latest version by running the setup script.
 
 ## Requirements
@@ -28,7 +29,7 @@ bun install
 2. Run the setup script:
 
 ```bash
-bash hack/setup.sh
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/bai/dev/refs/heads/main/hack/setup.sh)"
 ```
 
 This will:
@@ -45,9 +46,27 @@ dev cd
 # Direct navigation to best matching directory
 dev cd dev
 
+# Clone a repository (using automatic provider detection)
+dev clone repo-name
+dev clone org/repo-name
+dev clone https://github.com/org/repo-name
+
+# Clone with explicit provider/org options
+dev clone --github repo-name
+dev clone --gitlab repo-name
+dev clone --org custom-org repo-name
+
 # Update development tools
 dev up
 
 # Update the dev CLI tool itself
 dev upgrade
+```
+
+## Development
+
+Trigger setup script locally:
+
+```
+bash hack/setup.sh
 ```

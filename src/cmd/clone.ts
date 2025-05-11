@@ -5,7 +5,9 @@ import {
   defaultOrg,
   defaultGitHubUrl,
   defaultGitLabUrl,
-  orgToProvider
+  orgToProvider,
+  stdioInherit,
+  GitProvider
 } from "~/utils";
 import path from "path";
 import fs from "fs";
@@ -103,7 +105,7 @@ export function handleCloneCommand(args: string[]): void {
 
 /**
  * Parses repository URL to determine the local filesystem path.
- * 
+ *
  * @param repoUrl The repository URL (HTTPS or SSH format)
  * @returns The local filesystem path or null if parsing failed
  */
@@ -111,7 +113,7 @@ function parseRepoUrlToPath(repoUrl: string): string | null {
   try {
     let orgName: string;
     let repoName: string;
-    
+
     // Handle SSH URL format (git@github.com:foo/repo.git)
     if (repoUrl.includes("@")) {
       const sshMatch = repoUrl.match(/@([^:]+):([^\/]+)\/([^.]+)/);
@@ -120,35 +122,40 @@ function parseRepoUrlToPath(repoUrl: string): string | null {
         orgName = sshMatch[2];      // foo
         repoName = sshMatch[3];     // repo
         return path.join(baseSearchDir, domain, orgName, repoName);
-      }
-    } 
-    // Handle HTTPS URL format (https://github.com/foo/repo)
-    else {
-      // Try to extract the path from URL
-      const url = new URL(repoUrl);
-      const pathParts = url.pathname.split('/').filter(Boolean);
-      
-      if (pathParts.length >= 2) {
-        orgName = pathParts[0];
-        // Remove .git suffix if present
-        repoName = pathParts[1].replace(/\.git$/, '');
-        return path.join(baseSearchDir, url.hostname, orgName, repoName);
+      } else {
+        throw new Error(`Invalid SSH repository URL format: ${repoUrl}`);
       }
     }
-    
-    console.error(`Error: Could not parse repository URL: ${repoUrl}`);
-    process.exit(1);
+    // Handle HTTPS URL format (https://github.com/foo/repo)
+    else {
+      try {
+        // Try to extract the path from URL
+        const url = new URL(repoUrl);
+        const pathParts = url.pathname.split('/').filter(Boolean);
+
+        if (pathParts.length >= 2) {
+          orgName = pathParts[0];
+          // Remove .git suffix if present
+          repoName = pathParts[1].replace(/\.git$/, '');
+          return path.join(baseSearchDir, url.hostname, orgName, repoName);
+        } else {
+          throw new Error(`URL path does not contain organization and repository: ${repoUrl}`);
+        }
+      } catch (urlError) {
+        throw new Error(`Invalid repository URL: ${repoUrl}`);
+      }
+    }
   } catch (error: any) {
     console.error(`Error parsing repository URL: ${error.message}`);
     process.exit(1);
   }
-  
+
   return null;
 }
 
 /**
  * Clones a repository to the specified path.
- * 
+ *
  * @param repoUrl The repository URL to clone from
  * @param targetPath The local path to clone to
  */
@@ -156,34 +163,51 @@ function cloneRepository(repoUrl: string, targetPath: string): void {
   // Check if directory already exists
   if (fs.existsSync(targetPath)) {
     console.error(`Error: Directory already exists: ${targetPath}`);
+    console.error(`To continue with an existing directory, cd into it with: dev cd ${path.basename(targetPath)}`);
     process.exit(1);
   }
-  
+
   // Ensure parent directory exists
   const parentDir = path.dirname(targetPath);
   if (!fs.existsSync(parentDir)) {
     try {
+      console.log(`Creating parent directory: ${parentDir}`);
       fs.mkdirSync(parentDir, { recursive: true });
     } catch (error: any) {
       console.error(`Error creating directory ${parentDir}: ${error.message}`);
+      if (error.code === 'EACCES') {
+        console.error('Permission denied. Try running with sudo or check directory permissions.');
+      } else if (error.code === 'ENOSPC') {
+        console.error('No space left on device. Free up some disk space and try again.');
+      }
       process.exit(1);
     }
   }
-  
+
   // Clone the repository
   try {
     console.log(`Cloning ${repoUrl} into ${targetPath}...`);
-    
+
     const proc = spawnSync(["git", "clone", repoUrl, targetPath], {
-      stdio: ["inherit", "inherit", "inherit"] as any, // Inherit all IO to show progress
+      stdio: stdioInherit, // Inherit all IO to show progress
     });
-    
+
     if (proc.exitCode !== 0) {
-      console.error(`Error cloning repository: git exited with code ${proc.exitCode}`);
+      let errorMessage = `Error cloning repository: git exited with code ${proc.exitCode}`;
+
+      // Add more context for common git errors
+      if (proc.exitCode === 128) {
+        errorMessage += "\nRepository might not exist or you may not have permission to access it.";
+      } else if (proc.exitCode === 130) {
+        errorMessage += "\nOperation was interrupted by the user.";
+      }
+
+      console.error(errorMessage);
       process.exit(proc.exitCode || 1);
     }
-    
+
     console.log(`Successfully cloned ${repoUrl} to ${targetPath}`);
+    console.log(`To navigate to this directory, run: dev cd ${path.basename(targetPath)}`);
   } catch (error: any) {
     handleCommandError(error, "git clone", "git");
   }

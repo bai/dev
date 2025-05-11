@@ -1,5 +1,5 @@
 import { spawnSync } from "bun";
-import { baseSearchDir, handleCommandError, handleCdToPath } from "~/utils";
+import { baseSearchDir, handleCommandError, handleCdToPath, stdioPipe } from "~/utils";
 
 /**
  * Handles the cd command implementation.
@@ -35,6 +35,8 @@ export function handleCdCommand(args: string[]): void {
  * This function uses fzf to interactively select from directories at the third level in ~/src.
  * (e.g., ~/src/github.com/bai/dev, where "dev" is at the third level)
  * The script outputs the selected path to stdout, which is then used by a shell alias/function to `cd`.
+ *
+ * @returns The selected path or null if selection was canceled
  */
 function handleFzfInteractiveMode(): string | null {
   // Construct the command for fd piped to sed and then fzf.
@@ -61,7 +63,7 @@ function handleFzfInteractiveMode(): string | null {
       // stdin: inherit from user for fzf interaction.
       // stdout: pipe to capture fzf's selection.
       // stderr: inherit to show fzf's messages or errors from the shell pipeline.
-      stdio: ["ignore", "pipe", "pipe"] as any,
+      stdio: ["inherit", "pipe", "pipe"],
     });
 
     if (proc.stdout) {
@@ -104,6 +106,9 @@ function handleFzfInteractiveMode(): string | null {
  * Handles the direct cd mode, e.g., `dev cd dev`.
  * It looks for directories matching the given name at the third level in ~/src and
  * picks the best matching one to cd into using fuzzy matching.
+ *
+ * @param folderName The folder name to search for
+ * @returns The matched path or null if no match found
  */
 function handleDirectCdMode(folderName: string): string | null {
   // Use fzf in non-interactive mode to perform fuzzy matching
@@ -112,7 +117,7 @@ function handleDirectCdMode(folderName: string): string | null {
 
   try {
     const proc = spawnSync(["sh", "-c", commandString], {
-      stdio: ["ignore", "pipe", "pipe"] as const, // stdin: ignore, stdout: capture, stderr: capture.
+      stdio: stdioPipe, // stdin: ignore, stdout: capture, stderr: capture.
     });
 
     if (proc.stdout) {
@@ -127,7 +132,7 @@ function handleDirectCdMode(folderName: string): string | null {
     const grepCommandString = `fd --type directory --exact-depth 3 --follow --hidden --exclude .git --exclude node_modules --color=never . "${baseSearchDir}" | grep -i "${folderName}" | sed 's/\\/*$//g' | sort -r | head -n 1`;
 
     const grepProc = spawnSync(["sh", "-c", grepCommandString], {
-      stdio: ["ignore", "pipe", "pipe"] as const, // stdin: ignore, stdout: capture, stderr: capture.
+      stdio: stdioPipe, // stdin: ignore, stdout: capture, stderr: capture.
     });
 
     if (grepProc.stdout) {

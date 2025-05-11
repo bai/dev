@@ -1,5 +1,5 @@
 import { spawnSync } from "bun";
-import { handleCommandError } from "~/utils";
+import { handleCommandError, stdioInherit } from "~/utils";
 
 /**
  * Handles the 'up' subcommand.
@@ -8,7 +8,7 @@ import { handleCommandError } from "~/utils";
 export function handleUpCommand(): void {
   try {
     const proc = spawnSync(["mise", "up"], {
-      stdio: ["inherit", "inherit", "inherit"] as any, // Inherit all IO to pass through to the user
+      stdio: stdioInherit, // Inherit all IO to pass through to the user
     });
 
     if (proc.exitCode !== 0) {
