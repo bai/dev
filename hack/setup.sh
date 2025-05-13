@@ -71,6 +71,15 @@ source $HOME/.dev/hack/zshrc.sh
 EOF
 fi
 
+# Install required CLI utilities for dev CLI
+REQUIRED_UTILS=(fd fzf)
+for util in "${REQUIRED_UTILS[@]}"; do
+  if ! command -v "$util" &>/dev/null; then
+    echo "Installing $util..."
+    brew install "$util"
+  fi
+done
+
 echo "Setup complete! Please restart your terminal or run 'source ~/.zshrc' to start using dev."
 echo "Usage examples:"
 echo "  dev cd         # Interactive fuzzy search for directories"
