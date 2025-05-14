@@ -1,6 +1,6 @@
 import os from "os";
 import path from "path";
-import { SpawnSyncOptions } from "bun";
+import type { SpawnOptions } from "bun";
 
 // Provider type
 export type GitProvider = "github" | "gitlab";
@@ -21,12 +21,13 @@ export const defaultGitHubUrl = `https://github.com/${defaultOrg}`;
 export const defaultGitLabUrl = `https://gitlab.com/${defaultOrg}`;
 
 // Standardized stdio configuration for spawn calls
-export const stdioInherit: SpawnSyncOptions["stdio"] = [
-  "inherit",
-  "inherit",
-  "inherit",
+export type StdioTuple = [
+  SpawnOptions.Writable,
+  SpawnOptions.Readable,
+  SpawnOptions.Readable
 ];
-export const stdioPipe: SpawnSyncOptions["stdio"] = ["ignore", "pipe", "pipe"];
+export const stdioInherit: StdioTuple = ["inherit", "inherit", "inherit"];
+export const stdioPipe: StdioTuple = ["ignore", "pipe", "pipe"];
 
 // Common utility to handle errors from subprocesses
 export function handleCommandError(

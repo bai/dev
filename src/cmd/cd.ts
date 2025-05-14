@@ -1,33 +1,101 @@
 import { spawnSync } from "bun";
+import * as path from "path";
+import * as fs from "fs/promises";
 import {
   baseSearchDir,
   handleCommandError,
   handleCdToPath,
   stdioPipe,
 } from "~/utils";
+import {
+  updateDirectoryInCache,
+  findMatchingDirectoryInCache,
+} from "~/cacheUtils";
 
 /**
  * Handles the cd command implementation.
  *
  * @param args Command arguments (excluding the 'cd' part)
  */
-export function handleCdCommand(args: string[]): void {
+export async function handleCdCommand(args: string[]): Promise<void> {
   if (args.length === 0) {
     // When just "dev cd" is run, handle interactive fuzzy selection
     const selectedPath = handleFzfInteractiveMode();
     if (selectedPath) {
+      await updateDirectoryInCache(selectedPath);
       handleCdToPath(selectedPath);
     }
   } else if (args.length === 1) {
-    const folderName = args[0];
-    // Basic check, though process.argv usually provides non-empty strings for args.
-    if (!folderName || folderName.trim() === "") {
+    const folderNameOrPath = args[0];
+    if (!folderNameOrPath || folderNameOrPath.trim() === "") {
       console.error("Error: Folder name for 'cd' command cannot be empty.");
       process.exit(1);
     }
-    const targetPath = handleDirectCdMode(folderName);
+
+    let targetPath: string | null = null;
+
+    // Check if it's a special path like '.', '..', or an absolute path
+    if (
+      folderNameOrPath === "." ||
+      folderNameOrPath === ".." ||
+      path.isAbsolute(folderNameOrPath)
+    ) {
+      targetPath = path.resolve(folderNameOrPath);
+      try {
+        const stats = await fs.stat(targetPath);
+        if (!stats.isDirectory()) {
+          console.error(`Error: '${targetPath}' is not a directory.`);
+          process.exit(1);
+        }
+      } catch (e) {
+        console.error(
+          `Error: Directory '${targetPath}' not found or not accessible.`
+        );
+        process.exit(1);
+      }
+    } else {
+      // It's a folder name, try cache first
+      const cachedPath = await findMatchingDirectoryInCache(folderNameOrPath);
+      if (cachedPath) {
+        targetPath = cachedPath;
+      } else {
+        targetPath = handleDirectCdMode(folderNameOrPath);
+      }
+    }
+
     if (targetPath) {
-      handleCdToPath(targetPath);
+      const absoluteTargetPath = path.resolve(targetPath);
+
+      try {
+        const stats = await fs.stat(absoluteTargetPath);
+        if (!stats.isDirectory()) {
+          console.error(
+            `Error: Resolved path '${absoluteTargetPath}' is not a directory.`
+          );
+          process.exit(1);
+        }
+      } catch (e) {
+        console.error(
+          `Error: Resolved directory '${absoluteTargetPath}' not found or not accessible.`
+        );
+        process.exit(1);
+      }
+
+      await updateDirectoryInCache(absoluteTargetPath);
+      handleCdToPath(absoluteTargetPath);
+    } else {
+      if (
+        !(
+          folderNameOrPath === "." ||
+          folderNameOrPath === ".." ||
+          path.isAbsolute(folderNameOrPath)
+        )
+      ) {
+        console.error(
+          `Error: Could not determine directory for '${folderNameOrPath}'.`
+        );
+        process.exit(1);
+      }
     }
   } else {
     console.error("Error: Too many arguments for 'cd' command.");
@@ -122,7 +190,7 @@ function handleDirectCdMode(folderName: string): string | null {
 
   try {
     const proc = spawnSync(["sh", "-c", commandString], {
-      stdio: stdioPipe, // stdin: ignore, stdout: capture, stderr: capture.
+      stdio: ["ignore", "pipe", "pipe"], // Explicitly set stdio
     });
 
     if (proc.stdout) {
