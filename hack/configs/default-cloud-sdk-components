@@ -8,3 +8,4 @@ gke-gcloud-auth-plugin
 terraform-tools
 docker-credential-gcr
 cloud-build-local
+config-connector
