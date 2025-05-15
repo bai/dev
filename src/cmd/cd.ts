@@ -116,9 +116,9 @@ function handleFzfInteractiveMode(): string | null {
  * @returns The matched path or null if no match found
  */
 function handleDirectCdMode(folderName: string): string | null {
-  // Use fzf in non-interactive mode to perform fuzzy matching
+  // Use fzy to perform fuzzy matching
   // This will find the best match for the given folder name at the third level
-  const commandString = `fd --type directory --exact-depth 3 --follow --hidden --exclude .git --exclude node_modules --color=never . "${baseSearchDir}" | sed 's/\\/*$//g' | fzf -f "${folderName}" | sort -r | head -n 1`;
+  const commandString = `fd --type directory --exact-depth 3 --follow --hidden --exclude .git --exclude node_modules --color=never . "${baseSearchDir}" | sed 's/\\/*$//g' | fzy --show-scores --show-matches "${folderName}" | sort -r | head -n 1`;
 
   try {
     const proc = spawnSync(["sh", "-c", commandString], {
@@ -139,7 +139,7 @@ function handleDirectCdMode(folderName: string): string | null {
     return handleCommandError(
       error,
       `find folder '${folderName}'`,
-      "sh, fd, fzf, or head"
+      "sh, fd, fzy, or head"
     );
   }
 }
