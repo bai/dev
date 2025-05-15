@@ -47,6 +47,7 @@ export function handleCommandError(
 // Handles changing directory through shell wrapper
 export function handleCdToPath(targetPath: string): void {
   // Special format for the shell wrapper to interpret: "CD:<path>"
+  console.log(`[DEBUG] Changing directory to: '${targetPath}'`);
   console.log(`CD:${targetPath}`);
   process.exit(0);
 }

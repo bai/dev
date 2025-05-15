@@ -121,13 +121,26 @@ function handleDirectCdMode(folderName: string): string | null {
   const commandString = `fd --type directory --exact-depth 3 --follow --hidden --exclude .git --exclude node_modules --color=never . "${baseSearchDir}" | sed 's/\\/*$//g' | fzy --show-scores --show-matches "${folderName}" | sort -r | head -n 1`;
 
   try {
+    console.log(
+      `[DEBUG] Searching for folder: '${folderName}' in ${baseSearchDir}`
+    );
+    console.log(`[DEBUG] Command: ${commandString}`);
+
     const proc = spawnSync(["sh", "-c", commandString], {
       stdio: stdioPipe, // stdin: ignore, stdout: capture, stderr: capture.
     });
 
     if (proc.stdout) {
-      const foundPath = proc.stdout.toString().trim();
-      if (foundPath) {
+      const rawOutput = proc.stdout.toString().trim();
+      console.log(`[DEBUG] Raw fzy output: '${rawOutput}'`);
+
+      if (rawOutput) {
+        // Parse the output to extract just the path part
+        // fzy with --show-scores outputs lines like: "6.440000\t/path/to/dir"
+        const pathMatch = rawOutput.match(/[\d.]+\s+(.+)/);
+        const foundPath = pathMatch && pathMatch[1] ? pathMatch[1] : rawOutput;
+
+        console.log(`[DEBUG] Extracted path: '${foundPath}'`);
         return foundPath; // Return found path.
       }
     }
