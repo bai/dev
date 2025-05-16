@@ -1,6 +1,6 @@
 import os from "os";
 import path from "path";
-import { SpawnSyncOptions } from "bun";
+import type { SpawnOptions } from "bun";
 
 // Provider type
 export type GitProvider = "github" | "gitlab";
@@ -20,13 +20,12 @@ export const orgToProvider: Record<string, GitProvider> = {
 export const defaultGitHubUrl = `https://github.com/${defaultOrg}`;
 export const defaultGitLabUrl = `https://gitlab.com/${defaultOrg}`;
 
+// Define a more specific type for stdio options if StdioOption is not directly available
+type StdioValue = "inherit" | "pipe" | "ignore" | null | number; // Simplified based on common usage for array form
+
 // Standardized stdio configuration for spawn calls
-export const stdioInherit: SpawnSyncOptions["stdio"] = [
-  "inherit",
-  "inherit",
-  "inherit",
-];
-export const stdioPipe: SpawnSyncOptions["stdio"] = ["ignore", "pipe", "pipe"];
+export const stdioInherit: StdioValue[] = ["inherit", "inherit", "inherit"];
+export const stdioPipe: StdioValue[] = ["ignore", "pipe", "pipe"];
 
 // Common utility to handle errors from subprocesses
 export function handleCommandError(
@@ -56,10 +55,10 @@ export function showUsage(): never {
   console.error(`dev: A CLI tool for quick directory navigation and environment management.
 
 Usage:
-  dev cd                     Interactively select a directory from ~/src using fzf.
+  dev ls                     Interactively select a directory from ~/src using fzf and cd into it.
                              (Searches for directories at depth 3 in ~/src)
 
-  dev cd <folder_name>       Finds and outputs the path to <folder_name> within ~/src.
+  dev cd <folder_name>       Finds and outputs the path to <folder_name> within ~/src, then cds into it.
                              (Searches for a directory named <folder_name> at depth 3)
 
   dev clone <repo>           Clones a repository into ~/src with automatic provider detection.
@@ -73,6 +72,8 @@ Usage:
   dev up                     Runs 'mise up' to update development tools.
 
   dev upgrade                Updates the dev CLI tool to the latest version.
+
+  dev help                   Shows this help message.
 `);
   process.exit(1);
 }

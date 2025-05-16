@@ -1,5 +1,6 @@
 import { showUsage } from "./utils";
 import { handleCdCommand } from "./cmd/cd";
+import { handleLsCommand } from "./cmd/ls";
 import { handleUpCommand } from "./cmd/up";
 import { handleUpgradeCommand } from "./cmd/upgrade";
 import { handleCloneCommand } from "./cmd/clone";
@@ -13,6 +14,8 @@ if (args.length === 0) {
 } else if (args[0] === "cd") {
   // Handle cd command with remaining arguments
   handleCdCommand(args.slice(1));
+} else if (args.length === 1 && args[0] === "ls") {
+  handleLsCommand();
 } else if (args.length === 1 && args[0] === "up") {
   // Handle 'dev up' command
   handleUpCommand();

@@ -4,7 +4,7 @@ A CLI tool for quick directory navigation within `~/src` and environment managem
 
 ## Features
 
-- `dev cd` - Opens fzf fuzzy search for code directories located in `~/src`, limited to third level paths (e.g., `~/src/github.com/bai/dev`). After selection, it performs `cd` into that directory.
+- `dev ls` - Opens fzf fuzzy search for code directories located in `~/src`, limited to third level paths (e.g., `~/src/github.com/bai/dev`). After selection, it performs `cd` into that directory.
 - `dev cd <folder_name>` - Picks the best matching directory at the third level and performs `cd` into it.
 - `dev clone <repo>` - Clones a repository into `~/src` with automatic provider detection. Supports both full URLs and shorthand formats.
 - `dev up` - Installs development tools for the current repo.
@@ -41,8 +41,8 @@ This will:
 ## Usage
 
 ```bash
-# Interactive fuzzy search for directories
-dev cd
+# Interactive fuzzy search for directories and cd into it
+dev ls
 
 # Direct navigation to best matching directory
 dev cd dev
