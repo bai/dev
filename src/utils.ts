@@ -52,7 +52,7 @@ export function handleCdToPath(targetPath: string): void {
 
 // Shows usage information
 export function showUsage(): never {
-  console.error(`dev: A CLI tool for quick directory navigation and environment management.
+  console.log(`dev: A CLI tool for quick directory navigation and environment management.
 
 Usage:
   dev ls                     Interactively select a directory from ~/src using fzf and cd into it.
@@ -75,5 +75,5 @@ Usage:
 
   dev help                   Shows this help message.
 `);
-  process.exit(1);
+  process.exit(0);
 }
