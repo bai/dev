@@ -72,7 +72,7 @@ EOF
 fi
 
 # Install required CLI utilities for dev CLI
-REQUIRED_UTILS=(fd fzf)
+REQUIRED_UTILS=(fd fzf fzy)
 for util in "${REQUIRED_UTILS[@]}"; do
   if ! command -v "$util" &>/dev/null; then
     echo "Installing $util..."
