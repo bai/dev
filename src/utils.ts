@@ -69,6 +69,10 @@ Usage:
                                dev clone --gitlab repo (explicitly uses GitLab)
                                dev clone --org customorg repo
 
+  dev auth                   Attempts to authenticate with GitHub, GitLab, and Google Cloud (user and application-default).
+                             For GitHub and GitLab, this will guide you to use 'gh auth login' and 'glab auth login'.
+                             For Google Cloud, it will attempt 'gcloud auth login' and 'gcloud auth application-default login'.
+
   dev up                     Runs 'mise up' to update development tools.
 
   dev upgrade                Updates the dev CLI tool to the latest version.

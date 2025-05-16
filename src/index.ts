@@ -4,6 +4,7 @@ import { handleLsCommand } from "./cmd/ls";
 import { handleUpCommand } from "./cmd/up";
 import { handleUpgradeCommand } from "./cmd/upgrade";
 import { handleCloneCommand } from "./cmd/clone";
+import { handleAuthCommand } from "./cmd/auth";
 import { spawn } from "child_process";
 import fs from "fs/promises";
 import os from "os";
@@ -79,6 +80,9 @@ const runPeriodicUpgradeCheck = async () => {
   } else if (args[0] === "clone") {
     // Handle clone command with remaining arguments
     handleCloneCommand(args.slice(1));
+  } else if (args[0] === "auth") {
+    // Handle auth command with remaining arguments
+    handleAuthCommand(args.slice(1));
   } else {
     showUsage();
   }
