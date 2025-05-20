@@ -58,6 +58,8 @@ Usage:
   dev ls                     Interactively select a directory from ~/src using fzf and cd into it.
                              (Searches for directories at depth 3 in ~/src)
 
+  dev cd                     Same as 'dev ls' - interactively select a directory using fzf.
+
   dev cd <folder_name>       Finds and outputs the path to <folder_name> within ~/src, then cds into it.
                              (Searches for a directory named <folder_name> at depth 3)
 

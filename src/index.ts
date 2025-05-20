@@ -68,7 +68,12 @@ const runPeriodicUpgradeCheck = async () => {
     showUsage();
   } else if (args[0] === "cd") {
     // Handle cd command with remaining arguments
-    handleCdCommand(args.slice(1));
+    if (args.length === 1) {
+      // If 'cd' is used without arguments, show the list of directories
+      handleLsCommand();
+    } else {
+      handleCdCommand(args.slice(1));
+    }
   } else if (args.length === 1 && args[0] === "ls") {
     handleLsCommand();
   } else if (args.length === 1 && args[0] === "up") {

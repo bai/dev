@@ -4,7 +4,7 @@ A CLI tool for quick directory navigation within `~/src` and environment managem
 
 ## Features
 
-- `dev ls` - Opens fzf fuzzy search for code directories located in `~/src`, limited to third level paths (e.g., `~/src/github.com/bai/dev`). After selection, it performs `cd` into that directory.
+- `dev ls` or `dev cd` (without arguments) - Opens fzf fuzzy search for code directories located in `~/src`, limited to third level paths (e.g., `~/src/github.com/bai/dev`). After selection, it performs `cd` into that directory.
 - `dev cd <folder_name>` - Picks the best matching directory at the third level and performs `cd` into it.
 - `dev clone <repo>` - Clones a repository into `~/src` with automatic provider detection. Supports both full URLs and shorthand formats.
 - `dev auth` - Attempts to authenticate with GitHub, GitLab, and Google Cloud. For GitHub and GitLab, it provides guidance to use their respective CLI tools (`gh auth login`, `glab auth login`). For Google Cloud, it directly attempts `gcloud auth login` and `gcloud auth application-default login`.
