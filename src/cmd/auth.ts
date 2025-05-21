@@ -102,10 +102,10 @@ export async function handleAuthCommand(args: string[] = []): Promise<void> {
     // No specific service specified, attempt all authentications
     console.log("Starting authentication process for all services...");
 
-    handleGithubAuth();
-    // Add a small delay or user prompt if these were interactive, but they are guides.
-    console.log("--- Next: GitLab ---");
-    handleGitlabAuth();
+    // console.log("--- Next: GitHub ---");
+    // handleGithubAuth();
+    // console.log("--- Next: GitLab ---");
+    // handleGitlabAuth();
 
     console.log("--- Next: Google Cloud User Login ---");
     await handleGcloudLogin();
