@@ -2,6 +2,7 @@ import { spawnSync } from "bun";
 import {
   baseSearchDir,
   handleCommandError,
+  handleCdToPath,
   defaultOrg,
   defaultGitHubUrl,
   defaultGitLabUrl,
@@ -279,14 +280,12 @@ function cloneRepository(repoUrl: string, targetPath: string): void {
     }
 
     console.log(`✅ Successfully cloned ${repoUrl} to ${targetPath}`);
-    console.log(
-      `💡 To navigate to this directory, run: dev cd ${path.basename(
-        targetPath
-      )}`
-    );
+    console.log(`🚀 Navigating to ${path.basename(targetPath)}...`);
     console.log(
       `💡 To open in your editor, run: dev open ${path.basename(targetPath)}`
     );
+
+    handleCdToPath(targetPath);
   } catch (error: any) {
     handleCommandError(error, "git clone", "git", "repository cloning");
   }
