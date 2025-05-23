@@ -28,7 +28,8 @@ function dev() {
   fi
 
   # Look for a CD: directive anywhere in the output
-  local cd_line=$(echo "$result" | grep "^CD:")
+  local cd_line
+  cd_line=$(echo "$result" | grep "^CD:" || true)
 
   if [[ -n "$cd_line" ]]; then
     # Extract the directory path from the CD: line
