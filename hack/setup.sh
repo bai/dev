@@ -3,6 +3,20 @@ set -e
 
 echo "Setting up dev CLI tool..."
 
+# Check if Xcode command line tools are installed
+if ! xcode-select -p &>/dev/null; then
+  echo "Xcode command line tools not found. Installing..."
+  xcode-select --install
+  echo ""
+  echo "⚠️  Please complete the Xcode CLI tools installation in the dialog that appeared,"
+  echo "   then re-run this setup script once the installation is finished."
+  echo ""
+  echo "   Re-run with: bash $0"
+  exit 1
+else
+  echo "✅ Xcode command line tools already installed."
+fi
+
 # Create ~/.dev directory if it doesn't exist
 if [ ! -d "$HOME/.dev" ]; then
   echo "Creating ~/.dev directory..."
@@ -28,9 +42,14 @@ if ! command -v brew &>/dev/null; then
   fi
 fi
 
-# Install mise using Homebrew
-echo "Installing mise..."
-brew install mise
+# Install required CLI utilities for dev CLI
+REQUIRED_UTILS=(fd fzf fzy mise)
+for util in "${REQUIRED_UTILS[@]}"; do
+  if ! command -v "$util" &>/dev/null; then
+    echo "Installing $util..."
+    brew install "$util"
+  fi
+done
 
 # Install bun using mise
 echo "Installing bun..."
@@ -70,15 +89,6 @@ if [ -f "$HOME/.zshrc" ] && ! grep -q "source \$HOME/.dev/hack/zshrc.sh" "$HOME/
 source $HOME/.dev/hack/zshrc.sh
 EOF
 fi
-
-# Install required CLI utilities for dev CLI
-REQUIRED_UTILS=(fd fzf fzy)
-for util in "${REQUIRED_UTILS[@]}"; do
-  if ! command -v "$util" &>/dev/null; then
-    echo "Installing $util..."
-    brew install "$util"
-  fi
-done
 
 echo "Setup complete! Please restart your terminal or run 'source ~/.zshrc' to start using dev."
 echo "Usage examples:"
