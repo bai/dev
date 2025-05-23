@@ -13,12 +13,7 @@ export const defaultOrg = "flywheelsoftware";
 // Organization to provider mapping
 export const orgToProvider: Record<string, GitProvider> = {
   flywheelsoftware: "gitlab",
-  // Add more mappings as needed, e.g.:
-  // "otherorg": "github",
 };
-
-export const defaultGitHubUrl = `https://github.com/${defaultOrg}`;
-export const defaultGitLabUrl = `https://gitlab.com/${defaultOrg}`;
 
 // Typed stdio configuration for Bun's spawnSync
 export const stdioInherit: ["inherit", "inherit", "inherit"] = [
@@ -35,11 +30,6 @@ export function validateBaseSearchDir(): void {
     console.error(`Please create the directory first: mkdir -p ${baseSearchDir}`);
     process.exit(1);
   }
-}
-
-export function validateCommand(command: string, friendlyName?: string): void {
-  const displayName = friendlyName || command;
-  console.log(`Checking for required command: ${displayName}...`);
 }
 
 // Enhanced error handling with more context

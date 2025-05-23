@@ -7,16 +7,21 @@
   "private": true,
   "scripts": {
     "dev": "bun run src/index.ts",
-    "build": "bun build src/index.ts --outdir dist --target bun",
     "typecheck": "bun tsc --noEmit",
     "lint": "bun run typecheck",
     "setup": "bash hack/setup.sh",
-    "format": "prettier --write ."
+    "prettier": "prettier '**/*.{cjs,mjs,ts,tsx,md,json}' --ignore-path ./.gitignore --ignore-path ./.prettierignore --ignore-unknown --no-error-on-unmatched-pattern --check",
+    "prettier:fix": "prettier '**/*.{cjs,mjs,ts,tsx,md,json}' --ignore-path ./.gitignore --ignore-path ./.prettierignore --ignore-unknown --no-error-on-unmatched-pattern --write",
+    "test": "vitest --no-file-parallelism --bail=1",
+    "test:bench": "vitest bench --no-file-parallelism --bail=1"
   },
   "devDependencies": {
-    "@types/bun": "latest",
+    "@types/bun": "1.2.14",
     "prettier": "3.5.3",
-    "prettier-plugin-multiline-arrays": "4.0.3"
+    "prettier-plugin-multiline-arrays": "4.0.3",
+    "vite": "6.3.5",
+    "vite-tsconfig-paths": "5.1.4",
+    "vitest": "3.1.4"
   },
   "peerDependencies": {
     "typescript": "5.8.3"
