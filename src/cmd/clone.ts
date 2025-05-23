@@ -4,10 +4,7 @@ import {
   handleCommandError,
   handleCdToPath,
   defaultOrg,
-  defaultGitHubUrl,
-  defaultGitLabUrl,
   orgToProvider,
-  type GitProvider,
 } from "~/utils";
 import path from "path";
 import fs from "fs";

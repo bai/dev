@@ -1,7 +1,6 @@
 import os from "os";
 import path from "path";
 import fs from "fs";
-import type { SpawnOptions } from "bun";
 
 // Provider type
 export type GitProvider = "github" | "gitlab";
@@ -21,7 +20,7 @@ export const orgToProvider: Record<string, GitProvider> = {
 export const defaultGitHubUrl = `https://github.com/${defaultOrg}`;
 export const defaultGitLabUrl = `https://gitlab.com/${defaultOrg}`;
 
-// Properly typed stdio configurations for Bun's spawnSync
+// Typed stdio configuration for Bun's spawnSync
 export const stdioInherit: ["inherit", "inherit", "inherit"] = [
   "inherit",
   "inherit",
@@ -43,7 +42,6 @@ export function validateBaseSearchDir(): void {
 }
 
 export function validateCommand(command: string, friendlyName?: string): void {
-  // This is a basic check - in practice, you might want to use `which` or similar
   const displayName = friendlyName || command;
   console.log(`Checking for required command: ${displayName}...`);
 }
