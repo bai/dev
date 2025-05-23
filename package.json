@@ -1,12 +1,36 @@
 {
   "name": "dev",
+  "version": "1.0.0",
+  "description": "A CLI tool for quick directory navigation and environment management",
   "module": "index.ts",
   "type": "module",
   "private": true,
+  "scripts": {
+    "dev": "bun run src/index.ts",
+    "build": "bun build src/index.ts --outdir dist --target bun",
+    "typecheck": "bun tsc --noEmit",
+    "lint": "bun run typecheck",
+    "test": "echo \"No tests yet\" && exit 0",
+    "setup": "bash hack/setup.sh",
+    "clean": "rm -rf dist node_modules",
+    "format": "echo \"No formatter configured yet\" && exit 0"
+  },
+  "keywords": [
+    "cli",
+    "developer-tools",
+    "navigation",
+    "git",
+    "productivity"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
   "devDependencies": {
     "@types/bun": "latest"
   },
   "peerDependencies": {
     "typescript": "5.8.3"
+  },
+  "engines": {
+    "bun": ">=1.0.0"
   }
 }

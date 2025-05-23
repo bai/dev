@@ -1,6 +1,6 @@
 import { spawnSync } from "bun";
 import path from "path";
-import { homeDir, handleCommandError, stdioInherit } from "~/utils";
+import { homeDir, handleCommandError } from "~/utils";
 
 /**
  * Handles the 'upgrade' subcommand.
@@ -12,7 +12,7 @@ export function handleUpgradeCommand(): void {
     const setupScriptPath = path.join(homeDir, ".dev", "hack", "setup.sh");
 
     const proc = spawnSync(["bash", setupScriptPath], {
-      stdio: stdioInherit, // Inherit all IO to pass through to the user
+      stdio: ["ignore", "inherit", "inherit"], // Inherit stdout and stderr to pass through to the user
     });
 
     if (proc.exitCode !== 0) {

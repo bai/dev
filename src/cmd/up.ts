@@ -57,7 +57,7 @@ export function handleUpCommand(): void {
     }
 
     const proc = spawnSync(["mise", "up"], {
-      stdio: stdioInherit, // Inherit all IO to pass through to the user
+      stdio: ["ignore", "inherit", "inherit"], // Inherit stdout and stderr to pass through to the user
     });
 
     if (proc.exitCode !== 0) {

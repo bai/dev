@@ -1,10 +1,13 @@
-import { showUsage } from "./utils";
+import { showUsage, validateBaseSearchDir } from "./utils";
 import { handleCdCommand } from "./cmd/cd";
 import { handleLsCommand } from "./cmd/ls";
 import { handleUpCommand } from "./cmd/up";
 import { handleUpgradeCommand } from "./cmd/upgrade";
 import { handleCloneCommand } from "./cmd/clone";
 import { handleAuthCommand } from "./cmd/auth";
+import { handleStatusCommand } from "./cmd/status";
+import { handleOpenCommand } from "./cmd/open";
+import { handleTestCommand } from "./cmd/test";
 import { spawn } from "child_process";
 import fs from "fs/promises";
 import os from "os";
@@ -60,35 +63,118 @@ const runPeriodicUpgradeCheck = async () => {
   }
 };
 
+// Valid commands for better validation
+const VALID_COMMANDS = [
+  "cd",
+  "ls",
+  "up",
+  "upgrade",
+  "clone",
+  "auth",
+  "status",
+  "open",
+  "test",
+  "help",
+  "--help",
+  "-h",
+] as const;
+type ValidCommand = (typeof VALID_COMMANDS)[number];
+
+function isValidCommand(cmd: string): cmd is ValidCommand {
+  return VALID_COMMANDS.includes(cmd as ValidCommand);
+}
+
+function validateCommand(cmd: string): void {
+  if (!isValidCommand(cmd)) {
+    console.error(`❌ Error: Unknown command '${cmd}'`);
+    console.error(
+      `\n📖 Valid commands: ${VALID_COMMANDS.filter(
+        (c) => !c.startsWith("-")
+      ).join(", ")}`
+    );
+    console.error(`\n💡 Run 'dev help' for usage information.`);
+    process.exit(1);
+  }
+}
+
 // Main CLI logic
 (async () => {
-  await runPeriodicUpgradeCheck();
+  try {
+    await runPeriodicUpgradeCheck();
 
-  if (args.length === 0) {
-    showUsage();
-  } else if (args[0] === "cd") {
-    // Handle cd command with remaining arguments
-    if (args.length === 1) {
-      // If 'cd' is used without arguments, show the list of directories
-      handleLsCommand();
-    } else {
-      handleCdCommand(args.slice(1));
+    // Validate base search directory exists
+    validateBaseSearchDir();
+
+    if (args.length === 0) {
+      showUsage();
     }
-  } else if (args.length === 1 && args[0] === "ls") {
-    handleLsCommand();
-  } else if (args.length === 1 && args[0] === "up") {
-    // Handle 'dev up' command
-    handleUpCommand();
-  } else if (args.length === 1 && args[0] === "upgrade") {
-    // Handle 'dev upgrade' command
-    handleUpgradeCommand();
-  } else if (args[0] === "clone") {
-    // Handle clone command with remaining arguments
-    handleCloneCommand(args.slice(1));
-  } else if (args[0] === "auth") {
-    // Handle auth command with remaining arguments
-    handleAuthCommand(args.slice(1));
-  } else {
-    showUsage();
+
+    const command = args[0];
+    if (!command) {
+      showUsage();
+    }
+
+    // Handle help commands
+    if (command === "help" || command === "--help" || command === "-h") {
+      showUsage();
+    }
+
+    // Validate command before processing
+    validateCommand(command);
+
+    // Route to appropriate command handler
+    switch (command) {
+      case "cd":
+        if (args.length === 1) {
+          // If 'cd' is used without arguments, show the list of directories
+          handleLsCommand();
+        } else {
+          handleCdCommand(args.slice(1));
+        }
+        break;
+
+      case "ls":
+        handleLsCommand();
+        break;
+
+      case "up":
+        handleUpCommand();
+        break;
+
+      case "upgrade":
+        handleUpgradeCommand();
+        break;
+
+      case "clone":
+        handleCloneCommand(args.slice(1));
+        break;
+
+      case "auth":
+        await handleAuthCommand(args.slice(1));
+        break;
+
+      case "status":
+        handleStatusCommand();
+        break;
+
+      case "open":
+        handleOpenCommand(args.slice(1));
+        break;
+
+      case "test":
+        handleTestCommand();
+        break;
+
+      default:
+        // This should never happen due to validation, but just in case
+        console.error(`❌ Error: Unhandled command '${command}'`);
+        showUsage();
+    }
+  } catch (error: any) {
+    console.error(`❌ Unexpected error: ${error.message}`);
+    if (process.env.DEBUG) {
+      console.error(error.stack);
+    }
+    process.exit(1);
   }
 })();

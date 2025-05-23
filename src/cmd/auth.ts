@@ -120,7 +120,12 @@ export async function handleAuthCommand(args: string[] = []): Promise<void> {
   }
 
   // Handle specific service authentication
-  const service = args[0].toLowerCase();
+  const service = args[0]?.toLowerCase();
+
+  if (!service) {
+    printAuthHelp();
+    return;
+  }
 
   switch (service) {
     case "github":
@@ -130,9 +135,9 @@ export async function handleAuthCommand(args: string[] = []): Promise<void> {
       handleGitlabAuth();
       break;
     case "gcloud":
-      if (args.length > 1 && args[1].toLowerCase() === "app-login") {
+      if (args.length > 1 && args[1]?.toLowerCase() === "app-login") {
         await handleGcloudAppLogin();
-      } else if (args.length > 1 && args[1].toLowerCase() === "login") {
+      } else if (args.length > 1 && args[1]?.toLowerCase() === "login") {
         await handleGcloudLogin();
       } else {
         console.log("Starting Google Cloud authentication...");
