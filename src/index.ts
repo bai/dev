@@ -55,10 +55,7 @@ const runPeriodicUpgradeCheck = async () => {
       child.unref();
       console.log("[dev] Background self-update process completed.");
     } catch (spawnError: any) {
-      console.error(
-        "[dev] Error starting background self-update process:",
-        spawnError.message
-      );
+      console.error("[dev] Error starting background self-update process:", spawnError.message);
     }
   }
 };
@@ -87,11 +84,7 @@ function isValidCommand(cmd: string): cmd is ValidCommand {
 function validateCommand(cmd: string): void {
   if (!isValidCommand(cmd)) {
     console.error(`❌ Error: Unknown command '${cmd}'`);
-    console.error(
-      `\n📖 Valid commands: ${VALID_COMMANDS.filter(
-        (c) => !c.startsWith("-")
-      ).join(", ")}`
-    );
+    console.error(`\n📖 Valid commands: ${VALID_COMMANDS.filter((c) => !c.startsWith("-")).join(", ")}`);
     console.error(`\n💡 Run 'dev help' for usage information.`);
     process.exit(1);
   }

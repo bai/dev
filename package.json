@@ -10,10 +10,9 @@
     "build": "bun build src/index.ts --outdir dist --target bun",
     "typecheck": "bun tsc --noEmit",
     "lint": "bun run typecheck",
-    "test": "echo \"No tests yet\" && exit 0",
     "setup": "bash hack/setup.sh",
     "clean": "rm -rf dist node_modules",
-    "format": "echo \"No formatter configured yet\" && exit 0"
+    "format": "prettier --write ."
   },
   "keywords": [
     "cli",
@@ -25,7 +24,9 @@
   "author": "Your Name",
   "license": "MIT",
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "prettier": "^3.5.3",
+    "prettier-plugin-multiline-arrays": "^4.0.3"
   },
   "peerDependencies": {
     "typescript": "5.8.3"

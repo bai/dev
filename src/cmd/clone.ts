@@ -1,11 +1,5 @@
 import { spawnSync } from "bun";
-import {
-  baseSearchDir,
-  handleCommandError,
-  handleCdToPath,
-  defaultOrg,
-  orgToProvider,
-} from "~/utils";
+import { baseSearchDir, handleCommandError, handleCdToPath, defaultOrg, orgToProvider } from "~/utils";
 import path from "path";
 import fs from "fs";
 
@@ -16,9 +10,7 @@ import fs from "fs";
  */
 export function handleCloneCommand(args: string[]): void {
   if (args.length === 0) {
-    console.error(
-      "❌ Error: Repository argument is required for 'clone' command."
-    );
+    console.error("❌ Error: Repository argument is required for 'clone' command.");
     console.error("\n💡 Usage examples:");
     console.error("   dev clone myrepo");
     console.error("   dev clone org/myrepo");
@@ -101,10 +93,7 @@ function parseCloneArguments(args: string[]): CloneParams {
       // Use default org's provider mapping
       useGitLab = orgToProvider[defaultOrg] === "gitlab";
     }
-  } else if (
-    args.length === 2 &&
-    (args[0] === "--github" || args[0] === "--gitlab")
-  ) {
+  } else if (args.length === 2 && (args[0] === "--github" || args[0] === "--gitlab")) {
     useGitLab = args[0] === "--gitlab";
     repoArg = args[1]!;
   } else if (args.length === 3 && (args[0] === "--org" || args[0] === "-o")) {
@@ -112,17 +101,13 @@ function parseCloneArguments(args: string[]): CloneParams {
     repoArg = args[2]!;
 
     if (!explicitOrg || !repoArg) {
-      console.error(
-        "❌ Error: Organization and repository are required with --org flag."
-      );
+      console.error("❌ Error: Organization and repository are required with --org flag.");
       process.exit(1);
     }
 
     // Check if the org has a provider mapping
     useGitLab =
-      explicitOrg in orgToProvider
-        ? orgToProvider[explicitOrg] === "gitlab"
-        : orgToProvider[defaultOrg] === "gitlab";
+      explicitOrg in orgToProvider ? orgToProvider[explicitOrg] === "gitlab" : orgToProvider[defaultOrg] === "gitlab";
   } else {
     console.error("❌ Error: Invalid arguments for 'clone' command.");
     console.error("Usage: dev clone [--github|--gitlab] <repository>");
@@ -138,9 +123,7 @@ function parseCloneArguments(args: string[]): CloneParams {
  * Checks if a string is a full URL (HTTP/HTTPS/SSH)
  */
 function isFullUrl(str: string): boolean {
-  return (
-    str.startsWith("http://") || str.startsWith("https://") || str.includes("@")
-  );
+  return str.startsWith("http://") || str.startsWith("https://") || str.includes("@");
 }
 
 /**
@@ -184,9 +167,7 @@ function parseRepoUrlToPath(repoUrl: string): string | null {
             return path.join(baseSearchDir, url.hostname, orgName, repoName);
           }
         }
-        throw new Error(
-          `URL path does not contain organization and repository: ${repoUrl}`
-        );
+        throw new Error(`URL path does not contain organization and repository: ${repoUrl}`);
       } catch (urlError) {
         throw new Error(`Invalid repository URL: ${repoUrl}`);
       }
@@ -208,11 +189,7 @@ function cloneRepository(repoUrl: string, targetPath: string): void {
   // Check if directory already exists
   if (fs.existsSync(targetPath)) {
     console.error(`❌ Error: Directory already exists: ${targetPath}`);
-    console.error(
-      `💡 To navigate to the existing directory, run: dev cd ${path.basename(
-        targetPath
-      )}`
-    );
+    console.error(`💡 To navigate to the existing directory, run: dev cd ${path.basename(targetPath)}`);
     process.exit(1);
   }
 
@@ -223,17 +200,11 @@ function cloneRepository(repoUrl: string, targetPath: string): void {
       console.log(`📁 Creating parent directory: ${parentDir}`);
       fs.mkdirSync(parentDir, { recursive: true });
     } catch (error: any) {
-      console.error(
-        `❌ Error creating directory ${parentDir}: ${error.message}`
-      );
+      console.error(`❌ Error creating directory ${parentDir}: ${error.message}`);
       if (error.code === "EACCES") {
-        console.error(
-          "💡 Permission denied. Try running with sudo or check directory permissions."
-        );
+        console.error("💡 Permission denied. Try running with sudo or check directory permissions.");
       } else if (error.code === "ENOSPC") {
-        console.error(
-          "💡 No space left on device. Free up some disk space and try again."
-        );
+        console.error("💡 No space left on device. Free up some disk space and try again.");
       }
       process.exit(1);
     }
@@ -252,8 +223,7 @@ function cloneRepository(repoUrl: string, targetPath: string): void {
 
       // Add more context for common git errors
       if (proc.exitCode === 128) {
-        errorMessage +=
-          "\n💡 Repository might not exist or you may not have permission to access it.";
+        errorMessage += "\n💡 Repository might not exist or you may not have permission to access it.";
         errorMessage += "\n   - Check if the repository URL is correct";
         errorMessage += "\n   - Verify you have access to the repository";
         errorMessage += "\n   - Try authenticating with 'dev auth'";
@@ -278,9 +248,7 @@ function cloneRepository(repoUrl: string, targetPath: string): void {
 
     console.log(`✅ Successfully cloned ${repoUrl} to ${targetPath}`);
     console.log(`🚀 Navigating to ${path.basename(targetPath)}...`);
-    console.log(
-      `💡 To open in your editor, run: dev open ${path.basename(targetPath)}`
-    );
+    console.log(`💡 To open in your editor, run: dev open ${path.basename(targetPath)}`);
 
     handleCdToPath(targetPath);
   } catch (error: any) {

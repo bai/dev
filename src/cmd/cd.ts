@@ -1,10 +1,5 @@
 import { spawnSync } from "bun";
-import {
-  baseSearchDir,
-  handleCommandError,
-  handleCdToPath,
-  stdioPipe,
-} from "~/utils";
+import { baseSearchDir, handleCommandError, handleCdToPath, stdioPipe } from "~/utils";
 
 /**
  * Handles the cd command implementation.
@@ -13,9 +8,7 @@ import {
  */
 export function handleCdCommand(args: string[]): void {
   if (args.length === 0) {
-    console.error(
-      "Error: Missing folder name for 'cd' command. Usage: dev cd <folder_name>"
-    );
+    console.error("Error: Missing folder name for 'cd' command. Usage: dev cd <folder_name>");
     process.exit(1);
   } else if (args.length === 1) {
     const folderName = args[0];
@@ -63,10 +56,6 @@ function handleDirectCdMode(folderName: string): string | null {
     console.error(`Folder '${folderName}' not found in ${baseSearchDir}`);
     process.exit(1);
   } catch (error: any) {
-    return handleCommandError(
-      error,
-      `find folder '${folderName}'`,
-      "sh, fd, fzf, or head"
-    );
+    return handleCommandError(error, `find folder '${folderName}'`, "sh, fd, fzf, or head");
   }
 }

@@ -1,0 +1,18 @@
+{
+  "files.exclude": {
+    // "boop-terraform": true
+  },
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "typescript.enablePromptUseWorkspaceTsdk": true,
+  "search.exclude": {
+    "**/node_modules": true
+  },
+  "files.associations": {
+    "*.css": "tailwindcss"
+  },
+  "eslint.workingDirectories": [
+    {
+      "mode": "auto"
+    }
+  ]
+}

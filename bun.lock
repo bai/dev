@@ -5,6 +5,8 @@
       "name": "dev",
       "devDependencies": {
         "@types/bun": "latest",
+        "prettier": "^3.5.3",
+        "prettier-plugin-multiline-arrays": "^4.0.3",
       },
       "peerDependencies": {
         "typescript": "5.8.3",
@@ -12,11 +14,43 @@
     },
   },
   "packages": {
+    "@augment-vir/assert": ["@augment-vir/assert@31.20.0", "", { "dependencies": { "@augment-vir/core": "^31.20.0", "@date-vir/duration": "^7.3.1", "deep-eql": "^5.0.2", "expect-type": "^1.2.1", "type-fest": "^4.41.0" } }, "sha512-5lliVw4LCFdLduTqD4tbf+o2kS2S02uhxm28WHlTM0tF2QiqgCk+ydpf6fRFBBidnkw5rRLKo3o7FB09ldHsOA=="],
+
+    "@augment-vir/common": ["@augment-vir/common@31.20.0", "", { "dependencies": { "@augment-vir/assert": "^31.20.0", "@augment-vir/core": "^31.20.0", "@date-vir/duration": "^7.3.1", "ansi-styles": "^6.2.1", "json5": "^2.2.3", "type-fest": "^4.41.0", "typed-event-target": "^4.1.0" } }, "sha512-Hbgoo7k132JIhq319I3iuIP57UhLXXZVYgdC3gBTh/1xdYzR1Rf+DIR7qJjbVmYgxnvFoLSDnn20Xc9n4LWJcw=="],
+
+    "@augment-vir/core": ["@augment-vir/core@31.20.0", "", { "dependencies": { "@date-vir/duration": "^7.3.1", "browser-or-node": "^3.0.0", "json5": "^2.2.3", "type-fest": "^4.41.0" } }, "sha512-t4lzcG8PXOr0XhaGnQN8rcQGgWQ7AmIumywxnhEgYapddV2pYlt/H7QVaMJzhq/jaBiAkQ865OKo5cqI9RtxuQ=="],
+
+    "@date-vir/duration": ["@date-vir/duration@7.3.1", "", { "dependencies": { "@types/luxon": "^3.4.2", "luxon": "^3.5.0", "type-fest": "^4.37.0" } }, "sha512-MRXg2dz021QdOYx4TRcDFJ1PhiNIr8HsZ73uFot5+yMbE0oMdqEDpetzm3PAYvSrYrC3L/qxr8+cnh6FUr+cRw=="],
+
     "@types/bun": ["@types/bun@1.2.14", "", { "dependencies": { "bun-types": "1.2.14" } }, "sha512-VsFZKs8oKHzI7zwvECiAJ5oSorWndIWEVhfbYqZd4HI/45kzW7PN2Rr5biAzvGvRuNmYLSANY+H59ubHq8xw7Q=="],
+
+    "@types/luxon": ["@types/luxon@3.6.2", "", {}, "sha512-R/BdP7OxEMc44l2Ex5lSXHoIXTB2JLNa3y2QISIbr58U/YcsffyQrYW//hZSdrfxrjRZj3GcUoxMPGdO8gSYuw=="],
 
     "@types/node": ["@types/node@22.15.14", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-BL1eyu/XWsFGTtDWOYULQEs4KR0qdtYfCxYAUYRoB7JP7h9ETYLgQTww6kH8Sj2C0pFGgrpM0XKv6/kbIzYJ1g=="],
 
+    "ansi-styles": ["ansi-styles@6.2.1", "", {}, "sha512-bN798gFfQX+viw3R7yrGWRqnrN2oRkEkUjjl4JNn4E8GxxbjtG3FbrEIIY3l8/hrwUwIeCZvi4QuOTP4MErVug=="],
+
+    "browser-or-node": ["browser-or-node@3.0.0", "", {}, "sha512-iczIdVJzGEYhP5DqQxYM9Hh7Ztpqqi+CXZpSmX8ALFs9ecXkQIeqRyM6TfxEfMVpwhl3dSuDvxdzzo9sUOIVBQ=="],
+
     "bun-types": ["bun-types@1.2.14", "", { "dependencies": { "@types/node": "*" } }, "sha512-Kuh4Ub28ucMRWeiUUWMHsT9Wcbr4H3kLIO72RZZElSDxSu7vpetRvxIUDUaW6QtaIeixIpm7OXtNnZPf82EzwA=="],
+
+    "deep-eql": ["deep-eql@5.0.2", "", {}, "sha512-h5k/5U50IJJFpzfL6nO9jaaumfjO/f2NjK/oYB2Djzm4p9L+3T9qWpZqZ2hAbLPuuYq9wrU08WQyBTL5GbPk5Q=="],
+
+    "expect-type": ["expect-type@1.2.1", "", {}, "sha512-/kP8CAwxzLVEeFrMm4kMmy4CCDlpipyA7MYLVrdJIkV0fYF0UaigQHRsxHiuY/GEea+bh4KSv3TIlgr+2UL6bw=="],
+
+    "json5": ["json5@2.2.3", "", { "bin": { "json5": "lib/cli.js" } }, "sha512-XmOWe7eyHYH14cLdVPoyg+GOH3rYX++KpzrylJwSW98t3Nk+U8XOl8FWKOgwtzdb8lXGf6zYwDUzeHMWfxasyg=="],
+
+    "luxon": ["luxon@3.6.1", "", {}, "sha512-tJLxrKJhO2ukZ5z0gyjY1zPh3Rh88Ej9P7jNrZiHMUXHae1yvI2imgOZtL1TO8TW6biMMKfTtAOoEJANgtWBMQ=="],
+
+    "prettier": ["prettier@3.5.3", "", { "bin": { "prettier": "bin/prettier.cjs" } }, "sha512-QQtaxnoDJeAkDvDKWCLiwIXkTgRhwYDEQCghU9Z6q03iyek/rxRh/2lC3HB7P8sWT2xC/y5JDctPLBIGzHKbhw=="],
+
+    "prettier-plugin-multiline-arrays": ["prettier-plugin-multiline-arrays@4.0.3", "", { "dependencies": { "@augment-vir/common": "^31.10.1", "proxy-vir": "^2.0.1" }, "peerDependencies": { "prettier": ">=3.0.0" } }, "sha512-H1f/0zbvlO/FR0Fmyl31sSBodsIZkuQF0Omi9BrptLU31rZ+Almt9BbrE8IS3BFT/DGKePKb55XqN660LTnmsQ=="],
+
+    "proxy-vir": ["proxy-vir@2.0.1", "", { "dependencies": { "@augment-vir/assert": "^31.1.0", "@augment-vir/common": "^31.1.0" } }, "sha512-hjy5mWzHZhgRGh0f90f0Bz3VrGUe0T+AlhwnETakzRdvaN9RtPYLQG1+ZuEzSDK95FAhPYd26nEi1xVrXqvBwg=="],
+
+    "type-fest": ["type-fest@4.41.0", "", {}, "sha512-TeTSQ6H5YHvpqVwBRcnLDCBnDOHWYu7IvGbHT6N8AOymcr9PJGjc1GTtiWZTYg0NCgYwvnYWEkVChQAr9bjfwA=="],
+
+    "typed-event-target": ["typed-event-target@4.1.0", "", { "dependencies": { "@augment-vir/assert": "^31.19.1", "@augment-vir/common": "^31.19.1", "@augment-vir/core": "^31.19.1" } }, "sha512-fDFhZb7ofywLsVv8mYePD6ONfCpVHyM1t2dboEJx/XMsnflljnu3GQ5qH09hS1USuypGMR7wRbdWQPydgJ8nGQ=="],
 
     "typescript": ["typescript@5.8.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-p1diW6TqL9L07nNxvRMM7hMMw4c5XOo/1ibL4aAIGmSAt9slTE1Xgw5KWuof2uTOvCg9BY7ZRi+GaF+7sfgPeQ=="],
 

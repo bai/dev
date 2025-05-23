@@ -30,11 +30,7 @@ function handleFzfInteractiveMode(): string | null {
 
     return null;
   } catch (error: any) {
-    return handleCommandError(
-      error,
-      "interactive fzf mode for ls",
-      "sh, fd, sed, or fzf"
-    );
+    return handleCommandError(error, "interactive fzf mode for ls", "sh, fd, sed, or fzf");
   }
 }
 

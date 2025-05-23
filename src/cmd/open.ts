@@ -1,6 +1,5 @@
 import { spawnSync } from "bun";
 import fs from "fs";
-import path from "path";
 import { baseSearchDir, handleCommandError } from "~/utils";
 
 /**
@@ -22,9 +21,7 @@ export function handleOpenCommand(args: string[] = []): void {
     // Search for the folder in the base search directory
     const foundPath = findProjectDirectory(folderName);
     if (!foundPath) {
-      console.error(
-        `❌ Error: Folder '${folderName}' not found in ${baseSearchDir}`
-      );
+      console.error(`❌ Error: Folder '${folderName}' not found in ${baseSearchDir}`);
       process.exit(1);
     }
     targetPath = foundPath;
@@ -68,14 +65,10 @@ export function handleOpenCommand(args: string[] = []): void {
         });
 
         if (openResult.exitCode === 0) {
-          console.log(
-            `✅ Successfully opened ${targetPath} with ${editor.displayName}`
-          );
+          console.log(`✅ Successfully opened ${targetPath} with ${editor.displayName}`);
           return;
         } else {
-          console.warn(
-            `⚠️  Failed to open with ${editor.displayName}, trying next option...`
-          );
+          console.warn(`⚠️  Failed to open with ${editor.displayName}, trying next option...`);
         }
       }
     } catch (error) {
@@ -99,9 +92,7 @@ export function handleOpenCommand(args: string[] = []): void {
     // Fall through to error
   }
 
-  console.error(
-    "❌ Error: No suitable editor found. Please install VS Code, Cursor, or another supported editor."
-  );
+  console.error("❌ Error: No suitable editor found. Please install VS Code, Cursor, or another supported editor.");
   console.error("💡 Supported editors: code, cursor, subl, atom, vim, nano");
 }
 
@@ -125,10 +116,6 @@ function findProjectDirectory(folderName: string): string | null {
 
     return null;
   } catch (error: any) {
-    handleCommandError(
-      error,
-      `find folder '${folderName}'`,
-      "sh, fd, fzf, or head"
-    );
+    handleCommandError(error, `find folder '${folderName}'`, "sh, fd, fzf, or head");
   }
 }

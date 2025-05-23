@@ -31,12 +31,8 @@ export const stdioPipe: ["ignore", "pipe", "pipe"] = ["ignore", "pipe", "pipe"];
 // Validation utilities
 export function validateBaseSearchDir(): void {
   if (!fs.existsSync(baseSearchDir)) {
-    console.error(
-      `Error: Base search directory does not exist: ${baseSearchDir}`
-    );
-    console.error(
-      `Please create the directory first: mkdir -p ${baseSearchDir}`
-    );
+    console.error(`Error: Base search directory does not exist: ${baseSearchDir}`);
+    console.error(`Please create the directory first: mkdir -p ${baseSearchDir}`);
     process.exit(1);
   }
 }
@@ -51,21 +47,19 @@ export function handleCommandError(
   error: Error & { code?: string },
   commandName: string,
   requiredCommands: string,
-  context?: string
+  context?: string,
 ): never {
   const contextMsg = context ? ` (${context})` : "";
 
   if (error.code === "ENOENT") {
     console.error(`❌ Error: Required command not found${contextMsg}`);
     console.error(`   Command: ${requiredCommands}`);
-    console.error(
-      `   Please ensure the following are installed and in your PATH:`
-    );
+    console.error(`   Please ensure the following are installed and in your PATH:`);
     console.error(
       `   ${requiredCommands
         .split(", ")
         .map((cmd) => `   - ${cmd}`)
-        .join("\n")}`
+        .join("\n")}`,
     );
     console.error(`\n💡 Installation suggestions:`);
 
@@ -82,9 +76,7 @@ export function handleCommandError(
       console.error(`   - mise: brew install mise`);
     }
   } else {
-    console.error(
-      `❌ Failed to execute ${commandName}${contextMsg}: ${error.message}`
-    );
+    console.error(`❌ Failed to execute ${commandName}${contextMsg}: ${error.message}`);
   }
   process.exit(1);
 }

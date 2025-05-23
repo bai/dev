@@ -93,19 +93,13 @@ export function handleTestCommand(): void {
   console.log(`\n📊 Test Results:`);
   console.log(`   ✅ Passed: ${passed}`);
   console.log(`   ❌ Failed: ${failed}`);
-  console.log(
-    `   📈 Success Rate: ${Math.round((passed / (passed + failed)) * 100)}%`
-  );
+  console.log(`   📈 Success Rate: ${Math.round((passed / (passed + failed)) * 100)}%`);
 
   if (failed === 0) {
     console.log(`\n🎉 All tests passed! Your dev CLI is working correctly.`);
   } else {
-    console.log(
-      `\n⚠️  Some tests failed. Run 'dev status' for more detailed information.`
-    );
-    console.log(
-      `💡 Consider running the setup script: bash ~/.dev/hack/setup.sh`
-    );
+    console.log(`\n⚠️  Some tests failed. Run 'dev status' for more detailed information.`);
+    console.log(`💡 Consider running the setup script: bash ~/.dev/hack/setup.sh`);
   }
 
   // Exit with appropriate code
