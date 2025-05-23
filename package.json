@@ -1,6 +1,6 @@
 {
   "name": "dev",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "A CLI tool for quick directory navigation and environment management",
   "module": "index.ts",
   "type": "module",
@@ -11,22 +11,12 @@
     "typecheck": "bun tsc --noEmit",
     "lint": "bun run typecheck",
     "setup": "bash hack/setup.sh",
-    "clean": "rm -rf dist node_modules",
     "format": "prettier --write ."
   },
-  "keywords": [
-    "cli",
-    "developer-tools",
-    "navigation",
-    "git",
-    "productivity"
-  ],
-  "author": "Your Name",
-  "license": "MIT",
   "devDependencies": {
     "@types/bun": "latest",
-    "prettier": "^3.5.3",
-    "prettier-plugin-multiline-arrays": "^4.0.3"
+    "prettier": "3.5.3",
+    "prettier-plugin-multiline-arrays": "4.0.3"
   },
   "peerDependencies": {
     "typescript": "5.8.3"
