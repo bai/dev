@@ -5,8 +5,8 @@
       "name": "dev",
       "devDependencies": {
         "@types/bun": "latest",
-        "prettier": "^3.5.3",
-        "prettier-plugin-multiline-arrays": "^4.0.3",
+        "prettier": "3.5.3",
+        "prettier-plugin-multiline-arrays": "4.0.3",
       },
       "peerDependencies": {
         "typescript": "5.8.3",
