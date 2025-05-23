@@ -7,9 +7,6 @@
   "search.exclude": {
     "**/node_modules": true
   },
-  "files.associations": {
-    "*.css": "tailwindcss"
-  },
   "eslint.workingDirectories": [
     {
       "mode": "auto"
