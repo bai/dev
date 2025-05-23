@@ -23,11 +23,20 @@ function dev() {
     return $exit_code
   fi
 
-  # Check if the output starts with CD: to handle directory changes
-  if [[ "$result" == CD:* ]]; then
-    local dir="${result#CD:}"
+  # Look for a CD: directive anywhere in the output
+  local cd_line=$(echo "$result" | grep "^CD:")
+
+  if [[ -n "$cd_line" ]]; then
+    # Extract the directory path from the CD: line
+    local dir="${cd_line#CD:}"
+
+    # Print all output except the CD: line
+    echo "$result" | grep -v "^CD:"
+
+    # Change to the directory
     cd "$dir" || return
   else
+    # No CD directive, just print the output
     echo "$result"
   fi
 }
