@@ -43,7 +43,7 @@ fi
 # Step 3: CLI Utilities
 echo ""
 echo "🛠️  Installing CLI utilities..."
-for util in fd fzf fzy mise git mise 1password-cli; do
+for util in fd fzf fzy mise git 1password-cli; do
   if ! command -v "$util" &>/dev/null; then
     echo "   📥 Installing $util..."
     brew install "$util"
