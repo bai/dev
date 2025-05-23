@@ -26,21 +26,7 @@
 
 - `dev upgrade` - Update the dev CLI tool itself
 - Automatic background updates (every 10 runs)
-- `dev help` - Comprehensive usage information
-
-## 📋 Requirements
-
-- [Bun](https://bun.sh) - Fast JavaScript runtime
-- [fd](https://github.com/sharkdp/fd) - A faster alternative to find
-- [fzf](https://github.com/junegunn/fzf) - Fuzzy finder
-- [mise](https://mise.jdx.dev/) - Development environment manager
-- Standard Unix utilities: grep, sed, sort, head
-
-### Optional Tools
-
-- [gh](https://cli.github.com/) - GitHub CLI (for GitHub authentication)
-- [glab](https://glab.readthedocs.io/) - GitLab CLI (for GitLab authentication)
-- [gcloud](https://cloud.google.com/sdk/docs/install) - Google Cloud CLI
+- `dev help` - Usage information
 
 ## 🚀 Installation
 
@@ -234,29 +220,3 @@ bun run dev --help
 bun run typecheck
 bun run lint
 ```
-
-### Adding New Commands
-
-1. Create a new file in `src/cmd/`
-2. Export a handler function
-3. Add the command to `src/index.ts`
-4. Update the usage information in `src/utils.ts`
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
-
-## 📄 License
-
-MIT License - see LICENSE file for details.
-
-## 🙏 Acknowledgments
-
-- Built with [Bun](https://bun.sh)
-- Uses [fd](https://github.com/sharkdp/fd) for fast file finding
-- Uses [fzf](https://github.com/junegunn/fzf) for fuzzy searching
-- Environment management via [mise](https://mise.jdx.dev/)

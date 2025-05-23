@@ -5,6 +5,8 @@
 # This script is used to wrap the dev command in a way that is compatible with
 # interactive shells. It is sourced from the user's .zshrc file.
 
+eval "$(mise activate zsh)"
+
 export FZF_DEFAULT_COMMAND='fd --type f --hidden --exclude .git --exclude node_modules'
 
 export BUNDLE_IGNORE_MESSAGES=true
@@ -13,6 +15,8 @@ export BUNDLE_IGNORE_FUNDING_REQUESTS=true
 export HOMEBREW_NO_AUTO_UPDATE=1
 export HOMEBREW_NO_ANALYTICS=1
 export HOMEBREW_NO_ENV_HINTS=1
+
+export MISE_TRUSTED_CONFIG_PATHS="$HOME/src/gitlab.com/flywheelsoftware"
 
 function dev() {
   local result

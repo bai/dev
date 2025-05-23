@@ -1,38 +1,33 @@
 #!/usr/bin/env bash
+
 set -e
 
-echo "Setting up dev CLI tool..."
+echo ""
+echo "🚀 Setting up dev CLI tool..."
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
 
-# Check if Xcode command line tools are installed
-if ! xcode-select -p &>/dev/null; then
-  echo "Xcode command line tools not found. Installing..."
-  xcode-select --install
-  echo ""
-  echo "⚠️  Please complete the Xcode CLI tools installation in the dialog that appeared,"
-  echo "   then re-run this setup script once the installation is finished."
-  echo ""
-  echo "   Re-run with: bash $0"
-  exit 1
+# Step 1: Repository
+echo ""
+echo "📦 Setting up dev repository..."
+if [ ! -d "$HOME/.dev/.git" ]; then
+  echo "   📥 Cloning repository..."
+  git clone https://github.com/bai/dev.git "$HOME/.dev"
+  echo "   ✅ Repository cloned"
 else
-  echo "✅ Xcode command line tools already installed."
+  echo "   🔄 Updating existing repository..."
+  cd "$HOME/.dev" && git pull
+  echo "   ✅ Repository updated"
 fi
 
-# Create ~/.dev directory if it doesn't exist
-if [ ! -d "$HOME/.dev" ]; then
-  echo "Creating ~/.dev directory..."
-  mkdir -p "$HOME/.dev"
-fi
-
-# Clone the repository
-echo "Cloning dev repository to ~/.dev..."
-git clone https://github.com/bai/dev.git "$HOME/.dev" 2>/dev/null || (cd "$HOME/.dev" && git pull)
-
-# Install Homebrew if not installed
+# Step 2: Homebrew
+echo ""
+echo "🍺 Checking Homebrew..."
 if ! command -v brew &>/dev/null; then
-  echo "Installing Homebrew..."
+  echo "   📥 Installing Homebrew..."
   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
-  # Add Homebrew to PATH for macOS
+  echo "   🔧 Configuring Homebrew PATH..."
   if [[ "$(uname -m)" == "arm64" ]]; then
     echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> "$HOME/.zprofile"
     eval "$(/opt/homebrew/bin/brew shellenv)"
@@ -40,72 +35,107 @@ if ! command -v brew &>/dev/null; then
     echo 'eval "$(/usr/local/bin/brew shellenv)"' >> "$HOME/.zprofile"
     eval "$(/usr/local/bin/brew shellenv)"
   fi
+  echo "   ✅ Homebrew installed and configured"
+else
+  echo "   ✅ Homebrew already installed"
 fi
 
-# Install required CLI utilities for dev CLI
-REQUIRED_UTILS=(fd fzf fzy mise)
-for util in "${REQUIRED_UTILS[@]}"; do
+# Step 3: CLI Utilities
+echo ""
+echo "🛠️  Installing CLI utilities..."
+for util in fd fzf fzy mise git mise 1password-cli; do
   if ! command -v "$util" &>/dev/null; then
-    echo "Installing $util..."
+    echo "   📥 Installing $util..."
     brew install "$util"
+    echo "   ✅ $util installed"
+  else
+    echo "   ✅ $util already installed"
   fi
 done
 
-# Install bun using mise
-echo "Installing bun..."
-mise install bun@latest
+# Step 4: Bun Runtime
+echo ""
+echo "🏃 Setting up bun runtime..."
+if ! command -v bun &>/dev/null; then
+  echo "   📥 Installing bun via mise..."
+  mise install bun@latest
+  echo "   ✅ Bun installed"
+else
+  echo "   ✅ Bun already available"
+fi
 
-# Install dependencies
-echo "Installing dependencies..."
-cd "$HOME/.dev" && bun install
+# Step 5: Dependencies
+echo ""
+echo "📚 Installing project dependencies..."
+cd "$HOME/.dev"
+bun install
+echo "   ✅ Dependencies installed"
 
-# Create gcloud config directory if it doesn't exist
+# Step 6: Google Cloud Config
+echo ""
+echo "☁️  Setting up Google Cloud configuration..."
 if [ ! -d "$HOME/.config/gcloud" ]; then
-  echo "Creating gcloud config directory..."
+  echo "   📂 Creating gcloud config directory..."
   mkdir -p "$HOME/.config/gcloud"
 fi
-
-# Copy default-cloud-sdk-components file
-echo "Copying default-cloud-sdk-components file..."
+echo "   📄 Copying cloud SDK components config..."
 cp "$HOME/.dev/hack/configs/default-cloud-sdk-components" "$HOME/.config/gcloud/.default-cloud-sdk-components"
+echo "   ✅ Google Cloud config ready"
 
-# Create mise config directory if it doesn't exist
+# Step 7: Mise Configuration
+echo ""
+echo "🎯 Setting up mise configuration..."
 if [ ! -d "$HOME/.config/mise" ]; then
-  echo "Creating mise config directory..."
+  echo "   📂 Creating mise config directory..."
   mkdir -p "$HOME/.config/mise"
 fi
-
-# Copy mise-config-global.toml if it doesn't exist
 if [ ! -f "$HOME/.config/mise/config.toml" ]; then
-  echo "Copying mise config file..."
+  echo "   📄 Copying mise global config..."
   cp "$HOME/.dev/hack/configs/mise-config-global.toml" "$HOME/.config/mise/config.toml"
+  echo "   ✅ Mise config installed"
+else
+  echo "   ✅ Mise config already exists"
 fi
 
-# Source the dev function from the repo's zshrc file
-if [ -f "$HOME/.zshrc" ] && ! grep -q "source \$HOME/.dev/hack/zshrc.sh" "$HOME/.zshrc"; then
-  echo "Adding source reference to ~/.zshrc..."
-  cat >> "$HOME/.zshrc" << 'EOF'
+# Step 8: Shell Integration
+echo ""
+echo "🐚 Setting up shell integration..."
+if [ -f "$HOME/.zshrc" ]; then
+  if ! grep -q "source \$HOME/.dev/hack/zshrc.sh" "$HOME/.zshrc"; then
+    echo "   📝 Adding dev CLI to ~/.zshrc..."
+    cat >> "$HOME/.zshrc" << 'EOF'
 
+# Dev CLI integration
 source $HOME/.dev/hack/zshrc.sh
 EOF
-fi
-
-echo "Setup complete! Reloading shell configuration..."
-
-# Source the updated shell configuration
-if [ -f "$HOME/.zshrc" ]; then
-  source "$HOME/.zshrc"
-  echo "✅ Shell configuration reloaded successfully!"
+    echo "   ✅ Shell integration added"
+  else
+    echo "   ✅ Shell integration already configured"
+  fi
 else
-  echo "⚠️  ~/.zshrc not found. You may need to restart your terminal."
+  echo "   ⚠️  ~/.zshrc not found - you may need to create it"
+fi
+
+# Step 9: Activate Changes
+echo ""
+echo "🔄 Activating changes..."
+if [ -f "$HOME/.zshrc" ]; then
+  source "$HOME/.zshrc" 2>/dev/null || true
+  echo "   ✅ Shell configuration reloaded"
 fi
 
 echo ""
-echo "🎉 Dev CLI tool is now ready to use!"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "🎉 Dev CLI setup complete!"
 echo ""
-echo "Usage examples:"
-echo "  dev cd         # Interactive fuzzy search for directories"
-echo "  dev cd <name>  # Direct navigation to best matching directory"
-echo "  dev up         # Update development tools and mise configuration"
-echo "  dev upgrade    # Update the dev CLI tool itself"
-echo "  dev help       # Show help message"
+echo "💡 Usage examples:"
+echo "   dev cd         → Interactive directory navigation"
+echo "   dev cd <name>  → Jump to matching directory"
+echo "   dev up         → Update development tools"
+echo "   dev upgrade    → Update dev CLI itself"
+echo "   dev help       → Show all available commands"
+echo ""
+echo "🔧 To start using dev CLI:"
+echo "   • Restart your terminal, or"
+echo "   • Run: source ~/.zshrc"
+echo ""
