@@ -90,7 +90,19 @@ source $HOME/.dev/hack/zshrc.sh
 EOF
 fi
 
-echo "Setup complete! Please restart your terminal or run 'source ~/.zshrc' to start using dev."
+echo "Setup complete! Reloading shell configuration..."
+
+# Source the updated shell configuration
+if [ -f "$HOME/.zshrc" ]; then
+  source "$HOME/.zshrc"
+  echo "✅ Shell configuration reloaded successfully!"
+else
+  echo "⚠️  ~/.zshrc not found. You may need to restart your terminal."
+fi
+
+echo ""
+echo "🎉 Dev CLI tool is now ready to use!"
+echo ""
 echo "Usage examples:"
 echo "  dev cd         # Interactive fuzzy search for directories"
 echo "  dev cd <name>  # Direct navigation to best matching directory"
