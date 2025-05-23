@@ -29,7 +29,7 @@ export function handleUpCommand(): void {
           fs.mkdirSync(userMiseConfigDir, { recursive: true });
           console.log(`Created directory: ${userMiseConfigDir}`);
         }
-        let templateContent = fs.readFileSync(templateConfigPath, "utf-8");
+        const templateContent = fs.readFileSync(templateConfigPath, "utf-8");
 
         fs.writeFileSync(userMiseConfigFile, templateContent);
         console.log(`Successfully created ${userMiseConfigFile} with content from ${templateConfigPath}.`);

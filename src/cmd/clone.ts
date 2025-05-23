@@ -139,7 +139,7 @@ function parseRepoUrlToPath(repoUrl: string): string | null {
 
     // Handle SSH URL format (git@github.com:foo/repo.git)
     if (repoUrl.includes("@")) {
-      const sshMatch = repoUrl.match(/@([^:]+):([^\/]+)\/([^.]+)/);
+      const sshMatch = repoUrl.match(/@([^:]+):([^/]+)\/([^.]+)/);
       if (sshMatch && sshMatch[1] && sshMatch[2] && sshMatch[3]) {
         const domain = sshMatch[1]; // github.com
         orgName = sshMatch[2]; // foo
