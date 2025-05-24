@@ -121,6 +121,13 @@ export function showUsage(): never {
 
   dev up                     Runs 'mise up' to update development tools.
 
+  dev run <task>             Runs 'mise run <task>' to execute project tasks.
+                             All arguments after 'run' are passed through to mise.
+                             Examples:
+                               dev run my_super_task
+                               dev run build --watch
+                               dev run test --verbose
+
   dev upgrade                Updates the dev CLI tool to the latest version.
 
   dev help                   Shows this help message.
@@ -129,6 +136,7 @@ export function showUsage(): never {
   - Use 'dev cd' without arguments for interactive fuzzy search
   - Clone repos with just the name if using default org: 'dev clone myrepo'
   - Run 'dev up' in any git repository to set up development tools
+  - Use 'dev run <task>' to execute project-specific tasks with mise
   - Use 'dev status' to check your environment setup
   - Use 'dev open myproject' to quickly open projects in your editor
   - Use 'dev test' to validate your CLI installation

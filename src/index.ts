@@ -8,6 +8,7 @@ import { handleAuthCommand } from "./cmd/auth";
 import { handleStatusCommand } from "./cmd/status";
 import { handleOpenCommand } from "./cmd/open";
 import { handleTestCommand } from "./cmd/test";
+import { handleRunCommand } from "./cmd/run";
 import { spawn } from "child_process";
 import fs from "fs/promises";
 import os from "os";
@@ -71,6 +72,7 @@ const VALID_COMMANDS = [
   "status",
   "open",
   "test",
+  "run",
   "help",
   "--help",
   "-h",
@@ -156,6 +158,10 @@ function validateCommand(cmd: string): void {
 
       case "test":
         handleTestCommand();
+        break;
+
+      case "run":
+        handleRunCommand(args.slice(1));
         break;
 
       default:
