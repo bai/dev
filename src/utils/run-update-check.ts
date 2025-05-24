@@ -1,7 +1,7 @@
 import { spawn } from "child_process";
 import path from "path";
 import { Database } from "bun:sqlite";
-import { homeDir } from "~/utils/constants";
+import { devDir } from "~/utils/constants";
 
 const initializeDatabase = (dbPath: string): Database => {
   const db = new Database(dbPath, { create: true, strict: true });
@@ -25,9 +25,8 @@ const initializeDatabase = (dbPath: string): Database => {
 };
 
 export const runPeriodicUpgradeCheck = async () => {
-  const DEV_DIR = path.join(homeDir, ".dev");
-  const databasePath = path.join(DEV_DIR, "db.sqlite");
-  const upgradeScriptPath = path.join(DEV_DIR, "hack", "setup.sh");
+  const databasePath = path.join(devDir, "db.sqlite");
+  const upgradeScriptPath = path.join(devDir, "hack", "setup.sh");
 
   let currentCount = 0;
   let db: Database | null = null;

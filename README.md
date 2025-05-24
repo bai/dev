@@ -147,9 +147,8 @@ Edit `src/utils/constants.ts` to configure organization-to-provider mappings:
 
 ```typescript
 export const orgToProvider: Record<string, GitProvider> = {
-  flywheelsoftware: "gitlab",
   mycompany: "github",
-  // Add your organizations here
+  notmycompany: "gitlab",
 };
 ```
 

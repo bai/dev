@@ -1,7 +1,7 @@
 import { spawnSync } from "bun";
 import fs from "fs";
 import path from "path";
-import { baseSearchDir, homeDir } from "~/utils/constants";
+import { baseSearchDir, devDir, homeDir } from "~/utils/constants";
 
 /**
  * Shows comprehensive status information about the dev environment
@@ -111,7 +111,6 @@ export function handleStatusCommand(): void {
 
   // Check dev CLI installation and configuration
   console.log(`\n🚀 Dev CLI:`);
-  const devDir = path.join(homeDir, ".dev");
   if (fs.existsSync(devDir)) {
     console.log(`   ✅ Installed at: ${devDir}`);
     testsPassed++;
