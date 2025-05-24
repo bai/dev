@@ -1,9 +1,10 @@
 import js from "@eslint/js";
 import tsParser from "@typescript-eslint/parser";
 import { rules as eslintConfigPrettier } from "eslint-config-prettier";
-import pluginOnlyWarn from "eslint-plugin-only-warn";
 import pluginUnusedImports from "eslint-plugin-unused-imports";
 import tseslint from "typescript-eslint";
+
+import "eslint-plugin-only-warn";
 
 export default tseslint.config(
   js.configs.recommended,
@@ -16,12 +17,6 @@ export default tseslint.config(
 
   {
     rules: eslintConfigPrettier,
-  },
-
-  {
-    plugins: {
-      onlyWarn: pluginOnlyWarn,
-    },
   },
 
   {
