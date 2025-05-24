@@ -2,7 +2,7 @@ import { spawnSync } from "bun";
 import * as fs from "fs";
 import * as path from "path";
 import { handleCommandError } from "~/utils";
-import os from "os";
+import { homeDir } from "~/utils/constants";
 
 /**
  * Handles the 'up' subcommand.
@@ -15,7 +15,6 @@ export function handleUpCommand(): void {
     const gitRepoPath = path.join(cwd, ".git");
     const userMiseConfigDir = path.join(cwd, ".config", "mise");
     const userMiseConfigFile = path.join(userMiseConfigDir, "config.toml");
-    const homeDir = os.homedir();
     const templateConfigPath = path.join(homeDir, ".dev", "hack", "configs", "mise-config-repo.toml");
 
     if (fs.existsSync(gitRepoPath)) {

@@ -5,7 +5,10 @@
 # This script is used to wrap the dev command in a way that is compatible with
 # interactive shells. It is sourced from the user's .zshrc file.
 
-eval "$(mise activate zsh)"
+[[ -x /opt/homebrew/bin/brew ]] && eval "$(/opt/homebrew/bin/brew shellenv)"
+[[ -x /opt/homebrew/bin/mise ]] && eval "$(mise activate zsh)"
+[ -f "$HOME/.local/share/mise/installs/gcloud/latest/path.zsh.inc" ] && source "$HOME/.local/share/mise/installs/gcloud/latest/path.zsh.inc"
+[ -f "$HOME/.local/share/mise/installs/gcloud/latest/completion.zsh.inc" ] && source "$HOME/.local/share/mise/installs/gcloud/latest/completion.zsh.inc"
 
 export FZF_DEFAULT_COMMAND='fd --type f --hidden --exclude .git --exclude node_modules'
 
@@ -15,8 +18,6 @@ export BUNDLE_IGNORE_FUNDING_REQUESTS=true
 export HOMEBREW_NO_AUTO_UPDATE=1
 export HOMEBREW_NO_ANALYTICS=1
 export HOMEBREW_NO_ENV_HINTS=1
-
-export MISE_TRUSTED_CONFIG_PATHS="$HOME/src/gitlab.com/flywheelsoftware"
 
 function dev() {
   local result

@@ -1,4 +1,4 @@
-import { showUsage, validateBaseSearchDir } from "./utils";
+import { validateBaseSearchDir } from "./utils";
 import { handleCdCommand } from "./cmd/cd";
 import { handleLsCommand } from "./cmd/ls";
 import { handleUpCommand } from "./cmd/up";
@@ -9,90 +9,10 @@ import { handleStatusCommand } from "./cmd/status";
 import { handleOpenCommand } from "./cmd/open";
 import { handleTestCommand } from "./cmd/test";
 import { handleRunCommand } from "./cmd/run";
-import { spawn } from "child_process";
-import fs from "fs/promises";
-import os from "os";
-import path from "path";
+import { Command } from "commander";
+import { runPeriodicUpgradeCheck } from "~/utils/run-update-check";
+import { getCurrentGitCommitSha } from "~/utils/version";
 
-// Remove 'bun' and 'index.ts' / or executable name
-const args = process.argv.slice(2);
-
-const runPeriodicUpgradeCheck = async () => {
-  const DEV_DIR = path.join(os.homedir(), ".dev");
-  const runCountFilePath = path.join(DEV_DIR, ".dev_run_count");
-  const upgradeScriptPath = path.join(DEV_DIR, "hack", "setup.sh");
-
-  let currentCount = 0;
-  try {
-    const countData = await fs.readFile(runCountFilePath, "utf-8");
-    currentCount = parseInt(countData, 10);
-    if (isNaN(currentCount)) {
-      currentCount = 0;
-    }
-  } catch (error: any) {
-    if (error.code !== "ENOENT") {
-      console.warn("Warning: Could not read run count file:", error.message);
-    }
-    currentCount = 0; // Initialize if file not found or other error
-  }
-
-  const newCount = currentCount + 1;
-
-  try {
-    await fs.writeFile(runCountFilePath, newCount.toString(), "utf-8");
-  } catch (error: any) {
-    console.warn("Warning: Could not write run count file:", error.message);
-    // Proceed even if we can't write the count, to not break main functionality
-  }
-
-  const command = args[0];
-  if (command !== "upgrade" && newCount % 10 === 0) {
-    console.log(`[dev] Periodic check: Attempting background self-update...`);
-    try {
-      const child = spawn("bash", [upgradeScriptPath], {
-        detached: true,
-        stdio: "ignore",
-      });
-      child.unref();
-      console.log("[dev] Background self-update process completed.");
-    } catch (spawnError: any) {
-      console.error("[dev] Error starting background self-update process:", spawnError.message);
-    }
-  }
-};
-
-// Valid commands for better validation
-const VALID_COMMANDS = [
-  "cd",
-  "ls",
-  "up",
-  "upgrade",
-  "clone",
-  "auth",
-  "status",
-  "open",
-  "test",
-  "run",
-  "help",
-  "--help",
-  "-h",
-] as const;
-type ValidCommand = (typeof VALID_COMMANDS)[number];
-
-function isValidCommand(cmd: string): cmd is ValidCommand {
-  return VALID_COMMANDS.includes(cmd as ValidCommand);
-}
-
-function validateCommand(cmd: string): void {
-  if (!isValidCommand(cmd)) {
-    console.error(`❌ Error: Unknown command '${cmd}'`);
-    console.error(`\n📖 Valid commands: ${VALID_COMMANDS.filter((c) => !c.startsWith("-")).join(", ")}`);
-    console.error(`\n💡 Run 'dev help' for usage information.`);
-    process.exit(1);
-  }
-}
-
-// Main CLI logic
 (async () => {
   try {
     await runPeriodicUpgradeCheck();
@@ -100,75 +20,131 @@ function validateCommand(cmd: string): void {
     // Validate base search directory exists
     validateBaseSearchDir();
 
-    if (args.length === 0) {
-      showUsage();
-    }
+    const program = new Command();
 
-    const command = args[0];
-    if (!command) {
-      showUsage();
-    }
+    program
+      .name("dev")
+      .description("A CLI tool for quick directory navigation and environment management")
+      .version(getCurrentGitCommitSha())
+      .helpOption("-h, --help", "Display help for command");
 
-    // Handle help commands
-    if (command === "help" || command === "--help" || command === "-h") {
-      showUsage();
-    }
-
-    // Validate command before processing
-    validateCommand(command);
-
-    // Route to appropriate command handler
-    switch (command) {
-      case "cd":
-        if (args.length === 1) {
+    // cd command - can be used with or without arguments
+    program
+      .command("cd")
+      .description("Navigate to a directory in ~/src")
+      .argument("[folder_name]", "Name of the folder to navigate to")
+      .action((folderName?: string) => {
+        if (folderName) {
+          handleCdCommand([folderName]);
+        } else {
           // If 'cd' is used without arguments, show the list of directories
           handleLsCommand();
-        } else {
-          handleCdCommand(args.slice(1));
         }
-        break;
+      });
 
-      case "ls":
+    // ls command
+    program
+      .command("ls")
+      .description("Interactively select a directory from ~/src using fzf and cd into it")
+      .action(() => {
         handleLsCommand();
-        break;
+      });
 
-      case "up":
+    // up command
+    program
+      .command("up")
+      .description("Runs 'mise up' to update development tools")
+      .action(() => {
         handleUpCommand();
-        break;
+      });
 
-      case "upgrade":
+    // upgrade command
+    program
+      .command("upgrade")
+      .description("Updates the dev CLI tool to the latest version")
+      .action(() => {
         handleUpgradeCommand();
-        break;
+      });
 
-      case "clone":
-        handleCloneCommand(args.slice(1));
-        break;
+    // clone command
+    program
+      .command("clone")
+      .description("Clones a repository into ~/src with automatic provider detection")
+      .argument("<repo>", "Repository to clone (name, org/repo, or full URL)")
+      .option("--gitlab", "Use GitLab as the provider")
+      .option("--github", "Use GitHub as the provider")
+      .option("-o, --org <organization>", "Specify the organization")
+      .action((repo: string, options: { gitlab?: boolean; github?: boolean; org?: string }) => {
+        const args = [repo];
 
-      case "auth":
-        await handleAuthCommand(args.slice(1));
-        break;
+        if (options.gitlab) {
+          args.unshift("--gitlab");
+        } else if (options.github) {
+          args.unshift("--github");
+        }
 
-      case "status":
+        if (options.org) {
+          args.unshift("--org", options.org);
+        }
+
+        handleCloneCommand(args);
+      });
+
+    // auth command
+    program
+      .command("auth")
+      .description("Authenticate with GitHub, GitLab, and Google Cloud")
+      .argument("[service]", "Service to authenticate with (github, gitlab, gcloud)")
+      .argument("[subcommand]", "Subcommand for gcloud (login, app-login)")
+      .action(async (service?: string, subcommand?: string) => {
+        const args: string[] = [];
+        if (service) {
+          args.push(service);
+          if (subcommand) {
+            args.push(subcommand);
+          }
+        }
+        await handleAuthCommand(args);
+      });
+
+    // status command
+    program
+      .command("status")
+      .description("Shows status information about your dev environment")
+      .action(() => {
         handleStatusCommand();
-        break;
+      });
 
-      case "open":
-        handleOpenCommand(args.slice(1));
-        break;
+    // open command
+    program
+      .command("open")
+      .description("Opens a directory in your default editor/IDE")
+      .argument("[folder_name]", "Name of the folder to open (optional)")
+      .action((folderName?: string) => {
+        const args = folderName ? [folderName] : [];
+        handleOpenCommand(args);
+      });
 
-      case "test":
+    // test command
+    program
+      .command("test")
+      .description("Runs basic tests to validate CLI functionality")
+      .action(() => {
         handleTestCommand();
-        break;
+      });
 
-      case "run":
-        handleRunCommand(args.slice(1));
-        break;
+    // run command
+    program
+      .command("run")
+      .description("Runs 'mise run <task>' to execute project tasks")
+      .argument("<task>", "Task to run")
+      .argument("[args...]", "Additional arguments to pass to the task")
+      .action((task: string, args: string[]) => {
+        handleRunCommand([task, ...args]);
+      });
 
-      default:
-        // This should never happen due to validation, but just in case
-        console.error(`❌ Error: Unhandled command '${command}'`);
-        showUsage();
-    }
+    // Parse command line arguments
+    await program.parseAsync(process.argv);
   } catch (error: any) {
     console.error(`❌ Unexpected error: ${error.message}`);
     if (process.env.DEBUG) {

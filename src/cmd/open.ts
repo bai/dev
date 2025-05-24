@@ -1,6 +1,7 @@
 import { spawnSync } from "bun";
 import fs from "fs";
-import { baseSearchDir, handleCommandError } from "~/utils";
+import { handleCommandError } from "~/utils";
+import { baseSearchDir } from "~/utils/constants";
 
 /**
  * Opens a directory in the default editor/IDE

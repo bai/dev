@@ -1,5 +1,8 @@
 import { spawnSync } from "bun";
-import { baseSearchDir, handleCommandError, handleCdToPath, defaultOrg, orgToProvider } from "~/utils";
+import { handleCommandError, handleCdToPath } from "~/utils";
+import { orgToProvider } from "~/utils/constants";
+import { defaultOrg } from "~/utils/constants";
+import { baseSearchDir } from "~/utils/constants";
 import path from "path";
 import fs from "fs";
 

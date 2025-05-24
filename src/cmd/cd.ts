@@ -1,5 +1,7 @@
 import { spawnSync } from "bun";
-import { baseSearchDir, handleCommandError, handleCdToPath, stdioPipe } from "~/utils";
+import { handleCommandError, handleCdToPath } from "~/utils";
+import { stdioPipe } from "~/utils/constants";
+import { baseSearchDir } from "~/utils/constants";
 
 /**
  * Handles the cd command implementation.

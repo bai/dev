@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import { baseSearchDir, homeDir } from "~/utils";
+import { baseSearchDir, homeDir } from "~/utils/constants";
 
 /**
  * Runs basic tests to validate CLI functionality

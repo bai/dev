@@ -1,6 +1,7 @@
 import { spawnSync } from "bun";
 import path from "path";
-import { homeDir, handleCommandError } from "~/utils";
+import { handleCommandError } from "~/utils";
+import { homeDir } from "~/utils/constants";
 
 /**
  * Handles the 'upgrade' subcommand.

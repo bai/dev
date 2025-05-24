@@ -1,5 +1,6 @@
 import { spawnSync } from "bun";
-import { baseSearchDir, handleCommandError, handleCdToPath } from "~/utils";
+import { handleCommandError, handleCdToPath } from "~/utils";
+import { baseSearchDir } from "~/utils/constants";
 
 /**
  * Handles the interactive fzf mode when `dev ls` is called.

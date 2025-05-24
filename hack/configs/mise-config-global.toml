@@ -20,8 +20,11 @@ sops = "latest"
 age = "latest"
 pulumi = "latest"
 terraform = "latest"
+terragrunt = "latest"
 golangci-lint = "latest"
 jq = "latest"
+gh = "latest"
+glab = "latest"
 
 "npm:@anthropic-ai/claude-code" = "latest"
 "npm:biome" = "latest"
@@ -37,3 +40,8 @@ jq = "latest"
 
 [settings]
 idiomatic_version_file_enable_tools = ["python", "ruby"]
+trusted_config_paths = [
+    "~/.dev",
+    "~/src/gitlab.com/flywheelsoftware",
+    "~/src/github.com/Flywheel-Technologies",
+]
