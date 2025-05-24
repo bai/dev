@@ -4,7 +4,6 @@ set -e
 
 echo ""
 echo "🚀 Setting up dev CLI tool..."
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 
 # Step 1: Repository
@@ -125,7 +124,6 @@ if [ -f "$HOME/.zshrc" ]; then
 fi
 
 echo ""
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "🎉 Dev CLI setup complete!"
 echo ""
 echo "💡 Usage examples:"
@@ -134,8 +132,4 @@ echo "   dev cd <name>  → Jump to matching directory"
 echo "   dev up         → Update development tools"
 echo "   dev upgrade    → Update dev CLI itself"
 echo "   dev help       → Show all available commands"
-echo ""
-echo "🔧 To start using dev CLI:"
-echo "   • Restart your terminal, or"
-echo "   • Run: source ~/.zshrc"
 echo ""
