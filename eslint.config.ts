@@ -4,8 +4,6 @@ import { rules as eslintConfigPrettier } from "eslint-config-prettier";
 import pluginUnusedImports from "eslint-plugin-unused-imports";
 import tseslint from "typescript-eslint";
 
-import "eslint-plugin-only-warn";
-
 export default tseslint.config(
   js.configs.recommended,
   ...tseslint.configs.recommended,

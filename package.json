@@ -21,7 +21,6 @@
     "@types/bun": "1.2.14",
     "eslint": "9.27.0",
     "eslint-config-prettier": "10.1.5",
-    "eslint-plugin-only-warn": "1.1.0",
     "eslint-plugin-unused-imports": "4.1.4",
     "jiti": "2.4.2",
     "prettier": "3.5.3",
