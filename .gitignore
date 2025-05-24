@@ -1,12 +1,12 @@
-# dependencies (bun install)
+# Dependencies
 node_modules
 
-# output
+# Output
 out
 dist
 *.tgz
 
-# code coverage
+# Code coverage
 coverage
 *.lcov
 
@@ -15,22 +15,20 @@ logs
 _.log
 report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 
-# dotenv environment variable files
+# Environment variable files
 .env
 .env.development.local
 .env.test.local
 .env.production.local
 .env.local
 
-# caches
+# Caches
 .eslintcache
 .cache
 *.tsbuildinfo
 
-# IntelliJ based IDEs
-.idea
-
 # Finder (MacOS) folder config
 .DS_Store
 
-.dev_run_count
+# SQLite database
+db.sqlite
