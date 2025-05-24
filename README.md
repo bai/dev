@@ -8,7 +8,6 @@
 
 - `dev ls` or `dev cd` - Interactive fuzzy search for code directories in `~/src`
 - `dev cd <folder_name>` - Quick navigation to projects by name
-- `dev open [folder_name]` - Open projects in your preferred editor/IDE
 
 ### 📦 **Repository Management**
 
@@ -20,7 +19,8 @@
 
 - `dev up` - Install and update development tools using mise
 - `dev auth` - Authenticate with GitHub, GitLab, and Google Cloud
-- `dev status` - Check your development environment health
+- `dev status` - Comprehensive environment status and health validation
+- `dev run <task>` - Execute project tasks using mise
 
 ### 🛠️ **Maintenance**
 
@@ -68,10 +68,6 @@ dev cd
 
 # Direct navigation
 dev cd myproject
-
-# Open in editor
-dev open                    # Current directory
-dev open myproject         # Specific project
 ```
 
 ### Repository Management
@@ -91,11 +87,15 @@ dev clone --org myorg myrepo
 ### Environment Management
 
 ```bash
-# Check environment status
+# Check environment status and validate installation
 dev status
 
 # Set up development tools
 dev up
+
+# Execute project tasks
+dev run <task>              # Run specific task
+dev run build --watch       # Run with arguments
 
 # Authenticate services
 dev auth                    # All services
@@ -113,6 +113,14 @@ dev upgrade
 # Get help
 dev help
 ```
+
+## 💡 Tips
+
+- Use `dev cd` without arguments for interactive fuzzy search
+- Clone repos with just the name if using default org: `dev clone myrepo`
+- Run `dev up` in any git repository to set up development tools
+- Use `dev run <task>` to execute project-specific tasks with mise
+- Use `dev status` to check your environment setup and validate installation
 
 ## 🏗️ Directory Structure
 
@@ -135,7 +143,7 @@ The tool organizes repositories in a structured way:
 
 ### Organization Mapping
 
-Edit `src/utils.ts` to configure organization-to-provider mappings:
+Edit `src/utils/constants.ts` to configure organization-to-provider mappings:
 
 ```typescript
 export const orgToProvider: Record<string, GitProvider> = {
@@ -147,7 +155,7 @@ export const orgToProvider: Record<string, GitProvider> = {
 
 ### Default Organization
 
-Change the default organization in `src/utils.ts`:
+Change the default organization in `src/utils/constants.ts`:
 
 ```typescript
 export const defaultOrg = "your-default-org";
@@ -163,18 +171,23 @@ dev status
 
 This command shows:
 
-- Base directory existence
-- Required tool availability
-- Git repository status
+- Base directory existence and validation
+- Required tool availability (git, fd, fzf, fzy, mise)
+- Optional tool status (gh, glab, gcloud)
+- Git repository status and uncommitted changes
 - Mise configuration
-- CLI tool version
+- CLI tool installation and version
+- Package configuration validation
+- Source files verification
+- Shell integration status
+- Health check summary with pass/fail counts
 
 ### Common Issues
 
 #### "Command not found" errors
 
 - Run `dev status` to check which tools are missing
-- Install missing tools: `brew install fd fzf mise`
+- Install missing tools: `brew install fd fzf fzy mise`
 
 #### Directory not found
 
@@ -200,7 +213,7 @@ This command shows:
 .dev/
 ├── src/
 │   ├── cmd/           # Command implementations
-│   ├── utils.ts       # Shared utilities
+│   ├── utils/         # Shared utilities and constants
 │   └── index.ts       # Main CLI entry point
 ├── hack/
 │   ├── setup.sh       # Installation script

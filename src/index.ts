@@ -1,4 +1,4 @@
-import { validateBaseSearchDir } from "./utils";
+import { validateBaseSearchDir, showUsage } from "./utils";
 import { handleCdCommand } from "./cmd/cd";
 import { handleLsCommand } from "./cmd/ls";
 import { handleUpCommand } from "./cmd/up";
@@ -6,8 +6,6 @@ import { handleUpgradeCommand } from "./cmd/upgrade";
 import { handleCloneCommand } from "./cmd/clone";
 import { handleAuthCommand } from "./cmd/auth";
 import { handleStatusCommand } from "./cmd/status";
-import { handleOpenCommand } from "./cmd/open";
-import { handleTestCommand } from "./cmd/test";
 import { handleRunCommand } from "./cmd/run";
 import { Command } from "commander";
 import { runPeriodicUpgradeCheck } from "~/utils/run-update-check";
@@ -20,13 +18,19 @@ import { getCurrentGitCommitSha } from "~/utils/version";
     // Validate base search directory exists
     validateBaseSearchDir();
 
+    // Check for help commands before commander processes them
+    const args = process.argv.slice(2);
+    if (args.length === 0 || args[0] === "help" || (args.length === 1 && (args[0] === "--help" || args[0] === "-h"))) {
+      showUsage();
+    }
+
     const program = new Command();
 
     program
       .name("dev")
       .description("A CLI tool for quick directory navigation and environment management")
       .version(getCurrentGitCommitSha())
-      .helpOption("-h, --help", "Display help for command");
+      .helpOption(false); // Disable commander.js help since we handle it custom
 
     // cd command - can be used with or without arguments
     program
@@ -110,27 +114,9 @@ import { getCurrentGitCommitSha } from "~/utils/version";
     // status command
     program
       .command("status")
-      .description("Shows status information about your dev environment")
+      .description("Shows comprehensive status information and validates CLI functionality")
       .action(() => {
         handleStatusCommand();
-      });
-
-    // open command
-    program
-      .command("open")
-      .description("Opens a directory in your default editor/IDE")
-      .argument("[folder_name]", "Name of the folder to open (optional)")
-      .action((folderName?: string) => {
-        const args = folderName ? [folderName] : [];
-        handleOpenCommand(args);
-      });
-
-    // test command
-    program
-      .command("test")
-      .description("Runs basic tests to validate CLI functionality")
-      .action(() => {
-        handleTestCommand();
       });
 
     // run command
@@ -141,6 +127,14 @@ import { getCurrentGitCommitSha } from "~/utils/version";
       .argument("[args...]", "Additional arguments to pass to the task")
       .action((task: string, args: string[]) => {
         handleRunCommand([task, ...args]);
+      });
+
+    // help command
+    program
+      .command("help")
+      .description("Shows this help message")
+      .action(() => {
+        showUsage();
       });
 
     // Parse command line arguments
