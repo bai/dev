@@ -2,7 +2,7 @@ import { spawn } from "child_process";
 
 function printAuthHelp(): void {
   console.log(`
-Usage: dev auth <command>
+📖 Usage: dev auth <command>
 
 Commands:
   github              Authenticate with GitHub.
@@ -13,18 +13,18 @@ Commands:
 }
 
 function handleGithubAuth(): void {
-  console.log("Attempting GitHub authentication...");
-  console.log("Please run 'gh auth login' to authenticate with GitHub if prompted or if this step fails.");
-  console.log("If 'gh' is not installed, please install it first: https://cli.github.com/");
+  console.log("🔑 Attempting GitHub authentication...");
+  console.log("💡 Please run 'gh auth login' to authenticate with GitHub if prompted or if this step fails.");
+  console.log("💡 If 'gh' is not installed, please install it first: https://cli.github.com/");
   // We can't directly invoke interactive prompts well, so we guide the user.
   // If gh auth status could be used non-interactively, that would be an option.
 }
 
 function handleGitlabAuth(): void {
-  console.log("Attempting GitLab authentication...");
-  console.log("Please run 'glab auth login' to authenticate with GitLab if prompted or if this step fails.");
+  console.log("🔑 Attempting GitLab authentication...");
+  console.log("💡 Please run 'glab auth login' to authenticate with GitLab if prompted or if this step fails.");
   console.log(
-    "If 'glab' is not installed, please install it first: https://glab.readthedocs.io/en/latest/installation.html",
+    "💡 If 'glab' is not installed, please install it first: https://glab.readthedocs.io/en/latest/installation.html",
   );
   // Similar to GitHub, direct interactive auth is tricky.
 }
@@ -35,19 +35,21 @@ async function executeCommand(command: string, args: string[]): Promise<void> {
 
     process.on("close", (code) => {
       if (code === 0) {
-        console.log(`'${command} ${args.join(" ")}' executed successfully.`);
+        console.log(`✅ '${command} ${args.join(" ")}' executed successfully.`);
         resolve();
       } else {
-        console.error(`Error: '${command} ${args.join(" ")}' exited with code ${code}.`);
+        console.error(`❌ Error: '${command} ${args.join(" ")}' exited with code ${code}.`);
         // Resolve instead of reject to allow subsequent auth attempts
         resolve();
       }
     });
 
     process.on("error", (err) => {
-      console.error(`Failed to start '${command} ${args.join(" ")}':`, err.message);
+      console.error(`❌ Failed to start '${command} ${args.join(" ")}':`, err.message);
       if ((err as any).code === "ENOENT") {
-        console.error(`Error: The command '${command}' was not found. Please ensure it is installed and in your PATH.`);
+        console.error(
+          `❌ Error: The command '${command}' was not found. Please ensure it is installed and in your PATH.`,
+        );
       }
       // Resolve instead of reject to allow subsequent auth attempts
       resolve();
@@ -56,17 +58,17 @@ async function executeCommand(command: string, args: string[]): Promise<void> {
 }
 
 async function handleGcloudLogin(): Promise<void> {
-  console.log("Attempting Google Cloud user authentication...");
+  console.log("🔑 Attempting Google Cloud user authentication...");
   try {
     await executeCommand("gcloud", ["auth", "login", "--quiet"]);
   } catch (error) {
     // Error is already logged by executeCommand
-    console.log("If 'gcloud' is not installed, please install it first: https://cloud.google.com/sdk/docs/install");
+    console.log("💡 If 'gcloud' is not installed, please install it first: https://cloud.google.com/sdk/docs/install");
   }
 }
 
 async function handleGcloudAppLogin(): Promise<void> {
-  console.log("Attempting Google Cloud application-default authentication...");
+  console.log("🔑 Attempting Google Cloud application-default authentication...");
   try {
     await executeCommand("gcloud", [
       "auth",
@@ -76,27 +78,27 @@ async function handleGcloudAppLogin(): Promise<void> {
     ]);
   } catch (error) {
     // Error is already logged by executeCommand
-    console.log("If 'gcloud' is not installed, please install it first: https://cloud.google.com/sdk/docs/install");
+    console.log("💡 If 'gcloud' is not installed, please install it first: https://cloud.google.com/sdk/docs/install");
   }
 }
 
 export async function handleAuthCommand(args: string[] = []): Promise<void> {
   if (args.length === 0) {
     // No specific service specified, attempt all authentications
-    console.log("Starting authentication process for all services...");
+    console.log("🚀 Starting authentication process for all services...");
 
     // console.log("--- Next: GitHub ---");
     // handleGithubAuth();
     // console.log("--- Next: GitLab ---");
     // handleGitlabAuth();
 
-    console.log("--- Next: Google Cloud User Login ---");
+    console.log("🔄 --- Next: Google Cloud User Login ---");
     await handleGcloudLogin();
 
-    console.log("--- Next: Google Cloud Application-Default Login ---");
+    console.log("🔄 --- Next: Google Cloud Application-Default Login ---");
     await handleGcloudAppLogin();
 
-    console.log("All authentication processes attempted. Please check the output for status of each.");
+    console.log("✅ All authentication processes attempted. Please check the output for status of each.");
     return;
   }
 
@@ -121,9 +123,9 @@ export async function handleAuthCommand(args: string[] = []): Promise<void> {
       } else if (args.length > 1 && args[1]?.toLowerCase() === "login") {
         await handleGcloudLogin();
       } else {
-        console.log("Starting Google Cloud authentication...");
+        console.log("🔑 Starting Google Cloud authentication...");
         await handleGcloudLogin();
-        console.log("--- Next: Google Cloud Application-Default Login ---");
+        console.log("🔄 --- Next: Google Cloud Application-Default Login ---");
         await handleGcloudAppLogin();
       }
       break;

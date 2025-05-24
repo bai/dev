@@ -10,13 +10,13 @@ import { baseSearchDir } from "~/utils/constants";
  */
 export function handleCdCommand(args: string[]): void {
   if (args.length === 0) {
-    console.error("Error: Missing folder name for 'cd' command. Usage: dev cd <folder_name>");
+    console.error("❌ Error: Missing folder name for 'cd' command. Usage: dev cd <folder_name>");
     process.exit(1);
   } else if (args.length === 1) {
     const folderName = args[0];
     // Basic check, though process.argv usually provides non-empty strings for args.
     if (!folderName || folderName.trim() === "") {
-      console.error("Error: Folder name for 'cd' command cannot be empty.");
+      console.error("❌ Error: Folder name for 'cd' command cannot be empty.");
       process.exit(1);
     }
     const targetPath = handleDirectCdMode(folderName);
@@ -24,7 +24,7 @@ export function handleCdCommand(args: string[]): void {
       handleCdToPath(targetPath);
     }
   } else {
-    console.error("Error: Too many arguments for 'cd' command.");
+    console.error("❌ Error: Too many arguments for 'cd' command.");
     process.exit(1);
   }
 }
@@ -55,7 +55,7 @@ function handleDirectCdMode(folderName: string): string | null {
     }
 
     // Nothing found
-    console.error(`Folder '${folderName}' not found in ${baseSearchDir}`);
+    console.error(`❌ Folder '${folderName}' not found in ${baseSearchDir}`);
     process.exit(1);
   } catch (error: any) {
     return handleCommandError(error, `find folder '${folderName}'`, "sh, fd, fzy, or head");

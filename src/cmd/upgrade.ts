@@ -9,7 +9,7 @@ import { homeDir } from "~/utils/constants";
  */
 export function handleUpgradeCommand(): void {
   try {
-    console.log("Upgrading dev CLI tool...");
+    console.log("🔄 Upgrading dev CLI tool...");
     const setupScriptPath = path.join(homeDir, ".dev", "hack", "setup.sh");
 
     const proc = spawnSync(["bash", setupScriptPath], {
@@ -17,11 +17,11 @@ export function handleUpgradeCommand(): void {
     });
 
     if (proc.exitCode !== 0) {
-      console.error("Error running dev upgrade command");
+      console.error("❌ Error running dev upgrade command");
       process.exit(proc.exitCode || 1);
     }
 
-    console.log("dev CLI tool successfully upgraded!");
+    console.log("✅ dev CLI tool successfully upgraded!");
   } catch (error: any) {
     handleCommandError(error, "upgrade", "bash");
   }

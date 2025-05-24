@@ -19,24 +19,24 @@ export function handleUpCommand(): void {
 
     if (fs.existsSync(gitRepoPath)) {
       if (!fs.existsSync(userMiseConfigFile)) {
-        console.log(`Mise configuration not found at ${userMiseConfigFile}. Attempting to create one...`);
+        console.log(`⚠️  Mise configuration not found at ${userMiseConfigFile}. Attempting to create one...`);
         if (!fs.existsSync(templateConfigPath)) {
-          console.error(`Error: Template config file not found at ${templateConfigPath}`);
+          console.error(`❌ Error: Template config file not found at ${templateConfigPath}`);
           process.exit(1);
         }
         if (!fs.existsSync(userMiseConfigDir)) {
           fs.mkdirSync(userMiseConfigDir, { recursive: true });
-          console.log(`Created directory: ${userMiseConfigDir}`);
+          console.log(`📁 Created directory: ${userMiseConfigDir}`);
         }
         const templateContent = fs.readFileSync(templateConfigPath, "utf-8");
 
         fs.writeFileSync(userMiseConfigFile, templateContent);
-        console.log(`Successfully created ${userMiseConfigFile} with content from ${templateConfigPath}.`);
+        console.log(`✅ Successfully created ${userMiseConfigFile} with content from ${templateConfigPath}.`);
       } else {
-        console.log(`Mise configuration found at ${userMiseConfigFile}. Proceeding with 'mise up'.`);
+        console.log(`✅ Mise configuration found at ${userMiseConfigFile}. Proceeding with 'mise up'.`);
       }
     } else {
-      console.log(`No .git directory found in ${cwd}. Skipping mise config check, proceeding with 'mise up'.`);
+      console.log(`ℹ️  No .git directory found in ${cwd}. Skipping mise config check, proceeding with 'mise up'.`);
     }
 
     const proc = spawnSync(["mise", "up"], {
@@ -44,7 +44,7 @@ export function handleUpCommand(): void {
     });
 
     if (proc.exitCode !== 0) {
-      console.error("Error running 'mise up' command");
+      console.error("❌ Error running 'mise up' command");
       process.exit(proc.exitCode || 1);
     }
   } catch (error: any) {

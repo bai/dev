@@ -1,15 +1,6 @@
 import fs from "fs";
 import { baseSearchDir, defaultOrg } from "~/utils/constants";
 
-// Validation utilities
-export function validateBaseSearchDir(): void {
-  if (!fs.existsSync(baseSearchDir)) {
-    console.error(`Error: Base search directory does not exist: ${baseSearchDir}`);
-    console.error(`Please create the directory first: mkdir -p ${baseSearchDir}`);
-    process.exit(1);
-  }
-}
-
 // Enhanced error handling with more context
 export function handleCommandError(
   error: Error & { code?: string },

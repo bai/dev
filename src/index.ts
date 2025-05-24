@@ -1,4 +1,4 @@
-import { validateBaseSearchDir, showUsage } from "./utils";
+import { showUsage } from "./utils";
 import { handleCdCommand } from "./cmd/cd";
 import { handleLsCommand } from "./cmd/ls";
 import { handleUpCommand } from "./cmd/up";
@@ -10,13 +10,29 @@ import { handleRunCommand } from "./cmd/run";
 import { Command } from "commander";
 import { runPeriodicUpgradeCheck } from "~/utils/run-update-check";
 import { getCurrentGitCommitSha } from "~/utils/version";
+import { baseSearchDir } from "~/utils/constants";
+import fs from "fs";
 
 (async () => {
   try {
     await runPeriodicUpgradeCheck();
 
-    // Validate base search directory exists
-    validateBaseSearchDir();
+    // Ensure base search directory exists
+    if (!fs.existsSync(baseSearchDir)) {
+      try {
+        fs.mkdirSync(baseSearchDir, { recursive: true });
+        console.log(`📁 Created base search directory: ${baseSearchDir}`);
+      } catch (error: any) {
+        console.error(`❌ Error: Failed to create base search directory: ${baseSearchDir}`);
+        console.error(`   ${error.message}`);
+        if (error.code === "EACCES") {
+          console.error("💡 Permission denied. Run `dev status` to check environment health.");
+        } else if (error.code === "ENOSPC") {
+          console.error("💡 No space left on device. Free up some disk space and try again.");
+        }
+        process.exit(1);
+      }
+    }
 
     // Check for help commands before commander processes them
     const args = process.argv.slice(2);
