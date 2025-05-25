@@ -1,24 +1,22 @@
 import { spawn } from "child_process";
 import path from "path";
 
-import { desc } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 
 import { devDir } from "~/lib/constants";
 import { getCurrentGitCommitSha } from "~/lib/version";
 import { db } from "~/drizzle";
 import { runs } from "~/drizzle/schema";
 
+const upgradeFrequency = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
+
 /**
  * Records the current CLI run and triggers background self-update when appropriate.
  *
  * This function records each CLI run individually in the database with details like
  * command name, arguments, CLI version, and timestamps. It checks if the last recorded
- * run was more than 7 days ago, and if so (excluding the "upgrade" command itself),
+ * run of the "upgrade" command was more than 7 days ago, and if so,
  * it spawns a detached background process to run the self-update script.
- *
- * The function gracefully handles database errors and will continue execution even if
- * the run cannot be recorded, ensuring the main CLI functionality is not disrupted
- * by tracking issues.
  *
  * @returns Promise<void> Resolves when the check is complete
  */
@@ -39,7 +37,6 @@ export const runPeriodicUpgradeCheck = async () => {
       cli_version: cliVersion,
       command_name: commandName,
       arguments: args.length > 0 ? JSON.stringify(args) : null,
-      flags: null, // Could be enhanced to parse flags separately
       exit_code: null, // Will be set when the command completes
       cwd: cwd,
       started_at: startedAt,
@@ -53,17 +50,17 @@ export const runPeriodicUpgradeCheck = async () => {
   // Check if we should run an update (only if not running upgrade command)
   if (commandName !== "upgrade") {
     try {
-      // Get the most recent run (excluding the current one we just inserted)
+      // Get the most recent run of the "upgrade" command
       const lastRun = await db
         .select()
         .from(runs)
-        .orderBy(desc(runs.created_at))
-        .limit(2) // Get 2 to skip the one we just inserted
-        .offset(1); // Skip the first one (current run)
+        .where(eq(runs.command_name, "upgrade"))
+        .orderBy(desc(runs.started_at))
+        .limit(1);
 
       const shouldUpdate =
         !lastRun.length ||
-        (lastRun[0] && new Date().getTime() - new Date(lastRun[0].created_at).getTime() > 7 * 24 * 60 * 60 * 1000);
+        (lastRun[0] && new Date().getTime() - new Date(lastRun[0].started_at).getTime() > upgradeFrequency);
 
       if (shouldUpdate) {
         console.log(
@@ -79,6 +76,18 @@ export const runPeriodicUpgradeCheck = async () => {
         } catch (spawnError: any) {
           console.error("❌ [dev] Error starting background self-update process:", spawnError.message);
         }
+
+        // Add a new run for the upgrade command
+        await db.insert(runs).values({
+          id: Bun.randomUUIDv7(),
+          cli_version: cliVersion,
+          command_name: "upgrade",
+          arguments: null,
+          exit_code: null,
+          cwd: cwd,
+          started_at: new Date(),
+          finished_at: null,
+        });
       }
     } catch (error: any) {
       console.warn("⚠️  Warning: Could not check last run timestamp:", error.message);

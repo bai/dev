@@ -6,13 +6,9 @@ export const runs = sqliteTable("runs", {
   cli_version: text().notNull(),
   command_name: text().notNull(),
   arguments: text(),
-  flags: text(),
   exit_code: integer(),
   cwd: text().notNull(),
   started_at: integer({ mode: "timestamp" }).notNull(),
   finished_at: integer({ mode: "timestamp" }),
   duration_ms: integer().generatedAlwaysAs(() => sql`finished_at - started_at`),
-  created_at: integer({ mode: "timestamp" })
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
 });
