@@ -28,8 +28,7 @@ if [ ! -d "$HOME/.dev/.git" ]; then
   git clone https://github.com/bai/dev.git "$HOME/.dev"
   echo "   ✅ Repository cloned"
 else
-  echo "   🔄 Updating existing repository..."
-  (cd "$HOME/.dev" && git pull) || true
+  (cd "$HOME/.dev" && git pull 2>/dev/null) || true
   echo "   ✅ Repository updated"
 fi
 
@@ -94,16 +93,10 @@ EOF
   else
     echo "   ✅ Shell integration already configured"
   fi
-else
-  echo "   ⚠️  ~/.zshrc not found - you may need to create it"
-fi
-
-# Step 6: Activate Changes
-echo ""
-echo "🔄 Activating changes..."
-if [ -f "$HOME/.zshrc" ]; then
   source "$HOME/.zshrc" 2>/dev/null || true
   echo "   ✅ Shell configuration reloaded"
+else
+  echo "   ⚠️  ~/.zshrc not found - you may need to create it"
 fi
 
 # Step 7: Bun Runtime
@@ -117,46 +110,6 @@ else
   echo "   ✅ Bun already available"
 fi
 
-# Step 9: Google Cloud Config
+# Step 8: Dev Setup
 echo ""
-echo "☁️  Setting up Google Cloud configuration..."
-if [ ! -d "$HOME/.config/gcloud" ]; then
-  echo "   📂 Creating gcloud config directory..."
-  mkdir -p "$HOME/.config/gcloud"
-fi
-echo "   📄 Copying cloud SDK components config..."
-cp "$HOME/.dev/hack/configs/default-cloud-sdk-components" "$HOME/.config/gcloud/.default-cloud-sdk-components"
-echo "   ✅ Google Cloud config ready"
-
-# Step 10: Mise Configuration
-echo ""
-echo "🎯 Setting up mise configuration..."
-if [ ! -d "$HOME/.config/mise" ]; then
-  echo "   📂 Creating mise config directory..."
-  mkdir -p "$HOME/.config/mise"
-fi
-if [ ! -f "$HOME/.config/mise/config.toml" ]; then
-  echo "   📄 Copying mise global config..."
-  cp "$HOME/.dev/hack/configs/mise-config-global.toml" "$HOME/.config/mise/config.toml"
-  echo "   ✅ Mise config installed"
-else
-  echo "   ✅ Mise config already exists"
-fi
-
-# Step 11: Dev Setup
-echo ""
-echo "🔄 Setting up dev CLI..."
-cd "$HOME/.dev"
-dev setup
-echo "   ✅ Dev CLI setup complete"
-
-echo ""
-echo "🎉 Dev CLI setup complete!"
-echo ""
-echo "💡 Usage examples:"
-echo "   dev cd         → Interactive directory navigation"
-echo "   dev cd <name>  → Jump to matching directory"
-echo "   dev up         → Update development tools"
-echo "   dev upgrade    → Update dev CLI itself"
-echo "   dev help       → Show all available commands"
-echo ""
+bun run "$HOME"/.dev/src/index.ts setup
