@@ -69,7 +69,7 @@ fi
 # Step 3: CLI Utilities
 echo ""
 echo "🛠️  Installing CLI utilities..."
-for util in fd fzf fzy mise git 1password-cli; do
+for util in fd fzf fzy mise git; do
   if ! command -v "$util" &>/dev/null; then
     echo "   📥 Installing $util..."
     brew install "$util"
@@ -78,6 +78,34 @@ for util in fd fzf fzy mise git 1password-cli; do
     echo "   ✅ $util already installed"
   fi
 done
+
+
+# Step 8: Shell Integration
+echo ""
+echo "🐚 Setting up shell integration..."
+if [ -f "$HOME/.zshrc" ]; then
+  if ! grep -q "source \$HOME/.dev/hack/zshrc.sh" "$HOME/.zshrc"; then
+    echo "   📝 Adding dev CLI to ~/.zshrc..."
+    cat >> "$HOME/.zshrc" << 'EOF'
+
+# Dev CLI integration
+source $HOME/.dev/hack/zshrc.sh
+EOF
+    echo "   ✅ Shell integration added"
+  else
+    echo "   ✅ Shell integration already configured"
+  fi
+else
+  echo "   ⚠️  ~/.zshrc not found - you may need to create it"
+fi
+
+# Step 9: Activate Changes
+echo ""
+echo "🔄 Activating changes..."
+if [ -f "$HOME/.zshrc" ]; then
+  source "$HOME/.zshrc" 2>/dev/null || true
+  echo "   ✅ Shell configuration reloaded"
+fi
 
 # Step 4: Bun Runtime
 echo ""
@@ -121,33 +149,6 @@ if [ ! -f "$HOME/.config/mise/config.toml" ]; then
   echo "   ✅ Mise config installed"
 else
   echo "   ✅ Mise config already exists"
-fi
-
-# Step 8: Shell Integration
-echo ""
-echo "🐚 Setting up shell integration..."
-if [ -f "$HOME/.zshrc" ]; then
-  if ! grep -q "source \$HOME/.dev/hack/zshrc.sh" "$HOME/.zshrc"; then
-    echo "   📝 Adding dev CLI to ~/.zshrc..."
-    cat >> "$HOME/.zshrc" << 'EOF'
-
-# Dev CLI integration
-source $HOME/.dev/hack/zshrc.sh
-EOF
-    echo "   ✅ Shell integration added"
-  else
-    echo "   ✅ Shell integration already configured"
-  fi
-else
-  echo "   ⚠️  ~/.zshrc not found - you may need to create it"
-fi
-
-# Step 9: Activate Changes
-echo ""
-echo "🔄 Activating changes..."
-if [ -f "$HOME/.zshrc" ]; then
-  source "$HOME/.zshrc" 2>/dev/null || true
-  echo "   ✅ Shell configuration reloaded"
 fi
 
 # Step 10: Dev Setup
