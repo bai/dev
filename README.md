@@ -63,7 +63,6 @@ bash hack/setup.sh
 
 ```bash
 # Interactive directory selection
-dev ls
 dev cd
 
 # Direct navigation
@@ -139,27 +138,6 @@ The tool organizes repositories in a structured way:
         └── project4/
 ```
 
-## ⚙️ Configuration
-
-### Organization Mapping
-
-Edit `src/utils/constants.ts` to configure organization-to-provider mappings:
-
-```typescript
-export const orgToProvider: Record<string, GitProvider> = {
-  mycompany: "github",
-  notmycompany: "gitlab",
-};
-```
-
-### Default Organization
-
-Change the default organization in `src/utils/constants.ts`:
-
-```typescript
-export const defaultOrg = "your-default-org";
-```
-
 ## 🔍 Troubleshooting
 
 ### Check Environment Status
@@ -181,45 +159,7 @@ This command shows:
 - Shell integration status
 - Health check summary with pass/fail counts
 
-### Common Issues
-
-#### "Command not found" errors
-
-- Run `dev status` to check which tools are missing
-- Install missing tools: `brew install fd fzf fzy mise`
-
-#### Directory not found
-
-- Ensure `~/src` exists: `mkdir -p ~/src`
-- Check directory structure matches expected format
-
-#### Authentication issues
-
-- Run `dev auth` to set up authentication
-- For GitHub: `gh auth login`
-- For GitLab: `glab auth login`
-
-#### Permission errors during clone
-
-- Check repository access permissions
-- Verify authentication: `dev auth`
-
 ## 🛠️ Development
-
-### Project Structure
-
-```
-.dev/
-├── src/
-│   ├── cmd/           # Command implementations
-│   ├── utils/         # Shared utilities and constants
-│   └── index.ts       # Main CLI entry point
-├── hack/
-│   ├── setup.sh       # Installation script
-│   ├── zshrc.sh       # Shell integration
-│   └── configs/       # Configuration templates
-└── package.json
-```
 
 ### Running Locally
 
@@ -228,7 +168,6 @@ This command shows:
 bun run src/index.ts --help
 
 # Use npm scripts
-bun run dev --help
 bun run typecheck
 bun run lint
 ```

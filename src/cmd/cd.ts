@@ -1,7 +1,7 @@
 import { spawnSync } from "bun";
-import { handleCommandError, handleCdToPath } from "~/utils";
-import { stdioPipe } from "~/utils/constants";
-import { baseSearchDir } from "~/utils/constants";
+
+import { baseSearchDir, stdioPipe } from "~/lib/constants";
+import { handleCdToPath, handleCommandError } from "~/lib/handlers";
 
 /**
  * Handles the cd command implementation.
@@ -40,7 +40,7 @@ export function handleCdCommand(args: string[]): void {
 function handleDirectCdMode(folderName: string): string | null {
   // Use fzy in non-interactive mode to perform fuzzy matching
   // This will find the best match for the given folder name at the third level
-  const commandString = `fd --type directory --exact-depth 3 --follow --hidden --exclude .git --exclude node_modules --color=never . "${baseSearchDir}" | sed 's/\\/*$//g' | fzy -e "${folderName}" | head -n 1`;
+  const commandString = `fd --type directory --exact-depth 3 --follow --hidden --exclude .git --exclude node_modules --exclude .terraform --exclude .terragrunt-cache --color=never . "${baseSearchDir}" | sed 's/\\/*$//g' | fzy -e "${folderName}" | head -n 1`;
 
   try {
     const proc = spawnSync(["sh", "-c", commandString], {

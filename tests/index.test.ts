@@ -1,7 +1,8 @@
-import { describe, test, expect, beforeEach, afterEach } from "vitest";
 import fs from "fs/promises";
-import path from "path";
 import os from "os";
+import path from "path";
+
+import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
 describe("Integration Tests", () => {
   let tempDir: string;

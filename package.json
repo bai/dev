@@ -6,8 +6,6 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "setup": "bash hack/setup.sh",
-    "dev": "bun run src/index.ts",
     "typecheck": "bun tsc --noEmit",
     "lint": "eslint . --ext .ts,.tsx",
     "lint:fix": "eslint . --ext .ts,.tsx --fix",
@@ -16,23 +14,26 @@
     "test": "vitest --no-file-parallelism --bail=1",
     "test:bench": "vitest bench --no-file-parallelism --bail=1"
   },
+  "dependencies": {
+    "@iarna/toml": "2.2.5",
+    "commander": "14.0.0",
+    "zod": "3.25.28"
+  },
   "devDependencies": {
     "@eslint/js": "9.27.0",
+    "@ianvs/prettier-plugin-sort-imports": "4.4.1",
     "@types/bun": "1.2.14",
-    "commander": "14.0.0",
     "eslint": "9.27.0",
     "eslint-config-prettier": "10.1.5",
     "eslint-plugin-unused-imports": "4.1.4",
     "jiti": "2.4.2",
     "prettier": "3.5.3",
     "prettier-plugin-multiline-arrays": "4.0.3",
+    "typescript": "5.8.3",
     "typescript-eslint": "8.32.1",
     "vite": "6.3.5",
     "vite-tsconfig-paths": "5.1.4",
     "vitest": "3.1.4"
-  },
-  "peerDependencies": {
-    "typescript": "5.8.3"
   },
   "engines": {
     "bun": ">=1.0.0"

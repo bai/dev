@@ -1,7 +1,16 @@
 import fs from "fs";
-import { baseSearchDir, defaultOrg } from "~/utils/constants";
 
-// Enhanced error handling with more context
+import { devConfig } from "~/lib/dev-config";
+
+/**
+ * Handles command execution errors with appropriate error messages and exits the process.
+ *
+ * @param error - The error object, potentially with a code property
+ * @param commandName - Name of the command that failed
+ * @param requiredCommands - Comma-separated list of required commands
+ * @param context - Optional context information for the error
+ * @throws Never returns - always exits the process with code 1
+ */
 export function handleCommandError(
   error: Error & { code?: string },
   commandName: string,
@@ -26,7 +35,13 @@ export function handleCommandError(
   process.exit(1);
 }
 
-// Handles changing directory through shell wrapper
+/**
+ * Handles changing directory through shell wrapper by outputting a special format.
+ * Validates that the target path exists before attempting to change directory.
+ *
+ * @param targetPath - The absolute path to change directory to
+ * @throws Never returns - always exits the process (code 0 on success, code 1 on error)
+ */
 export function handleCdToPath(targetPath: string): void {
   // Validate path exists before attempting to cd
   if (!fs.existsSync(targetPath)) {
@@ -39,7 +54,12 @@ export function handleCdToPath(targetPath: string): void {
   process.exit(0);
 }
 
-// Custom usage information with beautiful formatting and emojis
+/**
+ * Displays comprehensive usage information for the dev CLI tool.
+ * Shows all available commands, their syntax, examples, and helpful tips.
+ *
+ * @throws Never returns - always exits the process with code 0
+ */
 export function showUsage(): never {
   console.log(`🚀 dev: A CLI tool for quick directory navigation and environment management.
 
@@ -54,7 +74,7 @@ export function showUsage(): never {
 
   dev clone <repo>           Clones a repository into ~/src with automatic provider detection.
                              Examples:
-                               dev clone https://github.com/${defaultOrg}/repo
+                               dev clone https://github.com/${devConfig.defaultOrg}/repo
                                dev clone repo (uses provider based on organization mapping)
                                dev clone org/repo (provider chosen based on 'org')
                                dev clone --gitlab repo (explicitly uses GitLab)

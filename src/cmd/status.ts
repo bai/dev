@@ -1,7 +1,9 @@
-import { spawnSync } from "bun";
 import fs from "fs";
 import path from "path";
-import { baseSearchDir, devDir, homeDir } from "~/utils/constants";
+
+import { spawnSync } from "bun";
+
+import { baseSearchDir, devDir, homeDir } from "~/lib/constants";
 
 /**
  * Shows comprehensive status information about the dev environment

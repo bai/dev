@@ -1,3 +1,5 @@
+# This mise config file is going to be placed in the root of a managed dev project.
+
 min_version = "2025.5.2"
 
 [tools]

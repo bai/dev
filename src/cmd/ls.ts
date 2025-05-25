@@ -1,6 +1,7 @@
 import { spawnSync } from "bun";
-import { handleCommandError, handleCdToPath } from "~/utils";
-import { baseSearchDir } from "~/utils/constants";
+
+import { baseSearchDir } from "~/lib/constants";
+import { handleCdToPath, handleCommandError } from "~/lib/handlers";
 
 /**
  * Handles the interactive fzf mode when `dev ls` is called.
@@ -11,7 +12,7 @@ import { baseSearchDir } from "~/utils/constants";
  * @returns The selected path or null if selection was canceled
  */
 function handleFzfInteractiveMode(): string | null {
-  const commandString = `fd --type directory --exact-depth 3 --follow --hidden --exclude .git --exclude node_modules --color=never . "${baseSearchDir}" | sed 's/\\/*$//g' | fzf`;
+  const commandString = `fd --type directory --exact-depth 3 --follow --hidden --exclude .git --exclude node_modules --exclude .terraform --exclude .terragrunt-cache --color=never . "${baseSearchDir}" | sed 's/\\/*$//g' | fzf`;
 
   try {
     const proc = spawnSync(["sh", "-c", commandString], {

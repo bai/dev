@@ -1,8 +1,10 @@
-import { spawnSync } from "bun";
 import * as fs from "fs";
 import * as path from "path";
-import { handleCommandError } from "~/utils";
-import { devDir } from "~/utils/constants";
+
+import { spawnSync } from "bun";
+
+import { devDir } from "~/lib/constants";
+import { handleCommandError } from "~/lib/handlers";
 
 /**
  * Handles the 'up' subcommand.

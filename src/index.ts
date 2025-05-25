@@ -1,17 +1,20 @@
-import { showUsage } from "./utils";
-import { handleCdCommand } from "./cmd/cd";
-import { handleLsCommand } from "./cmd/ls";
-import { handleUpCommand } from "./cmd/up";
-import { handleUpgradeCommand } from "./cmd/upgrade";
-import { handleCloneCommand } from "./cmd/clone";
-import { handleAuthCommand } from "./cmd/auth";
-import { handleStatusCommand } from "./cmd/status";
-import { handleRunCommand } from "./cmd/run";
-import { Command } from "commander";
-import { runPeriodicUpgradeCheck } from "~/utils/run-update-check";
-import { getCurrentGitCommitSha } from "~/utils/version";
-import { baseSearchDir } from "~/utils/constants";
 import fs from "fs";
+
+import { Command } from "commander";
+
+import { baseSearchDir } from "~/lib/constants";
+import { showUsage } from "~/lib/handlers";
+import { runPeriodicUpgradeCheck } from "~/lib/run-update-check";
+import { getCurrentGitCommitSha } from "~/lib/version";
+import { handleAuthCommand } from "~/cmd/auth";
+import { handleCdCommand } from "~/cmd/cd";
+import { handleCloneCommand } from "~/cmd/clone";
+import { handleLsCommand } from "~/cmd/ls";
+import { handleRunCommand } from "~/cmd/run";
+import { handleSetupCommand } from "~/cmd/setup";
+import { handleStatusCommand } from "~/cmd/status";
+import { handleUpCommand } from "~/cmd/up";
+import { handleUpgradeCommand } from "~/cmd/upgrade";
 
 (async () => {
   try {
@@ -143,6 +146,14 @@ import fs from "fs";
       .argument("[args...]", "Additional arguments to pass to the task")
       .action((task: string, args: string[]) => {
         handleRunCommand([task, ...args]);
+      });
+
+    // setup command
+    program
+      .command("setup")
+      .description("Sets up the dev CLI tool")
+      .action(async () => {
+        await handleSetupCommand();
       });
 
     // help command

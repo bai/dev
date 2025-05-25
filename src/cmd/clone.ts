@@ -1,10 +1,11 @@
-import { spawnSync } from "bun";
-import { handleCommandError, handleCdToPath } from "~/utils";
-import { orgToProvider } from "~/utils/constants";
-import { defaultOrg } from "~/utils/constants";
-import { baseSearchDir } from "~/utils/constants";
-import path from "path";
 import fs from "fs";
+import path from "path";
+
+import { spawnSync } from "bun";
+
+import { baseSearchDir } from "~/lib/constants";
+import { devConfig } from "~/lib/dev-config";
+import { handleCdToPath, handleCommandError } from "~/lib/handlers";
 
 /**
  * Handles the clone command implementation.
@@ -47,7 +48,7 @@ export function handleCloneCommand(args: string[]): void {
     repoPath = parsedPath;
   } else {
     // Handle shorthand format
-    const org = cloneParams.explicitOrg || defaultOrg;
+    const org = cloneParams.explicitOrg || devConfig.defaultOrg;
     const provider = cloneParams.useGitLab ? "gitlab.com" : "github.com";
     repoPath = path.join(baseSearchDir, provider, org, cloneParams.repoArg);
 
@@ -88,13 +89,13 @@ function parseCloneArguments(args: string[]): CloneParams {
         repoArg = parts[1];
 
         // Check if the org has a provider mapping
-        if (explicitOrg in orgToProvider) {
-          useGitLab = orgToProvider[explicitOrg] === "gitlab";
+        if (explicitOrg in devConfig.orgToProvider) {
+          useGitLab = devConfig.orgToProvider[explicitOrg] === "gitlab";
         }
       }
     } else {
       // Use default org's provider mapping
-      useGitLab = orgToProvider[defaultOrg] === "gitlab";
+      useGitLab = devConfig.orgToProvider[devConfig.defaultOrg] === "gitlab";
     }
   } else if (args.length === 2 && (args[0] === "--github" || args[0] === "--gitlab")) {
     useGitLab = args[0] === "--gitlab";
@@ -110,7 +111,9 @@ function parseCloneArguments(args: string[]): CloneParams {
 
     // Check if the org has a provider mapping
     useGitLab =
-      explicitOrg in orgToProvider ? orgToProvider[explicitOrg] === "gitlab" : orgToProvider[defaultOrg] === "gitlab";
+      explicitOrg in devConfig.orgToProvider
+        ? devConfig.orgToProvider[explicitOrg] === "gitlab"
+        : devConfig.orgToProvider[devConfig.defaultOrg] === "gitlab";
   } else {
     console.error("❌ Error: Invalid arguments for 'clone' command.");
     console.error("Usage: dev clone [--github|--gitlab] <repository>");
@@ -191,9 +194,10 @@ function parseRepoUrlToPath(repoUrl: string): string | null {
 function cloneRepository(repoUrl: string, targetPath: string): void {
   // Check if directory already exists
   if (fs.existsSync(targetPath)) {
-    console.error(`❌ Error: Directory already exists: ${targetPath}`);
-    console.error(`💡 To navigate to the existing directory, run: dev cd ${path.basename(targetPath)}`);
-    process.exit(1);
+    console.log(`📁 Directory already exists: ${targetPath}`);
+    console.log(`🚀 Navigating to existing directory...`);
+    handleCdToPath(targetPath);
+    return;
   }
 
   // Ensure parent directory exists

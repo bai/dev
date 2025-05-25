@@ -1,8 +1,19 @@
 import { spawn } from "child_process";
 import path from "path";
-import { Database } from "bun:sqlite";
-import { devDir } from "~/utils/constants";
 
+import { Database } from "bun:sqlite";
+
+import { devDir } from "~/lib/constants";
+
+/**
+ * Initializes the SQLite database for tracking run counts.
+ *
+ * Creates the database file if it doesn't exist and sets up the run_count table.
+ * Inserts an initial record with count 0 if the table is empty.
+ *
+ * @param dbPath - The file path where the SQLite database should be created/opened
+ * @returns Database instance ready for use
+ */
 const initializeDatabase = (dbPath: string): Database => {
   const db = new Database(dbPath, { create: true, strict: true });
 
@@ -24,6 +35,20 @@ const initializeDatabase = (dbPath: string): Database => {
   return db;
 };
 
+/**
+ * Runs a periodic upgrade check and triggers background self-update when appropriate.
+ *
+ * This function tracks how many times the dev CLI has been run using a SQLite database.
+ * Every 10th run (excluding the "upgrade" command itself), it spawns a detached background
+ * process to run the self-update script. The update process runs independently and won't
+ * block or interfere with the current command execution.
+ *
+ * The function gracefully handles database errors and will continue execution even if
+ * the run count cannot be read or updated, ensuring the main CLI functionality is not
+ * disrupted by tracking issues.
+ *
+ * @returns Promise<void> Resolves when the check is complete
+ */
 export const runPeriodicUpgradeCheck = async () => {
   const databasePath = path.join(devDir, "db.sqlite");
   const upgradeScriptPath = path.join(devDir, "hack", "setup.sh");

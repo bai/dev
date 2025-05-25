@@ -1,5 +1,6 @@
 import { spawnSync } from "bun";
-import { handleCommandError } from "~/utils";
+
+import { handleCommandError } from "~/lib/handlers";
 
 /**
  * Handles the 'run' subcommand.

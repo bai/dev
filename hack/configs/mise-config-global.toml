@@ -40,8 +40,4 @@ glab = "latest"
 
 [settings]
 idiomatic_version_file_enable_tools = ["python", "ruby"]
-trusted_config_paths = [
-    "~/.dev",
-    "~/src/gitlab.com/flywheelsoftware",
-    "~/src/github.com/Flywheel-Technologies",
-]
+trusted_config_paths = ["~/.dev"]
