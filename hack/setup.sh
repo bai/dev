@@ -29,11 +29,11 @@ if [ ! -d "$HOME/.dev/.git" ]; then
   echo "   ✅ Repository cloned"
 else
   echo "   🔄 Updating existing repository..."
-  cd "$HOME/.dev" && git pull
+  (cd "$HOME/.dev" && git pull) || true
   echo "   ✅ Repository updated"
 fi
 
-# Step 1.5: Config File (if provided)
+# Step 2: Config File (if provided)
 if [ -n "$CONFIG_URL" ]; then
   echo ""
   echo "⚙️  Fetching configuration file..."
@@ -46,7 +46,7 @@ if [ -n "$CONFIG_URL" ]; then
   fi
 fi
 
-# Step 2: Homebrew
+# Step 3: Homebrew
 echo ""
 echo "🍺 Checking Homebrew..."
 if ! command -v brew &>/dev/null; then
@@ -66,10 +66,10 @@ else
   echo "   ✅ Homebrew already installed"
 fi
 
-# Step 3: CLI Utilities
+# Step 4: CLI Utilities
 echo ""
 echo "🛠️  Installing CLI utilities..."
-for util in fd fzf fzy mise git; do
+for util in fd fzf fzy mise; do
   if ! command -v "$util" &>/dev/null; then
     echo "   📥 Installing $util..."
     brew install "$util"
@@ -79,8 +79,7 @@ for util in fd fzf fzy mise git; do
   fi
 done
 
-
-# Step 8: Shell Integration
+# Step 5: Shell Integration
 echo ""
 echo "🐚 Setting up shell integration..."
 if [ -f "$HOME/.zshrc" ]; then
@@ -99,7 +98,7 @@ else
   echo "   ⚠️  ~/.zshrc not found - you may need to create it"
 fi
 
-# Step 9: Activate Changes
+# Step 6: Activate Changes
 echo ""
 echo "🔄 Activating changes..."
 if [ -f "$HOME/.zshrc" ]; then
@@ -107,7 +106,7 @@ if [ -f "$HOME/.zshrc" ]; then
   echo "   ✅ Shell configuration reloaded"
 fi
 
-# Step 4: Bun Runtime
+# Step 7: Bun Runtime
 echo ""
 echo "🏃 Setting up bun runtime..."
 if ! command -v bun &>/dev/null; then
@@ -118,14 +117,7 @@ else
   echo "   ✅ Bun already available"
 fi
 
-# Step 5: Dependencies
-echo ""
-echo "📚 Installing project dependencies..."
-cd "$HOME/.dev"
-bun install
-echo "   ✅ Dependencies installed"
-
-# Step 6: Google Cloud Config
+# Step 9: Google Cloud Config
 echo ""
 echo "☁️  Setting up Google Cloud configuration..."
 if [ ! -d "$HOME/.config/gcloud" ]; then
@@ -136,7 +128,7 @@ echo "   📄 Copying cloud SDK components config..."
 cp "$HOME/.dev/hack/configs/default-cloud-sdk-components" "$HOME/.config/gcloud/.default-cloud-sdk-components"
 echo "   ✅ Google Cloud config ready"
 
-# Step 7: Mise Configuration
+# Step 10: Mise Configuration
 echo ""
 echo "🎯 Setting up mise configuration..."
 if [ ! -d "$HOME/.config/mise" ]; then
@@ -151,7 +143,7 @@ else
   echo "   ✅ Mise config already exists"
 fi
 
-# Step 10: Dev Setup
+# Step 11: Dev Setup
 echo ""
 echo "🔄 Setting up dev CLI..."
 cd "$HOME/.dev"
