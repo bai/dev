@@ -9,7 +9,7 @@ import { handleCommandError } from "~/lib/handlers";
 /**
  * Handles the 'up' subcommand.
  * Checks for and creates a local mise config if in a git repository and config is missing.
- * Then, runs 'mise up' command directly to update development tools.
+ * Then, runs 'mise install' command directly to update development tools.
  */
 export function handleUpCommand(): void {
   try {
@@ -35,21 +35,21 @@ export function handleUpCommand(): void {
         fs.writeFileSync(userMiseConfigFile, templateContent);
         console.log(`✅ Successfully created ${userMiseConfigFile} with content from ${templateConfigPath}.`);
       } else {
-        console.log(`✅ Mise configuration found at ${userMiseConfigFile}. Proceeding with 'mise up'.`);
+        console.log(`✅ Mise configuration found at ${userMiseConfigFile}. Proceeding with 'mise install'.`);
       }
     } else {
-      console.log(`ℹ️  No .git directory found in ${cwd}. Skipping mise config check, proceeding with 'mise up'.`);
+      console.log(`ℹ️  No .git directory found in ${cwd}. Skipping mise config check, proceeding with 'mise install'.`);
     }
 
-    const proc = spawnSync(["mise", "up"], {
+    const proc = spawnSync(["mise", "install"], {
       stdio: ["ignore", "inherit", "inherit"], // Inherit stdout and stderr to pass through to the user
     });
 
     if (proc.exitCode !== 0) {
-      console.error("❌ Error running 'mise up' command");
+      console.error("❌ Error running 'mise install' command");
       process.exit(proc.exitCode || 1);
     }
   } catch (error: any) {
-    handleCommandError(error, "mise up", "mise");
+    handleCommandError(error, "mise install", "mise");
   }
 }

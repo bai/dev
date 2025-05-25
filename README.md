@@ -6,7 +6,7 @@
 
 ### 🧭 **Navigation**
 
-- `dev ls` or `dev cd` - Interactive fuzzy search for code directories in `~/src`
+- `dev cd` - Interactive fuzzy search for code directories in `~/src`
 - `dev cd <folder_name>` - Quick navigation to projects by name
 
 ### 📦 **Repository Management**

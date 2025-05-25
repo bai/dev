@@ -64,10 +64,7 @@ export function showUsage(): never {
   console.log(`🚀 dev: A CLI tool for quick directory navigation and environment management.
 
 📖 Usage:
-  dev ls                     Interactively select a directory from ~/src using fzf and cd into it.
-                             (Searches for directories at depth 3 in ~/src)
-
-  dev cd                     Same as 'dev ls' - interactively select a directory using fzf.
+  dev cd                     Interactively select a directory using fzf and cd into it.
 
   dev cd <folder_name>       Finds and outputs the path to <folder_name> within ~/src, then cds into it.
                              (Searches for a directory named <folder_name> at depth 3)
@@ -87,7 +84,7 @@ export function showUsage(): never {
                              For GitHub and GitLab, this will guide you to use 'gh auth login' and 'glab auth login'.
                              For Google Cloud, it will attempt 'gcloud auth login' and 'gcloud auth application-default login'.
 
-  dev up                     Runs 'mise up' to update development tools.
+  dev up                     Installs development tools for the current project.
 
   dev run <task>             Runs 'mise run <task>' to execute project tasks.
                              All arguments after 'run' are passed through to mise.

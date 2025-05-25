@@ -7,9 +7,8 @@ import { showUsage } from "~/lib/handlers";
 import { runPeriodicUpgradeCheck } from "~/lib/run-update-check";
 import { getCurrentGitCommitSha } from "~/lib/version";
 import { handleAuthCommand } from "~/cmd/auth";
-import { handleCdCommand } from "~/cmd/cd";
+import { handleCdCommand, handleLsCommand } from "~/cmd/cd";
 import { handleCloneCommand } from "~/cmd/clone";
-import { handleLsCommand } from "~/cmd/ls";
 import { handleRunCommand } from "~/cmd/run";
 import { handleSetupCommand } from "~/cmd/setup";
 import { handleStatusCommand } from "~/cmd/status";
@@ -65,18 +64,10 @@ import { handleUpgradeCommand } from "~/cmd/upgrade";
         }
       });
 
-    // ls command
-    program
-      .command("ls")
-      .description("Interactively select a directory from ~/src using fzf and cd into it")
-      .action(() => {
-        handleLsCommand();
-      });
-
     // up command
     program
       .command("up")
-      .description("Runs 'mise up' to update development tools")
+      .description("Installs development tools for the current project")
       .action(() => {
         handleUpCommand();
       });
