@@ -33,7 +33,11 @@
 ### Quick Install
 
 ```bash
+# Set up using defaults
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/bai/dev/refs/heads/main/hack/setup.sh)"
+
+# Provide your config file URL
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/bai/dev/refs/heads/main/hack/setup.sh)" -- --config-url=<your_config_url>
 ```
 
 This will:

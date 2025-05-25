@@ -2,6 +2,20 @@
 
 set -e
 
+# Parse command line arguments
+CONFIG_URL=""
+for arg in "$@"; do
+  case $arg in
+    --config-url=*)
+      CONFIG_URL="${arg#*=}"
+      shift
+      ;;
+    *)
+      # Unknown option
+      ;;
+  esac
+done
+
 echo ""
 echo "🚀 Setting up dev CLI tool..."
 echo ""
@@ -17,6 +31,19 @@ else
   echo "   🔄 Updating existing repository..."
   cd "$HOME/.dev" && git pull
   echo "   ✅ Repository updated"
+fi
+
+# Step 1.5: Config File (if provided)
+if [ -n "$CONFIG_URL" ]; then
+  echo ""
+  echo "⚙️  Fetching configuration file..."
+  echo "   📥 Downloading config from: $CONFIG_URL"
+  if curl -fsSL "$CONFIG_URL" -o "$HOME/.dev/config.json"; then
+    echo "   ✅ Configuration saved to ~/.dev/config.json"
+  else
+    echo "   ❌ Failed to download configuration file"
+    echo "   ⚠️  Continuing with setup..."
+  fi
 fi
 
 # Step 2: Homebrew
@@ -122,6 +149,13 @@ if [ -f "$HOME/.zshrc" ]; then
   source "$HOME/.zshrc" 2>/dev/null || true
   echo "   ✅ Shell configuration reloaded"
 fi
+
+# Step 10: Dev Setup
+echo ""
+echo "🔄 Setting up dev CLI..."
+cd "$HOME/.dev"
+dev setup
+echo "   ✅ Dev CLI setup complete"
 
 echo ""
 echo "🎉 Dev CLI setup complete!"
