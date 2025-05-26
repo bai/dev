@@ -7,7 +7,7 @@ import { showUsage } from "~/lib/handlers";
 import { runPeriodicUpgradeCheck } from "~/lib/run-update-check";
 import { getCurrentGitCommitSha } from "~/lib/version";
 import { handleAuthCommand } from "~/cmd/auth";
-import { handleCdCommand, handleLsCommand } from "~/cmd/cd";
+import { handleCdCommand, handleCdInteractiveMode } from "~/cmd/cd";
 import { handleCloneCommand } from "~/cmd/clone";
 import { handleRunCommand } from "~/cmd/run";
 import { handleSetupCommand } from "~/cmd/setup";
@@ -60,7 +60,7 @@ import { handleUpgradeCommand } from "~/cmd/upgrade";
           handleCdCommand([folderName]);
         } else {
           // If 'cd' is used without arguments, show the list of directories
-          handleLsCommand();
+          handleCdInteractiveMode();
         }
       });
 

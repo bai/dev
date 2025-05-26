@@ -91,14 +91,14 @@ function handleFzfInteractiveMode(): string | null {
 
     return null;
   } catch (error: any) {
-    return handleCommandError(error, "interactive fzf mode for ls", "sh, fd, sed, or fzf");
+    return handleCommandError(error, "interactive fzf mode for cd", "sh, fd, sed, or fzf");
   }
 }
 
 /**
- * Handles the ls command implementation.
+ * Handles interactive cd command implementation.
  */
-export function handleLsCommand(): void {
+export function handleCdInteractiveMode(): void {
   const selectedPath = handleFzfInteractiveMode();
   if (selectedPath) {
     handleCdToPath(selectedPath);
