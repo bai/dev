@@ -1,4 +1,4 @@
-# dev
+# <code>&gt; dev</code>
 
 🚀 A powerful CLI tool for quick directory navigation, repository management, and development environment setup.
 
@@ -46,6 +46,9 @@ This will:
 - Install required dependencies via Homebrew
 - Configure your shell (adds to `~/.zshrc`)
 - Set up mise configuration
+
+You can also pass URL of your config file for `dev` to use. One pattern would be to create a gist and provide raw file URL from the gist.
+You can find example config in (hack/configs/dev-config.json)[hack/configs/dev-config.json].
 
 ### Manual Installation
 
@@ -101,7 +104,7 @@ dev run <task>              # Run specific task
 dev run build --watch       # Run with arguments
 
 # Authenticate services
-dev auth                    # All services
+dev auth                   # All services
 dev auth github            # GitHub only
 dev auth gitlab            # GitLab only
 dev auth gcloud            # Google Cloud only
