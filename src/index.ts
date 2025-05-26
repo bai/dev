@@ -5,6 +5,7 @@ import { Command } from "commander";
 import { baseSearchDir } from "~/lib/constants";
 import { showUsage } from "~/lib/handlers";
 import { runPeriodicUpgradeCheck } from "~/lib/run-update-check";
+import { ensureDatabaseIsUpToDate } from "~/lib/setup";
 import { getCurrentGitCommitSha } from "~/lib/version";
 import { handleAuthCommand } from "~/cmd/auth";
 import { handleCdCommand, handleCdInteractiveMode } from "~/cmd/cd";
@@ -17,6 +18,7 @@ import { handleUpgradeCommand } from "~/cmd/upgrade";
 
 (async () => {
   try {
+    await ensureDatabaseIsUpToDate();
     await runPeriodicUpgradeCheck();
 
     // Ensure base search directory exists

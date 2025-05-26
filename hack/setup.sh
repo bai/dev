@@ -32,13 +32,17 @@ else
   echo "   ✅ Repository updated"
 fi
 
+# Step 1.5: Create dev data and config directories
+mkdir -p "$HOME/.local/share/dev"
+mkdir -p "$HOME/.config/dev"
+
 # Step 2: Config File (if provided)
 if [ -n "$CONFIG_URL" ]; then
   echo ""
   echo "⚙️  Fetching configuration file..."
   echo "   📥 Downloading config from: $CONFIG_URL"
-  if curl -fsSL "$CONFIG_URL" -o "$HOME/.dev/config.json"; then
-    echo "   ✅ Configuration saved to ~/.dev/config.json"
+  if curl -fsSL "$CONFIG_URL" -o "$HOME/.config/dev/config.json"; then
+    echo "   ✅ Configuration saved to ~/.config/dev/config.json"
   else
     echo "   ❌ Failed to download configuration file"
     echo "   ⚠️  Continuing with setup..."

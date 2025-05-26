@@ -1,5 +1,7 @@
 import type { Config } from "drizzle-kit";
 
+import { devDbPath } from "~/lib/constants";
+
 export default {
   out: "./src/drizzle/migrations",
   schema: "./src/drizzle/schema.ts",
@@ -9,6 +11,6 @@ export default {
     casing: "preserve",
   },
   dbCredentials: {
-    url: "file:db.sqlite",
+    url: `file:${devDbPath}`,
   },
 } satisfies Config;

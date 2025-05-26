@@ -1,0 +1,10 @@
+{
+  "configUrl": "https://raw.githubusercontent.com/bai/dev/main/hack/configs/dev-config.json",
+  "defaultOrg": "bai",
+  "orgToProvider": {
+    "gitlab-org": "gitlab"
+  },
+  "mise": {
+    "trusted_config_paths": []
+  }
+}

@@ -1,5 +1,6 @@
+import { refreshDevConfigFromRemoteUrl } from "~/lib/dev-config";
 import { handleCommandError } from "~/lib/handlers";
-import { setupBunRuntime, setupGoogleCloudConfig, setupMiseGlobalConfig } from "~/lib/setup";
+import { setupGoogleCloudConfig, setupMiseGlobalConfig } from "~/lib/setup";
 
 /**
  * Handles the 'setup' subcommand.
@@ -8,13 +9,20 @@ import { setupBunRuntime, setupGoogleCloudConfig, setupMiseGlobalConfig } from "
  */
 export async function handleSetupCommand(): Promise<void> {
   try {
-    // Step 8: Google Cloud Config
+    // Step 1: Refresh dev config
+    // console.log("🔄 Refreshing dev configuration...");
+    await refreshDevConfigFromRemoteUrl();
+    // console.log("✅ Dev configuration refreshed");
+
+    // Step 2: Google Cloud Config
+    // console.log("🔄 Setting up Google Cloud configuration...");
     await setupGoogleCloudConfig();
+    // console.log("✅ Google Cloud configuration setup complete");
 
-    console.log("");
-
-    // Step 9: Mise Configuration
+    // Step 3: Mise Configuration
+    // console.log("🔄 Setting up mise global configuration...");
     await setupMiseGlobalConfig();
+    // console.log("✅ Mise global configuration setup complete");
 
     console.log("");
     console.log("🎉 Dev CLI setup complete!");

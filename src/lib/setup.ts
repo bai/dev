@@ -2,16 +2,35 @@ import fs from "fs";
 import path from "path";
 
 import { stringify } from "@iarna/toml";
-import { spawnSync } from "bun";
+import { $, spawnSync } from "bun";
+import { migrate } from "drizzle-orm/bun-sqlite/migrator";
 
-import { devDir, homeDir, miseConfigDir, miseConfigPath, stdioInherit, stdioPipe } from "~/lib/constants";
+import { devDir, homeDir, miseConfigDir, miseConfigPath, stdioPipe } from "~/lib/constants";
 import { devConfig } from "~/lib/dev-config";
 import { handleCommandError } from "~/lib/handlers";
 import { miseConfigSchema } from "~/lib/types";
+import { db } from "~/drizzle";
 
 const gcloudConfigDir = path.join(homeDir, ".config", "gcloud");
 const gcloudComponentsPath = path.join(gcloudConfigDir, ".default-cloud-sdk-components");
 
+export async function ensureDatabaseIsUpToDate() {
+  // console.log("🔄 Checking for database migrations...");
+  migrate(db, { migrationsFolder: `${devDir}/src/drizzle/migrations` });
+  // console.log("✅ Database migrations applied");
+}
+
+/**
+ * Sets up the global mise configuration.
+ *
+ * This function creates the mise config directory if it doesn't exist,
+ * loads the baseline global mise TOML config from the dev directory,
+ * amends it with trusted_config_paths from the dev JSON config,
+ * and writes the final configuration to the mise config file.
+ *
+ * @returns Promise<void> Resolves when the configuration is set up successfully
+ * @throws Error if the mise config cannot be parsed or written
+ */
 export async function setupMiseGlobalConfig() {
   try {
     console.log("🎯 Setting up global mise configuration...");
@@ -51,6 +70,16 @@ export async function setupMiseGlobalConfig() {
   }
 }
 
+/**
+ * Sets up the Google Cloud configuration.
+ *
+ * This function creates the gcloud config directory if it doesn't exist,
+ * copies the default cloud SDK components configuration from the dev directory
+ * to the appropriate gcloud config location.
+ *
+ * @returns Promise<void> Resolves when the configuration is set up successfully
+ * @throws Error if the source config file is not found or cannot be copied
+ */
 export async function setupGoogleCloudConfig() {
   try {
     console.log("☁️  Setting up Google Cloud configuration...");
@@ -77,6 +106,15 @@ export async function setupGoogleCloudConfig() {
   }
 }
 
+/**
+ * Sets up the Bun runtime using mise.
+ *
+ * This function checks if Bun is already available on the system.
+ * If not, it installs Bun using mise with the latest version.
+ *
+ * @returns Promise<void> Resolves when Bun is available or installed successfully
+ * @throws Error if mise is not available or the installation fails
+ */
 export async function setupBunRuntime() {
   try {
     console.log("🏃 Setting up bun runtime...");
