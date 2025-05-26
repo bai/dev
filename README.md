@@ -25,7 +25,6 @@
 ### 🛠️ **Maintenance**
 
 - `dev upgrade` - Update the dev CLI tool itself
-- Automatic background updates (every 10 runs)
 - `dev help` - Usage information
 
 ## 🚀 Installation
@@ -55,13 +54,9 @@ You can find example config in (hack/configs/dev-config.json)[hack/configs/dev-c
 ```bash
 # Clone the repository
 git clone https://github.com/bai/dev.git ~/.dev
-cd ~/.dev
-
-# Install dependencies
-bun install
 
 # Run setup
-bash hack/setup.sh
+bash ~/.dev/hack/setup.sh
 ```
 
 ## 📖 Usage
