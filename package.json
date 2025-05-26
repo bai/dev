@@ -21,6 +21,7 @@
     "@iarna/toml": "2.2.5",
     "commander": "14.0.0",
     "drizzle-orm": "0.43.1",
+    "yaml": "2.8.0",
     "zod": "3.25.28"
   },
   "devDependencies": {
