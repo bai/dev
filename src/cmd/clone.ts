@@ -1,6 +1,5 @@
 import fs from "fs";
 import path from "path";
-
 import { spawnSync } from "bun";
 
 import { baseSearchDir } from "~/lib/constants";

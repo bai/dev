@@ -1,18 +1,31 @@
 import fs from "fs";
 import path from "path";
+import { spawnSync } from "bun";
 
 import { stringify } from "@iarna/toml";
-import { $, spawnSync } from "bun";
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
+import z from "zod/v4";
 
 import { devDir, homeDir, miseConfigDir, miseConfigPath, stdioPipe } from "~/lib/constants";
 import { devConfig } from "~/lib/dev-config";
 import { handleCommandError } from "~/lib/handlers";
-import { miseConfigSchema } from "~/lib/types";
 import { db } from "~/drizzle";
 
 const gcloudConfigDir = path.join(homeDir, ".config", "gcloud");
 const gcloudComponentsPath = path.join(gcloudConfigDir, ".default-cloud-sdk-components");
+
+/**
+ * Mise config schema
+ * @see https://mise.jdx.dev/configuration/settings.html
+ */
+const miseConfigSchema = z.object({
+  env: z.object({ _: z.object({ path: z.array(z.string()) }) }),
+  tools: z.record(z.string(), z.string()),
+  settings: z.object({
+    idiomatic_version_file_enable_tools: z.array(z.string()),
+    trusted_config_paths: z.array(z.string()),
+  }),
+});
 
 export async function ensureDatabaseIsUpToDate() {
   // console.log("🔄 Checking for database migrations...");

@@ -1,63 +1,169 @@
-import fs from "fs";
+import fs from "node:fs";
+
+import { z } from "zod/v4";
 
 import { devConfigDir, devConfigPath } from "~/lib/constants";
-import { devConfigSchema } from "~/lib/types";
 
-/**
- * Ensures the development configuration directory and file exist.
- *
- * Creates the config directory if it doesn't exist, and creates a minimal
- * valid config file if it doesn't exist.
- */
-async function ensureConfigExists() {
-  // Create config directory if it doesn't exist
-  if (!fs.existsSync(devConfigDir)) {
-    fs.mkdirSync(devConfigDir, { recursive: true });
-  }
+const GitProvider = z.enum(["github", "gitlab"]);
 
-  // Create config file if it doesn't exist
-  if (!fs.existsSync(devConfigPath)) {
-    const defaultConfig = {};
-    await Bun.write(devConfigPath, JSON.stringify(defaultConfig, null, 2));
+const MiseConfig = z.object({
+  trusted_config_paths: z.array(z.string()),
+});
+
+const devConfigSchema = z.object({
+  configUrl: z
+    .url()
+    .default("https://raw.githubusercontent.com/bai/dev/main/hack/configs/dev-config.json")
+    .describe("URL to the dev config file, set to whatever URL was used to install dev"),
+
+  defaultOrg: z.string().default("bai").describe("Default organization to use for cloning repositories"),
+
+  orgToProvider: z
+    .record(z.string(), GitProvider)
+    .default({ "gitlab-org": "gitlab" })
+    .describe("Map of organizations to their preferred git provider"),
+
+  mise: MiseConfig.optional().describe("Mise configuration settings"),
+});
+
+export type DevConfig = z.infer<typeof devConfigSchema>;
+export type GitProviderType = z.infer<typeof GitProvider>;
+
+class ConfigError extends Error {
+  constructor(
+    message: string,
+    public readonly cause?: unknown,
+  ) {
+    super(message);
+    this.name = "ConfigError";
   }
 }
 
-export async function refreshDevConfigFromRemoteUrl() {
-  await ensureConfigExists();
+class ConfigManager {
+  private static instance: ConfigManager;
+  private cachedConfig: DevConfig | null = null;
 
-  const response = await fetch(devConfig.configUrl);
-  const configData = await response.text();
-
-  await Bun.write(devConfigPath, configData);
-}
-
-/**
- * Loads and validates the development configuration from the config file.
- *
- * Reads the JSON configuration file from the dev directory and validates it
- * against the expected schema. Creates the directory and file if they don't exist.
- * Throws an error if the configuration is invalid.
- *
- * @returns Promise<DevConfig> The parsed and validated development configuration
- * @throws Error if the configuration file cannot be parsed or is invalid
- */
-export async function getDevConfig() {
-  await ensureConfigExists();
-
-  const devConfig = await Bun.file(devConfigPath).json();
-  const jsonConfig = devConfigSchema.safeParse(devConfig);
-
-  if (!jsonConfig.success) {
-    throw new Error("Failed to parse dev config");
+  private constructor() {
+    // Private constructor enforces singleton pattern
   }
 
-  return jsonConfig.data;
+  static getInstance(): ConfigManager {
+    if (!ConfigManager.instance) {
+      ConfigManager.instance = new ConfigManager();
+    }
+    return ConfigManager.instance;
+  }
+
+  private ensureConfigExists(): void {
+    try {
+      if (!fs.existsSync(devConfigDir)) {
+        fs.mkdirSync(devConfigDir, { recursive: true });
+      }
+
+      if (!fs.existsSync(devConfigPath)) {
+        const defaultConfig = devConfigSchema.parse({});
+        fs.writeFileSync(devConfigPath, JSON.stringify(defaultConfig, null, 2));
+      }
+    } catch (error) {
+      throw new ConfigError("Failed to ensure config exists", error);
+    }
+  }
+
+  getConfig(): DevConfig {
+    if (this.cachedConfig) {
+      return this.cachedConfig;
+    }
+
+    this.ensureConfigExists();
+
+    try {
+      const jsonText = fs.readFileSync(devConfigPath, "utf-8");
+      const parsedJson = JSON.parse(jsonText);
+      this.cachedConfig = devConfigSchema.parse(parsedJson);
+      return this.cachedConfig;
+    } catch (error) {
+      if (error instanceof SyntaxError) {
+        throw new ConfigError(`Invalid JSON in config file: ${devConfigPath}`, error);
+      }
+      if (error instanceof z.ZodError) {
+        throw new ConfigError(`Invalid config schema: ${error.message}`, error);
+      }
+      throw new ConfigError("Failed to load config", error);
+    }
+  }
+
+  async refreshFromRemote(): Promise<void> {
+    console.log("🔄 Refreshing dev configuration...");
+
+    const currentConfig = this.getConfig();
+    const { configUrl } = currentConfig;
+
+    try {
+      const response = await fetch(configUrl);
+
+      if (!response.ok) {
+        throw new ConfigError(
+          `Failed to fetch remote config from ${configUrl}: ${response.status} ${response.statusText}`,
+        );
+      }
+
+      const configText = await response.text();
+
+      // Validate the remote config before saving
+      const remoteConfig = JSON.parse(configText);
+      const validatedConfig = devConfigSchema.parse(remoteConfig);
+
+      // Write the validated config
+      await Bun.write(devConfigPath, JSON.stringify(validatedConfig, null, 2));
+
+      // Invalidate cache
+      this.cachedConfig = null;
+
+      console.log("✅ Dev configuration refreshed successfully");
+    } catch (error) {
+      if (error instanceof ConfigError) {
+        throw error;
+      }
+      if (error instanceof SyntaxError) {
+        throw new ConfigError("Remote config contains invalid JSON", error);
+      }
+      if (error instanceof z.ZodError) {
+        throw new ConfigError(`Remote config validation failed: ${error.message}`, error);
+      }
+      throw new ConfigError("Failed to refresh config from remote", error);
+    }
+  }
+
+  clearCache(): void {
+    this.cachedConfig = null;
+  }
+
+  async updateConfig(updates: Partial<DevConfig>): Promise<void> {
+    const currentConfig = this.getConfig();
+    const newConfig = { ...currentConfig, ...updates };
+    const validatedConfig = devConfigSchema.parse(newConfig);
+
+    await Bun.write(devConfigPath, JSON.stringify(validatedConfig, null, 2));
+    this.cachedConfig = validatedConfig;
+  }
 }
 
-/**
- * The global development configuration instance.
- *
- * This is a pre-loaded and validated configuration object that can be imported
- * and used throughout the application without needing to reload the config file.
- */
-export const devConfig = await getDevConfig();
+const configManager = ConfigManager.getInstance();
+
+export function getDevConfig(): DevConfig {
+  return configManager.getConfig();
+}
+
+export async function refreshDevConfigFromRemoteUrl(): Promise<void> {
+  return configManager.refreshFromRemote();
+}
+
+export async function updateDevConfig(updates: Partial<DevConfig>): Promise<void> {
+  return configManager.updateConfig(updates);
+}
+
+export function clearConfigCache(): void {
+  return configManager.clearCache();
+}
+
+export const devConfig = getDevConfig();

@@ -1,5 +1,4 @@
 import path from "path";
-
 import { spawnSync } from "bun";
 
 import { devDir } from "~/lib/constants";

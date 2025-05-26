@@ -6,7 +6,7 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "build": "bun build src/index.ts --compile --outfile dev",
+    "build": "bun build --compile --minify --sourcemap --bytecode src/index.ts --outfile dist/dev",
     "typecheck": "bun tsc --noEmit",
     "lint": "eslint . --ext .ts,.tsx",
     "lint:fix": "eslint . --ext .ts,.tsx --fix",

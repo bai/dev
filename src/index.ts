@@ -122,8 +122,8 @@ import { handleUpgradeCommand } from "~/cmd/upgrade";
     program
       .command("status")
       .description("Shows comprehensive status information and validates CLI functionality")
-      .action(() => {
-        handleStatusCommand();
+      .action(async () => {
+        await handleStatusCommand();
       });
 
     // run command

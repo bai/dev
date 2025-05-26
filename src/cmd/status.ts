@@ -1,15 +1,34 @@
 import fs from "fs";
 import path from "path";
-
 import { spawnSync } from "bun";
 
-import { baseSearchDir, devDir, homeDir } from "~/lib/constants";
+import { count, desc } from "drizzle-orm";
+
+import { baseSearchDir, devDbPath, devDir, homeDir } from "~/lib/constants";
+import { getDevConfig } from "~/lib/dev-config";
+import { db } from "~/drizzle";
+import { runs } from "~/drizzle/schema";
+
+/**
+ * Helper function to format time ago
+ */
+function getTimeAgo(date: Date): string {
+  const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
+
+  if (seconds < 60) return `${seconds} seconds ago`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes} minute${minutes !== 1 ? "s" : ""} ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} hour${hours !== 1 ? "s" : ""} ago`;
+  const days = Math.floor(hours / 24);
+  return `${days} day${days !== 1 ? "s" : ""} ago`;
+}
 
 /**
  * Shows comprehensive status information about the dev environment
  * and validates CLI functionality
  */
-export function handleStatusCommand(): void {
+export async function handleStatusCommand(): Promise<void> {
   console.log("🔍 Dev Environment Status & Health Check\n");
 
   let testsPassed = 0;
@@ -73,6 +92,87 @@ export function handleStatusCommand(): void {
     console.log(`   ✅ Mise configuration found`);
   } else {
     console.log(`   ℹ️  No mise configuration`);
+  }
+
+  // Display dev config values
+  console.log(`\n⚙️  Dev Configuration:`);
+  try {
+    const config = getDevConfig();
+    console.log(`   📋 Config URL: ${config.configUrl}`);
+    console.log(`   🏢 Default Org: ${config.defaultOrg}`);
+    console.log(`   🔗 Org Mappings:`);
+    for (const [org, provider] of Object.entries(config.orgToProvider)) {
+      console.log(`      ${org} → ${provider}`);
+    }
+    if (config.mise?.trusted_config_paths && config.mise.trusted_config_paths.length > 0) {
+      console.log(`   🛡️  Mise Trusted Paths:`);
+      for (const trustedPath of config.mise.trusted_config_paths) {
+        console.log(`      ${trustedPath}`);
+      }
+    }
+    testsPassed++;
+  } catch (error) {
+    console.log(`   ❌ Failed to load dev configuration`);
+    testsFailed++;
+  }
+
+  // Check database status and stats
+  console.log(`\n💾 Database Status:`);
+  if (fs.existsSync(devDbPath)) {
+    console.log(`   ✅ Database exists: ${devDbPath}`);
+    try {
+      const stats = fs.statSync(devDbPath);
+      const sizeKB = Math.round(stats.size / 1024);
+      console.log(`   📊 Size: ${sizeKB} KB`);
+
+      // Get database stats
+      const totalRuns = await db.select({ count: count() }).from(runs);
+      console.log(`   📈 Total runs recorded: ${totalRuns[0]?.count || 0}`);
+
+      // Get command usage stats
+      const commandStats = await db
+        .select({
+          command: runs.command_name,
+          count: count(),
+        })
+        .from(runs)
+        .groupBy(runs.command_name)
+        .orderBy(desc(count()));
+
+      if (commandStats.length > 0) {
+        console.log(`   🏆 Most used commands:`);
+        commandStats.slice(0, 5).forEach((stat) => {
+          console.log(`      ${stat.command}: ${stat.count} times`);
+        });
+      }
+
+      // Get recent runs
+      const recentRuns = await db
+        .select({
+          command: runs.command_name,
+          started_at: runs.started_at,
+        })
+        .from(runs)
+        .orderBy(desc(runs.started_at))
+        .limit(3);
+
+      if (recentRuns.length > 0) {
+        console.log(`   🕐 Recent runs:`);
+        recentRuns.forEach((run) => {
+          const date = new Date(run.started_at);
+          const timeAgo = getTimeAgo(date);
+          console.log(`      ${run.command} - ${timeAgo}`);
+        });
+      }
+
+      testsPassed++;
+    } catch (error) {
+      console.log(`   ⚠️  Database exists but cannot read stats`);
+      testsFailed++;
+    }
+  } else {
+    console.log(`   ❌ Database not found at: ${devDbPath}`);
+    testsFailed++;
   }
 
   // Check required tools

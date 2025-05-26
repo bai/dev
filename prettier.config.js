@@ -15,6 +15,9 @@ const config = {
   importOrder: [
     "^server-only|client-only$",
     "",
+    "<BUILTIN_MODULES>",
+    "^bun$",
+    "",
     "^react-scan$",
     "",
     "^(react/(.*)$)|^(react-dom/(.*)$)|^(react$)",
