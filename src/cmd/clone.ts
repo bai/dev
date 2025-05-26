@@ -20,7 +20,6 @@ export function handleCloneCommand(args: string[]): void {
     console.error("   dev clone org/myrepo");
     console.error("   dev clone https://github.com/org/myrepo");
     console.error("   dev clone --gitlab myrepo");
-    console.error("   dev clone --org myorg myrepo");
     process.exit(1);
   }
 
@@ -100,24 +99,9 @@ function parseCloneArguments(args: string[]): CloneParams {
   } else if (args.length === 2 && (args[0] === "--github" || args[0] === "--gitlab")) {
     useGitLab = args[0] === "--gitlab";
     repoArg = args[1]!;
-  } else if (args.length === 3 && (args[0] === "--org" || args[0] === "-o")) {
-    explicitOrg = args[1];
-    repoArg = args[2]!;
-
-    if (!explicitOrg || !repoArg) {
-      console.error("❌ Error: Organization and repository are required with --org flag.");
-      process.exit(1);
-    }
-
-    // Check if the org has a provider mapping
-    useGitLab =
-      explicitOrg in devConfig.orgToProvider
-        ? devConfig.orgToProvider[explicitOrg] === "gitlab"
-        : devConfig.orgToProvider[devConfig.defaultOrg] === "gitlab";
   } else {
     console.error("❌ Error: Invalid arguments for 'clone' command.");
     console.error("Usage: dev clone [--github|--gitlab] <repository>");
-    console.error("       dev clone [--org|-o] <organization> <repository>");
     console.error("       dev clone <organization/repository>");
     process.exit(1);
   }

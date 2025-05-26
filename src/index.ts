@@ -89,7 +89,6 @@ import { handleUpgradeCommand } from "~/cmd/upgrade";
       .argument("<repo>", "Repository to clone (name, org/repo, or full URL)")
       .option("--gitlab", "Use GitLab as the provider")
       .option("--github", "Use GitHub as the provider")
-      .option("-o, --org <organization>", "Specify the organization")
       .action((repo: string, options: { gitlab?: boolean; github?: boolean; org?: string }) => {
         const args = [repo];
 
@@ -97,10 +96,6 @@ import { handleUpgradeCommand } from "~/cmd/upgrade";
           args.unshift("--gitlab");
         } else if (options.github) {
           args.unshift("--github");
-        }
-
-        if (options.org) {
-          args.unshift("--org", options.org);
         }
 
         handleCloneCommand(args);

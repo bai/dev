@@ -81,7 +81,6 @@ dev clone https://github.com/org/myrepo    # Full URL
 # Provider-specific cloning
 dev clone --github myrepo
 dev clone --gitlab myrepo
-dev clone --org myorg myrepo
 ```
 
 ### Environment Management

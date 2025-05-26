@@ -75,7 +75,6 @@ export function showUsage(): never {
                                dev clone repo (uses provider based on organization mapping)
                                dev clone org/repo (provider chosen based on 'org')
                                dev clone --gitlab repo (explicitly uses GitLab)
-                               dev clone --org customorg repo
 
   dev status                 Shows comprehensive status information and validates CLI functionality.
                              Displays tool availability, git status, configuration, and health checks.
