@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env zsh
 
 set -e
 
@@ -97,7 +97,7 @@ EOF
   else
     echo "   ✅ Shell integration already configured"
   fi
-  source "$HOME/.zshrc" 2>/dev/null || true
+  source "$HOME/.zshrc" #2>/dev/null || true
   echo "   ✅ Shell configuration reloaded"
 else
   echo "   ⚠️  ~/.zshrc not found - you may need to create it"
