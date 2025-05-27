@@ -114,6 +114,13 @@ else
   echo "   ✅ Bun already available"
 fi
 
+# Step 8: Dependencies
+echo ""
+echo "📚 Installing project dependencies..."
+cd "$HOME/.dev"
+bun install
+echo "   ✅ Dependencies installed"
+
 # Step 8: Dev Setup
 echo ""
 bun run "$HOME"/.dev/src/index.ts setup
