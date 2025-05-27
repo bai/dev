@@ -77,7 +77,12 @@ function parseCloneArguments(args: string[]): CloneParams {
   let explicitOrg: string | undefined;
 
   if (args.length === 1) {
-    repoArg = args[0]!;
+    const firstArg = args[0];
+    if (!firstArg) {
+      console.error("❌ Error: Repository argument is required.");
+      process.exit(1);
+    }
+    repoArg = firstArg;
 
     // Check if repo arg contains org/repo format
     if (repoArg.includes("/") && !isFullUrl(repoArg)) {
@@ -97,7 +102,12 @@ function parseCloneArguments(args: string[]): CloneParams {
     }
   } else if (args.length === 2 && (args[0] === "--github" || args[0] === "--gitlab")) {
     useGitLab = args[0] === "--gitlab";
-    repoArg = args[1]!;
+    const secondArg = args[1];
+    if (!secondArg) {
+      console.error("❌ Error: Repository argument is required.");
+      process.exit(1);
+    }
+    repoArg = secondArg;
   } else {
     console.error("❌ Error: Invalid arguments for 'clone' command.");
     console.error("Usage: dev clone [--github|--gitlab] <repository>");

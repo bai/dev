@@ -39,14 +39,22 @@ export function handleCommandError(
 
 /**
  * Handles changing directory through shell wrapper by outputting a special format.
- * Converts the relative path to an absolute path and validates that the target path exists before attempting to
- * change directory.
+ * Determines the absolute path from the given targetPath (which can be absolute or relative),
+ * validates that the target path exists, and then outputs a special format for the shell wrapper
+ * to change directory.
  *
- * @param targetPath - The absolute path to change directory to
+ * @param targetPath - The path (absolute or relative to baseSearchDir) to change directory to
  * @throws Never returns - always exits the process (code 0 on success, code 1 on error)
  */
 export function handleCdToPath(targetPath: string): void {
-  const absolutePath = path.join(baseSearchDir, targetPath.replace(/\/$/, ""));
+  let absolutePath: string;
+  const cleanedTargetPath = targetPath.replace(/\/$/, ""); // Remove trailing slash
+
+  if (path.isAbsolute(cleanedTargetPath)) {
+    absolutePath = cleanedTargetPath;
+  } else {
+    absolutePath = path.join(baseSearchDir, cleanedTargetPath);
+  }
 
   // Validate path exists before attempting to cd
   if (!fs.existsSync(absolutePath)) {
