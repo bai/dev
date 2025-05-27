@@ -13,7 +13,7 @@ export function handleUpgradeCommand(): void {
     console.log("🔄 Upgrading dev CLI tool...");
     const setupScriptPath = path.join(devDir, "hack", "setup.sh");
 
-    const proc = spawnSync(["bash", setupScriptPath], {
+    const proc = spawnSync(["zsh", setupScriptPath], {
       stdio: ["ignore", "inherit", "inherit"], // Inherit stdout and stderr to pass through to the user
     });
 
@@ -24,6 +24,6 @@ export function handleUpgradeCommand(): void {
 
     console.log("✅ dev CLI tool successfully upgraded!");
   } catch (error: any) {
-    handleCommandError(error, "upgrade", "bash");
+    handleCommandError(error, "upgrade", "zsh");
   }
 }

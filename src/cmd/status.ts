@@ -301,7 +301,7 @@ export async function handleStatusCommand(): Promise<void> {
     console.log(`\n🎉 All checks passed! Your dev CLI is working correctly.`);
   } else {
     console.log(`\n⚠️  Some checks failed.`);
-    console.log(`💡 Consider running the setup script: bash ~/.dev/hack/setup.sh`);
+    console.log(`💡 Consider running the setup script: zsh ~/.dev/hack/setup.sh`);
   }
 
   console.log(`\n💡 Run 'dev help' for usage information`);

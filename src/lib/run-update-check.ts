@@ -67,7 +67,7 @@ export const runPeriodicUpgradeCheck = async () => {
           `🔄 [dev] Periodic check: Last update was more than 7 days ago. Attempting background self-update...`,
         );
         try {
-          const child = spawn("bash", [upgradeScriptPath], {
+          const child = spawn("zsh", [upgradeScriptPath], {
             detached: true,
             stdio: "ignore",
           });
