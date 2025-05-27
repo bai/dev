@@ -33,10 +33,10 @@
 
 ```bash
 # Set up using defaults
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/bai/dev/refs/heads/main/hack/setup.sh)"
+/bin/zsh -c "$(curl -fsSL https://raw.githubusercontent.com/bai/dev/refs/heads/main/hack/setup.sh)"
 
 # Provide your config file URL
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/bai/dev/refs/heads/main/hack/setup.sh)" -- --config-url=<your_config_url>
+/bin/zsh -c "$(curl -fsSL https://raw.githubusercontent.com/bai/dev/refs/heads/main/hack/setup.sh)" -- --config-url=<your_config_url>
 ```
 
 This will:
@@ -55,7 +55,7 @@ You can customize `dev` by providing your own configuration file URL. A common a
 git clone https://github.com/bai/dev.git ~/.dev
 
 # Run setup
-bash ~/.dev/hack/setup.sh
+zsh ~/.dev/hack/setup.sh
 ```
 
 ## 📖 Usage
