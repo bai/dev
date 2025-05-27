@@ -1,5 +1,7 @@
 import fs from "fs";
+import path from "path";
 
+import { baseSearchDir } from "~/lib/constants";
 import { devConfig } from "~/lib/dev-config";
 
 /**
@@ -37,20 +39,23 @@ export function handleCommandError(
 
 /**
  * Handles changing directory through shell wrapper by outputting a special format.
- * Validates that the target path exists before attempting to change directory.
+ * Converts the relative path to an absolute path and validates that the target path exists before attempting to
+ * change directory.
  *
  * @param targetPath - The absolute path to change directory to
  * @throws Never returns - always exits the process (code 0 on success, code 1 on error)
  */
 export function handleCdToPath(targetPath: string): void {
+  const absolutePath = path.join(baseSearchDir, targetPath.replace(/\/$/, ""));
+
   // Validate path exists before attempting to cd
-  if (!fs.existsSync(targetPath)) {
-    console.error(`❌ Error: Directory does not exist: ${targetPath}`);
+  if (!fs.existsSync(absolutePath)) {
+    console.error(`❌ Error: Directory does not exist: ${absolutePath}`);
     process.exit(1);
   }
 
   // Special format for the shell wrapper to interpret: "CD:<path>"
-  console.log(`CD:${targetPath}`);
+  console.log(`CD:${absolutePath}`);
   process.exit(0);
 }
 

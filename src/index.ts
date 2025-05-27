@@ -8,7 +8,7 @@ import { runPeriodicUpgradeCheck } from "~/lib/run-update-check";
 import { ensureDatabaseIsUpToDate } from "~/lib/setup";
 import { getCurrentGitCommitSha } from "~/lib/version";
 import { handleAuthCommand } from "~/cmd/auth";
-import { handleCdCommand, handleCdInteractiveMode } from "~/cmd/cd";
+import { handleDirectCd, handleInteractiveCd } from "~/cmd/cd";
 import { handleCloneCommand } from "~/cmd/clone";
 import { handleRunCommand } from "~/cmd/run";
 import { handleSetupCommand } from "~/cmd/setup";
@@ -59,10 +59,9 @@ import { handleUpgradeCommand } from "~/cmd/upgrade";
       .argument("[folder_name]", "Name of the folder to navigate to")
       .action((folderName?: string) => {
         if (folderName) {
-          handleCdCommand([folderName]);
+          handleDirectCd(folderName);
         } else {
-          // If 'cd' is used without arguments, show the list of directories
-          handleCdInteractiveMode();
+          handleInteractiveCd();
         }
       });
 
