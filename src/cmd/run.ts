@@ -7,7 +7,7 @@ import { handleCommandError } from "~/lib/handlers";
  * Executes 'mise run <task>' with the provided task arguments.
  * All arguments after 'run' are passed through to the mise command.
  */
-export function handleRunCommand(args: string[]): void {
+export async function handleRunCommand(args: string[]): Promise<void> {
   try {
     // Validate that at least one task argument is provided
     if (args.length === 0) {

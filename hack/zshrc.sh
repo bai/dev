@@ -1,5 +1,3 @@
-#!/usr/bin/env zsh
-#
 # Dev CLI wrapper for interactive shells
 #
 # This script is used to wrap the dev command in a way that is compatible with

@@ -4,8 +4,9 @@ import { spawnSync } from "bun";
 
 import { count, desc } from "drizzle-orm";
 
-import { baseSearchDir, devDbPath, devDir, homeDir } from "~/lib/constants";
+import { baseSearchDir, devDbPath, devDir, homeDir, miseMinVersion } from "~/lib/constants";
 import { getDevConfig } from "~/lib/dev-config";
+import { checkMiseVersion } from "~/lib/mise-version";
 import { db } from "~/drizzle";
 import { runs } from "~/drizzle/schema";
 
@@ -196,8 +197,31 @@ export async function handleStatusCommand(): Promise<void> {
 
       if (result.exitCode === 0) {
         const toolPath = result.stdout?.toString().trim();
-        console.log(`   ✅ ${tool.name}: ${toolPath}`);
-        if (tool.required) testsPassed++;
+
+        if (tool.name === "mise") {
+          // Special handling for mise to show version information
+          const { isValid, currentVersion } = checkMiseVersion();
+
+          if (currentVersion) {
+            const versionStatus = isValid ? "✅" : "⚠️ ";
+            const versionNote = isValid
+              ? ` (v${currentVersion})`
+              : ` (v${currentVersion} - requires v${miseMinVersion}+)`;
+            console.log(`   ${versionStatus} ${tool.name}: ${toolPath}${versionNote}`);
+
+            if (!isValid) {
+              console.log(`   💡 Run 'dev upgrade' to update mise to the required version`);
+            }
+          } else {
+            console.log(`   ⚠️  ${tool.name}: ${toolPath} (version check failed)`);
+          }
+
+          if (tool.required && isValid) testsPassed++;
+          else if (tool.required) testsFailed++;
+        } else {
+          console.log(`   ✅ ${tool.name}: ${toolPath}`);
+          if (tool.required) testsPassed++;
+        }
       } else {
         const status = tool.required ? "❌" : "⚠️ ";
         const note = tool.required ? " (required)" : " (optional)";

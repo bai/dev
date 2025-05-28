@@ -10,7 +10,7 @@ import { handleCommandError } from "~/lib/handlers";
  * Checks for and creates a local mise config if in a git repository and config is missing.
  * Then, runs 'mise install' command directly to update development tools.
  */
-export function handleUpCommand(): void {
+export async function handleUpCommand(): Promise<void> {
   try {
     const cwd = process.cwd();
     const gitRepoPath = path.join(cwd, ".git");

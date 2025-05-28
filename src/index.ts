@@ -4,6 +4,7 @@ import { Command } from "commander";
 
 import { baseSearchDir } from "~/lib/constants";
 import { showUsage } from "~/lib/handlers";
+import { ensureMiseVersionOrUpgrade } from "~/lib/mise-version";
 import { runPeriodicUpgradeCheck } from "~/lib/run-update-check";
 import { ensureDatabaseIsUpToDate } from "~/lib/setup";
 import { getCurrentGitCommitSha } from "~/lib/version";
@@ -20,6 +21,7 @@ import { handleUpgradeCommand } from "~/cmd/upgrade";
   try {
     await ensureDatabaseIsUpToDate();
     await runPeriodicUpgradeCheck();
+    await ensureMiseVersionOrUpgrade("run");
 
     // Ensure base search directory exists
     if (!fs.existsSync(baseSearchDir)) {
@@ -69,8 +71,8 @@ import { handleUpgradeCommand } from "~/cmd/upgrade";
     program
       .command("up")
       .description("Installs development tools for the current project")
-      .action(() => {
-        handleUpCommand();
+      .action(async () => {
+        await handleUpCommand();
       });
 
     // upgrade command
@@ -131,8 +133,8 @@ import { handleUpgradeCommand } from "~/cmd/upgrade";
       .description("Runs 'mise run <task>' to execute project tasks")
       .argument("<task>", "Task to run")
       .argument("[args...]", "Additional arguments to pass to the task")
-      .action((task: string, args: string[]) => {
-        handleRunCommand([task, ...args]);
+      .action(async (task: string, args: string[]) => {
+        await handleRunCommand([task, ...args]);
       });
 
     // setup command
