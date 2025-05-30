@@ -1,6 +1,6 @@
 #!/usr/bin/env zsh
 
-set -e
+set -eu
 
 # Parse command line arguments
 CONFIG_URL=""

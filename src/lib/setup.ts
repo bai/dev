@@ -4,28 +4,14 @@ import { spawnSync } from "bun";
 
 import { stringify } from "@iarna/toml";
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
-import z from "zod/v4";
 
 import { devDir, homeDir, miseConfigDir, miseConfigPath, stdioPipe } from "~/lib/constants";
-import { devConfig } from "~/lib/dev-config";
+import { devConfig, miseConfigSchema } from "~/lib/dev-config";
 import { handleCommandError } from "~/lib/handlers";
 import { db } from "~/drizzle";
 
 const gcloudConfigDir = path.join(homeDir, ".config", "gcloud");
 const gcloudComponentsPath = path.join(gcloudConfigDir, ".default-cloud-sdk-components");
-
-/**
- * Mise config schema
- * @see https://mise.jdx.dev/configuration/settings.html
- */
-const miseConfigSchema = z.object({
-  env: z.object({ _: z.object({ path: z.array(z.string()) }) }),
-  tools: z.record(z.string(), z.string()),
-  settings: z.object({
-    idiomatic_version_file_enable_tools: z.array(z.string()),
-    trusted_config_paths: z.array(z.string()),
-  }),
-});
 
 export async function ensureDatabaseIsUpToDate() {
   // console.log("🔄 Checking for database migrations...");
@@ -69,8 +55,8 @@ export async function setupMiseGlobalConfig() {
     }
 
     // Amend the TOML config with trusted_config_paths from dev JSON config
-    if (devConfig.mise && devConfig.mise.trusted_config_paths) {
-      parsedMiseGlobalConfig.data.settings.trusted_config_paths = devConfig.mise.trusted_config_paths;
+    if (devConfig.mise && devConfig.mise.settings.trusted_config_paths) {
+      parsedMiseGlobalConfig.data.settings.trusted_config_paths = devConfig.mise.settings.trusted_config_paths;
     }
 
     // Serialize the final config as TOML and write to file

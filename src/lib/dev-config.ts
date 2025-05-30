@@ -4,13 +4,22 @@ import { z } from "zod/v4";
 
 import { devConfigDir, devConfigPath } from "~/lib/constants";
 
-const GitProvider = z.enum(["github", "gitlab"]);
+const gitProviderSchema = z.enum(["github", "gitlab"]);
 
-const MiseConfig = z.object({
-  trusted_config_paths: z.array(z.string()),
+/**
+ * Mise config schema
+ * @see https://mise.jdx.dev/configuration/settings.html
+ */
+export const miseConfigSchema = z.object({
+  env: z.object({ _: z.object({ path: z.array(z.string()) }) }),
+  tools: z.record(z.string(), z.string()),
+  settings: z.object({
+    idiomatic_version_file_enable_tools: z.array(z.string()),
+    trusted_config_paths: z.array(z.string()),
+  }),
 });
 
-const devConfigSchema = z.object({
+export const devConfigSchema = z.object({
   configUrl: z
     .url()
     .default("https://raw.githubusercontent.com/bai/dev/main/hack/configs/dev-config.json")
@@ -19,15 +28,15 @@ const devConfigSchema = z.object({
   defaultOrg: z.string().default("bai").describe("Default organization to use for cloning repositories"),
 
   orgToProvider: z
-    .record(z.string(), GitProvider)
+    .record(z.string(), gitProviderSchema)
     .default({ "gitlab-org": "gitlab" })
     .describe("Map of organizations to their preferred git provider"),
 
-  mise: MiseConfig.optional().describe("Mise configuration settings"),
+  mise: miseConfigSchema.optional().describe("Mise configuration settings"),
 });
 
 export type DevConfig = z.infer<typeof devConfigSchema>;
-export type GitProviderType = z.infer<typeof GitProvider>;
+export type GitProviderType = z.infer<typeof gitProviderSchema>;
 
 class ConfigError extends Error {
   constructor(
