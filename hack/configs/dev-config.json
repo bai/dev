@@ -26,6 +26,8 @@
       "glab": "latest",
       "fzf": "latest",
       "fd": "latest",
+      "fzy": "latest",
+      "git": "latest",
       "npm:@anthropic-ai/claude-code": "latest",
       "npm:eslint": "latest",
       "npm:npm-check-updates": "latest",

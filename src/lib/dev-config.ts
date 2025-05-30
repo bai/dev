@@ -11,12 +11,14 @@ const gitProviderSchema = z.enum(["github", "gitlab"]);
  * @see https://mise.jdx.dev/configuration/settings.html
  */
 export const miseConfigSchema = z.object({
-  env: z.object({ _: z.object({ path: z.array(z.string()) }) }),
-  tools: z.record(z.string(), z.string()),
-  settings: z.object({
-    idiomatic_version_file_enable_tools: z.array(z.string()),
-    trusted_config_paths: z.array(z.string()),
-  }),
+  env: z.object({ _: z.object({ path: z.array(z.string()) }) }).optional(),
+  tools: z.record(z.string(), z.string()).optional(),
+  settings: z
+    .object({
+      idiomatic_version_file_enable_tools: z.array(z.string()).optional(),
+      trusted_config_paths: z.array(z.string()).optional(),
+    })
+    .optional(),
 });
 
 export const devConfigSchema = z.object({
