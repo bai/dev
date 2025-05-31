@@ -1,10 +1,10 @@
-# Interface-Based CLI Architecture
+# Dev CLI Architecture
 
-This document describes the superior interface-based approach for the dev CLI, which provides better testability, maintainability, and extensibility compared to class-based inheritance patterns.
+This document describes architecture of the dev CLI.
 
 ## 🎯 Architecture Overview
 
-The interface-based CLI uses **composition over inheritance** and **dependency injection** for a cleaner, more flexible design:
+The dev CLI is built using an **interface-based architecture** that prioritizes **composition over inheritance** and **dependency injection** for maximum testability, maintainability, and extensibility.
 
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
@@ -13,19 +13,20 @@ The interface-based CLI uses **composition over inheritance** and **dependency i
 │                 │    │                 │    │    Config)      │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
          │                       │                       │
-         │                       │                       │
+         │ Auto-discovery        │ Commander.js          │ Dependency
+         │                       │ Integration           │ Injection
          ▼                       ▼                       ▼
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   DevCommand    │    │   Commander.js  │    │   CommandContext│
-│   Interface     │    │   Integration   │    │   (Runtime)     │
+│   DevCommand    │    │   Pure Utility  │    │   CommandContext│
+│   Interface     │    │   Functions     │    │   (Runtime)     │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
 ```
 
-## 🔧 Core Components
+## 🏗️ Core Components
 
 ### 1. DevCommand Interface
 
-Pure interface that all commands must implement:
+The foundation of our architecture is a pure interface that all commands must implement:
 
 ```typescript
 interface DevCommand {
@@ -42,9 +43,9 @@ interface DevCommand {
 }
 ```
 
-### 2. CommandContext
+### 2. CommandContext (Dependency Injection)
 
-Runtime context with dependency injection:
+Runtime context providing all dependencies through injection:
 
 ```typescript
 interface CommandContext {
@@ -58,7 +59,7 @@ interface CommandContext {
 
 ### 3. Pure Utility Functions
 
-Instead of inherited methods, use pure functions:
+Instead of inherited methods, we use pure, testable functions:
 
 ```typescript
 // Command creation utilities
@@ -75,7 +76,47 @@ export function runCommand(command: string[], context: CommandContext, options?:
 export function validateTool(toolName: string, context: CommandContext): void;
 ```
 
-## 🚀 Creating Commands
+## ✨ Key Benefits
+
+### 1. **Superior Testability**
+- **Pure functions** are easy to test in isolation
+- **Explicit dependencies** via context injection
+- **No hidden global state** or side effects
+- **Mockable services** through dependency injection
+
+```typescript
+// Easy to test with mocks
+const mockLogger = { success: vi.fn() };
+const context = { args: { name: 'World' }, logger: mockLogger };
+await helloCommand.exec(context);
+expect(mockLogger.success).toHaveBeenCalledWith('Hello, World!');
+```
+
+### 2. **Composition Over Inheritance**
+- **No tight coupling** to base classes
+- **Mix and match utilities** as needed
+- **More flexible command structure**
+- **Easier to extend and modify**
+
+### 3. **Dependency Injection**
+- **Services injected** through context
+- **Easy to mock** for testing
+- **Clear separation** of concerns
+- **Runtime flexibility**
+
+### 4. **Type Safety**
+- **Full TypeScript support** throughout
+- **Strongly typed context** and interfaces
+- **Compile-time validation**
+- **Better IDE support and autocomplete**
+
+### 5. **Functional Programming**
+- **Pure functions** without side effects
+- **Immutable data structures**
+- **Predictable behavior**
+- **Easy to reason about**
+
+## 🚀 Command Implementation Patterns
 
 ### Simple Command
 
@@ -112,7 +153,6 @@ import {
   getArg,
   hasOption,
   validateChoice,
-  isGitRepository,
   runCommand
 } from '~/utils/command-utils';
 
@@ -142,12 +182,6 @@ Examples:
 
     // Validate environment choice
     validateChoice(context, 'environment', ['staging', 'production']);
-
-    // Check git repository
-    if (!isGitRepository()) {
-      logger.error('Must be run in a git repository');
-      return false;
-    }
 
     // Check if production deployment requires confirmation
     const env = getArg(context, 'environment');
@@ -186,11 +220,11 @@ Examples:
 };
 ```
 
-## 🏗️ Command Registration
+## 🔄 Command Registration
 
-### Auto-Discovery
+### Auto-Discovery System
 
-Commands are automatically discovered from `src/commands/`:
+Commands are automatically discovered from the `src/commands/` directory:
 
 ```typescript
 // Commands are found by these export patterns:
@@ -201,16 +235,18 @@ export default { name: 'my-command', ... };             // Default export
 ### Manual Registration
 
 ```typescript
-// In your main file or plugin
+// For external plugins or custom commands
 import { commandRegistry } from '~/core/command-registry';
 import { myCustomCommand } from './my-commands';
 
 commandRegistry.register(myCustomCommand);
 ```
 
-## 🔌 Services and Dependency Injection
+## 🔌 Services Architecture
 
 ### Logger Service
+
+Provides structured, colorized logging throughout the application:
 
 ```typescript
 // Commands receive logger through context
@@ -227,6 +263,8 @@ async exec(context) {
 
 ### Configuration Service
 
+Manages application configuration with defaults and runtime overrides:
+
 ```typescript
 // Access configuration through context
 async exec(context) {
@@ -240,7 +278,7 @@ async exec(context) {
 }
 ```
 
-## 🧪 Testing
+## 🧪 Testing Strategy
 
 ### Pure Function Testing
 
@@ -297,26 +335,26 @@ describe('Hello Command', () => {
 
 ## 🔄 Migration from Class-Based
 
-### Before (Class-Based)
+### Before (Class-Based) ❌
 
 ```typescript
-// Old approach
+// Old inheritance-based approach
 export default class MyCommand extends BaseCommand {
   name = 'my-command';
   description = 'My command';
 
   async exec(context: CommandContext): Promise<void> {
-    const input = this.getArg(context, 0)!;
+    const input = this.getArg(context, 0)!;  // Hidden method
     const force = this.hasOption(context, 'force');
-    console.log(`Processing ${input}`);
+    console.log(`Processing ${input}`);       // Hardcoded console
   }
 }
 ```
 
-### After (Interface-Based)
+### After (Interface-Based) ✅
 
 ```typescript
-// New approach
+// New composition-based approach
 export const myCommand: DevCommand = {
   name: 'my-command',
   description: 'My command',
@@ -330,48 +368,16 @@ export const myCommand: DevCommand = {
   ],
 
   async exec(context) {
-    const { logger } = context;
-    const input = getArg(context, 'input');
+    const { logger } = context;              // Injected dependency
+    const input = getArg(context, 'input'); // Pure function
     const force = hasOption(context, 'force');
 
-    logger.info(`Processing ${input}`);
+    logger.info(`Processing ${input}`);      // Mockable logger
   }
 };
 ```
 
-## ✨ Benefits
-
-### 1. **Better Testability**
-- Pure functions are easy to test
-- Explicit dependencies via context
-- No hidden global state
-
-### 2. **Composition Over Inheritance**
-- Mix and match utilities as needed
-- No tight coupling to base classes
-- More flexible command structure
-
-### 3. **Dependency Injection**
-- Services injected through context
-- Easy to mock for testing
-- Clear separation of concerns
-
-### 4. **Type Safety**
-- Full TypeScript support
-- Strongly typed context
-- Compile-time validation
-
-### 5. **Functional Programming**
-- Pure functions
-- Immutable data
-- Predictable behavior
-
-### 6. **Extensibility**
-- Easy to add new utilities
-- Plugin-friendly architecture
-- External command registration
-
-## 🔮 Advanced Usage
+## 🔮 Advanced Features
 
 ### Custom Validation
 
@@ -401,23 +407,7 @@ export const advancedCommand: DevCommand = {
 };
 ```
 
-### Custom Setup
-
-```typescript
-export const specialCommand: DevCommand = {
-  // ... command definition
-
-  setup(command) {
-    // Custom commander.js setup
-    command.configureHelp({
-      sortSubcommands: true,
-      subcommandTerm: 'action'
-    });
-  }
-};
-```
-
-### External Plugins
+### External Plugin Support
 
 ```typescript
 // ~/.dev/plugins/my-plugin.ts
@@ -435,4 +425,26 @@ const customCommand = createCommand({
 commandRegistry.register(customCommand);
 ```
 
-This interface-based approach provides a more maintainable, testable, and extensible CLI architecture while maintaining all the functionality of the class-based approach.
+## 🎯 Design Principles
+
+1. **Composition over Inheritance** - No base class coupling, flexible composition
+2. **Dependency Injection** - Services provided through context
+3. **Pure Functions** - Predictable, side-effect free utilities
+4. **Testability First** - Easy to mock and isolate components
+5. **Type Safety** - Full TypeScript support throughout
+6. **Functional Style** - Modern JavaScript best practices
+7. **Plugin Friendly** - Easy external command registration
+8. **Auto-Discovery** - Commands automatically registered from filesystem
+
+## 🚀 Quick Start
+
+1. **Test the example command:**
+   ```bash
+   bun run src/index.ts example "Hello World" --uppercase --count 3
+   ```
+
+2. **Create new commands in `src/commands/`**
+
+3. **Commands are auto-discovered and registered automatically**
+
+This interface-based architecture provides a **production-ready CLI framework** that prioritizes maintainability, testability, and extensibility while maintaining excellent developer experience and type safety throughout.
