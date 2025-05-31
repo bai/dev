@@ -1,4 +1,3 @@
-import { spawn } from "child_process";
 import path from "path";
 
 import { desc, eq } from "drizzle-orm";
@@ -67,11 +66,9 @@ export const runPeriodicUpgradeCheck = async () => {
           `🔄 [dev] Periodic check: Last update was more than 7 days ago. Attempting background self-update...`,
         );
         try {
-          const child = spawn("zsh", [upgradeScriptPath], {
-            detached: true,
-            stdio: "ignore",
+          Bun.spawn(["zsh", upgradeScriptPath], {
+            stdio: ["ignore", "ignore", "ignore"],
           });
-          child.unref();
           console.log("✅ [dev] Background self-update process started.");
         } catch (spawnError: any) {
           console.error("❌ [dev] Error starting background self-update process:", spawnError.message);

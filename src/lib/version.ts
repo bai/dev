@@ -1,5 +1,3 @@
-import { execSync } from "child_process";
-
 import { devDir } from "~/lib/constants";
 
 /**
@@ -9,11 +7,15 @@ import { devDir } from "~/lib/constants";
  */
 export const getCurrentGitCommitSha = (): string => {
   try {
-    const sha = execSync("git rev-parse --short=7 HEAD", {
+    const result = Bun.spawnSync(["git", "rev-parse", "--short=7", "HEAD"], {
       cwd: devDir,
-      encoding: "utf-8",
-    }).trim();
-    return sha;
+    });
+
+    if (result.success && result.stdout) {
+      return result.stdout.toString().trim();
+    }
+
+    return "unknown";
   } catch (error) {
     return "unknown";
   }
