@@ -20,16 +20,16 @@
   "dependencies": {
     "@iarna/toml": "2.2.5",
     "commander": "14.0.0",
-    "drizzle-orm": "0.44.0",
+    "drizzle-orm": "0.44.1",
     "yaml": "2.8.0",
-    "zod": "3.25.39"
+    "zod": "3.25.42"
   },
   "devDependencies": {
-    "@eslint/js": "9.27.0",
+    "@eslint/js": "9.28.0",
     "@ianvs/prettier-plugin-sort-imports": "4.4.2",
     "@types/bun": "1.2.15",
     "drizzle-kit": "0.31.1",
-    "eslint": "9.27.0",
+    "eslint": "9.28.0",
     "eslint-config-prettier": "10.1.5",
     "eslint-plugin-unused-imports": "4.1.4",
     "jiti": "2.4.2",
