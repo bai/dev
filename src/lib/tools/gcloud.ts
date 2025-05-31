@@ -1,10 +1,24 @@
 import fs from "fs";
 import path from "path";
 
-import { devDir, homeDir } from "~/lib/constants";
+import { homeDir } from "~/lib/constants";
 
 const gcloudConfigDir = path.join(homeDir, ".config", "gcloud");
 const gcloudComponentsPath = path.join(gcloudConfigDir, ".default-cloud-sdk-components");
+
+const gcloudComponents = [
+  "alpha",
+  "beta",
+  "cloud_sql_proxy",
+  "cloud-build-local",
+  "config-connector",
+  "docker-credential-gcr",
+  "gke-gcloud-auth-plugin",
+  "kpt",
+  "kubectl",
+  "kustomize",
+  "terraform-tools",
+];
 
 /**
  * Sets up the Google Cloud configuration.
@@ -26,15 +40,7 @@ export async function setupGoogleCloudConfig() {
       fs.mkdirSync(gcloudConfigDir, { recursive: true });
     }
 
-    // Copy cloud SDK components config
-    const sourceConfigPath = path.join(devDir, "hack", "configs", "default-cloud-sdk-components");
-
-    if (!fs.existsSync(sourceConfigPath)) {
-      throw new Error(`Source config file not found: ${sourceConfigPath}`);
-    }
-
-    const configContent = await Bun.file(sourceConfigPath).text();
-    await Bun.write(gcloudComponentsPath, configContent);
+    await Bun.write(gcloudComponentsPath, gcloudComponents.join("\n"));
     console.log("   ✅ Google Cloud config ready");
   } catch (err) {
     console.error("❌ Error setting up Google Cloud configuration:", err);
