@@ -1,5 +1,5 @@
+import type { ConfigManager } from "~/lib/core/command-types";
 import { getDevConfig } from "~/lib/dev-config";
-import type { ConfigManager } from "~/types/command";
 
 /**
  * Configuration manager implementation

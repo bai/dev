@@ -1,8 +1,8 @@
 import path from "path";
 
 import { devDir } from "~/lib/constants";
-import type { DevCommand } from "~/types/command";
-import { runCommand } from "~/utils/command-utils";
+import type { DevCommand } from "~/lib/core/command-types";
+import { runCommand } from "~/lib/core/command-utils";
 
 export const upgradeCommand: DevCommand = {
   name: "upgrade",

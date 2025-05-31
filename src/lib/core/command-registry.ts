@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 
-import type { CommandRegistration, DevCommand } from "~/types/command";
+import type { CommandRegistration, DevCommand } from "~/lib/core/command-types";
 
 /**
  * Command registry for managing all available commands

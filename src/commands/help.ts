@@ -1,4 +1,4 @@
-import type { DevCommand } from "~/types/command";
+import type { DevCommand } from "~/lib/core/command-types";
 
 export const helpCommand: DevCommand = {
   name: "help",

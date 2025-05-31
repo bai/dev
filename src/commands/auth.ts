@@ -1,7 +1,7 @@
 import { spawn } from "child_process";
 
-import type { DevCommand } from "~/types/command";
-import { arg, getArg, validateChoice } from "~/utils/command-utils";
+import type { DevCommand } from "~/lib/core/command-types";
+import { arg, getArg, validateChoice } from "~/lib/core/command-utils";
 
 async function executeCommand(command: string, args: string[], logger: any): Promise<void> {
   return new Promise((resolve) => {

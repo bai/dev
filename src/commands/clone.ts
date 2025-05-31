@@ -2,10 +2,10 @@ import fs from "fs";
 import path from "path";
 
 import { baseSearchDir } from "~/lib/constants";
+import type { DevCommand } from "~/lib/core/command-types";
+import { arg, getArg, hasOption, option, runCommand } from "~/lib/core/command-utils";
 import { devConfig } from "~/lib/dev-config";
 import { handleCdToPath } from "~/lib/handlers";
-import type { DevCommand } from "~/types/command";
-import { arg, getArg, hasOption, option, runCommand } from "~/utils/command-utils";
 
 export const cloneCommand: DevCommand = {
   name: "clone",

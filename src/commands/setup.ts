@@ -1,6 +1,6 @@
+import type { DevCommand } from "~/lib/core/command-types";
 import { refreshDevConfigFromRemoteUrl } from "~/lib/dev-config";
 import { setupGoogleCloudConfig, setupMiseGlobalConfig } from "~/lib/setup";
-import type { DevCommand } from "~/types/command";
 
 export const setupCommand: DevCommand = {
   name: "setup",

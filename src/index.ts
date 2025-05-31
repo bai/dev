@@ -4,14 +4,14 @@ import path from "path";
 import { Command } from "commander";
 
 import { baseSearchDir } from "~/lib/constants";
+import { CommandLoader } from "~/lib/core/command-loader";
+import { CommandRegistry } from "~/lib/core/command-registry";
+import { createConfig } from "~/lib/dev-config-manager";
+import { createLogger } from "~/lib/logger";
 import { ensureMiseVersionOrUpgrade } from "~/lib/mise-version";
 import { runPeriodicUpgradeCheck } from "~/lib/run-update-check";
 import { ensureDatabaseIsUpToDate } from "~/lib/setup";
 import { getCurrentGitCommitSha } from "~/lib/version";
-import { CommandLoader } from "~/core/command-loader";
-import { CommandRegistry } from "~/core/command-registry";
-import { createConfig } from "~/services/config";
-import { createLogger } from "~/services/logger";
 
 (async () => {
   try {
@@ -81,9 +81,9 @@ import { createLogger } from "~/services/logger";
 })();
 
 // Export the system for external use
-export { CommandRegistry } from "~/core/command-registry";
-export { CommandLoader } from "~/core/command-loader";
-export { createLogger } from "~/services/logger";
-export { createConfig } from "~/services/config";
-export * from "~/types/command";
-export * from "~/utils/command-utils";
+export { CommandRegistry } from "~/lib/core/command-registry";
+export { CommandLoader } from "~/lib/core/command-loader";
+export { createLogger } from "~/lib/logger";
+export { createConfig } from "~/lib/dev-config-manager";
+export * from "~/lib/core/command-types";
+export * from "~/lib/core/command-utils";

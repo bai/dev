@@ -1,9 +1,9 @@
 import { baseSearchDir } from "~/lib/constants";
+import type { DevCommand } from "~/lib/core/command-types";
+import { arg, getArg, spawnCommand } from "~/lib/core/command-utils";
 import { findDirs } from "~/lib/find-dirs";
 import { handleCdToPath } from "~/lib/handlers";
 import { filter } from "~/lib/match";
-import type { DevCommand } from "~/types/command";
-import { arg, getArg, spawnCommand } from "~/utils/command-utils";
 
 export const cdCommand: DevCommand = {
   name: "cd",

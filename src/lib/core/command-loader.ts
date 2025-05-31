@@ -7,7 +7,7 @@ import {
   type ConfigManager,
   type DevCommand,
   type Logger,
-} from "~/types/command";
+} from "~/lib/core/command-types";
 
 import type { CommandRegistry } from "./command-registry";
 

@@ -1,5 +1,5 @@
-import type { DevCommand } from "~/types/command";
-import { arg, runCommand as execCommand, getArg, validateArgs, validateTool } from "~/utils/command-utils";
+import type { DevCommand } from "~/lib/core/command-types";
+import { arg, runCommand as execCommand, getArg, validateArgs, validateTool } from "~/lib/core/command-utils";
 
 export const runCommand: DevCommand = {
   name: "run",

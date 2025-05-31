@@ -7,7 +7,7 @@ import {
   type CommandOption,
   type DevCommand,
   type Logger,
-} from "~/types/command";
+} from "~/lib/core/command-types";
 
 /**
  * Utility for creating command arguments

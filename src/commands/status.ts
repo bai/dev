@@ -4,12 +4,12 @@ import path from "path";
 import { count, desc } from "drizzle-orm";
 
 import { baseSearchDir, devDbPath, devDir, homeDir, miseMinVersion } from "~/lib/constants";
+import type { DevCommand } from "~/lib/core/command-types";
+import { spawnCommand } from "~/lib/core/command-utils";
 import { getDevConfig } from "~/lib/dev-config";
 import { checkMiseVersion } from "~/lib/mise-version";
 import { db } from "~/drizzle";
 import { runs } from "~/drizzle/schema";
-import type { DevCommand } from "~/types/command";
-import { spawnCommand } from "~/utils/command-utils";
 
 /**
  * Helper function to format time ago

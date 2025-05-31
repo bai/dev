@@ -1,4 +1,4 @@
-import type { Logger } from "~/types/command";
+import type { Logger } from "~/lib/core/command-types";
 
 /**
  * Console logger implementation

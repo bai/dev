@@ -2,8 +2,8 @@ import * as fs from "fs";
 import * as path from "path";
 
 import { devDir } from "~/lib/constants";
-import type { DevCommand } from "~/types/command";
-import { isGitRepository, runCommand, validateTool } from "~/utils/command-utils";
+import type { DevCommand } from "~/lib/core/command-types";
+import { isGitRepository, runCommand, validateTool } from "~/lib/core/command-utils";
 
 export const upCommand: DevCommand = {
   name: "up",
