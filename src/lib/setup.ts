@@ -5,7 +5,7 @@ import { spawnSync } from "bun";
 import { stringify } from "@iarna/toml";
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
 
-import { devDir, homeDir, miseConfigDir, miseConfigPath, stdioPipe } from "~/lib/constants";
+import { devDir, homeDir, miseConfigDir, miseConfigPath } from "~/lib/constants";
 import { devConfig, miseConfigSchema } from "~/lib/dev-config";
 import { handleCommandError } from "~/lib/handlers";
 import { db } from "~/drizzle";
@@ -119,7 +119,7 @@ export async function setupBunRuntime() {
     console.log("🏃 Setting up bun runtime...");
 
     // Check if bun is already available
-    const bunCheck = spawnSync(["which", "bun"], { stdio: stdioPipe });
+    const bunCheck = spawnSync(["which", "bun"], { stdio: ["ignore", "pipe", "pipe"] });
     if (bunCheck.exitCode === 0) {
       console.log("   ✅ Bun already available");
       return;

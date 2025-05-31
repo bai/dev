@@ -102,7 +102,6 @@ export const ensureMiseVersionOrUpgrade = async (commandName: string): Promise<v
   console.log(`🔄 Running dev upgrade to update mise and other dependencies...`);
 
   try {
-    const { handleUpgradeCommand } = await import("~/cmd/upgrade");
     handleUpgradeCommand();
 
     // After upgrade, check again

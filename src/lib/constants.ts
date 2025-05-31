@@ -14,7 +14,4 @@ export const devDataDir = path.join(homeDir, ".local", "share", "dev");
 export const devConfigPath = path.join(devConfigDir, "config.json");
 export const devDbPath = path.join(devDataDir, "db.sqlite");
 
-export const stdioInherit: ["inherit", "inherit", "inherit"] = ["inherit", "inherit", "inherit"];
-export const stdioPipe: ["ignore", "pipe", "pipe"] = ["ignore", "pipe", "pipe"];
-
 export const miseMinVersion = "2025.5.2";
