@@ -1,45 +1,31 @@
 import type { Logger } from "~/types/command";
 
 /**
- * Color codes for console output
- */
-const colors = {
-  reset: "\x1b[0m",
-  red: "\x1b[31m",
-  green: "\x1b[32m",
-  yellow: "\x1b[33m",
-  blue: "\x1b[34m",
-  magenta: "\x1b[35m",
-  cyan: "\x1b[36m",
-  gray: "\x1b[90m",
-} as const;
-
-/**
  * Console logger implementation
  */
 export class ConsoleLogger implements Logger {
   constructor(private debugEnabled = false) {}
 
   info(message: string, ...args: any[]): void {
-    console.log(`${colors.blue}ℹ${colors.reset} ${message}`, ...args);
+    console.log(`${message}`, ...args);
   }
 
   warn(message: string, ...args: any[]): void {
-    console.warn(`${colors.yellow}⚠${colors.reset} ${message}`, ...args);
+    console.warn(`${message}`, ...args);
   }
 
   error(message: string, ...args: any[]): void {
-    console.error(`${colors.red}❌${colors.reset} ${message}`, ...args);
+    console.error(`${message}`, ...args);
   }
 
   debug(message: string, ...args: any[]): void {
     if (this.debugEnabled || process.env.DEBUG) {
-      console.log(`${colors.gray}🔧${colors.reset} ${message}`, ...args);
+      console.log(`${message}`, ...args);
     }
   }
 
   success(message: string, ...args: any[]): void {
-    console.log(`${colors.green}✅${colors.reset} ${message}`, ...args);
+    console.log(`${message}`, ...args);
   }
 
   /**

@@ -157,7 +157,7 @@ export class CommandRegistry {
 
         if (command) {
           this.register(command, filePath, "auto-discovered");
-          console.log(
+          console.debug(
             `📦 Discovered command: ${command.name}${command.aliases ? ` (aliases: ${command.aliases.join(", ")})` : ""}`,
           );
         } else {
