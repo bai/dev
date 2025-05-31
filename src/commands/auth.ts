@@ -1,32 +1,26 @@
-import { spawn } from "child_process";
-
 import type { DevCommand } from "~/lib/core/command-types";
 import { arg, getArg, validateChoice } from "~/lib/core/command-utils";
 
 async function executeCommand(command: string, args: string[], logger: any): Promise<void> {
-  return new Promise((resolve) => {
-    const process = spawn(command, args, { stdio: "inherit" });
-
-    process.on("close", (code) => {
-      if (code === 0) {
-        logger.success(`'${command} ${args.join(" ")}' executed successfully.`);
-        resolve();
-      } else {
-        logger.error(`'${command} ${args.join(" ")}' exited with code ${code}.`);
-        // Resolve instead of reject to allow subsequent auth attempts
-        resolve();
-      }
+  try {
+    const process = Bun.spawn([command, ...args], {
+      stdio: ["inherit", "inherit", "inherit"],
     });
 
-    process.on("error", (err: any) => {
-      logger.error(`Failed to start '${command} ${args.join(" ")}':`, err.message);
-      if (err.code === "ENOENT") {
-        logger.error(`The command '${command}' was not found. Please ensure it is installed and in your PATH.`);
-      }
-      // Resolve instead of reject to allow subsequent auth attempts
-      resolve();
-    });
-  });
+    const exitCode = await process.exited;
+
+    if (exitCode === 0) {
+      logger.success(`'${command} ${args.join(" ")}' executed successfully.`);
+    } else {
+      logger.error(`'${command} ${args.join(" ")}' exited with code ${exitCode}.`);
+    }
+  } catch (err: any) {
+    logger.error(`Failed to start '${command} ${args.join(" ")}':`, err.message);
+    if (err.code === "ENOENT") {
+      logger.error(`The command '${command}' was not found. Please ensure it is installed and in your PATH.`);
+    }
+    // Continue execution to allow subsequent auth attempts
+  }
 }
 
 export const authCommand: DevCommand = {
