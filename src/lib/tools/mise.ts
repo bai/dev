@@ -1,4 +1,10 @@
+import path from "path";
 import { spawnSync } from "bun";
+
+import { stringify } from "@iarna/toml";
+
+import { devDir, miseConfigDir, miseConfigPath } from "~/lib/constants";
+import { devConfig, miseConfigSchema } from "~/lib/dev-config";
 
 export const miseMinVersion = "2025.5.2";
 
@@ -86,7 +92,7 @@ export const checkMiseVersion = (): { isValid: boolean; currentVersion: string |
  * @param commandName - Name of the command being executed (for error context)
  * @returns Promise<void> - Resolves if version is valid or upgrade succeeds
  */
-export const ensureMiseVersionOrUpgrade = async (commandName: string): Promise<void> => {
+export const ensureMiseVersionOrUpgrade = async (): Promise<void> => {
   const { isValid, currentVersion } = checkMiseVersion();
 
   if (isValid) {
@@ -117,9 +123,58 @@ export const ensureMiseVersionOrUpgrade = async (commandName: string): Promise<v
     }
 
     console.log(`✅ Mise upgraded successfully to ${versionAfterUpgrade}`);
-    console.log(`🚀 Continuing with ${commandName}...`);
   } catch (error: any) {
     console.error(`❌ Failed to upgrade dev CLI: ${error.message}`);
     process.exit(1);
   }
 };
+
+/**
+ * Sets up the global mise configuration.
+ *
+ * This function creates the mise config directory if it doesn't exist,
+ * loads the baseline global mise TOML config from the dev directory,
+ * amends it with trusted_config_paths from the dev JSON config,
+ * and writes the final configuration to the mise config file.
+ *
+ * @returns Promise<void> Resolves when the configuration is set up successfully
+ * @throws Error if the mise config cannot be parsed or written
+ */
+export async function setupMiseGlobalConfig() {
+  try {
+    console.log("🎯 Setting up global mise configuration...");
+
+    // Ensure mise config directory exists
+    if (!fs.existsSync(miseConfigDir)) {
+      console.log("   📂 Creating mise config directory...");
+      fs.mkdirSync(miseConfigDir, { recursive: true });
+    }
+
+    // Check if config already exists
+    if (fs.existsSync(miseConfigPath)) {
+      console.log("   ✅ Mise config already exists");
+      return;
+    }
+
+    // Load baseline global mise TOML config
+    const miseGlobalConfig = await Bun.file(path.join(devDir, "hack", "configs", "mise-config-global.toml")).text();
+    const parsedMiseGlobalConfig = miseConfigSchema.safeParse(Bun.TOML.parse(miseGlobalConfig));
+
+    if (!parsedMiseGlobalConfig.success) {
+      throw new Error("Failed to parse mise config");
+    }
+
+    // Amend the TOML config with trusted_config_paths from dev JSON config
+    if (devConfig.mise && devConfig.mise.settings.trusted_config_paths) {
+      parsedMiseGlobalConfig.data.settings.trusted_config_paths = devConfig.mise.settings.trusted_config_paths;
+    }
+
+    // Serialize the final config as TOML and write to file
+    const tomlText = stringify(parsedMiseGlobalConfig.data);
+    await Bun.write(miseConfigPath, tomlText + "\n");
+    console.log("   ✅ Mise config installed");
+  } catch (err) {
+    console.error("❌ Error setting up mise configuration:", err);
+    throw err;
+  }
+}

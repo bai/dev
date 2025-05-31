@@ -1,40 +1,23 @@
-import fs from "fs";
 import path from "path";
 
 import { Command } from "commander";
 
-import { baseSearchDir } from "~/lib/constants";
 import { CommandLoader } from "~/lib/core/command-loader";
 import { CommandRegistry } from "~/lib/core/command-registry";
 import { createConfig } from "~/lib/dev-config-manager";
+import { ensureBaseDirectoryExists } from "~/lib/ensure-base-directory-exists";
+import { ensureDatabaseIsUpToDate } from "~/lib/ensure-database-is-up-to-date";
 import { createLogger } from "~/lib/logger";
 import { runPeriodicUpgradeCheck } from "~/lib/run-update-check";
-import { ensureDatabaseIsUpToDate } from "~/lib/setup";
 import { ensureMiseVersionOrUpgrade } from "~/lib/tools/mise";
 import { getCurrentGitCommitSha } from "~/lib/version";
 
 (async () => {
   try {
+    await ensureBaseDirectoryExists();
     await ensureDatabaseIsUpToDate();
     await runPeriodicUpgradeCheck();
-    await ensureMiseVersionOrUpgrade("run");
-
-    // Ensure base search directory exists
-    if (!fs.existsSync(baseSearchDir)) {
-      try {
-        fs.mkdirSync(baseSearchDir, { recursive: true });
-        console.log(`📁 Created base search directory: ${baseSearchDir}`);
-      } catch (error: any) {
-        console.error(`❌ Error: Failed to create base search directory: ${baseSearchDir}`);
-        console.error(`   ${error.message}`);
-        if (error.code === "EACCES") {
-          console.error("💡 Permission denied. Run `dev status` to check environment health.");
-        } else if (error.code === "ENOSPC") {
-          console.error("💡 No space left on device. Free up some disk space and try again.");
-        }
-        process.exit(1);
-      }
-    }
+    await ensureMiseVersionOrUpgrade();
 
     // Check for help commands before commander processes them
     const args = process.argv.slice(2);
