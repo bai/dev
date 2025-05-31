@@ -8,9 +8,9 @@ import { CommandLoader } from "~/lib/core/command-loader";
 import { CommandRegistry } from "~/lib/core/command-registry";
 import { createConfig } from "~/lib/dev-config-manager";
 import { createLogger } from "~/lib/logger";
-import { ensureMiseVersionOrUpgrade } from "~/lib/mise-version";
 import { runPeriodicUpgradeCheck } from "~/lib/run-update-check";
 import { ensureDatabaseIsUpToDate } from "~/lib/setup";
+import { ensureMiseVersionOrUpgrade } from "~/lib/tools/mise";
 import { getCurrentGitCommitSha } from "~/lib/version";
 
 (async () => {

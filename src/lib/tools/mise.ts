@@ -1,6 +1,6 @@
 import { spawnSync } from "bun";
 
-import { miseMinVersion } from "~/lib/constants";
+export const miseMinVersion = "2025.5.2";
 
 /**
  * Gets the current mise version.

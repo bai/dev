@@ -3,11 +3,11 @@ import path from "path";
 
 import { count, desc } from "drizzle-orm";
 
-import { baseSearchDir, devDbPath, devDir, homeDir, miseMinVersion } from "~/lib/constants";
+import { baseSearchDir, devDbPath, devDir, homeDir } from "~/lib/constants";
 import type { DevCommand } from "~/lib/core/command-types";
 import { spawnCommand } from "~/lib/core/command-utils";
 import { getDevConfig } from "~/lib/dev-config";
-import { checkMiseVersion } from "~/lib/mise-version";
+import { checkMiseVersion, miseMinVersion } from "~/lib/tools/mise";
 import { db } from "~/drizzle";
 import { runs } from "~/drizzle/schema";
 
