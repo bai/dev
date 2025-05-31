@@ -72,7 +72,7 @@ fi
 # Step 4: CLI Utilities
 echo ""
 echo "🛠️  Installing CLI utilities..."
-for util in fd fzf fzy mise; do
+for util in fzf mise; do
   if ! command -v "$util" &>/dev/null; then
     echo "   📥 Installing $util..."
     brew install "$util"

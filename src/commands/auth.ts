@@ -31,28 +31,24 @@ async function executeCommand(command: string, args: string[], logger: any): Pro
 
 export const authCommand: DevCommand = {
   name: "auth",
-  description: "Authenticate with GitHub, GitLab, and Google Cloud",
+  description: "Authenticate with Google Cloud",
   help: `
-The auth command helps you authenticate with various services:
+The auth command helps you authenticate with Google Cloud:
 
 Services:
-  github              Authenticate with GitHub (guides you to use gh CLI)
-  gitlab              Authenticate with GitLab (guides you to use glab CLI)
   gcloud              Authenticate with Google Cloud (both user and app-default)
   gcloud login        Authenticate with Google Cloud (user account only)
   gcloud app-login    Authenticate with Google Cloud (application default only)
 
 Examples:
-  dev auth                    # Authenticate with all services
-  dev auth github             # Guide for GitHub authentication
-  dev auth gitlab             # Guide for GitLab authentication
+  dev auth                    # Authenticate with Google Cloud (both types)
   dev auth gcloud             # Authenticate with Google Cloud (both types)
   dev auth gcloud login       # Google Cloud user authentication only
   dev auth gcloud app-login   # Google Cloud application-default only
   `,
 
   arguments: [
-    arg("service", "Service to authenticate with (github, gitlab, gcloud)", { required: false }),
+    arg("service", "Service to authenticate with (gcloud)", { required: false }),
     arg("subcommand", "Subcommand for gcloud (login, app-login)", { required: false }),
   ],
 
@@ -63,20 +59,6 @@ Examples:
     const subcommand = getArg(context, "subcommand");
 
     // Helper functions
-    const handleGithubAuth = () => {
-      logger.info("🔑 GitHub Authentication Guide");
-      logger.info("💡 Please run 'gh auth login' to authenticate with GitHub");
-      logger.info("💡 If 'gh' is not installed, install it first: https://cli.github.com/");
-    };
-
-    const handleGitlabAuth = () => {
-      logger.info("🔑 GitLab Authentication Guide");
-      logger.info("💡 Please run 'glab auth login' to authenticate with GitLab");
-      logger.info(
-        "💡 If 'glab' is not installed, install it first: https://glab.readthedocs.io/en/latest/installation.html",
-      );
-    };
-
     const handleGcloudLogin = async () => {
       logger.info("🔑 Attempting Google Cloud user authentication...");
       try {
@@ -96,8 +78,8 @@ Examples:
     };
 
     if (!service) {
-      // No specific service specified, attempt all authentications
-      logger.info("🚀 Starting authentication process for all services...");
+      // No specific service specified, attempt Google Cloud authentication
+      logger.info("🚀 Starting Google Cloud authentication process...");
 
       logger.info("🔄 --- Google Cloud User Login ---");
       await handleGcloudLogin();
@@ -105,21 +87,15 @@ Examples:
       logger.info("🔄 --- Google Cloud Application-Default Login ---");
       await handleGcloudAppLogin();
 
-      logger.success("✅ All authentication processes attempted. Please check the output for status of each.");
+      logger.success("✅ Google Cloud authentication processes attempted. Please check the output for status.");
       return;
     }
 
     // Validate service choice
-    const validServices = ["github", "gitlab", "gcloud"];
+    const validServices = ["gcloud"];
     const serviceChoice = validateChoice(context, "service", validServices);
 
     switch (serviceChoice) {
-      case "github":
-        handleGithubAuth();
-        break;
-      case "gitlab":
-        handleGitlabAuth();
-        break;
       case "gcloud":
         if (subcommand === "app-login") {
           await handleGcloudAppLogin();

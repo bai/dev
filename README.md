@@ -149,8 +149,8 @@ dev status
 This command shows:
 
 - Base directory existence and validation
-- Required tool availability (git, fd, fzf, fzy, mise)
-- Optional tool status (gh, glab, gcloud)
+- Required tool availability (git, fzf, mise)
+- Optional tool status (gcloud)
 - Git repository status and uncommitted changes
 - Mise configuration
 - CLI tool installation and version

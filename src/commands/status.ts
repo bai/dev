@@ -162,25 +162,6 @@ Examples:
           });
         }
 
-        // Get recent runs
-        const recentRuns = await db
-          .select({
-            command: runs.command_name,
-            started_at: runs.started_at,
-          })
-          .from(runs)
-          .orderBy(desc(runs.started_at))
-          .limit(3);
-
-        if (recentRuns.length > 0) {
-          logger.info(`   🕐 Recent runs:`);
-          recentRuns.forEach((run) => {
-            const date = new Date(run.started_at);
-            const timeAgo = getTimeAgo(date);
-            logger.info(`      ${run.command} - ${timeAgo}`);
-          });
-        }
-
         testsPassed++;
       } catch (error) {
         logger.info(`   ⚠️  Database exists but cannot read stats`);
@@ -195,12 +176,8 @@ Examples:
     logger.info(`\n🛠️  Required tools:`);
     const tools = [
       { name: "git", required: true },
-      { name: "fd", required: true },
       { name: "fzf", required: true },
-      { name: "fzy", required: true },
       { name: "mise", required: true },
-      { name: "gh", required: false },
-      { name: "glab", required: false },
       { name: "gcloud", required: false },
     ];
 
@@ -326,13 +303,9 @@ Examples:
     }
 
     // Health check summary
-    const totalTests = testsPassed + testsFailed;
-    const successRate = totalTests > 0 ? Math.round((testsPassed / totalTests) * 100) : 0;
-
     logger.info(`\n📊 Health Check Summary:`);
     logger.info(`   ✅ Passed: ${testsPassed}`);
     logger.info(`   ❌ Failed: ${testsFailed}`);
-    logger.info(`   📈 Success Rate: ${successRate}%`);
 
     if (testsFailed === 0) {
       logger.success(`\n🎉 All checks passed! Your dev CLI is working correctly.`);

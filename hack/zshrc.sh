@@ -8,8 +8,6 @@
 [ -f "$HOME/.local/share/mise/installs/gcloud/latest/path.zsh.inc" ] && source "$HOME/.local/share/mise/installs/gcloud/latest/path.zsh.inc"
 [ -f "$HOME/.local/share/mise/installs/gcloud/latest/completion.zsh.inc" ] && source "$HOME/.local/share/mise/installs/gcloud/latest/completion.zsh.inc"
 
-export FZF_DEFAULT_COMMAND='fd --type f --hidden --exclude .git --exclude node_modules --exclude .terraform --exclude .terragrunt-cache'
-
 export BUNDLE_IGNORE_MESSAGES=true
 export BUNDLE_IGNORE_FUNDING_REQUESTS=true
 

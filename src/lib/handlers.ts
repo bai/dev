@@ -92,8 +92,7 @@ export function showUsage(): never {
   dev status                 Shows comprehensive status information and validates CLI functionality.
                              Displays tool availability, git status, configuration, and health checks.
 
-  dev auth                   Attempts to authenticate with GitHub, GitLab, and Google Cloud.
-                             For GitHub and GitLab, this will guide you to use 'gh auth login' and 'glab auth login'.
+  dev auth                   Attempts to authenticate with Google Cloud.
                              For Google Cloud, it will attempt 'gcloud auth login' and 'gcloud auth application-default login'.
 
   dev up                     Installs development tools for the current project.
