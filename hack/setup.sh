@@ -20,12 +20,28 @@ echo ""
 echo "🚀 Setting up dev CLI tool..."
 echo ""
 
-# Step 0: Install mise
+# Homebrew
+echo ""
+echo "🍺 Checking Homebrew..."
+if ! command -v brew &>/dev/null; then
+  echo "   📥 Installing Homebrew..."
+  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+  echo "   🔧 Configuring Homebrew PATH..."
+  eval "$(/opt/homebrew/bin/brew shellenv)"
+  echo "   ✅ Homebrew installed and configured"
+else
+  echo "   ✅ Homebrew already installed"
+fi
+
+# Mise
 echo ""
 echo "🎯 Installing mise..."
-sh hack/mise-setup.sh
+export MISE_QUIET=1
+/bin/bash -c "$(curl -fsSL https://mise.run)"
+echo "   ✅ Mise installed"
 
-# Step 1: Repository
+# Repository
 echo ""
 echo "📦 Setting up dev repository..."
 if [ ! -d "$HOME/.dev/.git" ]; then
@@ -37,11 +53,11 @@ else
   echo "   ✅ Repository updated"
 fi
 
-# Step 2: Create dev data and config directories
+# Dev data and config directories
 mkdir -p "$HOME/.local/share/dev"
 mkdir -p "$HOME/.config/dev"
 
-# Step 3: Config File (if provided)
+# Config File (if provided)
 if [ -n "$CONFIG_URL" ]; then
   echo ""
   echo "⚙️  Fetching configuration file..."
@@ -54,7 +70,7 @@ if [ -n "$CONFIG_URL" ]; then
   fi
 fi
 
-# Step 4: Shell Integration
+# Shell Integration
 echo ""
 echo "🐚 Setting up shell integration..."
 if [ -f "$HOME/.zshrc" ]; then
@@ -71,7 +87,7 @@ else
   echo "   ⚠️  ~/.zshrc not found - you may need to create it"
 fi
 
-# Step 5: Bun Runtime
+# Bun Runtime
 echo ""
 echo "🏃 Setting up bun runtime..."
 if ! command -v bun &>/dev/null; then
@@ -82,13 +98,13 @@ else
   echo "   ✅ Bun already available"
 fi
 
-# Step 6: Dependencies
+# Dependencies
 echo ""
 echo "📚 Installing project dependencies..."
 cd "$HOME/.dev"
 bun install
 echo "   ✅ Dependencies installed"
 
-# Step 7: Dev Setup
+# Dev Setup
 echo ""
 bun run "$HOME"/.dev/src/index.ts setup
