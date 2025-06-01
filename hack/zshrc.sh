@@ -4,9 +4,9 @@
 # interactive shells. It is sourced from the user's .zshrc file.
 
 [[ -x /opt/homebrew/bin/brew ]] && eval "$(/opt/homebrew/bin/brew shellenv)"
-[[ -x /opt/homebrew/bin/mise ]] && eval "$(mise activate zsh)"
-[ -f "$HOME/.local/share/mise/installs/gcloud/latest/path.zsh.inc" ] && source "$HOME/.local/share/mise/installs/gcloud/latest/path.zsh.inc"
-[ -f "$HOME/.local/share/mise/installs/gcloud/latest/completion.zsh.inc" ] && source "$HOME/.local/share/mise/installs/gcloud/latest/completion.zsh.inc"
+[[ -x ~/.local/bin/mise ]] && eval "$(~/.local/bin/mise activate zsh)"
+[ -f "$HOME"/.local/share/mise/installs/gcloud/latest/path.zsh.inc ] && source "$HOME"/.local/share/mise/installs/gcloud/latest/path.zsh.inc
+[ -f "$HOME"/.local/share/mise/installs/gcloud/latest/completion.zsh.inc ] && source "$HOME"/.local/share/mise/installs/gcloud/latest/completion.zsh.inc
 
 export BUNDLE_IGNORE_MESSAGES=true
 export BUNDLE_IGNORE_FUNDING_REQUESTS=true

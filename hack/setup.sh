@@ -20,6 +20,12 @@ echo ""
 echo "🚀 Setting up dev CLI tool..."
 echo ""
 
+# Step 0: Install mise
+echo ""
+echo "🎯 Installing mise..."
+sh hack/mise-setup.sh
+echo "eval \"\$($HOME/.local/bin/mise activate zsh)\"" >> "$HOME/.zshrc"
+
 # Step 1: Repository
 echo ""
 echo "📦 Setting up dev repository..."
@@ -32,11 +38,11 @@ else
   echo "   ✅ Repository updated"
 fi
 
-# Step 1.5: Create dev data and config directories
+# Step 2: Create dev data and config directories
 mkdir -p "$HOME/.local/share/dev"
 mkdir -p "$HOME/.config/dev"
 
-# Step 2: Config File (if provided)
+# Step 3: Config File (if provided)
 if [ -n "$CONFIG_URL" ]; then
   echo ""
   echo "⚙️  Fetching configuration file..."
@@ -49,61 +55,24 @@ if [ -n "$CONFIG_URL" ]; then
   fi
 fi
 
-# Step 3: Homebrew
-echo ""
-echo "🍺 Checking Homebrew..."
-if ! command -v brew &>/dev/null; then
-  echo "   📥 Installing Homebrew..."
-  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-
-  echo "   🔧 Configuring Homebrew PATH..."
-  if [[ "$(uname -m)" == "arm64" ]]; then
-    echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> "$HOME/.zprofile"
-    eval "$(/opt/homebrew/bin/brew shellenv)"
-  else
-    echo 'eval "$(/usr/local/bin/brew shellenv)"' >> "$HOME/.zprofile"
-    eval "$(/usr/local/bin/brew shellenv)"
-  fi
-  echo "   ✅ Homebrew installed and configured"
-else
-  echo "   ✅ Homebrew already installed"
-fi
-
-# Step 4: CLI Utilities
-echo ""
-echo "🛠️  Installing CLI utilities..."
-for util in fzf mise; do
-  if ! command -v "$util" &>/dev/null; then
-    echo "   📥 Installing $util..."
-    brew install "$util"
-    echo "   ✅ $util installed"
-  else
-    echo "   ✅ $util already installed"
-  fi
-done
-
-# Step 5: Shell Integration
+# Step 4: Shell Integration
 echo ""
 echo "🐚 Setting up shell integration..."
 if [ -f "$HOME/.zshrc" ]; then
   if ! grep -q "source \$HOME/.dev/hack/zshrc.sh" "$HOME/.zshrc"; then
     echo "   📝 Adding dev CLI to ~/.zshrc..."
-    cat >> "$HOME/.zshrc" << 'EOF'
-
-# Dev CLI integration
-source $HOME/.dev/hack/zshrc.sh
-EOF
+    echo 'source $HOME/.dev/hack/zshrc.sh' >> "$HOME/.zshrc"
     echo "   ✅ Shell integration added"
   else
     echo "   ✅ Shell integration already configured"
   fi
-  source "$HOME/.zshrc" #2>/dev/null || true
+  source "$HOME/.zshrc"
   echo "   ✅ Shell configuration reloaded"
 else
   echo "   ⚠️  ~/.zshrc not found - you may need to create it"
 fi
 
-# Step 7: Bun Runtime
+# Step 5: Bun Runtime
 echo ""
 echo "🏃 Setting up bun runtime..."
 if ! command -v bun &>/dev/null; then
@@ -114,13 +83,13 @@ else
   echo "   ✅ Bun already available"
 fi
 
-# Step 8: Dependencies
+# Step 6: Dependencies
 echo ""
 echo "📚 Installing project dependencies..."
 cd "$HOME/.dev"
 bun install
 echo "   ✅ Dependencies installed"
 
-# Step 8: Dev Setup
+# Step 7: Dev Setup
 echo ""
 bun run "$HOME"/.dev/src/index.ts setup
