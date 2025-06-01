@@ -24,7 +24,6 @@ echo ""
 echo ""
 echo "🎯 Installing mise..."
 sh hack/mise-setup.sh
-echo "eval \"\$($HOME/.local/bin/mise activate zsh)\"" >> "$HOME/.zshrc"
 
 # Step 1: Repository
 echo ""
