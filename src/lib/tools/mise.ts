@@ -17,6 +17,7 @@ export const miseMinVersion = "2025.5.2";
 /**
  * Mise config schema
  * @see https://mise.jdx.dev/configuration/settings.html
+ * @see https://raw.githubusercontent.com/jdx/mise/refs/heads/main/schema/mise.json
  */
 export const miseConfigSchema = z.object({
   min_version: z.string().optional(),
