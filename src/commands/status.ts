@@ -11,21 +11,6 @@ import { checkMiseVersion, miseMinVersion } from "~/lib/tools/mise";
 import { db } from "~/drizzle";
 import { runs } from "~/drizzle/schema";
 
-/**
- * Helper function to format time ago
- */
-function getTimeAgo(date: Date): string {
-  const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
-
-  if (seconds < 60) return `${seconds} seconds ago`;
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes} minute${minutes !== 1 ? "s" : ""} ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours} hour${hours !== 1 ? "s" : ""} ago`;
-  const days = Math.floor(hours / 24);
-  return `${days} day${days !== 1 ? "s" : ""} ago`;
-}
-
 export const statusCommand: DevCommand = {
   name: "status",
   description: "Shows comprehensive status information and validates CLI functionality",
@@ -267,16 +252,6 @@ Examples:
         }
       } catch (error) {
         logger.info(`   ❌ Package.json is invalid JSON`);
-        testsFailed++;
-      }
-
-      // Check source files
-      const indexPath = path.join(devDir, "src", "index.ts");
-      if (fs.existsSync(indexPath)) {
-        logger.info(`   ✅ Source files exist`);
-        testsPassed++;
-      } else {
-        logger.info(`   ❌ Source files not found`);
         testsFailed++;
       }
     } else {
