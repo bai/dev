@@ -41,12 +41,23 @@ export MISE_QUIET=1
 /bin/bash -c "$(curl -fsSL https://mise.run)"
 echo "   ✅ Mise installed"
 
+# Bun Runtime
+echo ""
+echo "🏃 Setting up bun runtime..."
+if ! command -v bun &>/dev/null; then
+  echo "   📥 Installing bun via mise..."
+  mise install bun@latest
+  echo "   ✅ Bun installed"
+else
+  echo "   ✅ Bun already available"
+fi
+
 # Repository
 echo ""
 echo "📦 Setting up dev repository..."
 if [ ! -d "$HOME/.dev/.git" ]; then
   echo "   📥 Cloning repository..."
-  git clone https://github.com/bai/dev.git "$HOME/.dev"
+  git clone https://github.com/bai/dev "$HOME/.dev"
   echo "   ✅ Repository cloned"
 else
   (cd "$HOME/.dev" && git pull 2>/dev/null) || true
@@ -85,17 +96,6 @@ if [ -f "$HOME/.zshrc" ]; then
   echo "   ✅ Shell configuration reloaded"
 else
   echo "   ⚠️  ~/.zshrc not found - you may need to create it"
-fi
-
-# Bun Runtime
-echo ""
-echo "🏃 Setting up bun runtime..."
-if ! command -v bun &>/dev/null; then
-  echo "   📥 Installing bun via mise..."
-  mise install bun@latest
-  echo "   ✅ Bun installed"
-else
-  echo "   ✅ Bun already available"
 fi
 
 # Dependencies

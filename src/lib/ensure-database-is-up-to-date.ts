@@ -5,7 +5,7 @@ import { logger } from "~/lib/logger";
 import { db } from "~/drizzle";
 
 export async function ensureDatabaseIsUpToDate() {
-  logger.info("🔄 Checking for database migrations...");
+  logger.debug("🔄 Checking for database migrations...");
   migrate(db, { migrationsFolder: `${devDir}/src/drizzle/migrations` });
-  logger.info("✅ Database migrations applied");
+  logger.debug("✅ Database migrations applied");
 }
