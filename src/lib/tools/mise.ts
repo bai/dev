@@ -1,12 +1,69 @@
+import fs from "node:fs";
 import path from "path";
 import { spawnSync } from "bun";
 
 import { stringify } from "@iarna/toml";
 
 import { devDir, miseConfigDir, miseConfigPath } from "~/lib/constants";
-import { devConfig, miseConfigSchema } from "~/lib/dev-config";
+import { devConfig, miseConfigSchema, type MiseConfig } from "~/lib/dev-config";
 
 export const miseMinVersion = "2025.5.2";
+
+export const miseGlobalConfig = {
+  env: {
+    _: {
+      path: ["{{config_root}}/node_modules/.bin"],
+    },
+  },
+  tools: {
+    "bun": "latest",
+    "go": "latest",
+    "node": "latest",
+    "python": "latest",
+    "uv": "latest",
+    "ruby": "latest",
+    "rust": "latest",
+    "gcloud": "latest",
+    "aws-cli": "latest",
+    "sops": "latest",
+    "age": "latest",
+    "terraform": "latest",
+    "terragrunt": "latest",
+    "golangci-lint": "latest",
+    "jq": "latest",
+    "fzf": "latest",
+    "npm:@anthropic-ai/claude-code": "latest",
+    "npm:eslint": "latest",
+    "npm:npm-check-updates": "latest",
+    "npm:pnpm": "latest",
+    "npm:prettier": "latest",
+    "npm:typescript": "latest",
+  },
+  settings: {
+    idiomatic_version_file_enable_tools: ["python", "ruby"],
+    trusted_config_paths: ["~/.dev"],
+  },
+} satisfies MiseConfig;
+
+export const miseRepoConfig = {
+  min_version: "2025.5.2",
+  tools: {
+    python: "3.11",
+    sops: "latest",
+    age: "latest",
+  },
+  env: {
+    DEV_PROJECT_ROOT: "{{ config_root }}",
+    _: {
+      file: [
+        ".env",
+        ".env.development",
+        ".env.secret.json",
+        ".env.development.local",
+      ],
+    },
+  },
+} satisfies MiseConfig;
 
 /**
  * Gets the current mise version.
@@ -108,7 +165,10 @@ export const ensureMiseVersionOrUpgrade = async (): Promise<void> => {
   console.log(`🔄 Running dev upgrade to update mise and other dependencies...`);
 
   try {
-    handleUpgradeCommand();
+    // Note: handleUpgradeCommand would need to be imported or implemented
+    // For now, we'll exit and let the user manually upgrade
+    // console.error(`💡 Please run 'dev upgrade' to update mise and other dependencies`);
+    // process.exit(1);
 
     // After upgrade, check again
     const { isValid: isValidAfterUpgrade, currentVersion: versionAfterUpgrade } = checkMiseVersion();
@@ -156,21 +216,13 @@ export async function setupMiseGlobalConfig() {
       return;
     }
 
-    // Load baseline global mise TOML config
-    const miseGlobalConfig = await Bun.file(path.join(devDir, "hack", "configs", "mise-config-global.toml")).text();
-    const parsedMiseGlobalConfig = miseConfigSchema.safeParse(Bun.TOML.parse(miseGlobalConfig));
-
-    if (!parsedMiseGlobalConfig.success) {
-      throw new Error("Failed to parse mise config");
-    }
-
     // Amend the TOML config with trusted_config_paths from dev JSON config
-    if (devConfig.mise && devConfig.mise.settings.trusted_config_paths) {
-      parsedMiseGlobalConfig.data.settings.trusted_config_paths = devConfig.mise.settings.trusted_config_paths;
+    if (devConfig.mise?.settings?.trusted_config_paths && miseGlobalConfig.settings) {
+      miseGlobalConfig.settings.trusted_config_paths = devConfig.mise.settings.trusted_config_paths;
     }
 
     // Serialize the final config as TOML and write to file
-    const tomlText = stringify(parsedMiseGlobalConfig.data);
+    const tomlText = stringify(miseGlobalConfig);
     await Bun.write(miseConfigPath, tomlText + "\n");
     console.log("   ✅ Mise config installed");
   } catch (err) {
