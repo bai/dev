@@ -5,8 +5,7 @@ import { getCurrentGitCommitSha } from "~/lib/version";
 import { db } from "~/drizzle";
 import { runs } from "~/drizzle/schema";
 
-// const upgradeFrequency = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
-const upgradeFrequency = 1 * 60 * 1000; // 1 minute in milliseconds
+const upgradeFrequency = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
 
 /**
  * Records the current CLI run and prompts for upgrade when appropriate.
