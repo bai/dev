@@ -265,7 +265,7 @@ Examples:
       logger.success(`\n🎉 All checks passed! Your dev CLI is working correctly.`);
     } else {
       logger.warn(`\n⚠️  Some checks failed.`);
-      logger.info(`💡 Consider running the setup script: zsh ~/.dev/hack/setup.sh`);
+      logger.info(`💡 Consider upgrading the dev CLI, run: dev upgrade`);
     }
 
     logger.info(`\n💡 Run 'dev help' for usage information`);

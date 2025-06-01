@@ -1,14 +1,15 @@
-import path from "path";
-
+import { Command } from "commander";
 import { desc, eq } from "drizzle-orm";
 
-import { devDir } from "~/lib/constants";
+import { createConfig } from "~/lib/dev-config";
 import { logger } from "~/lib/logger";
 import { getCurrentGitCommitSha } from "~/lib/version";
+import { upgradeCommand } from "~/commands/upgrade";
 import { db } from "~/drizzle";
 import { runs } from "~/drizzle/schema";
 
-const upgradeFrequency = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
+// const upgradeFrequency = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
+const upgradeFrequency = 1 * 60 * 1000; // 1 minute in milliseconds
 
 /**
  * Records the current CLI run and triggers background self-update when appropriate.
@@ -16,13 +17,11 @@ const upgradeFrequency = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
  * This function records each CLI run individually in the database with details like
  * command name, arguments, CLI version, and timestamps. It checks if the last recorded
  * run of the "upgrade" command was more than 7 days ago, and if so,
- * it spawns a detached background process to run the self-update script.
+ * it executes the upgrade command directly via TypeScript.
  *
  * @returns Promise<void> Resolves when the check is complete
  */
 export const runPeriodicUpgradeCheck = async () => {
-  const upgradeScriptPath = path.join(devDir, "hack", "setup.sh");
-
   // Gather run information
   const commandName = process.argv[2] || "help";
   const args = process.argv.slice(3);
@@ -63,16 +62,22 @@ export const runPeriodicUpgradeCheck = async () => {
         (lastRun[0] && new Date().getTime() - new Date(lastRun[0].started_at).getTime() > upgradeFrequency);
 
       if (shouldUpdate) {
-        logger.info(
-          `🔄 [dev] Periodic check: Last update was more than 7 days ago. Attempting background self-update...`,
-        );
+        logger.info(`🔄 [dev] Periodic check: Last update was more than 7 days ago. Running background self-update...`);
         try {
-          Bun.spawn(["zsh", upgradeScriptPath], {
-            stdio: ["ignore", "ignore", "ignore"],
-          });
-          logger.info("✅ [dev] Background self-update process started.");
-        } catch (spawnError: any) {
-          logger.error("❌ [dev] Error starting background self-update process:", spawnError.message);
+          // Create a proper context for the upgrade command
+          const upgradeContext = {
+            args: {},
+            options: {},
+            command: new Command("upgrade"), // Create a minimal command instance
+            logger,
+            config: createConfig(),
+          };
+
+          // Execute the upgrade command directly
+          await upgradeCommand.exec(upgradeContext);
+          logger.info("✅ [dev] Background self-update completed successfully.");
+        } catch (upgradeError: any) {
+          logger.error("❌ [dev] Error during background self-update:", upgradeError.message);
         }
 
         // Add a new run for the upgrade command
