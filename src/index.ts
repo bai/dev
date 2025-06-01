@@ -8,6 +8,7 @@ import { createConfig } from "~/lib/dev-config";
 import { ensureBaseDirectoryExists } from "~/lib/ensure-base-directory-exists";
 import { ensureDatabaseIsUpToDate } from "~/lib/ensure-database-is-up-to-date";
 import { logger } from "~/lib/logger";
+import { recordCommandRun } from "~/lib/record-command-run";
 import { runPeriodicUpgradeCheck } from "~/lib/run-update-check";
 import { ensureMiseVersionOrUpgrade } from "~/lib/tools/mise";
 import { getCurrentGitCommitSha } from "~/lib/version";
@@ -16,6 +17,7 @@ import { getCurrentGitCommitSha } from "~/lib/version";
   try {
     await ensureBaseDirectoryExists();
     await ensureDatabaseIsUpToDate();
+    await recordCommandRun();
     await runPeriodicUpgradeCheck();
     await ensureMiseVersionOrUpgrade();
 
