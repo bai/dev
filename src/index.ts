@@ -4,7 +4,7 @@ import { Command } from "commander";
 
 import { CommandLoader } from "~/lib/core/command-loader";
 import { CommandRegistry } from "~/lib/core/command-registry";
-import { createConfig } from "~/lib/dev-config-manager";
+import { createConfig } from "~/lib/dev-config";
 import { ensureBaseDirectoryExists } from "~/lib/ensure-base-directory-exists";
 import { ensureDatabaseIsUpToDate } from "~/lib/ensure-database-is-up-to-date";
 import { logger } from "~/lib/logger";
@@ -67,6 +67,6 @@ import { getCurrentGitCommitSha } from "~/lib/version";
 export { CommandRegistry } from "~/lib/core/command-registry";
 export { CommandLoader } from "~/lib/core/command-loader";
 
-export { createConfig } from "~/lib/dev-config-manager";
+export { createConfig } from "~/lib/dev-config";
 export * from "~/lib/core/command-types";
 export * from "~/lib/core/command-utils";
