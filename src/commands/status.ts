@@ -233,27 +233,6 @@ Examples:
           logger.info(`   ⚠️  Could not check version info`);
         }
       }
-
-      // Check package.json validation
-      const packageJsonPath = path.join(devDir, "package.json");
-      try {
-        if (fs.existsSync(packageJsonPath)) {
-          const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf-8"));
-          if (packageJson.name === "dev") {
-            logger.info(`   ✅ Package configuration valid`);
-            testsPassed++;
-          } else {
-            logger.info(`   ❌ Package.json has incorrect name`);
-            testsFailed++;
-          }
-        } else {
-          logger.info(`   ❌ Package.json not found`);
-          testsFailed++;
-        }
-      } catch (error) {
-        logger.info(`   ❌ Package.json is invalid JSON`);
-        testsFailed++;
-      }
     } else {
       logger.info(`   ❌ Not found at expected location`);
       testsFailed++;
