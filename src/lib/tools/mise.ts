@@ -7,8 +7,7 @@ import z from "zod/v4";
 
 import { homeDir } from "~/lib/constants";
 import { devConfig } from "~/lib/dev-config";
-
-import { logger } from "../logger";
+import { logger } from "~/lib/logger";
 
 export const globalMiseConfigDir = path.join(homeDir, ".config", "mise");
 export const globalMiseConfigPath = path.join(globalMiseConfigDir, "config.toml");

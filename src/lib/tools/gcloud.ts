@@ -3,8 +3,7 @@ import os from "node:os";
 import path from "node:path";
 
 import { homeDir } from "~/lib/constants";
-
-import { logger } from "../logger";
+import { logger } from "~/lib/logger";
 
 const gcloudConfigDir = path.join(homeDir, ".config", "gcloud");
 const gcloudComponentsPath = path.join(gcloudConfigDir, ".default-cloud-sdk-components");

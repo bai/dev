@@ -2,8 +2,7 @@ import fs from "node:fs";
 import path from "path";
 
 import type { CommandRegistration, DevCommand } from "~/lib/core/command-types";
-
-import { logger } from "../logger";
+import { logger } from "~/lib/logger";
 
 /**
  * Command registry for managing all available commands
