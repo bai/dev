@@ -48,16 +48,16 @@ Examples:
           fs.writeFileSync(repoMiseConfigFile, templateContent);
           logger.success(`Successfully created ${repoMiseConfigFile} with content from ${templateConfigPath}.`);
         } else {
-          logger.success(`Mise configuration found at ${repoMiseConfigFile}. Proceeding with 'mise install'.`);
+          logger.debug(`Mise configuration found at ${repoMiseConfigFile}. Proceeding with 'mise install'.`);
         }
       } else {
         logger.info(`No .git directory found in ${cwd}. Skipping mise config check, proceeding with 'mise install'.`);
       }
 
       // Run mise install
-      logger.info("Running mise install...");
+      logger.debug("Running mise install...");
       runCommand(["mise", "install"], context, { inherit: true });
-      logger.success("Successfully completed mise install");
+      logger.debug("Successfully completed mise install");
     } catch (error: any) {
       logger.error(`Up command failed: ${error.message}`);
       throw error;

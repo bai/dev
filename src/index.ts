@@ -21,10 +21,8 @@ import { getCurrentGitCommitSha } from "~/lib/version";
     await runPeriodicUpgradeCheck();
     await ensureMiseVersionOrUpgrade();
 
-    // Check for help commands before commander processes them
-    const args = process.argv.slice(2);
-    if (args.length === 0) {
-      // Show help when no command is provided
+    // Show help when no command is provided
+    if (process.argv.slice(2).length === 0) {
       process.argv.push("help");
     }
 
@@ -41,22 +39,14 @@ import { getCurrentGitCommitSha } from "~/lib/version";
       .version(getCurrentGitCommitSha());
 
     // Auto-discover and register commands from src/commands
-    const cmdDir = path.join(__dirname, "commands");
-    await registry.autoDiscoverCommands(cmdDir);
+    await registry.autoDiscoverCommands(path.join(__dirname, "commands"));
 
     // Load all registered commands into commander
     loader.loadAllCommands(program);
 
-    // Log statistics if debug mode
-    if (process.env.DEBUG) {
-      const stats = registry.getStats();
-      logger.debug(`Command registry stats: ${JSON.stringify(stats, null, 2)}`);
-    }
-
     // Parse command line arguments
     await program.parseAsync(process.argv);
   } catch (error: any) {
-    // Use the imported logger for error handling
     logger.error(`❌ Unexpected error: ${error.message}`);
     if (process.env.DEBUG) {
       logger.error(error.stack);

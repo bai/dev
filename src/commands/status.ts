@@ -4,6 +4,7 @@ import path from "path";
 import { count, desc } from "drizzle-orm";
 
 import { baseSearchDir, devDbPath, devDir, homeDir } from "~/lib/constants";
+import { CommandRegistry } from "~/lib/core/command-registry";
 import type { DevCommand } from "~/lib/core/command-types";
 import { spawnCommand } from "~/lib/core/command-utils";
 import { getDevConfig } from "~/lib/dev-config";
@@ -114,6 +115,38 @@ Examples:
       testsPassed++;
     } catch (error) {
       logger.info(`   ❌ Failed to load dev configuration`);
+      testsFailed++;
+    }
+
+    // Check command registry status
+    logger.info(`\n📚 Command Registry:`);
+    try {
+      const registry = new CommandRegistry();
+      const cmdDir = path.join(__dirname, "..");
+      await registry.autoDiscoverCommands(path.join(cmdDir, "commands"));
+
+      const stats = registry.getStats();
+      logger.info(`   ✅ Registry initialized successfully`);
+      logger.info(`   📊 Total commands: ${stats.total}`);
+      logger.info(`   📂 Commands directory: ${path.join(cmdDir, "commands")}`);
+      logger.info(`   🔍 Auto-discovered: ${stats.autoDiscovered}`);
+      logger.info(`   📝 Manually registered: ${stats.manuallyRegistered}`);
+      logger.info(`   🔒 Hidden commands: ${stats.hidden}`);
+      logger.info(`   🏷️  Commands with aliases: ${stats.withAliases}`);
+
+      if (stats.total > 0) {
+        logger.info(`   📝 Available commands:`);
+        const commands = registry.getAll();
+        commands.forEach((command: DevCommand) => {
+          const aliasText = command.aliases ? ` (${command.aliases.join(", ")})` : "";
+          logger.info(`      • ${command.name}: ${command.description}${aliasText}`);
+        });
+      }
+
+      testsPassed++;
+    } catch (error) {
+      logger.info(`   ❌ Failed to initialize command registry`);
+      logger.info(`   💡 Error: ${error instanceof Error ? error.message : "Unknown error"}`);
       testsFailed++;
     }
 
