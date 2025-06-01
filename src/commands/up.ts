@@ -26,29 +26,29 @@ Examples:
       validateTool("mise", context);
 
       const cwd = process.cwd();
-      const userMiseConfigDir = path.join(cwd, ".config", "mise");
-      const userMiseConfigFile = path.join(userMiseConfigDir, "config.toml");
+      const repoMiseConfigDir = path.join(cwd, ".config", "mise");
+      const repoMiseConfigFile = path.join(repoMiseConfigDir, "config.toml");
       const templateConfigPath = path.join(devDir, "hack", "configs", "mise-config-repo.toml");
 
       // Check if we're in a git repository and need to create mise config
       if (isGitRepository(cwd)) {
-        if (!fs.existsSync(userMiseConfigFile)) {
-          logger.warn(`Mise configuration not found at ${userMiseConfigFile}. Attempting to create one...`);
+        if (!fs.existsSync(repoMiseConfigFile)) {
+          logger.warn(`Mise configuration not found at ${repoMiseConfigFile}. Attempting to create one...`);
 
           if (!fs.existsSync(templateConfigPath)) {
             throw new Error(`Template config file not found at ${templateConfigPath}`);
           }
 
-          if (!fs.existsSync(userMiseConfigDir)) {
-            fs.mkdirSync(userMiseConfigDir, { recursive: true });
-            logger.info(`Created directory: ${userMiseConfigDir}`);
+          if (!fs.existsSync(repoMiseConfigDir)) {
+            fs.mkdirSync(repoMiseConfigDir, { recursive: true });
+            logger.info(`Created directory: ${repoMiseConfigDir}`);
           }
 
           const templateContent = fs.readFileSync(templateConfigPath, "utf-8");
-          fs.writeFileSync(userMiseConfigFile, templateContent);
-          logger.success(`Successfully created ${userMiseConfigFile} with content from ${templateConfigPath}.`);
+          fs.writeFileSync(repoMiseConfigFile, templateContent);
+          logger.success(`Successfully created ${repoMiseConfigFile} with content from ${templateConfigPath}.`);
         } else {
-          logger.success(`Mise configuration found at ${userMiseConfigFile}. Proceeding with 'mise install'.`);
+          logger.success(`Mise configuration found at ${repoMiseConfigFile}. Proceeding with 'mise install'.`);
         }
       } else {
         logger.info(`No .git directory found in ${cwd}. Skipping mise config check, proceeding with 'mise install'.`);

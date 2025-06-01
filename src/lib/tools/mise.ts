@@ -1,10 +1,14 @@
 import fs from "node:fs";
+import path from "node:path";
 import { spawnSync } from "bun";
 
 import { stringify } from "@iarna/toml";
 
-import { miseConfigDir, miseConfigPath } from "~/lib/constants";
+import { homeDir } from "~/lib/constants";
 import { devConfig, type MiseConfig } from "~/lib/dev-config";
+
+export const globalMiseConfigDir = path.join(homeDir, ".config", "mise");
+export const globalMiseConfigPath = path.join(globalMiseConfigDir, "config.toml");
 
 export const miseMinVersion = "2025.5.2";
 
@@ -204,13 +208,13 @@ export async function setupMiseGlobalConfig() {
     console.log("🎯 Setting up global mise configuration...");
 
     // Ensure mise config directory exists
-    if (!fs.existsSync(miseConfigDir)) {
+    if (!fs.existsSync(globalMiseConfigDir)) {
       console.log("   📂 Creating mise config directory...");
-      fs.mkdirSync(miseConfigDir, { recursive: true });
+      fs.mkdirSync(globalMiseConfigDir, { recursive: true });
     }
 
     // Check if config already exists
-    if (fs.existsSync(miseConfigPath)) {
+    if (fs.existsSync(globalMiseConfigPath)) {
       console.log("   ✅ Mise config already exists");
       return;
     }
@@ -222,7 +226,7 @@ export async function setupMiseGlobalConfig() {
 
     // Serialize the final config as TOML and write to file
     const tomlText = stringify(miseGlobalConfig);
-    await Bun.write(miseConfigPath, tomlText + "\n");
+    await Bun.write(globalMiseConfigPath, tomlText + "\n");
     console.log("   ✅ Mise config installed");
   } catch (err) {
     console.error("❌ Error setting up mise configuration:", err);
