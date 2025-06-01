@@ -1,7 +1,9 @@
-import fs from "fs";
+import fs from "node:fs";
 import path from "path";
 
 import type { CommandRegistration, DevCommand } from "~/lib/core/command-types";
+
+import { createLogger } from "../logger";
 
 /**
  * Command registry for managing all available commands
@@ -104,10 +106,12 @@ export class CommandRegistry {
   /**
    * Auto-discover and register commands from a directory
    */
-  async autoDiscoverCommands(cmdDir: string): Promise<void> {
+  async autoDiscoverCommands(cmdDir: string): Promise<number> {
+    const logger = createLogger();
+
     if (!fs.existsSync(cmdDir)) {
-      console.warn(`⚠️ Command directory ${cmdDir} does not exist`);
-      return;
+      logger.warn(`⚠️ Command directory ${cmdDir} does not exist`);
+      return 0;
     }
 
     const files = fs.readdirSync(cmdDir);
@@ -115,6 +119,8 @@ export class CommandRegistry {
       (file) =>
         file.endsWith(".ts") && !file.endsWith(".test.ts") && !file.endsWith(".spec.ts") && !file.includes("-new.ts"), // Skip the old refactored versions
     );
+
+    let discovered = 0;
 
     for (const file of commandFiles) {
       const filePath = path.join(cmdDir, file);
@@ -157,16 +163,23 @@ export class CommandRegistry {
 
         if (command) {
           this.register(command, filePath, "auto-discovered");
-          console.debug(
-            `📦 Discovered command: ${command.name}${command.aliases ? ` (aliases: ${command.aliases.join(", ")})` : ""}`,
-          );
+          discovered++;
+
+          // Log in debug mode
+          if (process.env.DEBUG) {
+            logger.debug(
+              `📦 Discovered command: ${command.name}${command.aliases ? ` (aliases: ${command.aliases.join(", ")})` : ""}`,
+            );
+          }
         } else {
-          console.warn(`⚠️ No valid command found in ${file}`);
+          logger.warn(`⚠️ No valid command found in ${file}`);
         }
       } catch (error) {
-        console.error(`❌ Failed to load command from ${file}:`, error);
+        logger.error(`❌ Failed to load command from ${file}:`, error);
       }
     }
+
+    return discovered;
   }
 
   /**

@@ -7,6 +7,8 @@ import { getCurrentGitCommitSha } from "~/lib/version";
 import { db } from "~/drizzle";
 import { runs } from "~/drizzle/schema";
 
+import { createLogger } from "./logger";
+
 const upgradeFrequency = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
 
 /**
@@ -20,6 +22,7 @@ const upgradeFrequency = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
  * @returns Promise<void> Resolves when the check is complete
  */
 export const runPeriodicUpgradeCheck = async () => {
+  const logger = createLogger();
   const upgradeScriptPath = path.join(devDir, "hack", "setup.sh");
 
   // Gather run information
@@ -42,7 +45,7 @@ export const runPeriodicUpgradeCheck = async () => {
       finished_at: null, // Will be set when the command completes
     });
   } catch (error: any) {
-    console.warn("⚠️  Warning: Could not record run in database:", error.message);
+    logger.warn("⚠️  Warning: Could not record run in database:", error.message);
     // Proceed even if we can't record the run, to not break main functionality
   }
 
@@ -62,16 +65,16 @@ export const runPeriodicUpgradeCheck = async () => {
         (lastRun[0] && new Date().getTime() - new Date(lastRun[0].started_at).getTime() > upgradeFrequency);
 
       if (shouldUpdate) {
-        console.log(
+        logger.info(
           `🔄 [dev] Periodic check: Last update was more than 7 days ago. Attempting background self-update...`,
         );
         try {
           Bun.spawn(["zsh", upgradeScriptPath], {
             stdio: ["ignore", "ignore", "ignore"],
           });
-          console.log("✅ [dev] Background self-update process started.");
+          logger.info("✅ [dev] Background self-update process started.");
         } catch (spawnError: any) {
-          console.error("❌ [dev] Error starting background self-update process:", spawnError.message);
+          logger.error("❌ [dev] Error starting background self-update process:", spawnError.message);
         }
 
         // Add a new run for the upgrade command
@@ -87,7 +90,7 @@ export const runPeriodicUpgradeCheck = async () => {
         });
       }
     } catch (error: any) {
-      console.warn("⚠️  Warning: Could not check last run timestamp:", error.message);
+      logger.warn("⚠️  Warning: Could not check last run timestamp:", error.message);
       // Proceed even if we can't check the timestamp, to not break main functionality
     }
   }

@@ -55,9 +55,11 @@ import { getCurrentGitCommitSha } from "~/lib/version";
     // Parse command line arguments
     await program.parseAsync(process.argv);
   } catch (error: any) {
-    console.error(`❌ Unexpected error: ${error.message}`);
+    // Create a fallback logger if the main logger wasn't initialized
+    const fallbackLogger = createLogger();
+    fallbackLogger.error(`❌ Unexpected error: ${error.message}`);
     if (process.env.DEBUG) {
-      console.error(error.stack);
+      fallbackLogger.error(error.stack);
     }
     process.exit(1);
   }

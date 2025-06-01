@@ -7,6 +7,8 @@ import { stringify } from "@iarna/toml";
 import { homeDir } from "~/lib/constants";
 import { devConfig, type MiseConfig } from "~/lib/dev-config";
 
+import { createLogger } from "../logger";
+
 export const globalMiseConfigDir = path.join(homeDir, ".config", "mise");
 export const globalMiseConfigPath = path.join(globalMiseConfigDir, "config.toml");
 
@@ -153,6 +155,7 @@ export const checkMiseVersion = (): { isValid: boolean; currentVersion: string |
  * @returns Promise<void> - Resolves if version is valid or upgrade succeeds
  */
 export const ensureMiseVersionOrUpgrade = async (): Promise<void> => {
+  const logger = createLogger();
   const { isValid, currentVersion } = checkMiseVersion();
 
   if (isValid) {
@@ -160,12 +163,12 @@ export const ensureMiseVersionOrUpgrade = async (): Promise<void> => {
   }
 
   if (currentVersion) {
-    console.log(`⚠️  Mise version ${currentVersion} is older than required ${miseMinVersion}`);
+    logger.info(`⚠️  Mise version ${currentVersion} is older than required ${miseMinVersion}`);
   } else {
-    console.log(`⚠️  Unable to determine mise version, expected ${miseMinVersion} or newer`);
+    logger.info(`⚠️  Unable to determine mise version, expected ${miseMinVersion} or newer`);
   }
 
-  console.log(`🔄 Running dev upgrade to update mise and other dependencies...`);
+  logger.info(`🔄 Running dev upgrade to update mise and other dependencies...`);
 
   try {
     // Note: handleUpgradeCommand would need to be imported or implemented
@@ -177,17 +180,17 @@ export const ensureMiseVersionOrUpgrade = async (): Promise<void> => {
     const { isValid: isValidAfterUpgrade, currentVersion: versionAfterUpgrade } = checkMiseVersion();
 
     if (!isValidAfterUpgrade) {
-      console.error(`❌ Failed to upgrade mise to required version ${miseMinVersion}`);
+      logger.error(`❌ Failed to upgrade mise to required version ${miseMinVersion}`);
       if (versionAfterUpgrade) {
-        console.error(`   Current version: ${versionAfterUpgrade}`);
+        logger.error(`   Current version: ${versionAfterUpgrade}`);
       }
-      console.error(`💡 You may need to manually upgrade mise or check your installation`);
+      logger.error(`💡 You may need to manually upgrade mise or check your installation`);
       process.exit(1);
     }
 
-    console.log(`✅ Mise upgraded successfully to ${versionAfterUpgrade}`);
+    logger.info(`✅ Mise upgraded successfully to ${versionAfterUpgrade}`);
   } catch (error: any) {
-    console.error(`❌ Failed to upgrade dev CLI: ${error.message}`);
+    logger.error(`❌ Failed to upgrade dev CLI: ${error.message}`);
     process.exit(1);
   }
 };
@@ -204,18 +207,20 @@ export const ensureMiseVersionOrUpgrade = async (): Promise<void> => {
  * @throws Error if the mise config cannot be parsed or written
  */
 export async function setupMiseGlobalConfig() {
+  const logger = createLogger();
+
   try {
-    console.log("🎯 Setting up global mise configuration...");
+    logger.info("🎯 Setting up global mise configuration...");
 
     // Ensure mise config directory exists
     if (!fs.existsSync(globalMiseConfigDir)) {
-      console.log("   📂 Creating mise config directory...");
+      logger.info("   📂 Creating mise config directory...");
       fs.mkdirSync(globalMiseConfigDir, { recursive: true });
     }
 
     // Check if config already exists
     if (fs.existsSync(globalMiseConfigPath)) {
-      console.log("   ✅ Mise config already exists");
+      logger.info("   ✅ Mise config already exists");
       return;
     }
 
@@ -227,9 +232,9 @@ export async function setupMiseGlobalConfig() {
     // Serialize the final config as TOML and write to file
     const tomlText = stringify(miseGlobalConfig);
     await Bun.write(globalMiseConfigPath, tomlText + "\n");
-    console.log("   ✅ Mise config installed");
+    logger.info("   ✅ Mise config installed");
   } catch (err) {
-    console.error("❌ Error setting up mise configuration:", err);
+    logger.error("❌ Error setting up mise configuration:", err);
     throw err;
   }
 }

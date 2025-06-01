@@ -4,6 +4,8 @@ import { z } from "zod/v4";
 
 import { devConfigDir, devConfigPath } from "~/lib/constants";
 
+import { createLogger } from "./logger";
+
 const gitProviderSchema = z.enum(["github", "gitlab"]);
 
 /**
@@ -119,7 +121,8 @@ class ConfigManager {
   }
 
   async refreshFromRemote(): Promise<void> {
-    console.log("🔄 Refreshing dev configuration...");
+    const logger = createLogger();
+    logger.info("🔄 Refreshing dev configuration...");
 
     const currentConfig = this.getConfig();
     const { configUrl } = currentConfig;
@@ -145,7 +148,7 @@ class ConfigManager {
       // Invalidate cache
       this.cachedConfig = null;
 
-      console.log("✅ Dev configuration refreshed successfully");
+      logger.info("✅ Dev configuration refreshed successfully");
     } catch (error) {
       if (error instanceof ConfigError) {
         throw error;

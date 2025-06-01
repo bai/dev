@@ -5,7 +5,7 @@ import { baseSearchDir } from "~/lib/constants";
 import type { DevCommand } from "~/lib/core/command-types";
 import { arg, getArg, hasOption, option, runCommand } from "~/lib/core/command-utils";
 import { devConfig } from "~/lib/dev-config";
-import { handleCdToPath } from "~/lib/handlers";
+import { handleCdToPath } from "~/lib/handle-cd-to-path";
 
 export const cloneCommand: DevCommand = {
   name: "clone",

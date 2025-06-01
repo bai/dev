@@ -1,6 +1,8 @@
 import type { ConfigManager } from "~/lib/core/command-types";
 import { getDevConfig } from "~/lib/dev-config";
 
+import { createLogger } from "./logger";
+
 /**
  * Configuration manager implementation
  */
@@ -13,6 +15,8 @@ export class DevConfigManager implements ConfigManager {
    */
   private loadConfig(): void {
     if (this.loaded) return;
+
+    const logger = createLogger();
 
     try {
       const devConfig = getDevConfig();
@@ -37,7 +41,7 @@ export class DevConfigManager implements ConfigManager {
 
       this.loaded = true;
     } catch (error) {
-      console.warn("Failed to load dev configuration, using defaults");
+      logger.warn("Failed to load dev configuration, using defaults");
       this.config = {};
       this.loaded = true;
     }
