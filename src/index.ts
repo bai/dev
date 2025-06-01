@@ -66,7 +66,7 @@ import { getCurrentGitCommitSha } from "~/lib/version";
 // Export the system for external use
 export { CommandRegistry } from "~/lib/core/command-registry";
 export { CommandLoader } from "~/lib/core/command-loader";
-export { createLogger } from "~/lib/logger";
+export { createLogger, createDebugLogger, createPrefixedLogger } from "~/lib/logger";
 export { createConfig } from "~/lib/dev-config-manager";
 export * from "~/lib/core/command-types";
 export * from "~/lib/core/command-utils";

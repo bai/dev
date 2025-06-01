@@ -110,6 +110,8 @@ export interface Logger {
   error(message: string, ...args: any[]): void;
   debug(message: string, ...args: any[]): void;
   success(message: string, ...args: any[]): void;
+  /** Create a child logger with a prefix */
+  child(prefix: string): Logger;
 }
 
 /**
