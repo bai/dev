@@ -1,7 +1,6 @@
 import type { ConfigManager } from "~/lib/core/command-types";
 import { getDevConfig } from "~/lib/dev-config";
-
-import { createLogger } from "./logger";
+import { logger } from "~/lib/logger";
 
 /**
  * Configuration manager implementation
@@ -15,8 +14,6 @@ export class DevConfigManager implements ConfigManager {
    */
   private loadConfig(): void {
     if (this.loaded) return;
-
-    const logger = createLogger();
 
     try {
       const devConfig = getDevConfig();

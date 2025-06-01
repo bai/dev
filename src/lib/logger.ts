@@ -65,22 +65,6 @@ function createLoggerImplementation(config: LoggerConfig = {}): Logger {
 }
 
 /**
- * Create a logger instance
+ * Default logger instance - import this directly to use logging
  */
-export function createLogger(debugEnabled?: boolean): Logger {
-  return createLoggerImplementation({ debugEnabled });
-}
-
-/**
- * Create a logger with debug enabled
- */
-export function createDebugLogger(): Logger {
-  return createLoggerImplementation({ debugEnabled: true });
-}
-
-/**
- * Create a logger with a prefix
- */
-export function createPrefixedLogger(prefix: string, debugEnabled?: boolean): Logger {
-  return createLoggerImplementation({ debugEnabled, prefix });
-}
+export const logger = createLoggerImplementation({ debugEnabled: process.env.DEBUG === "true" });

@@ -7,7 +7,7 @@ import { CommandRegistry } from "~/lib/core/command-registry";
 import { createConfig } from "~/lib/dev-config-manager";
 import { ensureBaseDirectoryExists } from "~/lib/ensure-base-directory-exists";
 import { ensureDatabaseIsUpToDate } from "~/lib/ensure-database-is-up-to-date";
-import { createLogger } from "~/lib/logger";
+import { logger } from "~/lib/logger";
 import { runPeriodicUpgradeCheck } from "~/lib/run-update-check";
 import { ensureMiseVersionOrUpgrade } from "~/lib/tools/mise";
 import { getCurrentGitCommitSha } from "~/lib/version";
@@ -27,7 +27,6 @@ import { getCurrentGitCommitSha } from "~/lib/version";
     }
 
     // Initialize services
-    const logger = createLogger(process.env.DEBUG === "true");
     const config = createConfig();
     const registry = new CommandRegistry();
     const loader = new CommandLoader(registry, logger, config);
@@ -55,11 +54,10 @@ import { getCurrentGitCommitSha } from "~/lib/version";
     // Parse command line arguments
     await program.parseAsync(process.argv);
   } catch (error: any) {
-    // Create a fallback logger if the main logger wasn't initialized
-    const fallbackLogger = createLogger();
-    fallbackLogger.error(`❌ Unexpected error: ${error.message}`);
+    // Use the imported logger for error handling
+    logger.error(`❌ Unexpected error: ${error.message}`);
     if (process.env.DEBUG) {
-      fallbackLogger.error(error.stack);
+      logger.error(error.stack);
     }
     process.exit(1);
   }
@@ -68,7 +66,7 @@ import { getCurrentGitCommitSha } from "~/lib/version";
 // Export the system for external use
 export { CommandRegistry } from "~/lib/core/command-registry";
 export { CommandLoader } from "~/lib/core/command-loader";
-export { createLogger, createDebugLogger, createPrefixedLogger } from "~/lib/logger";
+
 export { createConfig } from "~/lib/dev-config-manager";
 export * from "~/lib/core/command-types";
 export * from "~/lib/core/command-utils";

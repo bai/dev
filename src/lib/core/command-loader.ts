@@ -1,5 +1,6 @@
 import { Option, type Command } from "commander";
 
+import type { CommandRegistry } from "~/lib/core/command-registry";
 import {
   CommandError,
   type CommandArgument,
@@ -8,8 +9,6 @@ import {
   type DevCommand,
   type Logger,
 } from "~/lib/core/command-types";
-
-import type { CommandRegistry } from "./command-registry";
 
 /**
  * Command loader that converts DevCommand to commander.js commands

@@ -3,8 +3,7 @@ import fs from "node:fs";
 import { z } from "zod/v4";
 
 import { devConfigDir, devConfigPath } from "~/lib/constants";
-
-import { createLogger } from "./logger";
+import { logger } from "~/lib/logger";
 
 const gitProviderSchema = z.enum(["github", "gitlab"]);
 
@@ -121,7 +120,6 @@ class ConfigManager {
   }
 
   async refreshFromRemote(): Promise<void> {
-    const logger = createLogger();
     logger.info("🔄 Refreshing dev configuration...");
 
     const currentConfig = this.getConfig();

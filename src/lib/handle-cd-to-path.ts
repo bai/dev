@@ -2,8 +2,7 @@ import fs from "fs";
 import path from "path";
 
 import { baseSearchDir } from "~/lib/constants";
-
-import { createLogger } from "./logger";
+import { logger } from "~/lib/logger";
 
 /**
  * Handles changing directory through shell wrapper by outputting a special format.
@@ -15,7 +14,6 @@ import { createLogger } from "./logger";
  * @throws Never returns - always exits the process (code 0 on success, code 1 on error)
  */
 export function handleCdToPath(targetPath: string): void {
-  const logger = createLogger();
   let absolutePath: string;
   const cleanedTargetPath = targetPath.replace(/\/$/, ""); // Remove trailing slash
 

@@ -1,11 +1,9 @@
 import fs from "node:fs";
 
 import { baseSearchDir } from "~/lib/constants";
-
-import { createLogger } from "./logger";
+import { logger } from "~/lib/logger";
 
 export function ensureBaseDirectoryExists() {
-  const logger = createLogger();
   if (!fs.existsSync(baseSearchDir)) {
     try {
       fs.mkdirSync(baseSearchDir, { recursive: true });

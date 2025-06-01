@@ -3,7 +3,7 @@ import path from "path";
 
 import type { CommandRegistration, DevCommand } from "~/lib/core/command-types";
 
-import { createLogger } from "../logger";
+import { logger } from "../logger";
 
 /**
  * Command registry for managing all available commands
@@ -107,8 +107,6 @@ export class CommandRegistry {
    * Auto-discover and register commands from a directory
    */
   async autoDiscoverCommands(cmdDir: string): Promise<number> {
-    const logger = createLogger();
-
     if (!fs.existsSync(cmdDir)) {
       logger.warn(`⚠️ Command directory ${cmdDir} does not exist`);
       return 0;

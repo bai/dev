@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { homeDir } from "~/lib/constants";
 
-import { createLogger } from "../logger";
+import { logger } from "../logger";
 
 const gcloudConfigDir = path.join(homeDir, ".config", "gcloud");
 const gcloudComponentsPath = path.join(gcloudConfigDir, ".default-cloud-sdk-components");
@@ -34,8 +34,6 @@ const gcloudComponents = [
  * @throws Error if the source config file is not found or cannot be copied
  */
 export async function setupGoogleCloudConfig(): Promise<void> {
-  const logger = createLogger();
-
   try {
     logger.info("☁️  Setting up Google Cloud configuration...");
 

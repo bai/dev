@@ -7,7 +7,7 @@ import { stringify } from "@iarna/toml";
 import { homeDir } from "~/lib/constants";
 import { devConfig, type MiseConfig } from "~/lib/dev-config";
 
-import { createLogger } from "../logger";
+import { logger } from "../logger";
 
 export const globalMiseConfigDir = path.join(homeDir, ".config", "mise");
 export const globalMiseConfigPath = path.join(globalMiseConfigDir, "config.toml");
@@ -155,7 +155,6 @@ export const checkMiseVersion = (): { isValid: boolean; currentVersion: string |
  * @returns Promise<void> - Resolves if version is valid or upgrade succeeds
  */
 export const ensureMiseVersionOrUpgrade = async (): Promise<void> => {
-  const logger = createLogger();
   const { isValid, currentVersion } = checkMiseVersion();
 
   if (isValid) {
@@ -207,8 +206,6 @@ export const ensureMiseVersionOrUpgrade = async (): Promise<void> => {
  * @throws Error if the mise config cannot be parsed or written
  */
 export async function setupMiseGlobalConfig() {
-  const logger = createLogger();
-
   try {
     logger.info("🎯 Setting up global mise configuration...");
 

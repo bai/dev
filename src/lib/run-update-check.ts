@@ -3,11 +3,10 @@ import path from "path";
 import { desc, eq } from "drizzle-orm";
 
 import { devDir } from "~/lib/constants";
+import { logger } from "~/lib/logger";
 import { getCurrentGitCommitSha } from "~/lib/version";
 import { db } from "~/drizzle";
 import { runs } from "~/drizzle/schema";
-
-import { createLogger } from "./logger";
 
 const upgradeFrequency = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
 
@@ -22,7 +21,6 @@ const upgradeFrequency = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
  * @returns Promise<void> Resolves when the check is complete
  */
 export const runPeriodicUpgradeCheck = async () => {
-  const logger = createLogger();
   const upgradeScriptPath = path.join(devDir, "hack", "setup.sh");
 
   // Gather run information
