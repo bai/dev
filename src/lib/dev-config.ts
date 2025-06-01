@@ -4,38 +4,9 @@ import { z } from "zod/v4";
 
 import { devConfigDir, devConfigPath } from "~/lib/constants";
 import { logger } from "~/lib/logger";
+import { miseConfigSchema } from "~/lib/tools/mise";
 
 const gitProviderSchema = z.enum(["github", "gitlab"]);
-
-/**
- * Mise config schema
- * @see https://mise.jdx.dev/configuration/settings.html
- */
-export const miseConfigSchema = z.object({
-  min_version: z.string().optional(),
-  env: z
-    .record(z.string(), z.any())
-    .and(
-      z.object({
-        _: z
-          .object({
-            path: z.array(z.string()).optional(),
-            file: z.array(z.string()).optional(),
-          })
-          .optional(),
-      }),
-    )
-    .optional(),
-  tools: z.record(z.string(), z.string()).optional(),
-  settings: z
-    .object({
-      idiomatic_version_file_enable_tools: z.array(z.string()).optional(),
-      trusted_config_paths: z.array(z.string()).optional(),
-    })
-    .optional(),
-});
-
-export type MiseConfig = z.infer<typeof miseConfigSchema>;
 
 export const devConfigSchema = z.object({
   configUrl: z
@@ -54,7 +25,6 @@ export const devConfigSchema = z.object({
 });
 
 export type DevConfig = z.infer<typeof devConfigSchema>;
-export type GitProviderType = z.infer<typeof gitProviderSchema>;
 
 class ConfigError extends Error {
   constructor(

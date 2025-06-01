@@ -3,9 +3,10 @@ import path from "node:path";
 import { spawnSync } from "bun";
 
 import { stringify } from "@iarna/toml";
+import z from "zod/v4";
 
 import { homeDir } from "~/lib/constants";
-import { devConfig, type MiseConfig } from "~/lib/dev-config";
+import { devConfig } from "~/lib/dev-config";
 
 import { logger } from "../logger";
 
@@ -13,6 +14,36 @@ export const globalMiseConfigDir = path.join(homeDir, ".config", "mise");
 export const globalMiseConfigPath = path.join(globalMiseConfigDir, "config.toml");
 
 export const miseMinVersion = "2025.5.2";
+
+/**
+ * Mise config schema
+ * @see https://mise.jdx.dev/configuration/settings.html
+ */
+export const miseConfigSchema = z.object({
+  min_version: z.string().optional(),
+  env: z
+    .record(z.string(), z.any())
+    .and(
+      z.object({
+        _: z
+          .object({
+            path: z.array(z.string()).optional(),
+            file: z.array(z.string()).optional(),
+          })
+          .optional(),
+      }),
+    )
+    .optional(),
+  tools: z.record(z.string(), z.string()).optional(),
+  settings: z
+    .object({
+      idiomatic_version_file_enable_tools: z.array(z.string()).optional(),
+      trusted_config_paths: z.array(z.string()).optional(),
+    })
+    .optional(),
+});
+
+export type MiseConfig = z.infer<typeof miseConfigSchema>;
 
 export const miseGlobalConfig = {
   env: {
