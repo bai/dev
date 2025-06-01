@@ -37,8 +37,7 @@ fi
 # Mise
 echo ""
 echo "🎯 Installing mise..."
-export MISE_QUIET=1
-/bin/bash -c "$(curl -fsSL https://mise.run)"
+curl https://mise.run | MISE_QUIET=1 sh
 echo "   ✅ Mise installed"
 
 # Bun Runtime
