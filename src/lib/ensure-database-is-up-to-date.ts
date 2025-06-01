@@ -1,10 +1,11 @@
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
 
 import { devDir } from "~/lib/constants";
+import { logger } from "~/lib/logger";
 import { db } from "~/drizzle";
 
 export async function ensureDatabaseIsUpToDate() {
-  // console.log("🔄 Checking for database migrations...");
+  logger.info("🔄 Checking for database migrations...");
   migrate(db, { migrationsFolder: `${devDir}/src/drizzle/migrations` });
-  // console.log("✅ Database migrations applied");
+  logger.info("✅ Database migrations applied");
 }
