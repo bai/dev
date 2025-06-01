@@ -1,11 +1,10 @@
 import fs from "node:fs";
-import path from "path";
 import { spawnSync } from "bun";
 
 import { stringify } from "@iarna/toml";
 
-import { devDir, miseConfigDir, miseConfigPath } from "~/lib/constants";
-import { devConfig, miseConfigSchema, type MiseConfig } from "~/lib/dev-config";
+import { miseConfigDir, miseConfigPath } from "~/lib/constants";
+import { devConfig, type MiseConfig } from "~/lib/dev-config";
 
 export const miseMinVersion = "2025.5.2";
 
