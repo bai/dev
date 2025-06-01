@@ -103,7 +103,3 @@ echo "📚 Installing project dependencies..."
 cd "$HOME/.dev"
 bun install
 echo "   ✅ Dependencies installed"
-
-# Dev Setup
-echo ""
-bun run "$HOME"/.dev/src/index.ts setup
