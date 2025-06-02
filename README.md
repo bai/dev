@@ -98,8 +98,6 @@ dev run build --watch       # Run with arguments
 
 # Authenticate services
 dev auth                   # All services
-dev auth github            # GitHub only
-dev auth gitlab            # GitLab only
 dev auth gcloud            # Google Cloud only
 ```
 

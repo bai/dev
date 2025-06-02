@@ -175,7 +175,7 @@ class DevConfigManager implements ConfigManager {
 
     // Support nested key setting with dot notation
     const keys = key.split(".");
-    const lastKey = keys.pop()!;
+    const lastKey = keys.pop();
     let target = this.runtimeConfig;
 
     for (const k of keys) {
@@ -185,7 +185,9 @@ class DevConfigManager implements ConfigManager {
       target = target[k];
     }
 
-    target[lastKey] = value;
+    if (lastKey !== undefined) {
+      target[lastKey] = value;
+    }
   }
 
   /**

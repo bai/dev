@@ -79,6 +79,7 @@ export function validateTool(toolName: string, context: CommandContext): void;
 ## ✨ Key Benefits
 
 ### 1. **Superior Testability**
+
 - **Pure functions** are easy to test in isolation
 - **Explicit dependencies** via context injection
 - **No hidden global state** or side effects
@@ -87,30 +88,34 @@ export function validateTool(toolName: string, context: CommandContext): void;
 ```typescript
 // Easy to test with mocks
 const mockLogger = { success: vi.fn() };
-const context = { args: { name: 'World' }, logger: mockLogger };
+const context = { args: { name: "World" }, logger: mockLogger };
 await helloCommand.exec(context);
-expect(mockLogger.success).toHaveBeenCalledWith('Hello, World!');
+expect(mockLogger.success).toHaveBeenCalledWith("Hello, World!");
 ```
 
 ### 2. **Composition Over Inheritance**
+
 - **No tight coupling** to base classes
 - **Mix and match utilities** as needed
 - **More flexible command structure**
 - **Easier to extend and modify**
 
 ### 3. **Dependency Injection**
+
 - **Services injected** through context
 - **Easy to mock** for testing
 - **Clear separation** of concerns
 - **Runtime flexibility**
 
 ### 4. **Type Safety**
+
 - **Full TypeScript support** throughout
 - **Strongly typed context** and interfaces
 - **Compile-time validation**
 - **Better IDE support and autocomplete**
 
 ### 5. **Functional Programming**
+
 - **Pure functions** without side effects
 - **Immutable data structures**
 - **Predictable behavior**
@@ -122,23 +127,23 @@ expect(mockLogger.success).toHaveBeenCalledWith('Hello, World!');
 
 ```typescript
 // src/commands/hello.ts
-import type { DevCommand } from '~/types/command';
-import { arg, getArg } from '~/utils/command-utils';
+import type { DevCommand } from "~/types/command";
+import { arg, getArg } from "~/utils/command-utils";
 
 export const helloCommand: DevCommand = {
-  name: 'hello',
-  description: 'Say hello to someone',
+  name: "hello",
+  description: "Say hello to someone",
 
   arguments: [
-    arg('name', 'Name to greet', { required: true }),
+    arg("name", "Name to greet", { required: true }),
   ],
 
   async exec(context) {
     const { logger } = context;
-    const name = getArg(context, 'name');
+    const name = getArg(context, "name");
 
     logger.success(`Hello, ${name}!`);
-  }
+  },
 };
 ```
 
@@ -146,19 +151,12 @@ export const helloCommand: DevCommand = {
 
 ```typescript
 // src/commands/deploy.ts
-import type { DevCommand } from '~/types/command';
-import {
-  arg,
-  option,
-  getArg,
-  hasOption,
-  validateChoice,
-  runCommand
-} from '~/utils/command-utils';
+import type { DevCommand } from "~/types/command";
+import { arg, getArg, hasOption, option, runCommand, validateChoice } from "~/utils/command-utils";
 
 export const deployCommand: DevCommand = {
-  name: 'deploy',
-  description: 'Deploy application to specified environment',
+  name: "deploy",
+  description: "Deploy application to specified environment",
   help: `
 Deploy your application to different environments.
 
@@ -168,27 +166,27 @@ Examples:
   `,
 
   arguments: [
-    arg('environment', 'Target environment', { required: true }),
+    arg("environment", "Target environment", { required: true }),
   ],
 
   options: [
-    option('--dry-run', 'Perform a dry run without actual deployment'),
-    option('-f, --force', 'Force deployment even if checks fail'),
-    option('--skip-tests', 'Skip running tests before deployment'),
+    option("--dry-run", "Perform a dry run without actual deployment"),
+    option("-f, --force", "Force deployment even if checks fail"),
+    option("--skip-tests", "Skip running tests before deployment"),
   ],
 
   async validate(context) {
     const { logger } = context;
 
     // Validate environment choice
-    validateChoice(context, 'environment', ['staging', 'production']);
+    validateChoice(context, "environment", ["staging", "production"]);
 
     // Check if production deployment requires confirmation
-    const env = getArg(context, 'environment');
-    const force = hasOption(context, 'force');
+    const env = getArg(context, "environment");
+    const force = hasOption(context, "force");
 
-    if (env === 'production' && !force) {
-      logger.warn('Production deployment requires --force flag');
+    if (env === "production" && !force) {
+      logger.warn("Production deployment requires --force flag");
       return false;
     }
 
@@ -198,25 +196,25 @@ Examples:
   async exec(context) {
     const { logger, config } = context;
 
-    const environment = getArg(context, 'environment');
-    const dryRun = hasOption(context, 'dry-run');
-    const skipTests = hasOption(context, 'skip-tests');
+    const environment = getArg(context, "environment");
+    const dryRun = hasOption(context, "dry-run");
+    const skipTests = hasOption(context, "skip-tests");
 
     logger.info(`Deploying to ${environment}...`);
 
     if (!skipTests) {
-      logger.info('Running tests...');
-      runCommand(['npm', 'test'], context);
+      logger.info("Running tests...");
+      runCommand(["npm", "test"], context);
     }
 
     if (dryRun) {
-      logger.info('Dry run completed successfully');
+      logger.info("Dry run completed successfully");
     } else {
-      const deployScript = config.get(`deploy.${environment}.script`, './deploy.sh');
+      const deployScript = config.get(`deploy.${environment}.script`, "./deploy.sh");
       runCommand([deployScript, environment], context, { inherit: true });
       logger.success(`Successfully deployed to ${environment}`);
     }
-  }
+  },
 };
 ```
 
@@ -236,8 +234,9 @@ export default { name: 'my-command', ... };             // Default export
 
 ```typescript
 // For external plugins or custom commands
-import { commandRegistry } from '~/core/command-registry';
-import { myCustomCommand } from './my-commands';
+import { commandRegistry } from "~/core/command-registry";
+
+import { myCustomCommand } from "./my-commands";
 
 commandRegistry.register(myCustomCommand);
 ```
@@ -284,19 +283,20 @@ async exec(context) {
 
 ```typescript
 // test/utils/command-utils.test.ts
-import { describe, it, expect } from 'vitest';
-import { getArg, hasOption } from '~/utils/command-utils';
+import { describe, expect, it } from "vitest";
 
-describe('Command Utils', () => {
-  it('should get argument with default', () => {
+import { getArg, hasOption } from "~/utils/command-utils";
+
+describe("Command Utils", () => {
+  it("should get argument with default", () => {
     const context = {
-      args: { name: 'John' },
+      args: { name: "John" },
       options: {},
       // ... other context properties
     };
 
-    expect(getArg(context, 'name')).toBe('John');
-    expect(getArg(context, 'missing', 'default')).toBe('default');
+    expect(getArg(context, "name")).toBe("John");
+    expect(getArg(context, "missing", "default")).toBe("default");
   });
 });
 ```
@@ -305,11 +305,12 @@ describe('Command Utils', () => {
 
 ```typescript
 // test/commands/hello.test.ts
-import { describe, it, expect, vi } from 'vitest';
-import { helloCommand } from '~/commands/hello';
+import { describe, expect, it, vi } from "vitest";
 
-describe('Hello Command', () => {
-  it('should greet user', async () => {
+import { helloCommand } from "~/commands/hello";
+
+describe("Hello Command", () => {
+  it("should greet user", async () => {
     const mockLogger = {
       success: vi.fn(),
       info: vi.fn(),
@@ -319,7 +320,7 @@ describe('Hello Command', () => {
     };
 
     const context = {
-      args: { name: 'World' },
+      args: { name: "World" },
       options: {},
       logger: mockLogger,
       config: {} as any,
@@ -328,7 +329,7 @@ describe('Hello Command', () => {
 
     await helloCommand.exec(context);
 
-    expect(mockLogger.success).toHaveBeenCalledWith('Hello, World!');
+    expect(mockLogger.success).toHaveBeenCalledWith("Hello, World!");
   });
 });
 ```
@@ -340,13 +341,13 @@ describe('Hello Command', () => {
 ```typescript
 // Old inheritance-based approach
 export default class MyCommand extends BaseCommand {
-  name = 'my-command';
-  description = 'My command';
+  name = "my-command";
+  description = "My command";
 
   async exec(context: CommandContext): Promise<void> {
-    const input = this.getArg(context, 0)!;  // Hidden method
-    const force = this.hasOption(context, 'force');
-    console.log(`Processing ${input}`);       // Hardcoded console
+    const input = this.getArg(context, 0)!; // Hidden method
+    const force = this.hasOption(context, "force");
+    console.log(`Processing ${input}`); // Hardcoded console
   }
 }
 ```
@@ -356,24 +357,24 @@ export default class MyCommand extends BaseCommand {
 ```typescript
 // New composition-based approach
 export const myCommand: DevCommand = {
-  name: 'my-command',
-  description: 'My command',
+  name: "my-command",
+  description: "My command",
 
   arguments: [
-    arg('input', 'Input value', { required: true }),
+    arg("input", "Input value", { required: true }),
   ],
 
   options: [
-    option('-f, --force', 'Force operation'),
+    option("-f, --force", "Force operation"),
   ],
 
   async exec(context) {
-    const { logger } = context;              // Injected dependency
-    const input = getArg(context, 'input'); // Pure function
-    const force = hasOption(context, 'force');
+    const { logger } = context; // Injected dependency
+    const input = getArg(context, "input"); // Pure function
+    const force = hasOption(context, "force");
 
-    logger.info(`Processing ${input}`);      // Mockable logger
-  }
+    logger.info(`Processing ${input}`); // Mockable logger
+  },
 };
 ```
 
@@ -389,9 +390,9 @@ export const advancedCommand: DevCommand = {
     const { logger, config } = context;
 
     // Custom validation logic
-    const apiKey = config.get('api.key');
+    const apiKey = config.get("api.key");
     if (!apiKey) {
-      logger.error('API key not configured');
+      logger.error("API key not configured");
       return false;
     }
 
@@ -400,10 +401,10 @@ export const advancedCommand: DevCommand = {
       await validateApiKey(apiKey);
       return true;
     } catch (error) {
-      logger.error('Invalid API key');
+      logger.error("Invalid API key");
       return false;
     }
-  }
+  },
 };
 ```
 
@@ -411,15 +412,15 @@ export const advancedCommand: DevCommand = {
 
 ```typescript
 // ~/.dev/plugins/my-plugin.ts
-import { commandRegistry } from 'dev';
-import { createCommand } from 'dev/utils/command-utils';
+import { commandRegistry } from "dev";
+import { createCommand } from "dev/utils/command-utils";
 
 const customCommand = createCommand({
-  name: 'custom',
-  description: 'My custom command',
+  name: "custom",
+  description: "My custom command",
   exec: (context) => {
-    context.logger.success('Plugin command executed!');
-  }
+    context.logger.success("Plugin command executed!");
+  },
 });
 
 commandRegistry.register(customCommand);
@@ -439,6 +440,7 @@ commandRegistry.register(customCommand);
 ## 🚀 Quick Start
 
 1. **Test the example command:**
+
    ```bash
    bun run src/index.ts example "Hello World" --uppercase --count 3
    ```
