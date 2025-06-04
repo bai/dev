@@ -27,7 +27,7 @@ if ! command -v brew &>/dev/null; then
   echo "   📥 Installing Homebrew..."
   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
-  echo "   🔧 Configuring Homebrew PATH..."
+  echo "   🔧 Configuring Homebrew..."
   eval "$(/opt/homebrew/bin/brew shellenv)"
   echo "   ✅ Homebrew installed and configured"
 else
@@ -38,6 +38,8 @@ fi
 echo ""
 echo "🎯 Installing mise..."
 curl -fsSL https://mise.run | MISE_QUIET=1 sh
+echo "   🔧 Configuring Mise..."
+eval "$(~/.local/bin/mise activate zsh)"
 echo "   ✅ Mise installed"
 
 # Bun Runtime
