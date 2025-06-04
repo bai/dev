@@ -85,19 +85,21 @@ fi
 # Shell Integration
 echo ""
 echo "🐚 Setting up shell integration..."
-if [ -f "$HOME/.zshrc" ]; then
-  if ! grep -q "source \$HOME/.dev/hack/zshrc.sh" "$HOME/.zshrc"; then
-    echo "   📝 Adding dev CLI to ~/.zshrc..."
-    echo 'source $HOME/.dev/hack/zshrc.sh' >> "$HOME/.zshrc"
-    echo "   ✅ Shell integration added"
-  else
-    echo "   ✅ Shell integration already configured"
-  fi
-  source "$HOME/.zshrc"
-  echo "   ✅ Shell configuration reloaded"
-else
-  echo "   ⚠️  ~/.zshrc not found - you may need to create it"
+if [ ! -f "$HOME/.zshrc" ]; then
+  echo "   📝 Creating ~/.zshrc..."
+  touch "$HOME/.zshrc"
+  echo "   ✅ ~/.zshrc created"
 fi
+
+if ! grep -q "source \$HOME/.dev/hack/zshrc.sh" "$HOME/.zshrc"; then
+  echo "   📝 Adding dev CLI to ~/.zshrc..."
+  echo 'source $HOME/.dev/hack/zshrc.sh' >> "$HOME/.zshrc"
+  echo "   ✅ Shell integration added"
+else
+  echo "   ✅ Shell integration already configured"
+fi
+source "$HOME/.zshrc"
+echo "   ✅ Shell configuration reloaded"
 
 # Dependencies
 echo ""
