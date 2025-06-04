@@ -10,6 +10,5 @@ export default defineConfig({
     globals: true,
     testTimeout: 50000,
     env: loadEnv("", process.cwd(), ""),
-    setupFiles: ["./tests/setup-tests.ts"],
   },
 });

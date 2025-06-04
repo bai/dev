@@ -1,10 +1,10 @@
 import fs from "fs";
 import path from "path";
 
-import { baseSearchDir } from "~/lib/constants";
 import type { DevCommand } from "~/lib/core/command-types";
 import { arg, getArg, hasOption, option, runCommand } from "~/lib/core/command-utils";
 import { devConfig } from "~/lib/dev-config";
+import { expandToFullGitUrl, parseRepoUrlToPath } from "~/lib/get-repo-url";
 import { handleCdToPath } from "~/lib/handle-cd-to-path";
 
 export const cloneCommand: DevCommand = {
@@ -51,30 +51,21 @@ Examples:
         throw new Error("Cannot specify both --gitlab and --github options");
       }
 
-      // Parse clone parameters
-      const cloneParams = parseCloneArguments(repoArg, forceGitlab, forceGithub);
+      // Convert to forced provider format for expandToFullGitUrl
+      let forceProvider: "github" | "gitlab" | undefined;
+      if (forceGitlab) {
+        forceProvider = "gitlab";
+      } else if (forceGithub) {
+        forceProvider = "github";
+      }
 
-      // Determine final repository URL and local path
-      let repoUrl: string;
-      let repoPath: string;
+      // Expand shorthand to full URL
+      const repoUrl = expandToFullGitUrl(repoArg, devConfig.defaultOrg, devConfig.orgToProvider, forceProvider);
 
-      if (isFullUrl(cloneParams.repoArg)) {
-        // Handle full URL case
-        const parsedPath = parseRepoUrlToPath(cloneParams.repoArg);
-        if (!parsedPath) {
-          throw new Error("Could not parse repository URL");
-        }
-        repoUrl = cloneParams.repoArg;
-        repoPath = parsedPath;
-      } else {
-        // Handle shorthand format
-        const org = cloneParams.explicitOrg || devConfig.defaultOrg;
-        const provider = cloneParams.useGitLab ? "gitlab.com" : "github.com";
-        repoPath = path.join(baseSearchDir, provider, org, cloneParams.repoArg);
-
-        repoUrl = cloneParams.useGitLab
-          ? `https://gitlab.com/${org}/${cloneParams.repoArg}`
-          : `https://github.com/${org}/${cloneParams.repoArg}`;
+      // Parse URL to get local path
+      const repoPath = parseRepoUrlToPath(repoUrl);
+      if (!repoPath) {
+        throw new Error("Could not determine local path for repository");
       }
 
       logger.info("🚀 Cloning repository...");
@@ -88,89 +79,6 @@ Examples:
     }
   },
 };
-
-interface CloneParams {
-  repoArg: string;
-  useGitLab: boolean;
-  explicitOrg?: string;
-}
-
-/**
- * Parses clone command arguments into structured parameters
- */
-function parseCloneArguments(repoArg: string, forceGitlab: boolean, forceGithub: boolean): CloneParams {
-  let useGitLab = forceGitlab;
-  let explicitOrg: string | undefined;
-
-  // Check if repo arg contains org/repo format
-  if (repoArg.includes("/") && !isFullUrl(repoArg)) {
-    const parts = repoArg.split("/");
-    if (parts.length === 2 && parts[0] && parts[1]) {
-      explicitOrg = parts[0];
-      repoArg = parts[1];
-
-      // Check if the org has a provider mapping (unless forced)
-      if (!forceGitlab && !forceGithub && explicitOrg in devConfig.orgToProvider) {
-        useGitLab = devConfig.orgToProvider[explicitOrg] === "gitlab";
-      }
-    }
-  } else if (!forceGitlab && !forceGithub) {
-    // Use default org's provider mapping
-    useGitLab = devConfig.orgToProvider[devConfig.defaultOrg] === "gitlab";
-  }
-
-  return { repoArg, useGitLab, explicitOrg };
-}
-
-/**
- * Checks if a string is a full URL (HTTP/HTTPS/SSH)
- */
-function isFullUrl(str: string): boolean {
-  return str.startsWith("http://") || str.startsWith("https://") || str.includes("@");
-}
-
-/**
- * Parses repository URL to determine the local filesystem path.
- */
-function parseRepoUrlToPath(repoUrl: string): string | null {
-  try {
-    let orgName = "";
-    let repoName = "";
-
-    // Handle SSH URL format (git@github.com:foo/repo.git)
-    if (repoUrl.includes("@")) {
-      const sshMatch = repoUrl.match(/@([^:]+):([^/]+)\/([^.]+)/);
-      if (sshMatch && sshMatch[1] && sshMatch[2] && sshMatch[3]) {
-        const domain = sshMatch[1]; // github.com
-        orgName = sshMatch[2]; // foo
-        repoName = sshMatch[3]; // repo
-        return path.join(baseSearchDir, domain, orgName, repoName);
-      } else {
-        throw new Error(`Invalid SSH repository URL format: ${repoUrl}`);
-      }
-    }
-    // Handle HTTPS URL format (https://github.com/foo/repo)
-    else {
-      const url = new URL(repoUrl);
-      const pathParts = url.pathname.split("/").filter(Boolean);
-
-      if (pathParts.length >= 2) {
-        const firstPart = pathParts[0];
-        const secondPart = pathParts[1];
-
-        if (firstPart && secondPart) {
-          orgName = firstPart;
-          // Remove .git suffix if present
-          repoName = secondPart.replace(/\.git$/, "");
-          return path.join(baseSearchDir, url.hostname, orgName, repoName);
-        }
-      }
-      throw new Error(`URL path does not contain organization and repository: ${repoUrl}`);
-    }
-  } catch (error: any) {
-    throw new Error(`Invalid repository URL: ${repoUrl} - ${error.message}`);
-  }
-}
 
 /**
  * Clones a repository to the specified path.
