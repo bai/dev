@@ -33,10 +33,10 @@
 
 ```bash
 # Set up using defaults
-/bin/zsh -c "$(curl -fsSL https://usedevup.com/up)"
+/bin/zsh -c "$(curl -fsSL https://raw.githubusercontent.com/bai/dev/refs/heads/main/hack/setup.sh)"
 
 # Provide your config file URL
-/bin/zsh -c "$(curl -fsSL https://usedevup.com/up)" -- --config-url=<your_config_url>
+/bin/zsh -c "$(curl -fsSL https://raw.githubusercontent.com/bai/dev/refs/heads/main/hack/setup.sh)" -- --config-url=<your_config_url>
 ```
 
 This will:
