@@ -6,7 +6,7 @@ This document describes architecture of the dev CLI.
 
 The dev CLI is built using an **interface-based architecture** that prioritizes **composition over inheritance** and **dependency injection** for maximum testability, maintainability, and extensibility.
 
-```
+```text
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
 │   Command       │    │   Command       │    │   Services      │
 │   Registry      │────│   Loader        │────│   (Logger,      │
