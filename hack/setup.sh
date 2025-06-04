@@ -48,6 +48,7 @@ echo "🏃 Setting up bun runtime..."
 if ! command -v bun &>/dev/null; then
   echo "   📥 Installing bun via mise..."
   mise install bun@latest
+  mise use -g bun@latest
   echo "   ✅ Bun installed"
 else
   echo "   ✅ Bun already available"

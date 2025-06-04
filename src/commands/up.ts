@@ -1,9 +1,12 @@
 import * as fs from "fs";
 import * as path from "path";
 
+import { stringify } from "@iarna/toml";
+
 import { devDir } from "~/lib/constants";
 import type { DevCommand } from "~/lib/core/command-types";
 import { isGitRepository, runCommand, validateTool } from "~/lib/core/command-utils";
+import { miseRepoConfig } from "~/lib/tools/mise";
 
 export const upCommand: DevCommand = {
   name: "up",
@@ -28,25 +31,20 @@ Examples:
       const cwd = process.cwd();
       const repoMiseConfigDir = path.join(cwd, ".config", "mise");
       const repoMiseConfigFile = path.join(repoMiseConfigDir, "config.toml");
-      const templateConfigPath = path.join(devDir, "hack", "configs", "mise-config-repo.toml");
 
       // Check if we're in a git repository and need to create mise config
       if (isGitRepository(cwd)) {
         if (!fs.existsSync(repoMiseConfigFile)) {
           logger.warn(`Mise configuration not found at ${repoMiseConfigFile}. Attempting to create one...`);
 
-          if (!fs.existsSync(templateConfigPath)) {
-            throw new Error(`Template config file not found at ${templateConfigPath}`);
-          }
-
           if (!fs.existsSync(repoMiseConfigDir)) {
             fs.mkdirSync(repoMiseConfigDir, { recursive: true });
             logger.info(`Created directory: ${repoMiseConfigDir}`);
           }
 
-          const templateContent = fs.readFileSync(templateConfigPath, "utf-8");
-          fs.writeFileSync(repoMiseConfigFile, templateContent);
-          logger.success(`Successfully created ${repoMiseConfigFile} with content from ${templateConfigPath}.`);
+          const configContent = stringify(miseRepoConfig);
+          fs.writeFileSync(repoMiseConfigFile, configContent);
+          logger.success(`Successfully created ${repoMiseConfigFile} with mise repository configuration.`);
         } else {
           logger.debug(`Mise configuration found at ${repoMiseConfigFile}. Proceeding with 'mise install'.`);
         }
