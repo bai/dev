@@ -100,7 +100,7 @@ class DevConfigManager implements ConfigManager {
         "env.home": process.env.HOME,
         "env.user": process.env.USER,
         "env.shell": process.env.SHELL,
-        "env.debug": process.env.DEBUG === "true",
+        "env.debug": process.env.DEV_CLI_DEBUG === "true",
       };
 
       this.configLoaded = true;

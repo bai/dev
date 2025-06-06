@@ -5,6 +5,7 @@ bun = "latest"
 
 [env]
 DEV_PROJECT_ROOT = "{{ config_root }}"
+DEV_CLI_DEBUG = "true"
 _.file = [
     ".env",
     ".env.development",

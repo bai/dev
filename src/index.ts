@@ -48,7 +48,7 @@ import { getCurrentGitCommitSha } from "~/lib/version";
     await program.parseAsync(process.argv);
   } catch (error: any) {
     logger.error(`❌ Unexpected error: ${error.message}`);
-    if (process.env.DEBUG) {
+    if (process.env.DEV_CLI_DEBUG) {
       logger.error(error.stack);
     }
     process.exit(1);

@@ -164,13 +164,13 @@ export class CommandLoader {
       if (error.cause) {
         this.logger.error(`Caused by: ${error.cause.message}`);
       }
-      if (process.env.DEBUG) {
+      if (process.env.DEV_CLI_DEBUG) {
         this.logger.error(error.stack || "");
       }
       process.exit(error.exitCode);
     } else if (error instanceof Error) {
       this.logger.error(`Unexpected error in command '${commandName}': ${error.message}`);
-      if (process.env.DEBUG) {
+      if (process.env.DEV_CLI_DEBUG) {
         this.logger.error(error.stack || "");
       }
       process.exit(1);

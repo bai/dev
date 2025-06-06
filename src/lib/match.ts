@@ -334,7 +334,7 @@ export function filter(needle: string, choices: string[]): Choice[] {
   results.sort((a, b) => b.score - a.score);
 
   // Debug logging for top 5 matches
-  if (process.env.DEBUG === "1") {
+  if (process.env.DEV_CLI_DEBUG === "1") {
     const top5 = results.slice(0, 5);
     console.log(`🐛 Top 5 matches for "${needle}":`);
     top5.forEach((result, index) => {

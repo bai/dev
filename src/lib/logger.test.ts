@@ -15,7 +15,7 @@ describe("Logger", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
-    delete process.env.DEBUG;
+    delete process.env.DEV_CLI_DEBUG;
   });
 
   describe("default logger", () => {
@@ -32,7 +32,7 @@ describe("Logger", () => {
     });
 
     it("should show debug messages when DEBUG env var is set", () => {
-      process.env.DEBUG = "true";
+      process.env.DEV_CLI_DEBUG = "true";
 
       logger.debug("test debug", "arg1");
 
@@ -40,7 +40,7 @@ describe("Logger", () => {
     });
 
     it("should not show debug messages when DEBUG env var is not set", () => {
-      delete process.env.DEBUG;
+      delete process.env.DEV_CLI_DEBUG;
 
       logger.debug("test debug");
 
@@ -73,7 +73,7 @@ describe("Logger", () => {
     });
 
     it("should inherit debug settings from parent logger", () => {
-      process.env.DEBUG = "true";
+      process.env.DEV_CLI_DEBUG = "true";
       const childLogger = logger.child("CHILD");
 
       childLogger.debug("test debug");
@@ -92,7 +92,7 @@ describe("Logger", () => {
     });
 
     it("should handle debug messages in child loggers when DEBUG is not set", () => {
-      delete process.env.DEBUG;
+      delete process.env.DEV_CLI_DEBUG;
       const childLogger = logger.child("CHILD");
 
       childLogger.debug("test debug");

@@ -172,7 +172,7 @@ export class CommandRegistry {
     }
 
     // Log all discovered commands at once in debug mode
-    if (process.env.DEBUG && discoveredCommands.length > 0) {
+    if (process.env.DEV_CLI_DEBUG && discoveredCommands.length > 0) {
       logger.debug(`📦 Discovered commands: ${discoveredCommands.join(", ")}`);
     }
 

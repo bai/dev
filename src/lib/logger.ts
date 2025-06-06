@@ -43,7 +43,7 @@ function createLoggerImplementation(config: LoggerConfig = {}): Logger {
     },
 
     debug(message: string, ...args: any[]): void {
-      if (state.debugEnabled || process.env.DEBUG) {
+      if (state.debugEnabled || process.env.DEV_CLI_DEBUG) {
         console.log(formatMessage(message), ...args);
       }
     },
@@ -67,4 +67,4 @@ function createLoggerImplementation(config: LoggerConfig = {}): Logger {
 /**
  * Default logger instance - import this directly to use logging
  */
-export const logger = createLoggerImplementation({ debugEnabled: process.env.DEBUG === "true" });
+export const logger = createLoggerImplementation({ debugEnabled: process.env.DEV_CLI_DEBUG === "true" });
