@@ -118,6 +118,7 @@ export class CommandRegistry {
     );
 
     let discovered = 0;
+    const discoveredCommands: string[] = [];
 
     for (const file of commandFiles) {
       const filePath = path.join(cmdDir, file);
@@ -161,19 +162,18 @@ export class CommandRegistry {
         if (command) {
           this.register(command, filePath, "auto-discovered");
           discovered++;
-
-          // Log in debug mode
-          if (process.env.DEBUG) {
-            logger.debug(
-              `📦 Discovered command: ${command.name}${command.aliases ? ` (aliases: ${command.aliases.join(", ")})` : ""}`,
-            );
-          }
+          discoveredCommands.push(command.name);
         } else {
           logger.warn(`⚠️ No valid command found in ${file}`);
         }
       } catch (error) {
         logger.error(`❌ Failed to load command from ${file}:`, error);
       }
+    }
+
+    // Log all discovered commands at once in debug mode
+    if (process.env.DEBUG && discoveredCommands.length > 0) {
+      logger.debug(`📦 Discovered commands: ${discoveredCommands.join(", ")}`);
     }
 
     return discovered;

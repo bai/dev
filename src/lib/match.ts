@@ -333,28 +333,16 @@ export function filter(needle: string, choices: string[]): Choice[] {
   // Sort by score descending
   results.sort((a, b) => b.score - a.score);
 
-  return results;
-}
-
-export function filterWithPositions(needle: string, choices: string[]): Choice[] {
-  if (!needle) {
-    return choices.map((str) => ({ str, score: 0, positions: [] }));
+  // Debug logging for top 5 matches
+  if (process.env.DEBUG === "1") {
+    const top5 = results.slice(0, 5);
+    console.log(`🐛 Top 5 matches for "${needle}":`);
+    top5.forEach((result, index) => {
+      const pos = positions(needle, result.str);
+      const positionsStr = pos ? `[${pos.join(", ")}]` : "[]";
+      console.log(`  ${index + 1}. "${result.str}" (score: ${result.score.toFixed(3)}, positions: ${positionsStr})`);
+    });
   }
-
-  const results: Choice[] = [];
-
-  for (const str of choices) {
-    if (hasMatch(needle, str)) {
-      const pos = positions(needle, str);
-      if (pos) {
-        const choiceScore = score(needle, str);
-        results.push({ str, score: choiceScore, positions: pos });
-      }
-    }
-  }
-
-  // Sort by score descending
-  results.sort((a, b) => b.score - a.score);
 
   return results;
 }
