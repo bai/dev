@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { spawnSync } from "bun";
+import { spawn, spawnSync } from "bun";
 
 import { stringify } from "@iarna/toml";
 import z from "zod/v4";
@@ -12,7 +12,10 @@ import { logger } from "~/lib/logger";
 export const globalMiseConfigDir = path.join(homeDir, ".config", "mise");
 export const globalMiseConfigPath = path.join(globalMiseConfigDir, "config.toml");
 
-export const miseMinVersion = "2025.5.2";
+export const miseMinVersion = "2025.6.0";
+
+// Add debug mode flag
+const isDebugMode = process.env.DEV_CLI_DEBUG === "true";
 
 /**
  * Mise config schema
@@ -114,6 +117,11 @@ export const getCurrentMiseVersion = (): string | null => {
 
     if (result.exitCode === 0 && result.stdout) {
       const output = result.stdout.toString().trim();
+
+      if (isDebugMode) {
+        logger.debug("mise --version raw output:", output);
+      }
+
       // Extract version from output - the version is typically on the last line like "2025.5.14 macos-arm64 (2025-05-26)"
       const lines = output.split("\n");
       for (const line of lines) {
@@ -121,13 +129,31 @@ export const getCurrentMiseVersion = (): string | null => {
         // Look for a line that starts with a version pattern
         const match = trimmedLine.match(/^(\d+\.\d+\.\d+)/);
         if (match) {
-          return match[1] ?? null;
+          const version = match[1];
+          if (isDebugMode) {
+            logger.debug(`Extracted mise version: ${version}`);
+          }
+          return version ?? null;
         }
+      }
+
+      if (isDebugMode) {
+        logger.debug("Failed to extract version from mise output");
       }
       return null;
     }
+
+    if (isDebugMode) {
+      logger.debug(`mise --version failed with exit code: ${result.exitCode}`);
+      if (result.stderr) {
+        logger.debug(`stderr: ${result.stderr.toString()}`);
+      }
+    }
     return null;
-  } catch (error) {
+  } catch (error: any) {
+    if (isDebugMode) {
+      logger.debug(`Error getting mise version: ${error.message}`);
+    }
     return null;
   }
 };
@@ -160,6 +186,20 @@ export const compareVersions = (version1: string, version2: string): number => {
 };
 
 /**
+ * Formats version comparison for display.
+ */
+const formatVersionComparison = (current: string, required: string): string => {
+  const comparison = compareVersions(current, required);
+  if (comparison < 0) {
+    return `${current} → ${required} (upgrade needed)`;
+  } else if (comparison === 0) {
+    return `${current} (up to date)`;
+  } else {
+    return `${current} (newer than required ${required})`;
+  }
+};
+
+/**
  * Checks if the current mise version meets the minimum required version.
  *
  * @returns Object with isValid boolean and currentVersion string
@@ -172,6 +212,11 @@ export const checkMiseVersion = (): { isValid: boolean; currentVersion: string |
   }
 
   const comparison = compareVersions(currentVersion, miseMinVersion);
+
+  if (isDebugMode) {
+    logger.debug(`Version check: ${formatVersionComparison(currentVersion, miseMinVersion)}`);
+  }
+
   return {
     isValid: comparison >= 0,
     currentVersion,
@@ -179,48 +224,201 @@ export const checkMiseVersion = (): { isValid: boolean; currentVersion: string |
 };
 
 /**
+ * Runs mise self-update command with progress output and retry logic.
+ *
+ * @param retries - Number of retries to attempt (default: 3)
+ * @returns Promise<boolean> - True if update was successful, false otherwise
+ */
+export const runMiseSelfUpdate = async (retries = 3): Promise<boolean> => {
+  let attempt = 1;
+
+  while (attempt <= retries) {
+    try {
+      if (attempt > 1) {
+        logger.info(`🔄 Retry attempt ${attempt}/${retries}...`);
+      }
+
+      logger.info("⏳ Updating mise... (this may take a moment)");
+
+      // Use streaming output for better user experience
+      const process = spawn(["mise", "self-update"], {
+        stdio: ["ignore", "pipe", "pipe"],
+      });
+
+      let output = "";
+      let errorOutput = "";
+
+      // Stream stdout
+      if (process.stdout) {
+        const reader = process.stdout.getReader();
+        const decoder = new TextDecoder();
+
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            const chunk = decoder.decode(value, { stream: true });
+            output += chunk;
+
+            // Show progress to user
+            const lines = chunk.trim().split("\n");
+            for (const line of lines) {
+              if (line.trim()) {
+                // Filter out verbose download progress but show meaningful updates
+                if (line.includes("Downloading") || line.includes("Installing") || line.includes("Updated")) {
+                  logger.info(`   ${line.trim()}`);
+                } else if (isDebugMode) {
+                  logger.debug(`   ${line.trim()}`);
+                }
+              }
+            }
+          }
+        } catch (readError: any) {
+          if (isDebugMode) {
+            logger.debug(`Error reading stdout: ${readError.message}`);
+          }
+        }
+      }
+
+      // Capture stderr
+      if (process.stderr) {
+        const reader = process.stderr.getReader();
+        const decoder = new TextDecoder();
+
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            errorOutput += decoder.decode(value, { stream: true });
+          }
+        } catch (readError: any) {
+          if (isDebugMode) {
+            logger.debug(`Error reading stderr: ${readError.message}`);
+          }
+        }
+      }
+
+      const exitCode = await process.exited;
+
+      if (exitCode === 0) {
+        // Get new version after update
+        const newVersion = getCurrentMiseVersion();
+        if (newVersion) {
+          logger.success(`✅ Mise updated successfully to version ${newVersion}`);
+        } else {
+          logger.success(`✅ Mise update completed successfully`);
+        }
+        return true;
+      } else {
+        if (isDebugMode) {
+          logger.debug(`mise self-update exit code: ${exitCode}`);
+          if (errorOutput) {
+            logger.debug(`stderr: ${errorOutput}`);
+          }
+        }
+
+        // Check if it's a network error
+        if (errorOutput.includes("network") || errorOutput.includes("timeout") || errorOutput.includes("connection")) {
+          logger.warn(`⚠️  Network error during update (attempt ${attempt}/${retries})`);
+          if (attempt < retries) {
+            await Bun.sleep(2000 * attempt); // Exponential backoff
+            attempt++;
+            continue;
+          }
+        }
+
+        logger.error(`❌ Mise self-update failed with exit code: ${exitCode}`);
+        if (errorOutput && !isDebugMode) {
+          logger.error(`   Error: ${errorOutput.trim()}`);
+        }
+        return false;
+      }
+    } catch (error: any) {
+      logger.error(`❌ Error running mise self-update: ${error.message}`);
+      if (isDebugMode) {
+        logger.debug(`Full error:`, error);
+      }
+
+      // Retry on certain errors
+      if (error.message.includes("network") || error.code === "ENOTFOUND") {
+        if (attempt < retries) {
+          await Bun.sleep(2000 * attempt);
+          attempt++;
+          continue;
+        }
+      }
+      return false;
+    }
+  }
+
+  return false;
+};
+
+/**
  * Checks mise version and triggers upgrade if needed.
  * This should be called before running mise-related commands.
  *
- * @param commandName - Name of the command being executed (for error context)
  * @returns Promise<void> - Resolves if version is valid or upgrade succeeds
  */
 export const ensureMiseVersionOrUpgrade = async (): Promise<void> => {
   const { isValid, currentVersion } = checkMiseVersion();
 
   if (isValid) {
+    if (isDebugMode && currentVersion) {
+      logger.debug(`Mise version ${currentVersion} meets minimum requirement ${miseMinVersion}`);
+    }
     return; // Version is fine, continue
   }
 
   if (currentVersion) {
-    logger.info(`⚠️  Mise version ${currentVersion} is older than required ${miseMinVersion}`);
+    logger.warn(`⚠️  Mise version ${currentVersion} is older than required ${miseMinVersion}`);
+    logger.info(`   ${formatVersionComparison(currentVersion, miseMinVersion)}`);
   } else {
-    logger.info(`⚠️  Unable to determine mise version, expected ${miseMinVersion} or newer`);
+    logger.warn(`⚠️  Unable to determine mise version`);
+    logger.info(`   Expected version ${miseMinVersion} or newer`);
   }
 
-  logger.info(`🔄 Running dev upgrade to update mise and other dependencies...`);
+  logger.info(`🚀 Starting mise upgrade...`);
 
   try {
-    // Note: handleUpgradeCommand would need to be imported or implemented
-    // For now, we'll exit and let the user manually upgrade
-    // console.error(`💡 Please run 'dev upgrade' to update mise and other dependencies`);
-    // process.exit(1);
+    // Run mise self-update with retry logic
+    const updateSuccess = await runMiseSelfUpdate();
+
+    if (!updateSuccess) {
+      logger.error(`❌ Failed to update mise to required version`);
+      logger.error(`💡 Try manually upgrading mise:`);
+      logger.error(`   • If installed via Homebrew: brew upgrade mise`);
+      logger.error(`   • If installed via curl: curl https://mise.run | sh`);
+      logger.error(`   • Visit: https://mise.jdx.dev/getting-started.html`);
+      process.exit(1);
+    }
 
     // After upgrade, check again
     const { isValid: isValidAfterUpgrade, currentVersion: versionAfterUpgrade } = checkMiseVersion();
 
     if (!isValidAfterUpgrade) {
-      logger.error(`❌ Failed to upgrade mise to required version ${miseMinVersion}`);
+      logger.error(`❌ Mise upgrade completed but version still doesn't meet requirement`);
       if (versionAfterUpgrade) {
-        logger.error(`   Current version: ${versionAfterUpgrade}`);
+        logger.error(`   Current: ${versionAfterUpgrade}, Required: ${miseMinVersion}`);
       }
-      logger.error(`💡 You may need to manually upgrade mise or check your installation`);
+      logger.error(`💡 This might be due to:`);
+      logger.error(`   • PATH issues - try 'which mise' to check location`);
+      logger.error(`   • Multiple mise installations`);
+      logger.error(`   • Package manager conflicts`);
       process.exit(1);
     }
 
-    logger.info(`✅ Mise upgraded successfully to ${versionAfterUpgrade}`);
+    if (currentVersion && versionAfterUpgrade) {
+      logger.success(`✨ Mise successfully upgraded: ${currentVersion} → ${versionAfterUpgrade}`);
+    } else if (versionAfterUpgrade) {
+      logger.success(`✨ Mise upgraded to version ${versionAfterUpgrade}`);
+    }
   } catch (error: any) {
-    logger.error(`❌ Failed to upgrade dev CLI: ${error.message}`);
+    logger.error(`❌ Unexpected error during mise upgrade: ${error.message}`);
+    if (isDebugMode) {
+      logger.debug(`Full error:`, error);
+    }
     process.exit(1);
   }
 };
@@ -248,6 +446,20 @@ export async function setupMiseGlobalConfig() {
 
     // Check if config already exists
     if (fs.existsSync(globalMiseConfigPath)) {
+      if (isDebugMode) {
+        logger.debug(`   Config exists at: ${globalMiseConfigPath}`);
+        try {
+          const existingConfig = await Bun.file(globalMiseConfigPath).text();
+          logger.debug("   Existing config preview:");
+          const lines = existingConfig.split("\n").slice(0, 10);
+          lines.forEach((line) => logger.debug(`     ${line}`));
+          if (existingConfig.split("\n").length > 10) {
+            logger.debug(`     ... (${existingConfig.split("\n").length - 10} more lines)`);
+          }
+        } catch {
+          // Ignore read errors in debug mode
+        }
+      }
       logger.info("   ✅ Mise config already exists");
       return;
     }
@@ -255,14 +467,53 @@ export async function setupMiseGlobalConfig() {
     // Amend the TOML config with trusted_config_paths from dev JSON config
     if (devConfig.mise?.settings?.trusted_config_paths && miseGlobalConfig.settings) {
       miseGlobalConfig.settings.trusted_config_paths = devConfig.mise.settings.trusted_config_paths;
+      if (isDebugMode) {
+        logger.debug(`   Adding trusted paths: ${devConfig.mise.settings.trusted_config_paths.join(", ")}`);
+      }
     }
+
+    logger.info("   📝 Writing configuration...");
+
+    // Show key tools being configured
+    const toolCount = Object.keys(miseGlobalConfig.tools || {}).length;
+    logger.info(
+      `   🔧 Configuring ${toolCount} tools: ${Object.keys(miseGlobalConfig.tools || {})
+        .slice(0, 5)
+        .join(", ")}${toolCount > 5 ? "..." : ""}`,
+    );
 
     // Serialize the final config as TOML and write to file
     const tomlText = stringify(miseGlobalConfig);
+
+    if (isDebugMode) {
+      logger.debug("   Generated TOML preview:");
+      const lines = tomlText.split("\n").slice(0, 15);
+      lines.forEach((line) => logger.debug(`     ${line}`));
+      if (tomlText.split("\n").length > 15) {
+        logger.debug(`     ... (${tomlText.split("\n").length - 15} more lines)`);
+      }
+    }
+
     await Bun.write(globalMiseConfigPath, tomlText + "\n");
-    logger.info("   ✅ Mise config installed");
-  } catch (err) {
-    logger.error("❌ Error setting up mise configuration:", err);
+    logger.success(`   ✅ Mise config installed at ${globalMiseConfigPath}`);
+
+    // Provide helpful next steps
+    logger.info("   💡 Run 'mise install' to install configured tools");
+  } catch (err: any) {
+    logger.error("❌ Error setting up mise configuration:", err.message);
+    if (isDebugMode) {
+      logger.debug("Full error:", err);
+    }
+
+    // Provide helpful error recovery suggestions
+    if (err.code === "EACCES" || err.code === "EPERM") {
+      logger.error("💡 Permission denied. Try:");
+      logger.error(`   • Check permissions on ${globalMiseConfigDir}`);
+      logger.error(`   • Run with appropriate permissions`);
+    } else if (err.code === "ENOSPC") {
+      logger.error("💡 No space left on device");
+    }
+
     throw err;
   }
 }
