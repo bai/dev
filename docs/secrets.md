@@ -1,241 +1,332 @@
-# `dev` CLI — Secrets Management Specification
+# `dev` CLI — **Secrets Management**
 
-> **Version:** 0.9-draft · **Date:** 2025-06-08
-> **Authors:** Dev Platform Engineering
-
----
-
-## 1 Motivation
-
-Modern teams need a **single, developer-friendly workflow** to:
-
-* keep small (< 60 KB) secrets (JSON / YAML / text / certs / binary blobs) version-controlled with their code,
-* review changes in PRs with meaningful, line-level diffs,
-* stay secure (zero plain-text at rest),
-* work offline, and
-* promote secrets to CI/CD and Cloud runtimes (Google Cloud Secret Manager, GCSM).
-
-`dev secrets` brings these goals to every repo with **three guiding principles**:
-
-1. **“Git first.”** Secrets live next to the code that needs them.
-2. **“Encrypt last-mile only.”** We encrypt *values*, not whole files, so diffs stay readable.
-3. **“One-liner UX.”** Common tasks should be a single `dev secrets …` invocation, with sane defaults and a guided TUI when needed.
+**Version 0.9-draft · 2025-06-08**
 
 ---
 
-## 2 Key Components
+## Table of Contents
 
-| Layer                    | Tooling                         | Why                                                                                   |
-| ------------------------ | ------------------------------- | ------------------------------------------------------------------------------------- |
-| Encryption engine        | **SOPS v3+**                    | Proven, diff-friendly structured encryption (JSON/YAML).                              |
-| Cipher                   | **age**                         | Modern, simple, small, supports both X25519 recipients and plug-in KMS (**GCP KMS**). |
-| Runtime installer        | **mise** (`.tool-versions`)     | Ensures every contributor & CI runs same versions of `sops`, `age`, `dev`.            |
-| Cloud backend (optional) | **Google Cloud Secret Manager** | Authoritative store for production; `dev secrets sync` bridges Git↔︎GCSM.             |
+- [`dev` CLI — **Secrets Management**](#dev-cli--secrets-management)
+  - [Table of Contents](#table-of-contents)
+  - [1 — Executive summary](#1--executive-summary)
+  - [2 — Problem \& objectives](#2--problem--objectives)
+  - [3 — Goals \& non-goals](#3--goals--non-goals)
+  - [4 — Guiding principles](#4--guiding-principles)
+  - [5 — High-level architecture](#5--high-level-architecture)
+  - [6 — Canonical repository layout](#6--canonical-repository-layout)
+  - [7 — Encryption policy](#7--encryption-policy)
+  - [8 — `dev secrets` CLI surface](#8--dev-secrets-cli-surface)
+  - [9 — Typical user flows](#9--typical-user-flows)
+    - [9.1 Happy path (add first secret)](#91-happy-path-add-first-secret)
+    - [9.2 CI job](#92-ci-job)
+  - [10 — Diff \& size strategy](#10--diff--size-strategy)
+  - [11 — Key management lifecycle](#11--key-management-lifecycle)
+  - [12 — Google Cloud Secret Manager sync](#12--google-cloud-secret-manager-sync)
+  - [13 — CI / CD integration](#13--ci--cd-integration)
+  - [14 — Validation \& guard-rails](#14--validation--guard-rails)
+  - [15 — Developer-experience niceties](#15--developer-experience-niceties)
+  - [16 — Security considerations](#16--security-considerations)
+  - [17 — Open questions / future work](#17--open-questions--future-work)
+  - [18 — Glossary](#18--glossary)
+    - [**TL;DR**](#tldr)
 
 ---
 
-## 3 Repo Layout
+## 1 — Executive summary
 
-```
+`dev secrets` gives every repository a **first-class, Git-native, diff-friendly** workflow for managing secrets of up to 60 KB (JSON / YAML / text / certs / small binaries). It combines **SOPS + age** encryption, optional **Google Cloud Secret Manager** promotion, and a **one-liner UX** backed by **mise** to guarantee reproducible tooling versions.
+
+---
+
+## 2 — Problem & objectives
+
+| # | Problem                                                   | Objective                                                       |
+| - | --------------------------------------------------------- | --------------------------------------------------------------- |
+| 1 | Secrets scattered across vaults, env-files, CI variables. | Keep secrets **next to the code** that needs them.              |
+| 2 | Entire files re-encrypted on edit ⇒ unreadable PRs.       | Encrypt **only leaf values** so reviewers see meaningful diffs. |
+| 3 | Local setup & CI break when tool versions drift.          | **Auto-install** exact versions of `sops`, `age`, `dev`.        |
+| 4 | Production wants authoritative secrets in GCP.            | Enable **bidirectional Git ↔ GCSM sync**.                       |
+| 5 | Teams use mono-repos with multiple environments.          | Provide **namespaces & env directories** that scale.            |
+
+---
+
+## 3 — Goals & non-goals
+
+| Goals                                                            | Non-goals                                                  |
+| ---------------------------------------------------------------- | ---------------------------------------------------------- |
+| 🔐 End-to-end secret confidentiality with zero plaintext in Git. | Replace enterprise vaults for > 60 KB objects.             |
+| 🏷️ Line-level diffs in PRs.                                     | Handle secrets > 100 KB (kube configs, large cert chains). |
+| 🛠️ One approach for dev laptops, CI containers, prod clusters.  | Be a general-purpose config management system.             |
+| ☁️ Optional promotion to Google Cloud Secret Manager.            | Support every possible cloud KMS (focus on GCP).           |
+
+---
+
+## 4 — Guiding principles
+
+1. **Git-first.** Secrets live in the repo, versioned with code.
+2. **Encrypt the leaves.** Structure stays visible; only values become ciphertext.
+3. **One command, sane defaults.** Common tasks fit in a single `dev secrets …`.
+4. **Config lives in `.config/dev/`.** No clutter at repo root, follows XDG spirit.
+5. **Scratch is disposable.** Decrypted artefacts never enter `git add -A`.
+
+---
+
+## 5 — High-level architecture
+
+| Layer                    | Technology                      | Rationale                                           |
+| ------------------------ | ------------------------------- | --------------------------------------------------- |
+| Encryption engine        | **SOPS v3**                     | Mature, JSON/YAML aware, diff-friendly.             |
+| Cipher                   | **age + age-plugin-gcpkms**     | Modern, small, forward-secret; native GCP KMS URIs. |
+| Runtime installer        | **mise** (`.tool-versions`)     | Reproducible versions for dev & CI.                 |
+| Secrets backend (opt-in) | **Google Cloud Secret Manager** | Authoritative store for runtime environments.       |
+
+---
+
+## 6 — Canonical repository layout
+
+```text
 repo/
-├─ .tool-versions         # managed by mise
-├─ .sops.yaml             # repo-level SOPS policy
-├─ .dev/                  # hidden meta
-│  ├─ secrets/            # decrypted scratch space (git-ignored)
-│  └─ keys/               # age key per contributor (optional)
-└─ secrets/               # ***encrypted*** sources, committed
-   ├─ app.yaml            # mixed YAML / env
-   ├─ certs.json          # PEM, DER, etc.
-   └─ binary.b64          # base64-encoded blobs ≤ 60 KB
+├─ .tool-versions               # managed by mise
+├─ .sops.yaml                   # global encryption policy
+├─ .config/
+│  └─ dev/
+│     ├─ policy.yaml            # optional CLI overrides
+│     ├─ recipients.txt         # PUBLIC age recipients (team & robots)
+│     ├─ keys/                  # PRIVATE age keys (git-ignored)
+│     └─ scratch/               # decrypted temp files (git-ignored)
+└─ secrets/
+   ├─ common/                   # cross-env values (rare)
+   │   └─ redis.yaml
+   ├─ dev/
+   │   ├─ api.yaml
+   │   └─ queue.json
+   └─ prod/
+       ├─ api.yaml
+       ├─ queue.json
+       └─ certs.pem.b64
 ```
 
-*Anything under `secrets/` is encrypted and safe to commit; everything under `.dev/secrets/` is unencrypted and listed in `.gitignore`.*
+*Anything under `secrets/` is encrypted & committed; anything under `.config/dev/scratch/` is plaintext & **ignored**.*
 
 ---
 
-## 4 `.sops.yaml` Policy
+## 7 — Encryption policy
+
+**`.sops.yaml`** — encrypt only the values we care about.
 
 ```yaml
 creation_rules:
-  # Default: age recipients live in ./secrets/recipients.txt
-  - path_regex: 'secrets/.*'
-    encrypted_regex: '^(data|stringData|value)$'
-    age: &recipients
+  - path_regex: '^secrets/.*'
+    encrypted_regex: '^(data|stringData|value)$'  # leaf scalars
+    age:
       - 'age1…teamkey1'
       - 'age1…teamkey2'
-    kms: []
-    pgp: []
+      - 'age-plugin-gcpkms://projects/…/cryptoKeys/…/…'
     format: yaml
+    kms: []   # we rely on age-plugin-gcpkms
+    pgp: []
 ```
 
-* Only **leaf values** matching `encrypted_regex` are cipher-texts; keys, comments, and structure stay diff-able.
-* Policy keeps one SOPS metadata header per file (small one-line diff when recipients rotate).
+*Rotating recipients rewrites only a **single header line** per file.*
 
 ---
 
-## 5 CLI Surface
+## 8 — `dev secrets` CLI surface
 
 ```
 dev secrets <subcommand> [flags]
 
-Primary workflow
-  init           # one-time: adds .sops.yaml, scaffolds secrets/
-  edit  <file>   # opens decrypted temp copy in $EDITOR, re-encrypts on save
-  view  <file>   # cat decrypted contents
-  diff  <rev>    # human-readable diff between two git refs
-  add   <key> [--from-file|-f] [--binary]   # create/update entry
-  rm    <key>    # delete entry
-  list           # tree view of secrets/
-  rotate-keys    # add/remove age recipients repo-wide
+Bootstrap
+  init                 # scaffold .config/dev + secrets/common
+  rotate-keys          # add/remove age recipients repo-wide
 
-Automation & CI
-  decrypt-all    # bulk decrypt into .dev/secrets/ ; used by dev containers
-  sync [gcp]     # bidirectional sync with Google Cloud Secret Manager
-  validate       # CI gate: file size ≤ 60 KB, no unencrypted leaks
-  export-env     # emit `export FOO=` lines, useful for `eval $(dev secrets export-env)`
+CRUD
+  add    <key> [--from-file|-f] [--binary]
+  edit   <file>
+  view   <file>
+  rm     <key>
+  list   [--tree]
 
-Plumbing (rare)
-  exec  [--] cmd…   # run command with secrets injected as env vars
-  reencrypt         # re-run sops update (e.g., after policy change)
+Diff & audit
+  diff  <rev>
+  validate             # size ≤60 KB, grep for plaintext leaks
+
+Automation
+  decrypt-all          # bulk decrypt to .config/dev/scratch
+  exec  [--] cmd…      # run command w/ secrets injected
+  export-env           # print `export FOO=` lines
+  sync  [gcp] [--push|--pull|--prune]
+
+House-keeping
+  scratch --purge      # wipe decrypted temp dir
 ```
 
-### Flag conventions
-
-* `--json`, `--yaml`, `--binary` override auto-detection.
-* All subcommands accept `--namespace/-n` to scope to logical secret sets (see §6.1).
-* `--mount=path` places decrypted files in custom location for Docker/K8s builds.
+*All subcommands accept:* `--namespace/-n <env>`, `--json|--yaml|--binary`, `--mount <path>`.
 
 ---
 
-## 6 User Flows (Mermaid)
+## 9 — Typical user flows
 
-### 6.1 Happy path — first secret in a new repo
+### 9.1 Happy path (add first secret)
 
 ```mermaid
 sequenceDiagram
   participant Dev
-  participant DevCLI
+  participant DevCLI as dev secrets
   participant Mise
   Dev->>DevCLI: dev secrets init
-  DevCLI->>Mise: ensure sops & age
-  DevCLI->>Git: add .sops.yaml, secrets/.keep
-  Dev->>DevCLI: dev secrets add db/password
-  DevCLI->>Dev: prompt 🔑 (masked)
-  DevCLI->>SOPS: encrypt value w/ age recipients
-  DevCLI->>Git: stage secrets/app.yaml
+  DevCLI->>Mise: ensure tools
+  DevCLI->>Git: add .sops.yaml, .config/dev/…
+  Dev->>DevCLI: dev secrets add prod/db.password
+  DevCLI->>Dev: prompt 🔑
+  DevCLI->>SOPS: encrypt leaf
+  DevCLI->>Git: stage secrets/prod/api.yaml
   Dev-->Git: git commit -m "Add DB password"
 ```
 
-### 6.2 CI decryption
+### 9.2 CI job
 
 ```mermaid
 flowchart TD
-  A["CI job checkout"] --> B["mise install"]
+  A["Checkout"] --> B["mise install"]
   B --> C["dev secrets decrypt-all"]
-  C --> D["Run tests / build"]
+  C --> D["Build / Test"]
   D --> E["dev secrets validate --ci"]
 ```
 
 ---
 
-## 7 Diff Strategy
+## 10 — Diff & size strategy
 
-| Scenario                | Git Diff outcome                                                     |
-| ----------------------- | -------------------------------------------------------------------- |
-| Add/remove key          | One-line insertion/deletion in file.                                 |
-| Change JSON/YAML scalar | Only that line’s ciphertext changes (base64 chunk \~100 chars).      |
-| Rotate recipients       | Header line `sops: >` changes once per file.                         |
-| Binary secret           | Diff shows a *binary diff* marker; reviewers rely on commit message. |
+| Scenario           | Git diff result                                              |
+| ------------------ | ------------------------------------------------------------ |
+| Change YAML scalar | One-line ciphertext delta (≈ 100 chars).                     |
+| Add / rm key       | Minimal insert / delete lines.                               |
+| Rotate recipients  | Header line only.                                            |
+| Binary (base64)    | Diff limited to changed block; reviewers rely on commit msg. |
 
-> **Tip:** Encourage teams to keep each secret in its own small file to further localize changes.
+**Hard limit:** 60 KB *pre-encrypt* ⇒ \~ 72 KB ciphertext. Validation fails otherwise.
 
 ---
 
-## 8 Key Management
+## 11 — Key management lifecycle
 
-* Project owners maintain an **age X25519 team key** in `secrets/recipients.txt`.
-* Each developer creates their own keypair (`age-keygen -o ~/.config/age/key.txt`), then runs:
+1. Developer generates key:
+   `age-keygen -o ~/.config/age/key.txt`
+2. Add public part to repo:
+   `dev secrets rotate-keys --add "$(grep pub ~/.config/age/key.txt)"`
+3. CI/robots use **GCP KMS** URIs as recipients; no disk keys.
+4. Monthly rotation:
+   `dev secrets rotate-keys --kms-roll` (updates KMS key version + rewrites headers).
 
+Private keys **never** live inside the repository.
+
+---
+
+## 12 — Google Cloud Secret Manager sync
+
+| Direction  | Command                                             | Notes                                   |
+| ---------- | --------------------------------------------------- | --------------------------------------- |
+| Git → GCSM | `dev secrets sync --push`                           | Uses `gcloud` creds / impersonation.    |
+| GCSM → Git | `dev secrets sync --pull`                           | Useful for bootstrap of legacy secrets. |
+| CI runtime | `dev secrets sync --pull --out .config/dev/scratch` | Workload Identity auth.                 |
+
+Secret names:
+`projects/$PROJECT/secrets/$REPO-$ENV-$PATH_WITHOUT_EXTENSION`
+Labels: `repo`, `sha`, `env`.
+
+---
+
+## 13 — CI / CD integration
+
+```yaml
+# .github/workflows/test.yml  (example)
+steps:
+  - uses: actions/checkout@v4
+  - run: mise install          # pin tools
+  - run: dev secrets decrypt-all
+  - run: ./gradlew test
+  - run: dev secrets validate --ci
+  - run: dev secrets sync --push --env=prod   # only on main
 ```
-dev secrets rotate-keys --add $(cat ~/.config/age/key.txt | grep pub:)
+
+Containerised builds mount `repo/.config/dev/scratch/` read-only into the build context.
+
+---
+
+## 14 — Validation & guard-rails
+
+| Rule                                          | Enforced by                                    |
+| --------------------------------------------- | ---------------------------------------------- |
+| ≤ 60 KB per secret file                       | `dev secrets validate` (in CI & pre-commit).   |
+| No plaintext high-entropy strings in Git diff | Built-in scanner (entropy + regex heuristics). |
+| UTF-8 filenames only                          | `validate`.                                    |
+| SOPS metadata pinned to version 3.8.x         | `validate`.                                    |
+| `recipients.txt` must match `.sops.yaml`      | `validate`.                                    |
+
+Pre-commit hook template:
+
+```bash
+#!/usr/bin/env bash
+dev secrets validate --staged || {
+  echo "❌  Secret validation failed"; exit 1; }
 ```
 
-`rotate-keys` touches every file once, creating a single automated PR.
+---
 
-* **CI robots** use a GCP KMS key as a recipient (`age-plugin-gcpkms://projects/…`), so no disk-stored keys in CI.
+## 15 — Developer-experience niceties
+
+* **Auto-install**: Missing `sops`/`age` → transparent `mise install`.
+* **Smart editor HUD**: When `$EDITOR` is `vim`/`nano`/`helix`, show decrypted path & live size counter.
+* **`dev secrets diff`**: Pipes to `git diff --color` / `delta`.
+* **Shell hook**: `eval "$(dev secrets export-env --shell)"` for zero-friction local runs.
+* **Templates**: `--from-template=gcp-service-account`, `--from-template=jwt`.
+* **Scratch cleaner**: `scratch --purge` wipes decrypted debris on logout.
 
 ---
 
-## 9 Google Cloud Secret Manager Sync
+## 16 — Security considerations
 
-| Direction     | Command                   | Auth method                                             |
-| ------------- | ------------------------- | ------------------------------------------------------- |
-| Git → GCSM    | `dev secrets sync --push` | Workstation’s gcloud creds (impersonate CI-svc-acct).   |
-| GCSM → CI env | `dev secrets sync --pull` | Workload Identity; writes decoded files to disk or env. |
-
-* Each secret path maps to `projects/$PROJECT/secrets/$REPO-$PATH`.
-* Metadata (labels) include git SHA and repo URL for traceability.
-* `sync --prune` deletes GCSM versions that disappeared from git (opt-in).
-
----
-
-## 10 DX niceties
-
-| Feature            | Detail                                                                                           |
-| ------------------ | ------------------------------------------------------------------------------------------------ |
-| **Auto-install**   | `dev secrets` checks `$PATH`, runs `mise install` if `sops`/`age` missing or wrong version.      |
-| **TUI editor**     | When `$EDITOR` is `nano`/`vim`/`helix`, displays HUD with decrypted file path + live size check. |
-| **Human diffs**    | `dev secrets diff` pipes to `delta`/`git diff --color` for local readability.                    |
-| **Shell hook**     | `eval "$(dev secrets export-env --shell)"` in `.envrc` / `.zshrc` for zero-friction local usage. |
-| **File templates** | `dev secrets add --from-template=gcp-service-account` scaffold common JSON shapes.               |
+| Vector                 | Mitigation                                                                                     |
+| ---------------------- | ---------------------------------------------------------------------------------------------- |
+| **Source-code leak**   | Ciphertext only in Git; leaf encryption prevents accidental plaintext commits.                 |
+| **Compromised laptop** | Private keys outside repo; scratch dir purged daily (`tmpfiles.d`).                            |
+| **Replay or tamper**   | SOPS MAC verifies integrity; Git SHA pinning.                                                  |
+| **Key compromise**     | Monthly rotation cadence; easy `rotate-keys`.                                                  |
+| **Audit trail**        | `dev secrets` logs decrypt events to `.config/dev/.audit.log` (opt-in) & Cloud Audit for GCSM. |
 
 ---
 
-## 11 Constraints & Validation Rules
+## 17 — Open questions / future work
 
-| Rule                                  | Enforcement                                                        |
-| ------------------------------------- | ------------------------------------------------------------------ |
-| ≤ 60 KB per secret                    | Hard limit in `validate`; CI fails on oversize.                    |
-| No plaintext secrets in git           | `pre-commit` hook scans staged changes with regex / entropy check. |
-| Only UTF-8 filenames under `secrets/` | Prevents CI path issues.                                           |
-| Binary secrets must be base64         | Auto-wraps at 76 chars for diff-ability.                           |
-| SOPS metadata version pinned          | `.sops.yaml` sets `version: 3.8.x` for reproducibility.            |
-
----
-
-## 12 Security Considerations
-
-* **Confidentiality:** age encryption with forward secrecy.
-* **Integrity:** Git SHA + SOPS MAC.
-* **Access auditing:** All GCSM reads logged in Cloud Audit; local decrypts logged to `.dev/secrets/.audit.log` (opt-in).
-* **Key rotation:** Monthly cadence via `dev secrets rotate-keys --kms-roll` (rotates GCP KMS key version).
-* **Supply-chain safety:** `mise` pins checksums of sops/age binaries; `dev secrets validate --ci` verifies.
-
----
-
-## 13 Open Questions / Future Work
-
-1. **Secret search**: fuzzy finder across decrypted content?
-2. **Hierarchical namespaces** beyond per-repo, e.g., mono-repo sub-projects.
-3. **Merge conflict resolver**: interactive 3-way tool for encrypted files.
+1. Interactive **merge-conflict resolver** for encrypted YAML.
+2. Secret **search & grep** across decrypted scratch (fzf integration).
+3. **Namespace delegation** for huge mono-repos (`packages/foo/.config/dev`).
 4. **Automatic stale-secret pruning** after N days of unused references.
 
 ---
 
-## 14 Glossary
+## 18 — Glossary
 
-| Term              | Meaning                                                               |
-| ----------------- | --------------------------------------------------------------------- |
-| **Age recipient** | Public key (or KMS URI) that can decrypt a secret.                    |
-| **SOPS**          | “Secrets OPerationS”, tool that encrypts individual JSON/YAML values. |
-| **GCSM**          | Google Cloud Secret Manager.                                          |
-| **Namespace**     | Logical prefix within `secrets/` (e.g., `dev/`, `prod/`).             |
+| Term                | Definition                                                            |
+| ------------------- | --------------------------------------------------------------------- |
+| **age**             | “Actually Good Encryption”; modern, small, opinionated file cipher.   |
+| **SOPS**            | “Secrets OPerationS”; encrypts individual values in structured files. |
+| **GCSM**            | Google Cloud Secret Manager.                                          |
+| **Namespace / env** | Directory under `secrets/` (`dev/`, `staging/`, `prod/`).             |
+| **Recipients**      | Public keys (age) or KMS URIs that can decrypt a secret.              |
+| **Scratch dir**     | Local, git-ignored folder for decrypted artefacts.                    |
 
 ---
 
-## 15 Summary
+### **TL;DR**
 
-`dev secrets` marries **git-native workflows** with **best-practices encryption** and **cloud-grade rotation**.
-Developers run *one* command, reviewers see *one-line* diffs, CI/CD receives *just-in-time* plaintext—all without leaking a single byte.
+*Repo layout:*
 
-> *“Great DX is invisible security.”*
+```
+config → .config/dev/           # tooling & keys
+state  → .config/dev/scratch/   # decrypted, ignored
+secrets → secrets/(env)/…       # encrypted, committed
+```
+
+`dev secrets` delivers **Git-first, diff-friendly, cloud-ready** secret management in a single, ergonomic command set—securing your stack without slowing anyone down.
