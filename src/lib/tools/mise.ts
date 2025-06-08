@@ -15,7 +15,7 @@ export const globalMiseConfigPath = path.join(globalMiseConfigDir, "config.toml"
 export const miseMinVersion = "2025.6.0";
 
 // Add debug mode flag
-const isDebugMode = process.env.DEV_CLI_DEBUG === "true";
+const isDebugMode = process.env.DEV_CLI_DEBUG === "1";
 
 /**
  * Mise config schema

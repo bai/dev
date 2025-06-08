@@ -67,4 +67,4 @@ function createLoggerImplementation(config: LoggerConfig = {}): Logger {
 /**
  * Default logger instance - import this directly to use logging
  */
-export const logger = createLoggerImplementation({ debugEnabled: process.env.DEV_CLI_DEBUG === "true" });
+export const logger = createLoggerImplementation({ debugEnabled: process.env.DEV_CLI_DEBUG === "1" });
