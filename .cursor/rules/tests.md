@@ -27,6 +27,10 @@ You write tests that are clear, maintainable, and thorough. You optimize for rea
     ✅ it('generates a slug from the title')
     ❌ it('should generate a slug from the title')
 
+## Running Tests
+
+- Run tests with `bun run test`
+
 ## Testing Vue Components
 
 - Don’t rely on markup for assertions.
