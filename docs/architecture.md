@@ -1,6 +1,6 @@
 # Dev CLI Architecture
 
-This document describes architecture of the dev CLI.
+This document describes the architecture of the dev CLI.
 
 ## 🎯 Architecture Overview
 
@@ -127,8 +127,8 @@ expect(mockLogger.success).toHaveBeenCalledWith("Hello, World!");
 
 ```typescript
 // src/commands/hello.ts
-import type { DevCommand } from "~/types/command";
-import { arg, getArg } from "~/utils/command-utils";
+import type { DevCommand } from "~/lib/core/command-types";
+import { arg, getArg } from "~/lib/core/command-utils";
 
 export const helloCommand: DevCommand = {
   name: "hello",
@@ -151,8 +151,8 @@ export const helloCommand: DevCommand = {
 
 ```typescript
 // src/commands/deploy.ts
-import type { DevCommand } from "~/types/command";
-import { arg, getArg, hasOption, option, runCommand, validateChoice } from "~/utils/command-utils";
+import type { DevCommand } from "~/lib/core/command-types";
+import { arg, getArg, hasOption, option, runCommand, validateChoice } from "~/lib/core/command-utils";
 
 export const deployCommand: DevCommand = {
   name: "deploy",

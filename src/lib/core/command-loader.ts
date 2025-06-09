@@ -133,15 +133,30 @@ export class CommandLoader {
     // Build args object from remaining arguments and command definition
     const argsObj: Record<string, any> = {};
     if (devCommand.arguments) {
-      devCommand.arguments.forEach((arg, index) => {
-        let value = args[index];
+      let argIndex = 0;
 
-        // Handle default values for undefined arguments
-        if (value === undefined && arg.defaultValue !== undefined) {
-          value = arg.defaultValue;
+      devCommand.arguments.forEach((arg, definitionIndex) => {
+        let value;
+
+        if (arg.variadic) {
+          // For variadic arguments, commander.js already collects them into an array
+          value = args[argIndex];
+          // If the value is not an array or is undefined, use default or empty array
+          if (!Array.isArray(value)) {
+            value = arg.defaultValue !== undefined ? arg.defaultValue : [];
+          }
+        } else {
+          // For non-variadic arguments, get the value at the current index
+          value = args[argIndex];
+
+          // Handle default values for undefined arguments
+          if (value === undefined && arg.defaultValue !== undefined) {
+            value = arg.defaultValue;
+          }
         }
 
         argsObj[arg.name] = value;
+        argIndex++;
       });
     }
 

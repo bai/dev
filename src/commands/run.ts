@@ -31,12 +31,11 @@ Examples:
 
       const task = getArg(context, "task");
 
-      // Get variadic arguments - in the new system these would be collected properly
-      // For now, we'll extract them from the raw arguments
-      const allArgs = Object.values(context.args).filter((arg) => arg !== task);
+      // Get variadic arguments - now properly collected by CommandLoader
+      const additionalArgs = getArg(context, "args", []);
 
       // Build the command arguments: ['mise', 'run', task, ...additionalArgs]
-      const command = ["mise", "run", task, ...allArgs];
+      const command = ["mise", "run", task, ...additionalArgs];
 
       logger.info(`Running: ${command.join(" ")}`);
 
