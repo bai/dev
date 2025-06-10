@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "path";
 
 import type { CommandRegistration, DevCommand } from "~/lib/core/command-types";
+import { isDebugMode } from "~/lib/is-debug-mode";
 import { logger } from "~/lib/logger";
 
 /**
@@ -172,7 +173,7 @@ export class CommandRegistry {
     }
 
     // Log all discovered commands at once in debug mode
-    if (process.env.DEV_CLI_DEBUG && discoveredCommands.length > 0) {
+    if (isDebugMode() && discoveredCommands.length > 0) {
       logger.debug(`📦 Discovered commands: ${discoveredCommands.join(", ")}`);
     }
 

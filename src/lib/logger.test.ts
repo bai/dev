@@ -32,7 +32,7 @@ describe("Logger", () => {
     });
 
     it("should show debug messages when DEBUG env var is set", () => {
-      process.env.DEV_CLI_DEBUG = "true";
+      process.env.DEV_CLI_DEBUG = "1";
 
       logger.debug("test debug", "arg1");
 
@@ -73,7 +73,7 @@ describe("Logger", () => {
     });
 
     it("should inherit debug settings from parent logger", () => {
-      process.env.DEV_CLI_DEBUG = "true";
+      process.env.DEV_CLI_DEBUG = "1";
       const childLogger = logger.child("CHILD");
 
       childLogger.debug("test debug");

@@ -1,4 +1,5 @@
 import type { Logger } from "~/lib/core/command-types";
+import { isDebugMode } from "~/lib/is-debug-mode";
 
 /**
  * Logger configuration
@@ -19,7 +20,7 @@ interface LoggerState {
 /**
  * Create a logger implementation with given configuration
  */
-function createLoggerImplementation(config: LoggerConfig = {}): Logger {
+function createLogger(config: LoggerConfig = {}): Logger {
   const state: LoggerState = {
     debugEnabled: config.debugEnabled ?? false,
     prefix: config.prefix,
@@ -43,7 +44,7 @@ function createLoggerImplementation(config: LoggerConfig = {}): Logger {
     },
 
     debug(message: string, ...args: any[]): void {
-      if (state.debugEnabled || process.env.DEV_CLI_DEBUG) {
+      if (state.debugEnabled || isDebugMode()) {
         console.log(formatMessage(message), ...args);
       }
     },
@@ -54,7 +55,7 @@ function createLoggerImplementation(config: LoggerConfig = {}): Logger {
 
     child(prefix: string): Logger {
       const childPrefix = state.prefix ? `${state.prefix}:${prefix}` : prefix;
-      return createLoggerImplementation({
+      return createLogger({
         debugEnabled: state.debugEnabled,
         prefix: childPrefix,
       });
@@ -67,4 +68,4 @@ function createLoggerImplementation(config: LoggerConfig = {}): Logger {
 /**
  * Default logger instance - import this directly to use logging
  */
-export const logger = createLoggerImplementation({ debugEnabled: process.env.DEV_CLI_DEBUG === "1" });
+export const logger = createLogger({ debugEnabled: false });

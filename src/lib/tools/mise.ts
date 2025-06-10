@@ -7,15 +7,13 @@ import z from "zod/v4";
 
 import { homeDir } from "~/lib/constants";
 import { devConfig } from "~/lib/dev-config";
+import { isDebugMode } from "~/lib/is-debug-mode";
 import { logger } from "~/lib/logger";
 
 export const globalMiseConfigDir = path.join(homeDir, ".config", "mise");
 export const globalMiseConfigPath = path.join(globalMiseConfigDir, "config.toml");
 
 export const miseMinVersion = "2025.6.0";
-
-// Add debug mode flag
-const isDebugMode = process.env.DEV_CLI_DEBUG === "1";
 
 /**
  * Mise config schema
@@ -118,7 +116,7 @@ export const getCurrentMiseVersion = (): string | null => {
     if (result.exitCode === 0 && result.stdout) {
       const output = result.stdout.toString().trim();
 
-      if (isDebugMode) {
+      if (isDebugMode()) {
         logger.debug("mise --version raw output:", output);
       }
 
@@ -130,20 +128,20 @@ export const getCurrentMiseVersion = (): string | null => {
         const match = trimmedLine.match(/^(\d+\.\d+\.\d+)/);
         if (match) {
           const version = match[1];
-          if (isDebugMode) {
+          if (isDebugMode()) {
             logger.debug(`Extracted mise version: ${version}`);
           }
           return version ?? null;
         }
       }
 
-      if (isDebugMode) {
+      if (isDebugMode()) {
         logger.debug("Failed to extract version from mise output");
       }
       return null;
     }
 
-    if (isDebugMode) {
+    if (isDebugMode()) {
       logger.debug(`mise --version failed with exit code: ${result.exitCode}`);
       if (result.stderr) {
         logger.debug(`stderr: ${result.stderr.toString()}`);
@@ -151,7 +149,7 @@ export const getCurrentMiseVersion = (): string | null => {
     }
     return null;
   } catch (error: any) {
-    if (isDebugMode) {
+    if (isDebugMode()) {
       logger.debug(`Error getting mise version: ${error.message}`);
     }
     return null;
@@ -213,7 +211,7 @@ export const checkMiseVersion = (): { isValid: boolean; currentVersion: string |
 
   const comparison = compareVersions(currentVersion, miseMinVersion);
 
-  if (isDebugMode) {
+  if (isDebugMode()) {
     logger.debug(`Version check: ${formatVersionComparison(currentVersion, miseMinVersion)}`);
   }
 
@@ -268,14 +266,14 @@ export const runMiseSelfUpdate = async (retries = 3): Promise<boolean> => {
                 // Filter out verbose download progress but show meaningful updates
                 if (line.includes("Downloading") || line.includes("Installing") || line.includes("Updated")) {
                   logger.info(`   ${line.trim()}`);
-                } else if (isDebugMode) {
+                } else if (isDebugMode()) {
                   logger.debug(`   ${line.trim()}`);
                 }
               }
             }
           }
         } catch (readError: any) {
-          if (isDebugMode) {
+          if (isDebugMode()) {
             logger.debug(`Error reading stdout: ${readError.message}`);
           }
         }
@@ -293,7 +291,7 @@ export const runMiseSelfUpdate = async (retries = 3): Promise<boolean> => {
             errorOutput += decoder.decode(value, { stream: true });
           }
         } catch (readError: any) {
-          if (isDebugMode) {
+          if (isDebugMode()) {
             logger.debug(`Error reading stderr: ${readError.message}`);
           }
         }
@@ -311,7 +309,7 @@ export const runMiseSelfUpdate = async (retries = 3): Promise<boolean> => {
         }
         return true;
       } else {
-        if (isDebugMode) {
+        if (isDebugMode()) {
           logger.debug(`mise self-update exit code: ${exitCode}`);
           if (errorOutput) {
             logger.debug(`stderr: ${errorOutput}`);
@@ -336,7 +334,7 @@ export const runMiseSelfUpdate = async (retries = 3): Promise<boolean> => {
       }
     } catch (error: any) {
       logger.error(`❌ Error running mise self-update: ${error.message}`);
-      if (isDebugMode) {
+      if (isDebugMode()) {
         logger.debug(`Full error:`, error);
       }
 
@@ -416,7 +414,7 @@ export const ensureMiseVersionOrUpgrade = async (): Promise<void> => {
     }
   } catch (error: any) {
     logger.error(`❌ Unexpected error during mise upgrade: ${error.message}`);
-    if (isDebugMode) {
+    if (isDebugMode()) {
       logger.debug(`Full error:`, error);
     }
     process.exit(1);
@@ -446,7 +444,7 @@ export async function setupMiseGlobalConfig() {
 
     // Check if config already exists
     if (fs.existsSync(globalMiseConfigPath)) {
-      if (isDebugMode) {
+      if (isDebugMode()) {
         logger.debug(`   Config exists at: ${globalMiseConfigPath}`);
         try {
           const existingConfig = await Bun.file(globalMiseConfigPath).text();
@@ -467,7 +465,7 @@ export async function setupMiseGlobalConfig() {
     // Amend the TOML config with trusted_config_paths from dev JSON config
     if (devConfig.mise?.settings?.trusted_config_paths && miseGlobalConfig.settings) {
       miseGlobalConfig.settings.trusted_config_paths = devConfig.mise.settings.trusted_config_paths;
-      if (isDebugMode) {
+      if (isDebugMode()) {
         logger.debug(`   Adding trusted paths: ${devConfig.mise.settings.trusted_config_paths.join(", ")}`);
       }
     }
@@ -485,7 +483,7 @@ export async function setupMiseGlobalConfig() {
     // Serialize the final config as TOML and write to file
     const tomlText = stringify(miseGlobalConfig);
 
-    if (isDebugMode) {
+    if (isDebugMode()) {
       logger.debug("   Generated TOML preview:");
       const lines = tomlText.split("\n").slice(0, 15);
       lines.forEach((line) => logger.debug(`     ${line}`));
@@ -501,7 +499,7 @@ export async function setupMiseGlobalConfig() {
     logger.info("   💡 Run 'mise install' to install configured tools");
   } catch (err: any) {
     logger.error("❌ Error setting up mise configuration:", err.message);
-    if (isDebugMode) {
+    if (isDebugMode()) {
       logger.debug("Full error:", err);
     }
 

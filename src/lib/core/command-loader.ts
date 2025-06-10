@@ -9,6 +9,7 @@ import {
   type DevCommand,
   type Logger,
 } from "~/lib/core/command-types";
+import { isDebugMode } from "~/lib/is-debug-mode";
 
 /**
  * Command loader that converts DevCommand to commander.js commands
@@ -179,13 +180,13 @@ export class CommandLoader {
       if (error.cause) {
         this.logger.error(`Caused by: ${error.cause.message}`);
       }
-      if (process.env.DEV_CLI_DEBUG) {
+      if (isDebugMode()) {
         this.logger.error(error.stack || "");
       }
       process.exit(error.exitCode);
     } else if (error instanceof Error) {
       this.logger.error(`Unexpected error in command '${commandName}': ${error.message}`);
-      if (process.env.DEV_CLI_DEBUG) {
+      if (isDebugMode()) {
         this.logger.error(error.stack || "");
       }
       process.exit(1);

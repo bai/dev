@@ -1,3 +1,5 @@
+import { isDebugMode } from "~/lib/is-debug-mode";
+
 const SCORE_MIN = -Infinity;
 const SCORE_MAX = Infinity;
 const SCORE_GAP_LEADING = -0.005;
@@ -334,7 +336,7 @@ export function filter(needle: string, choices: string[]): Choice[] {
   results.sort((a, b) => b.score - a.score);
 
   // Debug logging for top 5 matches
-  if (process.env.DEV_CLI_DEBUG === "1") {
+  if (isDebugMode()) {
     const top5 = results.slice(0, 5);
     console.log(`🐛 Top 5 matches for "${needle}":`);
     top5.forEach((result, index) => {

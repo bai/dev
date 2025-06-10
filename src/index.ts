@@ -7,6 +7,7 @@ import { CommandRegistry } from "~/lib/core/command-registry";
 import { createConfig } from "~/lib/dev-config";
 import { ensureBaseDirectoryExists } from "~/lib/ensure-base-directory-exists";
 import { ensureDatabaseIsUpToDate } from "~/lib/ensure-database-is-up-to-date";
+import { isDebugMode } from "~/lib/is-debug-mode";
 import { logger } from "~/lib/logger";
 import { recordCommandRun } from "~/lib/record-command-run";
 import { runPeriodicUpgradeCheck } from "~/lib/run-update-check";
@@ -48,7 +49,7 @@ import { getCurrentGitCommitSha } from "~/lib/version";
     await program.parseAsync(process.argv);
   } catch (error: any) {
     logger.error(`❌ Unexpected error: ${error.message}`);
-    if (process.env.DEV_CLI_DEBUG) {
+    if (isDebugMode()) {
       logger.error(error.stack);
     }
     process.exit(1);

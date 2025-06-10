@@ -4,6 +4,7 @@ import { z } from "zod/v4";
 
 import { devConfigDir, devConfigPath } from "~/lib/constants";
 import type { ConfigManager } from "~/lib/core/command-types";
+import { isDebugMode } from "~/lib/is-debug-mode";
 import { logger } from "~/lib/logger";
 import { miseConfigSchema } from "~/lib/tools/mise";
 
@@ -100,7 +101,7 @@ class DevConfigManager implements ConfigManager {
         "env.home": process.env.HOME,
         "env.user": process.env.USER,
         "env.shell": process.env.SHELL,
-        "env.debug": process.env.DEV_CLI_DEBUG === "1",
+        "env.debug": isDebugMode(),
       };
 
       this.configLoaded = true;

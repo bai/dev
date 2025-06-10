@@ -31,4 +31,4 @@ jobs:
       run: bun run prettier
 
     - name: Test
-      run: bun run test
+      run: bun test
