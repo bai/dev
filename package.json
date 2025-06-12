@@ -22,12 +22,12 @@
     "commander": "14.0.0",
     "drizzle-orm": "0.44.2",
     "yaml": "2.8.0",
-    "zod": "3.25.62"
+    "zod": "3.25.63"
   },
   "devDependencies": {
     "@eslint/js": "9.28.0",
     "@ianvs/prettier-plugin-sort-imports": "4.4.2",
-    "@types/bun": "1.2.15",
+    "@types/bun": "1.2.16",
     "drizzle-kit": "0.31.1",
     "eslint": "9.28.0",
     "eslint-config-prettier": "10.1.5",
