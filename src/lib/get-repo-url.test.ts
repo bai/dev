@@ -71,6 +71,68 @@ describe("parseRepoUrlToPath", () => {
     const expected = path.join(baseSearchDir, "gitlab.com", "bar", "myrepo");
     expect(parseRepoUrlToPath(url)).toBe(expected);
   });
+
+  describe("invalid inputs", () => {
+    it("throws error for empty string", () => {
+      expect(() => parseRepoUrlToPath("")).toThrow("Invalid repository URL");
+    });
+
+    it("throws error for plain domain without org/repo", () => {
+      expect(() => parseRepoUrlToPath("https://github.com")).toThrow("Invalid repository URL");
+    });
+
+    it("throws error for URL with only one path segment", () => {
+      expect(() => parseRepoUrlToPath("https://github.com/foo")).toThrow("Invalid repository URL");
+    });
+
+    it("throws error for URL with only slashes", () => {
+      expect(() => parseRepoUrlToPath("https://github.com/")).toThrow("Invalid repository URL");
+    });
+
+    it("throws error for malformed SSH URL without colon", () => {
+      expect(() => parseRepoUrlToPath("git@github.com/foo/repo.git")).toThrow("Invalid repository URL");
+    });
+
+    it("throws error for SSH URL with missing org", () => {
+      expect(() => parseRepoUrlToPath("git@github.com:repo.git")).toThrow("Invalid repository URL");
+    });
+
+    it("throws error for SSH URL with missing repo", () => {
+      expect(() => parseRepoUrlToPath("git@github.com:foo/")).toThrow("Invalid repository URL");
+    });
+
+    it("throws error for non-URL string", () => {
+      expect(() => parseRepoUrlToPath("not-a-url")).toThrow("Invalid repository URL");
+    });
+
+    it("throws error for random text", () => {
+      expect(() => parseRepoUrlToPath("just some random text")).toThrow("Invalid repository URL");
+    });
+
+    it("throws error for invalid URL format", () => {
+      expect(() => parseRepoUrlToPath("://invalid-url")).toThrow("Invalid repository URL");
+    });
+
+    it("throws error for malformed SSH URL without username", () => {
+      expect(() => parseRepoUrlToPath("@github.com:foo/repo.git")).toThrow("Invalid repository URL");
+    });
+
+    it("throws error for malformed SSH URL without host", () => {
+      expect(() => parseRepoUrlToPath("git@:foo/repo.git")).toThrow("Invalid repository URL");
+    });
+
+    it("throws error for URL with invalid scheme format", () => {
+      expect(() => parseRepoUrlToPath("ht!tp://github.com/foo/repo")).toThrow("Invalid repository URL");
+    });
+
+    it("throws error for incomplete https URL", () => {
+      expect(() => parseRepoUrlToPath("https://")).toThrow("Invalid repository URL");
+    });
+
+    it("throws error for URL with empty path segments", () => {
+      expect(() => parseRepoUrlToPath("https://github.com//")).toThrow("Invalid repository URL");
+    });
+  });
 });
 
 describe("expandToFullGitUrl", () => {
