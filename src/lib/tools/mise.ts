@@ -363,7 +363,7 @@ export const ensureMiseVersionOrUpgrade = async (): Promise<void> => {
   const { isValid, currentVersion } = checkMiseVersion();
 
   if (isValid) {
-    if (isDebugMode && currentVersion) {
+    if (isDebugMode() && currentVersion) {
       logger.debug(`Mise version ${currentVersion} meets minimum requirement ${miseMinVersion}`);
     }
     return; // Version is fine, continue

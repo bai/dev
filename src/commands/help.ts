@@ -43,7 +43,6 @@ Examples:
       logger.info("  dev auth                   Authenticate with GitHub, GitLab, and Google Cloud");
       logger.info("  dev up                     Install development tools for current project");
       logger.info("  dev run <task>             Run project tasks using mise");
-      logger.info("  dev setup                  Set up the dev CLI environment");
       logger.info("  dev upgrade                Update the dev CLI tool");
     }
 
