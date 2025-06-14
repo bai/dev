@@ -42,6 +42,10 @@ import { getCurrentGitCommitSha } from "~/lib/version";
     // Auto-discover and register commands from src/commands
     await registry.autoDiscoverCommands(path.join(__dirname, "commands"));
 
+    // Auto-discover and register commands from docs/examples/personal
+    const examplesDir = path.join(__dirname, "..", "docs", "examples", "personal");
+    await registry.autoDiscoverCommands(examplesDir);
+
     // Load all registered commands into commander
     loader.loadAllCommands(program);
 
