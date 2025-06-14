@@ -25,11 +25,11 @@
     "zod": "3.25.64"
   },
   "devDependencies": {
-    "@eslint/js": "9.28.0",
+    "@eslint/js": "9.29.0",
     "@ianvs/prettier-plugin-sort-imports": "4.4.2",
     "@types/bun": "1.2.16",
     "drizzle-kit": "0.31.1",
-    "eslint": "9.28.0",
+    "eslint": "9.29.0",
     "eslint-config-prettier": "10.1.5",
     "eslint-plugin-unused-imports": "4.1.4",
     "jiti": "2.4.2",
