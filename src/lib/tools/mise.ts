@@ -48,6 +48,7 @@ export type MiseConfig = z.infer<typeof miseConfigSchema>;
 
 export const miseGlobalConfig = {
   env: {
+    CLOUDSDK_CORE_DISABLE_PROMPTS: "1",
     _: {
       path: ["{{config_root}}/node_modules/.bin"],
     },
@@ -57,7 +58,7 @@ export const miseGlobalConfig = {
     "rust": "latest",
     "go": "latest",
     "node": "latest",
-    "python": "latest",
+    "python": "3.12",
     "uv": "latest",
     "ruby": "latest",
     "gcloud": "latest",
