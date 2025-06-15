@@ -1,4 +1,4 @@
-import fs from "node:fs";
+import fs from "fs";
 
 import { baseSearchDir } from "~/lib/constants";
 import { logger } from "~/lib/logger";

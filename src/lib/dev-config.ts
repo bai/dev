@@ -1,4 +1,4 @@
-import fs from "node:fs";
+import fs from "fs";
 
 import { z } from "zod/v4";
 
@@ -135,6 +135,12 @@ class DevConfigManager implements ConfigManager {
       }
 
       this.cachedDevConfig = result.data;
+
+      // Debug logging
+      if (isDebugMode()) {
+        logger.info("🔍 Dev Config (Debug Mode):\n" + JSON.stringify(this.cachedDevConfig, null, 2));
+      }
+
       return this.cachedDevConfig;
     } catch (error) {
       if (error instanceof SyntaxError) {
