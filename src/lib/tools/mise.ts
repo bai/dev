@@ -54,12 +54,12 @@ export const miseGlobalConfig = {
   },
   tools: {
     "bun": "latest",
+    "rust": "latest",
     "go": "latest",
     "node": "latest",
     "python": "latest",
     "uv": "latest",
     "ruby": "latest",
-    "rust": "latest",
     "gcloud": "latest",
     "aws-cli": "latest",
     "sops": "latest",
@@ -69,12 +69,12 @@ export const miseGlobalConfig = {
     "golangci-lint": "latest",
     "jq": "latest",
     "fzf": "latest",
-    "npm:@anthropic-ai/claude-code": "latest",
-    "npm:eslint": "latest",
-    "npm:npm-check-updates": "latest",
-    "npm:pnpm": "latest",
-    "npm:prettier": "latest",
-    "npm:typescript": "latest",
+    // "npm:@anthropic-ai/claude-code": "latest",
+    // "npm:eslint": "latest",
+    // "npm:npm-check-updates": "latest",
+    // "npm:pnpm": "latest",
+    // "npm:prettier": "latest",
+    // "npm:typescript": "latest",
   },
   settings: {
     idiomatic_version_file_enable_tools: ["python", "ruby"],
@@ -459,7 +459,7 @@ export async function setupMiseGlobalConfig() {
         }
       }
       logger.info("   ✅ Mise config already exists");
-      return;
+      // return;
     }
 
     // Amend the TOML config with trusted_config_paths from dev JSON config
