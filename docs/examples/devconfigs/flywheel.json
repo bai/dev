@@ -1,0 +1,35 @@
+{
+    "configUrl": "https://gist.githubusercontent.com/bai/91f88fb26dcedccb97a07e3d53ee1baa/raw/config.json",
+    "defaultOrg": "flywheelsoftware",
+    "orgToProvider": {
+      "flywheelsoftware": "gitlab"
+    },
+    "mise": {
+      "trusted_config_paths": [
+        "~/.dev",
+        "~/src/gitlab.com/flywheelsoftware",
+        "~/src/github.com/Flywheel-Technologies"
+      ],
+      "tools": {
+        "bun": "latest",
+        "go": "latest",
+        "node": "latest",
+        "python": ["3.12", "latest"],
+        "uv": "latest",
+        "ruby": "latest",
+        "rust": "latest",
+        "gcloud": "latest",
+        "aws-cli": "latest",
+        "sops": "latest",
+        "age": "latest",
+        "terraform": "latest",
+        "terragrunt": "latest",
+        "golangci-lint": "latest",
+        "jq": "latest",
+        "gh": "latest",
+        "glab": "latest",
+        "fzf": "latest",
+        "fd": "latest"
+      }
+    }
+  }
