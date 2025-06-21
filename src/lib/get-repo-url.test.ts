@@ -159,6 +159,12 @@ describe("expandToFullGitUrl", () => {
       expect(result).toBe("https://github.com/someorg/myrepo");
     });
 
+    it("expands explicit org/repo to GitHub even when default org maps to GitLab", () => {
+      const gitlabDefaultOrgToProvider = { myorg: "gitlab" };
+      const result = expandToFullGitUrl("bai/config", "myorg", gitlabDefaultOrgToProvider);
+      expect(result).toBe("https://github.com/bai/config");
+    });
+
     it("expands org/repo format to GitLab when org has GitLab mapping", () => {
       const result = expandToFullGitUrl("gitlab-org/myrepo", defaultOrg, orgToProvider);
       expect(result).toBe("https://gitlab.com/gitlab-org/myrepo");

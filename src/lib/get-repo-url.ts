@@ -60,6 +60,7 @@ export function expandToFullGitUrl(
   let orgName = defaultOrg;
   let repoName = repoInput;
   let provider = "github"; // default provider
+  let isExplicitOrg = false;
 
   // Check if input has org/repo format
   if (repoInput.includes("/")) {
@@ -67,6 +68,7 @@ export function expandToFullGitUrl(
     if (parts.length === 2 && parts[0] && parts[1]) {
       orgName = parts[0];
       repoName = parts[1];
+      isExplicitOrg = true;
     }
   }
 
@@ -75,7 +77,8 @@ export function expandToFullGitUrl(
     provider = forceProvider;
   } else if (orgName in orgToProvider) {
     provider = orgToProvider[orgName] === "gitlab" ? "gitlab" : "github";
-  } else if (defaultOrg in orgToProvider) {
+  } else if (!isExplicitOrg && defaultOrg in orgToProvider) {
+    // Only use default org's provider if no explicit org was specified
     provider = orgToProvider[defaultOrg] === "gitlab" ? "gitlab" : "github";
   }
 
