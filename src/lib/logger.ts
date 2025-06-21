@@ -45,7 +45,7 @@ function createLogger(config: LoggerConfig = {}): Logger {
 
     debug(message: string, ...args: any[]): void {
       if (state.debugEnabled || isDebugMode()) {
-        console.log(formatMessage(message), ...args);
+        console.log(formatMessage(`[DEBUG] ${message}`), ...args);
       }
     },
 
