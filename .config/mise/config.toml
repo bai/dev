@@ -4,7 +4,7 @@ min_version = "2025.5.2"
 bun = "latest"
 
 [env]
-DEV_PROJECT_ROOT = "{{ config_root }}"
+DEV_PROJECT_ROOT = "{{ config_root | basename }}"
 DEV_CLI_DEBUG = "1"
 BUN_BE_BUN = "1"
 _.file = [

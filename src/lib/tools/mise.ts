@@ -1,5 +1,5 @@
-import fs from "node:fs";
-import path from "node:path";
+import fs from "fs";
+import path from "path";
 import { spawn, spawnSync } from "bun";
 
 import { stringify } from "@iarna/toml";
@@ -35,7 +35,7 @@ export const miseConfigSchema = z.object({
       }),
     )
     .optional(),
-  tools: z.record(z.string(), z.string()).optional(),
+  tools: z.record(z.string(), z.string().or(z.array(z.string()))).optional(),
   settings: z
     .object({
       idiomatic_version_file_enable_tools: z.array(z.string()).optional(),
@@ -48,18 +48,21 @@ export type MiseConfig = z.infer<typeof miseConfigSchema>;
 
 export const miseGlobalConfig = {
   env: {
+    DEV_CLI_DEBUG: "1",
+    BUN_BE_BUN: "1",
+    CLOUDSDK_CORE_DISABLE_PROMPTS: "1",
     _: {
       path: ["{{config_root}}/node_modules/.bin"],
     },
   },
   tools: {
     "bun": "latest",
+    "rust": "latest",
     "go": "latest",
     "node": "latest",
-    "python": "latest",
+    "python": ["3.12", "3.13", "latest"],
     "uv": "latest",
     "ruby": "latest",
-    "rust": "latest",
     "gcloud": "latest",
     "aws-cli": "latest",
     "sops": "latest",
@@ -69,12 +72,12 @@ export const miseGlobalConfig = {
     "golangci-lint": "latest",
     "jq": "latest",
     "fzf": "latest",
-    "npm:@anthropic-ai/claude-code": "latest",
-    "npm:eslint": "latest",
-    "npm:npm-check-updates": "latest",
-    "npm:pnpm": "latest",
-    "npm:prettier": "latest",
-    "npm:typescript": "latest",
+    // "npm:@anthropic-ai/claude-code": "latest",
+    // "npm:eslint": "latest",
+    // "npm:npm-check-updates": "latest",
+    // "npm:pnpm": "latest",
+    // "npm:prettier": "latest",
+    // "npm:typescript": "latest",
   },
   settings: {
     idiomatic_version_file_enable_tools: ["python", "ruby"],
@@ -425,9 +428,14 @@ export const ensureMiseVersionOrUpgrade = async (): Promise<void> => {
  * Sets up the global mise configuration.
  *
  * This function creates the mise config directory if it doesn't exist,
- * loads the baseline global mise TOML config from the dev directory,
- * amends it with trusted_config_paths from the dev JSON config,
+ * loads the baseline global mise TOML config, merges it with configuration
+ * from the dev JSON config (tools, trusted_config_paths, and other settings),
  * and writes the final configuration to the mise config file.
+ *
+ * The merge process:
+ * - Tools: dev config tools override/extend global config tools
+ * - Trusted paths: arrays are merged and deduplicated
+ * - Settings: arrays are merged and deduplicated, objects are merged
  *
  * @returns Promise<void> Resolves when the configuration is set up successfully
  * @throws Error if the mise config cannot be parsed or written
@@ -459,14 +467,46 @@ export async function setupMiseGlobalConfig() {
         }
       }
       logger.info("   ✅ Mise config already exists");
-      return;
+      // return;
     }
 
-    // Amend the TOML config with trusted_config_paths from dev JSON config
-    if (devConfig.mise?.settings?.trusted_config_paths && miseGlobalConfig.settings) {
-      miseGlobalConfig.settings.trusted_config_paths = devConfig.mise.settings.trusted_config_paths;
+    // Merge tools from dev config into global config
+    if (devConfig.mise?.tools && miseGlobalConfig.tools) {
+      const mergedTools = { ...miseGlobalConfig.tools, ...devConfig.mise.tools };
+      miseGlobalConfig.tools = mergedTools;
       if (isDebugMode()) {
-        logger.debug(`   Adding trusted paths: ${devConfig.mise.settings.trusted_config_paths.join(", ")}`);
+        const devConfigToolNames = Object.keys(devConfig.mise.tools);
+        logger.debug(`   Merging tools from dev config: ${devConfigToolNames.join(", ")}`);
+      }
+    }
+
+    // Merge trusted_config_paths from dev config into global config
+    if (devConfig.mise?.settings?.trusted_config_paths && miseGlobalConfig.settings) {
+      const existingPaths = miseGlobalConfig.settings.trusted_config_paths || [];
+      const devConfigPaths = devConfig.mise.settings.trusted_config_paths;
+
+      // Merge arrays and remove duplicates
+      const mergedPaths = [...new Set([...existingPaths, ...devConfigPaths])];
+      miseGlobalConfig.settings.trusted_config_paths = mergedPaths;
+
+      if (isDebugMode()) {
+        logger.debug(`   Merging trusted paths: ${devConfigPaths.join(", ")}`);
+        logger.debug(`   Final trusted paths: ${mergedPaths.join(", ")}`);
+      }
+    }
+
+    // Merge other settings from dev config if they exist
+    if (devConfig.mise?.settings && miseGlobalConfig.settings) {
+      // Merge idiomatic_version_file_enable_tools
+      if (devConfig.mise.settings.idiomatic_version_file_enable_tools) {
+        const existingTools = miseGlobalConfig.settings.idiomatic_version_file_enable_tools || [];
+        const devConfigTools = devConfig.mise.settings.idiomatic_version_file_enable_tools;
+        const mergedTools = [...new Set([...existingTools, ...devConfigTools])];
+        miseGlobalConfig.settings.idiomatic_version_file_enable_tools = mergedTools;
+
+        if (isDebugMode()) {
+          logger.debug(`   Merging idiomatic version tools: ${devConfigTools.join(", ")}`);
+        }
       }
     }
 

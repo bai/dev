@@ -1,6 +1,5 @@
-import fs from "node:fs";
-import os from "node:os";
-import path from "node:path";
+import fs from "fs";
+import path from "path";
 
 import { homeDir } from "~/lib/constants";
 import { logger } from "~/lib/logger";
