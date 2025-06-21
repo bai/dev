@@ -7,7 +7,9 @@ import { runCommand, spawnCommand } from "~/lib/core/command-utils";
 import { refreshDevConfigFromRemoteUrl } from "~/lib/dev-config";
 import { ensureDatabaseIsUpToDate } from "~/lib/ensure-database-is-up-to-date";
 import { ensureBunVersionOrUpgrade } from "~/lib/tools/bun";
-import { setupGoogleCloudConfig } from "~/lib/tools/gcloud";
+import { ensureFzfVersionOrUpgrade } from "~/lib/tools/fzf";
+import { ensureGcloudVersionOrUpgrade, setupGoogleCloudConfig } from "~/lib/tools/gcloud";
+import { ensureGitVersionOrUpgrade } from "~/lib/tools/git";
 import { ensureMiseVersionOrUpgrade, setupMiseGlobalConfig } from "~/lib/tools/mise";
 
 /**
@@ -145,6 +147,9 @@ The upgrade command updates your dev CLI tool itself:
 - Ensures database is up to date
 - Checks bun version and upgrades if needed
 - Checks mise version and upgrades if needed
+- Checks git version and upgrades if needed
+- Checks fzf version and upgrades if needed
+- Checks gcloud version and upgrades if needed
 - Ensures essential tools are available
 - Provides usage examples
 
@@ -185,7 +190,12 @@ Examples:
       // Step 9: Mise version check and upgrade if needed
       await ensureMiseVersionOrUpgrade();
 
-      // Step 10: Check essential tools
+      // Step 10: Essential tools version checks and upgrades
+      await ensureGitVersionOrUpgrade();
+      await ensureFzfVersionOrUpgrade();
+      await ensureGcloudVersionOrUpgrade();
+
+      // Step 11: Check essential tools availability
       await ensureEssentialTools(context);
 
       logger.info("");

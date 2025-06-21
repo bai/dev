@@ -9,6 +9,9 @@ import type { DevCommand } from "~/lib/core/command-types";
 import { spawnCommand } from "~/lib/core/command-utils";
 import { getDevConfig } from "~/lib/dev-config";
 import { bunMinVersion, checkBunVersion } from "~/lib/tools/bun";
+import { checkFzfVersion, fzfMinVersion } from "~/lib/tools/fzf";
+import { checkGcloudVersion, gcloudMinVersion } from "~/lib/tools/gcloud";
+import { checkGitVersion, gitMinVersion } from "~/lib/tools/git";
 import { checkMiseVersion, miseMinVersion } from "~/lib/tools/mise";
 import { db } from "~/drizzle";
 import { runs } from "~/drizzle/schema";
@@ -208,39 +211,29 @@ Examples:
         if (result.exitCode === 0) {
           const toolPath = result.stdout?.toString().trim();
 
-          if (tool.name === "bun") {
-            // Special handling for bun to show version information
-            const { isValid, currentVersion } = checkBunVersion();
+          // Special handling for tools with version checking
+          const versionCheckers = {
+            bun: { check: checkBunVersion, minVersion: bunMinVersion },
+            git: { check: checkGitVersion, minVersion: gitMinVersion },
+            fzf: { check: checkFzfVersion, minVersion: fzfMinVersion },
+            mise: { check: checkMiseVersion, minVersion: miseMinVersion },
+            gcloud: { check: checkGcloudVersion, minVersion: gcloudMinVersion },
+          };
+
+          const checker = versionCheckers[tool.name as keyof typeof versionCheckers];
+
+          if (checker) {
+            const { isValid, currentVersion } = checker.check();
 
             if (currentVersion) {
               const versionStatus = isValid ? "✅" : "⚠️ ";
               const versionNote = isValid
                 ? ` (v${currentVersion})`
-                : ` (v${currentVersion} - requires v${bunMinVersion}+)`;
+                : ` (v${currentVersion} - requires v${checker.minVersion}+)`;
               logger.info(`   ${versionStatus} ${tool.name}: ${toolPath}${versionNote}`);
 
               if (!isValid) {
-                logger.info(`   💡 Run 'dev upgrade' to update bun to the required version`);
-              }
-            } else {
-              logger.info(`   ⚠️  ${tool.name}: ${toolPath} (version check failed)`);
-            }
-
-            if (tool.required && isValid) testsPassed++;
-            else if (tool.required) testsFailed++;
-          } else if (tool.name === "mise") {
-            // Special handling for mise to show version information
-            const { isValid, currentVersion } = checkMiseVersion();
-
-            if (currentVersion) {
-              const versionStatus = isValid ? "✅" : "⚠️ ";
-              const versionNote = isValid
-                ? ` (v${currentVersion})`
-                : ` (v${currentVersion} - requires v${miseMinVersion}+)`;
-              logger.info(`   ${versionStatus} ${tool.name}: ${toolPath}${versionNote}`);
-
-              if (!isValid) {
-                logger.info(`   💡 Run 'dev upgrade' to update mise to the required version`);
+                logger.info(`   💡 Run 'dev upgrade' to update ${tool.name} to the required version`);
               }
             } else {
               logger.info(`   ⚠️  ${tool.name}: ${toolPath} (version check failed)`);

@@ -13,7 +13,7 @@ import { logger } from "~/lib/logger";
 export const globalMiseConfigDir = path.join(homeDir, ".config", "mise");
 export const globalMiseConfigPath = path.join(globalMiseConfigDir, "config.toml");
 
-export const miseMinVersion = "2025.6.0";
+export const miseMinVersion = "2025.6.5";
 
 /**
  * Mise config schema
