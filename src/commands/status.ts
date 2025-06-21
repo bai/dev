@@ -8,6 +8,7 @@ import { CommandRegistry } from "~/lib/core/command-registry";
 import type { DevCommand } from "~/lib/core/command-types";
 import { spawnCommand } from "~/lib/core/command-utils";
 import { getDevConfig } from "~/lib/dev-config";
+import { bunMinVersion, checkBunVersion } from "~/lib/tools/bun";
 import { checkMiseVersion, miseMinVersion } from "~/lib/tools/mise";
 import { db } from "~/drizzle";
 import { runs } from "~/drizzle/schema";
@@ -193,6 +194,7 @@ Examples:
     // Check required tools
     logger.info(`\n🛠️  Required tools:`);
     const tools = [
+      { name: "bun", required: true },
       { name: "git", required: true },
       { name: "fzf", required: true },
       { name: "mise", required: true },
@@ -206,7 +208,27 @@ Examples:
         if (result.exitCode === 0) {
           const toolPath = result.stdout?.toString().trim();
 
-          if (tool.name === "mise") {
+          if (tool.name === "bun") {
+            // Special handling for bun to show version information
+            const { isValid, currentVersion } = checkBunVersion();
+
+            if (currentVersion) {
+              const versionStatus = isValid ? "✅" : "⚠️ ";
+              const versionNote = isValid
+                ? ` (v${currentVersion})`
+                : ` (v${currentVersion} - requires v${bunMinVersion}+)`;
+              logger.info(`   ${versionStatus} ${tool.name}: ${toolPath}${versionNote}`);
+
+              if (!isValid) {
+                logger.info(`   💡 Run 'dev upgrade' to update bun to the required version`);
+              }
+            } else {
+              logger.info(`   ⚠️  ${tool.name}: ${toolPath} (version check failed)`);
+            }
+
+            if (tool.required && isValid) testsPassed++;
+            else if (tool.required) testsFailed++;
+          } else if (tool.name === "mise") {
             // Special handling for mise to show version information
             const { isValid, currentVersion } = checkMiseVersion();
 

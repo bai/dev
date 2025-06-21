@@ -6,6 +6,7 @@ import type { DevCommand } from "~/lib/core/command-types";
 import { runCommand, spawnCommand } from "~/lib/core/command-utils";
 import { refreshDevConfigFromRemoteUrl } from "~/lib/dev-config";
 import { ensureDatabaseIsUpToDate } from "~/lib/ensure-database-is-up-to-date";
+import { ensureBunVersionOrUpgrade } from "~/lib/tools/bun";
 import { setupGoogleCloudConfig } from "~/lib/tools/gcloud";
 import { ensureMiseVersionOrUpgrade, setupMiseGlobalConfig } from "~/lib/tools/mise";
 
@@ -142,6 +143,7 @@ The upgrade command updates your dev CLI tool itself:
 - Sets up Google Cloud configuration
 - Configures mise global settings
 - Ensures database is up to date
+- Checks bun version and upgrades if needed
 - Checks mise version and upgrades if needed
 - Ensures essential tools are available
 - Provides usage examples
@@ -177,10 +179,13 @@ Examples:
       // Step 7: Database migrations (ensure DB is up to date)
       await ensureDatabaseIsUpToDate();
 
-      // Step 8: Mise version check and upgrade if needed
+      // Step 8: Bun version check and upgrade if needed
+      await ensureBunVersionOrUpgrade();
+
+      // Step 9: Mise version check and upgrade if needed
       await ensureMiseVersionOrUpgrade();
 
-      // Step 9: Check essential tools
+      // Step 10: Check essential tools
       await ensureEssentialTools(context);
 
       logger.info("");
