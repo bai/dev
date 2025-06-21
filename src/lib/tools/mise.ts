@@ -48,7 +48,7 @@ export type MiseConfig = z.infer<typeof miseConfigSchema>;
 
 export const miseGlobalConfig = {
   env: {
-    DEV_CLI_DEBUG: "1",
+    DEV_CLI_DEBUG: "0",
     BUN_BE_BUN: "1",
     CLOUDSDK_CORE_DISABLE_PROMPTS: "1",
     _: {
