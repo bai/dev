@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 
+import { parse as parseToml } from "@iarna/toml";
 import { count, desc } from "drizzle-orm";
 
 import { baseSearchDir, devDbPath, devDir, homeDir } from "~/lib/constants";
@@ -12,7 +13,7 @@ import { bunMinVersion, checkBunVersion } from "~/lib/tools/bun";
 import { checkFzfVersion, fzfMinVersion } from "~/lib/tools/fzf";
 import { checkGcloudVersion, gcloudMinVersion } from "~/lib/tools/gcloud";
 import { checkGitVersion, gitMinVersion } from "~/lib/tools/git";
-import { checkMiseVersion, miseMinVersion } from "~/lib/tools/mise";
+import { checkMiseVersion, globalMiseConfigPath, miseMinVersion, type MiseConfig } from "~/lib/tools/mise";
 import { db } from "~/drizzle";
 import { runs } from "~/drizzle/schema";
 
@@ -110,12 +111,86 @@ Examples:
       for (const [org, provider] of Object.entries(config.orgToProvider)) {
         logger.info(`      ${org} → ${provider}`);
       }
-      if (config.mise?.settings?.trusted_config_paths && config.mise.settings.trusted_config_paths.length > 0) {
-        logger.info(`   🛡️  Mise Trusted Paths:`);
-        for (const trustedPath of config.mise.settings.trusted_config_paths) {
-          logger.info(`      ${trustedPath}`);
+
+      // Display Global Mise Config
+      logger.info(`   🌐 Mise Global Config:`);
+      if (fs.existsSync(globalMiseConfigPath)) {
+        try {
+          const globalConfigContent = fs.readFileSync(globalMiseConfigPath, "utf-8");
+          const globalConfig = parseToml(globalConfigContent) as MiseConfig;
+
+          logger.info(`      📍 Path: ${globalMiseConfigPath}`);
+
+          if (globalConfig.tools && Object.keys(globalConfig.tools).length > 0) {
+            logger.info(`      🔧 Tools: ${Object.keys(globalConfig.tools).join(", ")}`);
+          }
+
+          if (globalConfig.settings?.trusted_config_paths && globalConfig.settings.trusted_config_paths.length > 0) {
+            logger.info(`      🛡️  Trusted Paths:`);
+            for (const trustedPath of globalConfig.settings.trusted_config_paths) {
+              logger.info(`         ${trustedPath}`);
+            }
+          }
+        } catch (error) {
+          logger.info(`      ⚠️  Failed to parse global mise config`);
+        }
+      } else {
+        logger.info(`      ❌ Global config not found at ${globalMiseConfigPath}`);
+      }
+
+      // Display Local/Repo Mise Config
+      logger.info(`   📁 Mise Local Config:`);
+      const localConfigPaths = [
+        path.join(cwd, ".mise.toml"),
+        path.join(cwd, ".config/mise/config.toml"),
+        path.join(cwd, "mise.toml"),
+      ];
+
+      let localConfigFound = false;
+      for (const localConfigPath of localConfigPaths) {
+        if (fs.existsSync(localConfigPath)) {
+          localConfigFound = true;
+          try {
+            const localConfigContent = fs.readFileSync(localConfigPath, "utf-8");
+            const localConfig = parseToml(localConfigContent) as MiseConfig;
+
+            logger.info(`      📍 Path: ${localConfigPath}`);
+
+            if (localConfig.min_version) {
+              logger.info(`      📋 Min Version: ${localConfig.min_version}`);
+            }
+
+            if (localConfig.tools && Object.keys(localConfig.tools).length > 0) {
+              logger.info(`      🔧 Tools:`);
+              for (const [tool, version] of Object.entries(localConfig.tools)) {
+                const versionStr = Array.isArray(version) ? version.join(", ") : version;
+                logger.info(`         ${tool}: ${versionStr}`);
+              }
+            }
+
+            if (localConfig.env) {
+              const envKeys = Object.keys(localConfig.env).filter((key) => key !== "_");
+              if (envKeys.length > 0) {
+                logger.info(`      🌍 Environment Variables: ${envKeys.join(", ")}`);
+              }
+
+              if (localConfig.env._ && localConfig.env._.file && localConfig.env._.file.length > 0) {
+                logger.info(`      📄 Env Files: ${localConfig.env._.file.join(", ")}`);
+              }
+            }
+
+            break; // Use the first config file found
+          } catch (error) {
+            logger.info(`      ⚠️  Failed to parse local mise config at ${localConfigPath}`);
+          }
         }
       }
+
+      if (!localConfigFound) {
+        logger.info(`      ℹ️  No local mise config found`);
+        logger.info(`         Checked: ${localConfigPaths.map((p) => path.basename(p)).join(", ")}`);
+      }
+
       testsPassed++;
     } catch (error) {
       logger.info(`   ❌ Failed to load dev configuration`);
