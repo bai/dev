@@ -31,7 +31,14 @@
       "ruby": "latest",
       "terraform": "latest",
       "terragrunt": "latest",
-      "uv": "latest"
+      "uv": "latest",
+
+      "npm:@anthropic-ai/claude-code": "latest",
+      "npm:eslint": "latest",
+      "npm:npm-check-updates": "latest",
+      "npm:pnpm": "latest",
+      "npm:prettier": "latest",
+      "npm:typescript": "latest"
     }
   },
   "miseRepoConfig": {
