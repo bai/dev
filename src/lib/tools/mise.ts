@@ -63,6 +63,7 @@ export const miseGlobalConfig = {
   },
   settings: {
     trusted_config_paths: ["~/.dev"],
+    idiomatic_version_file_enable_tools: [] as string[],
   },
 } satisfies MiseConfig;
 
@@ -446,23 +447,22 @@ export async function setupMiseGlobalConfig() {
         }
       }
       logger.info("   ✅ Mise config already exists");
-      // return;
     }
 
     // Merge tools from dev config into global config
-    if (devConfig.mise?.tools && miseGlobalConfig.tools) {
-      const mergedTools = { ...miseGlobalConfig.tools, ...devConfig.mise.tools };
+    if (devConfig.miseGlobalConfig?.tools && miseGlobalConfig.tools) {
+      const mergedTools = { ...miseGlobalConfig.tools, ...devConfig.miseGlobalConfig.tools };
       miseGlobalConfig.tools = mergedTools;
       if (isDebugMode()) {
-        const devConfigToolNames = Object.keys(devConfig.mise.tools);
+        const devConfigToolNames = Object.keys(devConfig.miseGlobalConfig.tools);
         logger.debug(`   Merging tools from dev config: ${devConfigToolNames.join(", ")}`);
       }
     }
 
     // Merge trusted_config_paths from dev config into global config
-    if (devConfig.mise?.settings?.trusted_config_paths && miseGlobalConfig.settings) {
+    if (devConfig.miseGlobalConfig?.settings?.trusted_config_paths && miseGlobalConfig.settings) {
       const existingPaths = miseGlobalConfig.settings.trusted_config_paths || [];
-      const devConfigPaths = devConfig.mise.settings.trusted_config_paths;
+      const devConfigPaths = devConfig.miseGlobalConfig.settings.trusted_config_paths;
 
       // Merge arrays and remove duplicates
       const mergedPaths = [...new Set([...existingPaths, ...devConfigPaths])];
@@ -475,11 +475,11 @@ export async function setupMiseGlobalConfig() {
     }
 
     // Merge other settings from dev config if they exist
-    if (devConfig.mise?.settings && miseGlobalConfig.settings) {
+    if (devConfig.miseGlobalConfig?.settings && miseGlobalConfig.settings) {
       // Merge idiomatic_version_file_enable_tools
-      if (devConfig.mise.settings.idiomatic_version_file_enable_tools) {
-        const existingTools = miseGlobalConfig.settings.idiomatic_version_file_enable_tools ?? [];
-        const devConfigTools = devConfig.mise.settings.idiomatic_version_file_enable_tools;
+      if (devConfig.miseGlobalConfig.settings.idiomatic_version_file_enable_tools) {
+        const existingTools = miseGlobalConfig.settings.idiomatic_version_file_enable_tools || [];
+        const devConfigTools = devConfig.miseGlobalConfig.settings.idiomatic_version_file_enable_tools;
         const mergedTools = [...new Set([...existingTools, ...devConfigTools])];
         miseGlobalConfig.settings.idiomatic_version_file_enable_tools = mergedTools;
 

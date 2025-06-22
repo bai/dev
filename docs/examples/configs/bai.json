@@ -1,5 +1,5 @@
 {
-  "configUrl": "https://gist.githubusercontent.com/bai/91f88fb26dcedccb97a07e3d53ee1baa/raw/config.json",
+  "configUrl": "https://raw.githubusercontent.com/bai/dev/refs/heads/ux2/docs/examples/configs/bai.json",
   "defaultOrg": "flywheelsoftware",
   "orgToProvider": {
     "flywheelsoftware": "gitlab"
