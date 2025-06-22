@@ -48,52 +48,31 @@ export type MiseConfig = z.infer<typeof miseConfigSchema>;
 
 export const miseGlobalConfig = {
   env: {
-    DEV_CLI_DEBUG: "0",
     BUN_BE_BUN: "1",
-    CLOUDSDK_CORE_DISABLE_PROMPTS: "1",
     _: {
       path: ["{{config_root}}/node_modules/.bin"],
     },
   },
   tools: {
-    "bun": "latest",
-    "rust": "latest",
-    "go": "latest",
-    "node": "latest",
-    "python": ["3.12", "3.13", "latest"],
-    "uv": "latest",
-    "ruby": "latest",
-    "gcloud": "latest",
-    "aws-cli": "latest",
-    "sops": "latest",
-    "age": "latest",
-    "terraform": "latest",
-    "terragrunt": "latest",
-    "golangci-lint": "latest",
-    "jq": "latest",
-    "fzf": "latest",
-    // "npm:@anthropic-ai/claude-code": "latest",
-    // "npm:eslint": "latest",
-    // "npm:npm-check-updates": "latest",
-    // "npm:pnpm": "latest",
-    // "npm:prettier": "latest",
-    // "npm:typescript": "latest",
+    bun: "latest",
+    sops: "latest",
+    age: "latest",
+    fd: "latest",
+    fzf: "latest",
+    jq: "latest",
   },
   settings: {
-    idiomatic_version_file_enable_tools: ["python", "ruby"],
     trusted_config_paths: ["~/.dev"],
   },
 } satisfies MiseConfig;
 
 export const miseRepoConfig = {
-  min_version: "2025.5.2",
+  min_version: miseMinVersion,
   tools: {
-    python: "3.11",
-    sops: "latest",
-    age: "latest",
+    python: ["3.12", "latest"],
   },
   env: {
-    DEV_PROJECT_ROOT: "{{ config_root }}",
+    DEV_PROJECT_ROOT: "{{ config_root | basename }}",
     _: {
       file: [
         ".env",
@@ -499,7 +478,7 @@ export async function setupMiseGlobalConfig() {
     if (devConfig.mise?.settings && miseGlobalConfig.settings) {
       // Merge idiomatic_version_file_enable_tools
       if (devConfig.mise.settings.idiomatic_version_file_enable_tools) {
-        const existingTools = miseGlobalConfig.settings.idiomatic_version_file_enable_tools || [];
+        const existingTools = miseGlobalConfig.settings.idiomatic_version_file_enable_tools ?? [];
         const devConfigTools = devConfig.mise.settings.idiomatic_version_file_enable_tools;
         const mergedTools = [...new Set([...existingTools, ...devConfigTools])];
         miseGlobalConfig.settings.idiomatic_version_file_enable_tools = mergedTools;
