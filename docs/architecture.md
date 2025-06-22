@@ -1,4 +1,4 @@
-# Dev CLI Architecture
+# `dev` — Architecture
 
 This document describes the architecture of the dev CLI.
 

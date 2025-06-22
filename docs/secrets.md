@@ -1,42 +1,8 @@
-# `dev` CLI — **Secrets Management**
-
-**Version 0.9-draft · 2025-06-08**
-
----
-
-## Table of Contents
-
-- [`dev` CLI — **Secrets Management**](#dev-cli--secrets-management)
-  - [Table of Contents](#table-of-contents)
-  - [1 — Executive summary](#1--executive-summary)
-  - [2 — Problem \& objectives](#2--problem--objectives)
-  - [3 — Goals \& non-goals](#3--goals--non-goals)
-  - [4 — Guiding principles](#4--guiding-principles)
-  - [5 — High-level architecture](#5--high-level-architecture)
-  - [6 — Canonical repository layout](#6--canonical-repository-layout)
-  - [7 — Encryption policy](#7--encryption-policy)
-  - [8 — `dev secrets` CLI surface](#8--dev-secrets-cli-surface)
-  - [9 — Typical user flows](#9--typical-user-flows)
-    - [9.1 Happy path (add first secret)](#91-happy-path-add-first-secret)
-    - [9.2 CI job](#92-ci-job)
-  - [10 — Diff \& size strategy](#10--diff--size-strategy)
-  - [11 — Key management lifecycle](#11--key-management-lifecycle)
-  - [12 — Google Cloud Secret Manager sync](#12--google-cloud-secret-manager-sync)
-  - [13 — CI / CD integration](#13--ci--cd-integration)
-  - [14 — Validation \& guard-rails](#14--validation--guard-rails)
-  - [15 — Developer-experience niceties](#15--developer-experience-niceties)
-  - [16 — Security considerations](#16--security-considerations)
-  - [17 — Open questions / future work](#17--open-questions--future-work)
-  - [18 — Glossary](#18--glossary)
-    - [**TL;DR**](#tldr)
-
----
+# `dev` — Secrets Management
 
 ## 1 — Executive summary
 
 `dev secrets` gives every repository a **first-class, Git-native, diff-friendly** workflow for managing secrets of up to 60 KB (JSON / YAML / text / certs / small binaries). It combines **SOPS + age** encryption, optional **Google Cloud Secret Manager** promotion, and a **one-liner UX** backed by **mise** to guarantee reproducible tooling versions.
-
----
 
 ## 2 — Problem & objectives
 
@@ -48,8 +14,6 @@
 | 4 | Production wants authoritative secrets in GCP.            | Enable **bidirectional Git ↔ GCSM sync**.                       |
 | 5 | Teams use mono-repos with multiple environments.          | Provide **namespaces & env directories** that scale.            |
 
----
-
 ## 3 — Goals & non-goals
 
 | Goals                                                            | Non-goals                                                  |
@@ -59,8 +23,6 @@
 | 🛠️ One approach for dev laptops, CI containers, prod clusters.  | Be a general-purpose config management system.             |
 | ☁️ Optional promotion to Google Cloud Secret Manager.            | Support every possible cloud KMS (focus on GCP).           |
 
----
-
 ## 4 — Guiding principles
 
 1. **Git-first.** Secrets live in the repo, versioned with code.
@@ -68,8 +30,6 @@
 3. **One command, sane defaults.** Common tasks fit in a single `dev secrets …`.
 4. **Config lives in `.config/dev/`.** No clutter at repo root, follows XDG spirit.
 5. **Scratch is disposable.** Decrypted artefacts never enter `git add -A`.
-
----
 
 ## 5 — High-level architecture
 
@@ -79,8 +39,6 @@
 | Cipher                   | **age + age-plugin-gcpkms**     | Modern, small, forward-secret; native GCP KMS URIs. |
 | Runtime installer        | **mise** (`.tool-versions`)     | Reproducible versions for dev & CI.                 |
 | Secrets backend (opt-in) | **Google Cloud Secret Manager** | Authoritative store for runtime environments.       |
-
----
 
 ## 6 — Canonical repository layout
 
@@ -108,8 +66,6 @@ repo/
 
 *Anything under `secrets/` is encrypted & committed; anything under `.config/dev/scratch/` is plaintext & **ignored**.*
 
----
-
 ## 7 — Encryption policy
 
 **`.sops.yaml`** — encrypt only the values we care about.
@@ -129,11 +85,9 @@ creation_rules:
 
 *Rotating recipients rewrites only a **single header line** per file.*
 
----
-
 ## 8 — `dev secrets` CLI surface
 
-```
+```sh
 dev secrets <subcommand> [flags]
 
 Bootstrap
@@ -162,8 +116,6 @@ House-keeping
 ```
 
 *All subcommands accept:* `--namespace/-n <env>`, `--json|--yaml|--binary`, `--mount <path>`.
-
----
 
 ## 9 — Typical user flows
 
@@ -194,8 +146,6 @@ flowchart TD
   D --> E["dev secrets validate --ci"]
 ```
 
----
-
 ## 10 — Diff & size strategy
 
 | Scenario           | Git diff result                                              |
@@ -206,8 +156,6 @@ flowchart TD
 | Binary (base64)    | Diff limited to changed block; reviewers rely on commit msg. |
 
 **Hard limit:** 60 KB *pre-encrypt* ⇒ \~ 72 KB ciphertext. Validation fails otherwise.
-
----
 
 ## 11 — Key management lifecycle
 
@@ -221,8 +169,6 @@ flowchart TD
 
 Private keys **never** live inside the repository.
 
----
-
 ## 12 — Google Cloud Secret Manager sync
 
 | Direction  | Command                                             | Notes                                   |
@@ -234,8 +180,6 @@ Private keys **never** live inside the repository.
 Secret names:
 `projects/$PROJECT/secrets/$REPO-$ENV-$PATH_WITHOUT_EXTENSION`
 Labels: `repo`, `sha`, `env`.
-
----
 
 ## 13 — CI / CD integration
 
@@ -251,8 +195,6 @@ steps:
 ```
 
 Containerised builds mount `repo/.config/dev/scratch/` read-only into the build context.
-
----
 
 ## 14 — Validation & guard-rails
 
@@ -272,18 +214,14 @@ dev secrets validate --staged || {
   echo "❌  Secret validation failed"; exit 1; }
 ```
 
----
-
 ## 15 — Developer-experience niceties
 
-* **Auto-install**: Missing `sops`/`age` → transparent `mise install`.
-* **Smart editor HUD**: When `$EDITOR` is `vim`/`nano`/`helix`, show decrypted path & live size counter.
-* **`dev secrets diff`**: Pipes to `git diff --color` / `delta`.
-* **Shell hook**: `eval "$(dev secrets export-env --shell)"` for zero-friction local runs.
-* **Templates**: `--from-template=gcp-service-account`, `--from-template=jwt`.
-* **Scratch cleaner**: `scratch --purge` wipes decrypted debris on logout.
-
----
+- **Auto-install**: Missing `sops`/`age` → transparent `mise install`.
+- **Smart editor HUD**: When `$EDITOR` is `vim`/`nano`/`helix`, show decrypted path & live size counter.
+- **`dev secrets diff`**: Pipes to `git diff --color` / `delta`.
+- **Shell hook**: `eval "$(dev secrets export-env --shell)"` for zero-friction local runs.
+- **Templates**: `--from-template=gcp-service-account`, `--from-template=jwt`.
+- **Scratch cleaner**: `scratch --purge` wipes decrypted debris on logout.
 
 ## 16 — Security considerations
 
@@ -295,16 +233,12 @@ dev secrets validate --staged || {
 | **Key compromise**     | Monthly rotation cadence; easy `rotate-keys`.                                                  |
 | **Audit trail**        | `dev secrets` logs decrypt events to `.config/dev/.audit.log` (opt-in) & Cloud Audit for GCSM. |
 
----
-
 ## 17 — Open questions / future work
 
 1. Interactive **merge-conflict resolver** for encrypted YAML.
 2. Secret **search & grep** across decrypted scratch (fzf integration).
 3. **Namespace delegation** for huge mono-repos (`packages/foo/.config/dev`).
 4. **Automatic stale-secret pruning** after N days of unused references.
-
----
 
 ## 18 — Glossary
 
@@ -316,8 +250,6 @@ dev secrets validate --staged || {
 | **Namespace / env** | Directory under `secrets/` (`dev/`, `staging/`, `prod/`).             |
 | **Recipients**      | Public keys (age) or KMS URIs that can decrypt a secret.              |
 | **Scratch dir**     | Local, git-ignored folder for decrypted artefacts.                    |
-
----
 
 ### **TL;DR**
 
