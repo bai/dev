@@ -1,5 +1,5 @@
 {
-  "configUrl": "https://raw.githubusercontent.com/bai/dev/main/hack/example-dev-config.json",
+  "configUrl": "https://raw.githubusercontent.com/bai/dev/main/docs/examples/configs/example.json",
   "defaultOrg": "bai",
   "orgToProvider": {
     "gitlab-org": "gitlab"

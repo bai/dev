@@ -46,7 +46,7 @@ This will:
 - Configure your shell (adds to `~/.zshrc`)
 - Set up mise configuration
 
-You can customize `dev` by providing your own configuration file URL. A common approach is to create a GitHub Gist and use its raw file URL. For reference, see the example configuration at [hack/example-dev-config.json](hack/example-dev-config.json).
+You can customize `dev` by providing your own configuration file URL. A common approach is to create a GitHub Gist and use its raw file URL. For reference, see the example configuration at [docs/examples/configs/example.json](docs/examples/configs/example.json).
 
 ### Manual Installation
 

@@ -13,7 +13,7 @@ const gitProviderSchema = z.enum(["github", "gitlab"]);
 export const devConfigSchema = z.object({
   configUrl: z
     .url()
-    .default("https://raw.githubusercontent.com/bai/dev/main/hack/example-dev-config.json")
+    .default("https://raw.githubusercontent.com/bai/dev/main/docs/examples/configs/example.json")
     .describe("URL to the dev config file, set to whatever URL was used to install dev"),
 
   defaultOrg: z.string().default("bai").describe("Default organization to use for cloning repositories"),
