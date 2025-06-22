@@ -128,8 +128,12 @@ export class CommandLoader {
    * Build context object for command execution
    */
   private buildContext(devCommand: DevCommand, args: any[], command: Command): CommandContext {
-    // Extract options (last argument from commander)
-    const options = args.pop() || {};
+    // Extract commander command object (last argument from commander)
+    const commanderCmd = args.pop() as Command;
+
+    // Get the parsed option values using commander's opts() method
+    // For tests, commanderCmd might be a mock object without opts(), so fall back to {}
+    const options = commanderCmd && typeof commanderCmd.opts === "function" ? commanderCmd.opts() : commanderCmd || {};
 
     // Build args object from remaining arguments and command definition
     const argsObj: Record<string, any> = {};

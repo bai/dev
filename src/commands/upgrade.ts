@@ -3,7 +3,7 @@ import path from "path";
 
 import { devConfigDir, devDataDir, devDir, homeDir } from "~/lib/constants";
 import type { DevCommand } from "~/lib/core/command-types";
-import { runCommand, spawnCommand } from "~/lib/core/command-utils";
+import { hasOption, option, runCommand, spawnCommand } from "~/lib/core/command-utils";
 import { refreshDevConfigFromRemoteUrl } from "~/lib/dev-config";
 import { ensureDatabaseIsUpToDate } from "~/lib/ensure-database-is-up-to-date";
 import { ensureBunVersionOrUpgrade } from "~/lib/tools/bun";
@@ -155,14 +155,26 @@ The upgrade command updates your dev CLI tool itself:
 
 Examples:
   dev upgrade             # Upgrade to latest version
+  dev upgrade --force     # Upgrade and force overwrite mise config
   `,
+
+  options: [
+    option("--force", "Force overwrite mise global config even if it exists"),
+  ],
 
   async exec(context) {
     const { logger } = context;
 
-    try {
-      logger.info("🔄 Upgrading dev CLI tool...");
+    // Check if force flag is enabled
+    const force = hasOption(context, "force");
 
+    if (force) {
+      logger.info("🔄 Upgrading dev CLI tool (force mode enabled)...");
+    } else {
+      logger.info("🔄 Upgrading dev CLI tool...");
+    }
+
+    try {
       // Step 1: Self-update the CLI repository and dependencies
       await updateCliRepository(context);
 
@@ -179,7 +191,7 @@ Examples:
       await setupGoogleCloudConfig();
 
       // Step 6: Mise Configuration
-      await setupMiseGlobalConfig();
+      await setupMiseGlobalConfig(force);
 
       // Step 7: Database migrations (ensure DB is up to date)
       await ensureDatabaseIsUpToDate();

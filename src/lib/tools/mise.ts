@@ -417,10 +417,11 @@ export const ensureMiseVersionOrUpgrade = async (): Promise<void> => {
  * - Trusted paths: arrays are merged and deduplicated
  * - Settings: arrays are merged and deduplicated, objects are merged
  *
+ * @param force - If true, overwrite existing config file even if it exists
  * @returns Promise<void> Resolves when the configuration is set up successfully
  * @throws Error if the mise config cannot be parsed or written
  */
-export async function setupMiseGlobalConfig() {
+export async function setupMiseGlobalConfig(force = false) {
   try {
     logger.info("🎯 Setting up global mise configuration...");
 
@@ -446,7 +447,13 @@ export async function setupMiseGlobalConfig() {
           // Ignore read errors in debug mode
         }
       }
-      logger.info("   ✅ Mise config already exists");
+
+      if (force) {
+        logger.info("   🔄 Force flag enabled, overwriting existing mise config...");
+      } else {
+        logger.info("   ✅ Mise config already exists");
+        return;
+      }
     }
 
     // Merge tools from dev config into global config

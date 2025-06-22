@@ -36,7 +36,7 @@ describe("Logger", () => {
 
       logger.debug("test debug", "arg1");
 
-      expect(consoleLogSpy).toHaveBeenCalledWith("test debug", "arg1");
+      expect(consoleLogSpy).toHaveBeenCalledWith("[DEBUG] test debug", "arg1");
     });
 
     it("should not show debug messages when DEBUG env var is not set", () => {
@@ -44,7 +44,7 @@ describe("Logger", () => {
 
       logger.debug("test debug");
 
-      expect(consoleLogSpy).not.toHaveBeenCalledWith("test debug");
+      expect(consoleLogSpy).not.toHaveBeenCalledWith("[DEBUG] test debug");
     });
   });
 
@@ -78,7 +78,7 @@ describe("Logger", () => {
 
       childLogger.debug("test debug");
 
-      expect(consoleLogSpy).toHaveBeenCalledWith("[CHILD] test debug");
+      expect(consoleLogSpy).toHaveBeenCalledWith("[CHILD] [DEBUG] test debug");
     });
 
     it("should create multiple levels of nested child loggers", () => {
@@ -97,7 +97,7 @@ describe("Logger", () => {
 
       childLogger.debug("test debug");
 
-      expect(consoleLogSpy).not.toHaveBeenCalledWith("[CHILD] test debug");
+      expect(consoleLogSpy).not.toHaveBeenCalledWith("[CHILD] [DEBUG] test debug");
     });
   });
 });
