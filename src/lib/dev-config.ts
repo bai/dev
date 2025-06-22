@@ -140,7 +140,7 @@ class DevConfigManager implements ConfigManager {
 
       // Debug logging
       if (isDebugMode()) {
-        logger.info("🔍 Dev Config (Debug Mode):\n" + JSON.stringify(this.cachedDevConfig, null, 2));
+        logger.debug("🔍 Dev Config:\n" + JSON.stringify(this.cachedDevConfig, null, 2));
       }
 
       return this.cachedDevConfig;
