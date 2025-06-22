@@ -23,7 +23,8 @@ export const devConfigSchema = z.object({
     .default({ "gitlab-org": "gitlab" })
     .describe("Map of organizations to their preferred git provider"),
 
-  mise: miseConfigSchema.optional().describe("Mise configuration settings"),
+  miseGlobalConfig: miseConfigSchema.optional().describe("Mise global configuration settings"),
+  miseRepoConfig: miseConfigSchema.optional().describe("Mise repository configuration settings"),
 });
 
 export type DevConfig = z.infer<typeof devConfigSchema>;
@@ -95,7 +96,8 @@ class DevConfigManager implements ConfigManager {
         "dev.configUrl": devConfig.configUrl,
         "dev.defaultOrg": devConfig.defaultOrg,
         "dev.orgToProvider": devConfig.orgToProvider,
-        "dev.mise.trustedConfigPaths": devConfig.mise?.settings?.trusted_config_paths || [],
+        "dev.miseGlobalConfig": devConfig.miseGlobalConfig,
+        "dev.miseRepoConfig": devConfig.miseRepoConfig,
 
         // Environment variables as config
         "env.home": process.env.HOME,

@@ -4,7 +4,7 @@
   "orgToProvider": {
     "flywheelsoftware": "gitlab"
   },
-  "mise": {
+  "miseGlobalConfig": {
     "trusted_config_paths": [
       "~/.dev",
       "~/src/gitlab.com/flywheelsoftware",
@@ -12,24 +12,31 @@
     ],
     "tools": {
       "bun": "latest",
-      "go": "latest",
-      "node": "latest",
-      "python": ["3.12", "latest"],
-      "uv": "latest",
-      "ruby": "latest",
       "rust": "latest",
-      "gcloud": "latest",
-      "aws-cli": "latest",
+
       "sops": "latest",
       "age": "latest",
-      "terraform": "latest",
-      "terragrunt": "latest",
-      "golangci-lint": "latest",
-      "jq": "latest",
+
+      "aws-cli": "latest",
+      "fd": "latest",
+      "fzf": "latest",
+      "gcloud": "latest",
       "gh": "latest",
       "glab": "latest",
-      "fzf": "latest",
-      "fd": "latest"
+      "go": "latest",
+      "golangci-lint": "latest",
+      "jq": "latest",
+      "node": "latest",
+      "python": ["3.12", "latest"],
+      "ruby": "latest",
+      "terraform": "latest",
+      "terragrunt": "latest",
+      "uv": "latest"
+    }
+  },
+  "miseRepoConfig": {
+    "tools": {
+      "python": ["3.12", "latest"]
     }
   }
 }
