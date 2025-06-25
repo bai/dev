@@ -4,7 +4,6 @@ import { Command } from "commander";
 
 import { CommandLoader } from "~/lib/core/command-loader";
 import { CommandRegistry } from "~/lib/core/command-registry";
-import { getGitRoot, isGitRepository } from "~/lib/core/command-utils";
 import { createConfig } from "~/lib/dev-config";
 import { ensureBaseDirectoryExists } from "~/lib/ensure-base-directory-exists";
 import { ensureDatabaseIsUpToDate } from "~/lib/ensure-database-is-up-to-date";
