@@ -1,7 +1,6 @@
 import { describe, expect, test, vi } from "vitest";
 
 import { buildContext } from "~/lib/core/command-loader";
-import { createCommandRegistry } from "~/lib/core/command-registry";
 import type { ConfigManager, DevCommand, Logger } from "~/lib/core/command-types";
 import { arg } from "~/lib/core/command-utils";
 

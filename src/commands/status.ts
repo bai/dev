@@ -6,7 +6,7 @@ import { parse as parseToml } from "@iarna/toml";
 import { count, desc } from "drizzle-orm";
 
 import { baseSearchDir, devDbPath, devDir, homeDir } from "~/lib/constants";
-import { CommandRegistry, createCommandRegistry } from "~/lib/core/command-registry";
+import { commandRegistry } from "~/lib/core/command-registry";
 import type { DevCommand } from "~/lib/core/command-types";
 import { spawnCommand } from "~/lib/core/command-utils";
 import { getDevConfig } from "~/lib/dev-config";
@@ -201,11 +201,10 @@ Examples:
     // Check command registry status
     logger.info(`\n📚 Command Registry:`);
     try {
-      const registry = createCommandRegistry();
       const cmdDir = path.join(__dirname, "..");
-      await registry.autoDiscoverCommands(path.join(cmdDir, "commands"));
+      await commandRegistry.autoDiscoverCommands(path.join(cmdDir, "commands"));
 
-      const stats = registry.getStats();
+      const stats = commandRegistry.getStats();
       logger.info(`   ✅ Registry initialized successfully`);
       logger.info(`   📊 Total commands: ${stats.total}`);
       logger.info(`   📂 Commands directory: ${path.join(cmdDir, "commands")}`);
@@ -216,7 +215,7 @@ Examples:
 
       if (stats.total > 0) {
         logger.info(`   📝 Available commands:`);
-        const commands = registry.getAll();
+        const commands = commandRegistry.getAll();
         commands.forEach((command: DevCommand) => {
           const aliasText = command.aliases ? ` (${command.aliases.join(", ")})` : "";
           logger.info(`      • ${command.name}: ${command.description}${aliasText}`);
