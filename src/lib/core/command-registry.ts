@@ -241,22 +241,6 @@ export const getCommandStats = (): {
 };
 
 /**
- * Functional command registry interface for object-oriented compatibility
- */
-export const createCommandRegistry = () => ({
-  register: registerCommand,
-  get: getCommand,
-  getRegistration: getCommandRegistration,
-  getAll: getAllCommands,
-  getVisible: getVisibleCommands,
-  has: hasCommand,
-  remove: removeCommand,
-  clear: clearAllCommands,
-  autoDiscoverCommands,
-  getStats: getCommandStats,
-});
-
-/**
  * Functional command registry manager
  */
 export const commandRegistry = {
@@ -271,17 +255,3 @@ export const commandRegistry = {
   autoDiscoverCommands,
   getStats: getCommandStats,
 };
-
-// Legacy class-like interface for backward compatibility
-export class CommandRegistry {
-  register = registerCommand;
-  get = getCommand;
-  getRegistration = getCommandRegistration;
-  getAll = getAllCommands;
-  getVisible = getVisibleCommands;
-  has = hasCommand;
-  remove = removeCommand;
-  clear = clearAllCommands;
-  autoDiscoverCommands = autoDiscoverCommands;
-  getStats = getCommandStats;
-}

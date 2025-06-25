@@ -201,16 +201,6 @@ export const loadAllCommands = (
 };
 
 /**
- * Create a command loader function factory for functional composition
- */
-export const createCommandLoader = (logger: Logger, config: ConfigManager) => ({
-  loadCommand: (devCommand: DevCommand, program: Command) => loadCommand(devCommand, program, logger, config),
-  loadAllCommands: (commands: DevCommand[], program: Command) => loadAllCommands(commands, program, logger, config),
-  buildContext: (devCommand: DevCommand, args: any[], command: Command) =>
-    buildContext(devCommand, args, command, logger, config),
-});
-
-/**
  * Functional command loader manager for advanced use cases
  */
 export const commandLoader = {
@@ -219,37 +209,7 @@ export const commandLoader = {
   buildContext,
   buildArgumentSyntax,
   handleCommandError,
-  createCommandLoader,
 };
 
 // Export individual functions for direct use
 export { buildContext, buildArgumentSyntax, handleCommandError };
-
-// Legacy class-like interface for backward compatibility
-export class CommandLoader {
-  constructor(
-    private registry: { getAll: () => DevCommand[] },
-    private logger: Logger,
-    private config: ConfigManager,
-  ) {}
-
-  loadCommand = (devCommand: DevCommand, program: Command): void => {
-    loadCommand(devCommand, program, this.logger, this.config);
-  };
-
-  loadAllCommands = (program: Command): void => {
-    this.registry.getAll().forEach((command) => {
-      this.loadCommand(command, program);
-    });
-  };
-
-  private buildContext = (devCommand: DevCommand, args: any[], command: Command): CommandContext => {
-    return buildContext(devCommand, args, command, this.logger, this.config);
-  };
-
-  private buildArgumentSyntax = buildArgumentSyntax;
-
-  private handleCommandError = (error: any, commandName: string): never => {
-    return handleCommandError(error, commandName, this.logger);
-  };
-}

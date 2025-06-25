@@ -217,47 +217,6 @@ export function getGitRoot(cwd?: string): string | undefined {
 }
 
 /**
- * Utility for wrapping legacy handler functions
- */
-export function wrapLegacyHandler(
-  name: string,
-  description: string,
-  handler: (...args: any[]) => Promise<void> | void,
-  config?: {
-    help?: string;
-    arguments?: CommandArgument[];
-    options?: CommandOption[];
-    aliases?: string[];
-    hidden?: boolean;
-  },
-): DevCommand {
-  return {
-    name,
-    description,
-    help: config?.help,
-    arguments: config?.arguments,
-    options: config?.options,
-    aliases: config?.aliases,
-    hidden: config?.hidden,
-    async exec(context: CommandContext): Promise<void> {
-      // Try to match the original function signature
-      const argValues = config?.arguments?.map((arg) => context.args[arg.name]) || [];
-
-      if (handler.length === 0) {
-        // No arguments expected
-        await handler();
-      } else if (handler.length === 1) {
-        // Single argument (likely args array)
-        await handler(argValues);
-      } else {
-        // Multiple arguments - try to match original pattern
-        await handler(...argValues, context.options);
-      }
-    },
-  };
-}
-
-/**
  * Utility for handling common validation patterns
  */
 export function validateChoice<T extends string>(

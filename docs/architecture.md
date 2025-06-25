@@ -334,50 +334,6 @@ describe("Hello Command", () => {
 });
 ```
 
-## 🔄 Migration from Class-Based
-
-### Before (Class-Based) ❌
-
-```typescript
-// Old inheritance-based approach
-export default class MyCommand extends BaseCommand {
-  name = "my-command";
-  description = "My command";
-
-  async exec(context: CommandContext): Promise<void> {
-    const input = this.getArg(context, 0)!; // Hidden method
-    const force = this.hasOption(context, "force");
-    console.log(`Processing ${input}`); // Hardcoded console
-  }
-}
-```
-
-### After (Interface-Based) ✅
-
-```typescript
-// New composition-based approach
-export const myCommand: DevCommand = {
-  name: "my-command",
-  description: "My command",
-
-  arguments: [
-    arg("input", "Input value", { required: true }),
-  ],
-
-  options: [
-    option("-f, --force", "Force operation"),
-  ],
-
-  async exec(context) {
-    const { logger } = context; // Injected dependency
-    const input = getArg(context, "input"); // Pure function
-    const force = hasOption(context, "force");
-
-    logger.info(`Processing ${input}`); // Mockable logger
-  },
-};
-```
-
 ## 🔮 Advanced Features
 
 ### Custom Validation
