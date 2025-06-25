@@ -1,9 +1,14 @@
+import path from "path";
+
 import { loadEnv } from "vite";
-import tsconfigPaths from "vite-tsconfig-paths";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
-  plugins: [tsconfigPaths()],
+  resolve: {
+    alias: {
+      "~": path.resolve(__dirname, "./src"),
+    },
+  },
   test: {
     dir: "./",
     reporters: ["verbose"],
