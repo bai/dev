@@ -60,6 +60,6 @@ import { getCurrentGitCommitSha } from "~/lib/version";
 export { commandRegistry, createCommandRegistry } from "~/lib/core/command-registry";
 export { createCommandLoader, loadCommand, loadAllCommands } from "~/lib/core/command-loader";
 
-export { createConfig, configManager } from "~/lib/dev-config";
+export { createConfig } from "~/lib/dev-config";
 export * from "~/lib/core/command-types";
 export * from "~/lib/core/command-utils";
