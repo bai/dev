@@ -1,6 +1,5 @@
 import fs from "fs";
 import path from "path";
-import { spawn, spawnSync } from "bun";
 
 import { stringify } from "@iarna/toml";
 import z from "zod/v4";
@@ -92,7 +91,7 @@ export const miseRepoConfig = {
  */
 export const getCurrentMiseVersion = (): string | null => {
   try {
-    const result = spawnSync(["mise", "--version"], {
+    const result = Bun.spawnSync(["mise", "--version"], {
       stdio: ["ignore", "pipe", "pipe"],
     });
 
@@ -222,7 +221,7 @@ export const runMiseSelfUpdate = async (retries = 3): Promise<boolean> => {
       logger.info("⏳ Updating mise... (this may take a moment)");
 
       // Use streaming output for better user experience
-      const process = spawn(["mise", "self-update"], {
+      const process = Bun.spawn(["mise", "self-update"], {
         stdio: ["ignore", "pipe", "pipe"],
       });
 

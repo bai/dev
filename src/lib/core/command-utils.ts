@@ -1,5 +1,3 @@
-import { spawnSync } from "bun";
-
 import {
   createCommandError,
   type CommandArgument,
@@ -94,7 +92,7 @@ export function spawnCommand(
     silent?: boolean; // Whether to suppress output
   },
 ): { exitCode: number; stdout?: string; stderr?: string } {
-  const proc = spawnSync(command, {
+  const proc = Bun.spawnSync(command, {
     cwd: options?.cwd,
     stdio: options?.silent
       ? ["ignore", "pipe", "pipe"]
