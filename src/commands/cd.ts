@@ -88,25 +88,51 @@ async function handleInteractiveCd(logger: any): Promise<void> {
     return;
   }
 
-  // Create a command that echoes the directories and pipes to fzf
-  const directoryList = directories.join("\n");
-  const commandString = `echo "${directoryList.replace(/"/g, '\\"')}" | fzf`;
+  // Stream directories to fzf instead of building a large command string
+  const { spawn } = await import("bun");
 
-  const proc = spawnCommand(["sh", "-c", commandString]);
+  const proc = spawn(["fzf"], {
+    stdin: "pipe",
+    stdout: "pipe",
+    stderr: "pipe",
+  });
 
-  if (proc.stdout) {
-    const selectedPath = proc.stdout.toString().trim();
-    if (selectedPath) {
-      handleCdToPath(selectedPath);
-      return; // Path handled, function complete
+  // Stream directories to fzf stdin
+  if (proc.stdin) {
+    try {
+      // Create directory list as a single string to write to stdin
+      const directoryList = directories.join("\n") + "\n";
+      await proc.stdin.write(directoryList);
+      await proc.stdin.end();
+    } catch (error: any) {
+      logger.error(`Error writing to fzf: ${error.message}`);
+      return;
+    }
+  }
+
+  // Wait for fzf to complete and read the selected path
+  const exitCode = await proc.exited;
+
+  if (exitCode === 0 && proc.stdout) {
+    try {
+      const output = await new Response(proc.stdout).text();
+      const selectedPath = output.trim();
+
+      if (selectedPath) {
+        handleCdToPath(selectedPath);
+        return; // Path handled, function complete
+      }
+    } catch (error: any) {
+      logger.error(`Error reading from fzf: ${error.message}`);
+      return;
     }
   }
 
   // Handle fzf exit codes for cancellation or no selection
   // Exit codes 1 (no match) and 130 (cancelled by SIGINT/Ctrl+C) are considered normal non-selection cases.
-  if (proc.exitCode !== 0 && proc.exitCode !== 1 && proc.exitCode !== 130) {
-    // For other non-zero exit codes, it's an unexpected error from fzf or the shell.
-    throw new Error(`Error during fzf execution. Exit code: ${proc.exitCode}`);
+  if (exitCode !== 0 && exitCode !== 1 && exitCode !== 130) {
+    // For other non-zero exit codes, it's an unexpected error from fzf.
+    throw new Error(`Error during fzf execution. Exit code: ${exitCode}`);
   }
 
   // If no path was selected (e.g., fzf cancelled or no output), we simply do nothing.
