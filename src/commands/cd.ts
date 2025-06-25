@@ -89,9 +89,7 @@ async function handleInteractiveCd(logger: any): Promise<void> {
   }
 
   // Stream directories to fzf instead of building a large command string
-  const { spawn } = await import("bun");
-
-  const proc = spawn(["fzf"], {
+  const proc = Bun.spawn(["fzf"], {
     stdin: "pipe",
     stdout: "pipe",
     stderr: "pipe",
