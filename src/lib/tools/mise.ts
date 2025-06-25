@@ -73,7 +73,7 @@ export const miseRepoConfig = {
     python: ["3.12", "latest"],
   },
   env: {
-    DEV_PROJECT_ROOT: "{{ config_root | basename }}",
+    DEV_PROJECT_ROOT: "{{ config_root }}",
     _: {
       file: [
         ".env",
