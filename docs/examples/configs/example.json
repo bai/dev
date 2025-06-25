@@ -5,10 +5,6 @@
     "gitlab-org": "gitlab"
   },
   "miseGlobalConfig": {
-    "trusted_config_paths": [
-      "~/.dev",
-      "~/src/github.com/bai"
-    ],
     "tools": {
       "bun": "latest",
       "rust": "latest",
@@ -36,6 +32,12 @@
       "npm:pnpm": "latest",
       "npm:prettier": "latest",
       "npm:typescript": "latest"
+    },
+    "settings": {
+      "trusted_config_paths": [
+        "~/.dev",
+        "~/src/github.com/bai"
+      ]
     }
   },
   "miseRepoConfig": {

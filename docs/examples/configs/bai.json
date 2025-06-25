@@ -1,15 +1,10 @@
 {
-  "configUrl": "https://raw.githubusercontent.com/bai/dev/refs/heads/ux2/docs/examples/configs/bai.json",
+  "configUrl": "https://raw.githubusercontent.com/bai/dev/main/docs/examples/configs/bai.json",
   "defaultOrg": "flywheelsoftware",
   "orgToProvider": {
     "flywheelsoftware": "gitlab"
   },
   "miseGlobalConfig": {
-    "trusted_config_paths": [
-      "~/.dev",
-      "~/src/gitlab.com/flywheelsoftware",
-      "~/src/github.com/Flywheel-Technologies"
-    ],
     "tools": {
       "bun": "latest",
       "rust": "latest",
@@ -21,12 +16,10 @@
       "fd": "latest",
       "fzf": "latest",
       "gcloud": "latest",
-      "gh": "latest",
-      "glab": "latest",
       "go": "latest",
       "golangci-lint": "latest",
       "jq": "latest",
-      "node": "latest",
+      "node": ["lts", "latest"],
       "python": ["3.12", "latest"],
       "ruby": "latest",
       "terraform": "latest",
@@ -39,6 +32,13 @@
       "npm:pnpm": "latest",
       "npm:prettier": "latest",
       "npm:typescript": "latest"
+    },
+    "settings": {
+      "trusted_config_paths": [
+        "~/.dev",
+        "~/src/gitlab.com/flywheelsoftware",
+        "~/src/github.com/Flywheel-Technologies"
+      ]
     }
   },
   "miseRepoConfig": {
