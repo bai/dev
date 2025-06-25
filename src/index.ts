@@ -2,7 +2,7 @@ import path from "path";
 
 import { Command } from "commander";
 
-import { createCommandLoader, loadAllCommands } from "~/lib/core/command-loader";
+import { loadAllCommands } from "~/lib/core/command-loader";
 import { autoDiscoverCommands, commandRegistry } from "~/lib/core/command-registry";
 import { createConfig } from "~/lib/dev-config";
 import { ensureBaseDirectoryExists } from "~/lib/ensure-base-directory-exists";
@@ -29,7 +29,6 @@ import { getCurrentGitCommitSha } from "~/lib/version";
 
     // Initialize services
     const config = createConfig();
-    const loader = createCommandLoader(logger, config);
 
     // Set up commander program
     const program = new Command();
@@ -55,11 +54,3 @@ import { getCurrentGitCommitSha } from "~/lib/version";
     process.exit(1);
   }
 })();
-
-// Export the functional system for external use
-export { commandRegistry, createCommandRegistry } from "~/lib/core/command-registry";
-export { createCommandLoader, loadCommand, loadAllCommands } from "~/lib/core/command-loader";
-
-export { createConfig } from "~/lib/dev-config";
-export * from "~/lib/core/command-types";
-export * from "~/lib/core/command-utils";
