@@ -43,24 +43,6 @@ import { getCurrentGitCommitSha } from "~/lib/version";
     // Auto-discover and register commands from src/commands
     await registry.autoDiscoverCommands(path.join(__dirname, "commands"));
 
-    // Auto-discover and register commands from git repository root .config/dev/tasks (if in a git repo)
-    if (isGitRepository()) {
-      const gitRoot = getGitRoot();
-      if (gitRoot) {
-        const repoTasksDir = path.join(gitRoot, ".config", "dev", "tasks");
-        try {
-          await registry.autoDiscoverCommands(repoTasksDir);
-          if (isDebugMode()) {
-            logger.debug(`Loaded commands from git repository tasks: ${repoTasksDir}`);
-          }
-        } catch (error: any) {
-          if (isDebugMode()) {
-            logger.debug(`No commands found or error loading from git repository tasks: ${error.message}`);
-          }
-        }
-      }
-    }
-
     // Load all registered commands into commander
     loader.loadAllCommands(program);
 
