@@ -1,7 +1,7 @@
 import { describe, expect, test, vi } from "vitest";
 
-import { CommandLoader } from "~/lib/core/command-loader";
-import { CommandRegistry } from "~/lib/core/command-registry";
+import { buildContext } from "~/lib/core/command-loader";
+import { createCommandRegistry } from "~/lib/core/command-registry";
 import type { ConfigManager, DevCommand, Logger } from "~/lib/core/command-types";
 import { arg } from "~/lib/core/command-utils";
 
@@ -25,9 +25,6 @@ describe("CommandLoader", () => {
         getAll: vi.fn(),
       };
 
-      const registry = new CommandRegistry();
-      const loader = new CommandLoader(registry, mockLogger, mockConfig);
-
       // Create a test command with variadic arguments
       const testCommand: DevCommand = {
         name: "test",
@@ -44,8 +41,8 @@ describe("CommandLoader", () => {
       const commanderArgs = ["build", ["--watch", "--production", "output.js"], {}];
       const mockCommand = {} as any;
 
-      // Access the private buildContext method using type assertion
-      const context = (loader as any).buildContext(testCommand, commanderArgs, mockCommand);
+      // Use the functional buildContext directly
+      const context = buildContext(testCommand, commanderArgs, mockCommand, mockLogger, mockConfig);
 
       // Verify that the context has the correct structure
       expect(context.args.task).toBe("build");
@@ -72,9 +69,6 @@ describe("CommandLoader", () => {
         getAll: vi.fn(),
       };
 
-      const registry = new CommandRegistry();
-      const loader = new CommandLoader(registry, mockLogger, mockConfig);
-
       const testCommand: DevCommand = {
         name: "test",
         description: "Test command",
@@ -90,7 +84,7 @@ describe("CommandLoader", () => {
       const commanderArgs = ["lint", [], {}];
       const mockCommand = {} as any;
 
-      const context = (loader as any).buildContext(testCommand, commanderArgs, mockCommand);
+      const context = buildContext(testCommand, commanderArgs, mockCommand, mockLogger, mockConfig);
 
       expect(context.args.task).toBe("lint");
       expect(context.args.args).toEqual([]);
@@ -113,9 +107,6 @@ describe("CommandLoader", () => {
         getAll: vi.fn(),
       };
 
-      const registry = new CommandRegistry();
-      const loader = new CommandLoader(registry, mockLogger, mockConfig);
-
       const testCommand: DevCommand = {
         name: "test",
         description: "Test command",
@@ -129,7 +120,7 @@ describe("CommandLoader", () => {
       const commanderArgs = ["value1", "value2", {}];
       const mockCommand = {} as any;
 
-      const context = (loader as any).buildContext(testCommand, commanderArgs, mockCommand);
+      const context = buildContext(testCommand, commanderArgs, mockCommand, mockLogger, mockConfig);
 
       expect(context.args.first).toBe("value1");
       expect(context.args.second).toBe("value2");
@@ -152,9 +143,6 @@ describe("CommandLoader", () => {
         getAll: vi.fn(),
       };
 
-      const registry = new CommandRegistry();
-      const loader = new CommandLoader(registry, mockLogger, mockConfig);
-
       const testCommand: DevCommand = {
         name: "test",
         description: "Test command",
@@ -169,7 +157,7 @@ describe("CommandLoader", () => {
       const commanderArgs = ["deploy", "production", ["--force", "--dry-run", "--verbose"], {}];
       const mockCommand = {} as any;
 
-      const context = (loader as any).buildContext(testCommand, commanderArgs, mockCommand);
+      const context = buildContext(testCommand, commanderArgs, mockCommand, mockLogger, mockConfig);
 
       expect(context.args.command).toBe("deploy");
       expect(context.args.target).toBe("production");

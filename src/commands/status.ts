@@ -1,11 +1,12 @@
 import fs from "fs";
+import os from "os";
 import path from "path";
 
 import { parse as parseToml } from "@iarna/toml";
 import { count, desc } from "drizzle-orm";
 
 import { baseSearchDir, devDbPath, devDir, homeDir } from "~/lib/constants";
-import { CommandRegistry } from "~/lib/core/command-registry";
+import { CommandRegistry, createCommandRegistry } from "~/lib/core/command-registry";
 import type { DevCommand } from "~/lib/core/command-types";
 import { spawnCommand } from "~/lib/core/command-utils";
 import { getDevConfig } from "~/lib/dev-config";
@@ -200,7 +201,7 @@ Examples:
     // Check command registry status
     logger.info(`\n📚 Command Registry:`);
     try {
-      const registry = new CommandRegistry();
+      const registry = createCommandRegistry();
       const cmdDir = path.join(__dirname, "..");
       await registry.autoDiscoverCommands(path.join(cmdDir, "commands"));
 

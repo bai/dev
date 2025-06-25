@@ -136,14 +136,25 @@ export interface CommandRegistration {
 /**
  * Error thrown when command execution fails
  */
-export class CommandError extends Error {
-  constructor(
-    message: string,
-    public command: string,
-    public exitCode = 1,
-    public cause?: Error,
-  ) {
-    super(message);
-    this.name = "CommandError";
-  }
-}
+export const createCommandError = (
+  message: string,
+  command: string,
+  exitCode = 1,
+  cause?: Error,
+): Error & { command: string; exitCode: number; cause?: Error } => {
+  const error = new Error(message) as Error & { command: string; exitCode: number; cause?: Error };
+  error.name = "CommandError";
+  error.command = command;
+  error.exitCode = exitCode;
+  error.cause = cause;
+  return error;
+};
+
+/**
+ * Type guard to check if an error is a CommandError
+ */
+export const isCommandError = (error: any): error is Error & { command: string; exitCode: number; cause?: Error } => {
+  return (
+    error && error.name === "CommandError" && typeof error.command === "string" && typeof error.exitCode === "number"
+  );
+};

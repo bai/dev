@@ -1,7 +1,7 @@
 import { spawnSync } from "bun";
 
 import {
-  CommandError,
+  createCommandError,
   type CommandArgument,
   type CommandContext,
   type CommandOption,
@@ -90,7 +90,7 @@ export function validateArgs(context: CommandContext, requiredArgs: string[]): v
 
   for (const argName of requiredArgs) {
     if (args[argName] === undefined || args[argName] === null) {
-      throw new CommandError(`Missing required argument: ${argName}`, "validation");
+      throw createCommandError(`Missing required argument: ${argName}`, "validation");
     }
   }
 }
@@ -164,7 +164,7 @@ export function runCommand(
   const result = spawnCommand(command, options);
 
   if (result.exitCode !== 0) {
-    throw new CommandError(
+    throw createCommandError(
       `Command failed: ${command.join(" ")} (exit code: ${result.exitCode})`,
       "command-execution",
       result.exitCode,
@@ -184,7 +184,7 @@ export function validateTool(toolName: string, context: CommandContext): void {
   const result = spawnCommand(["which", toolName], { silent: true });
 
   if (result.exitCode !== 0) {
-    throw new CommandError(`Required tool '${toolName}' is not installed or not in PATH`, "tool-validation");
+    throw createCommandError(`Required tool '${toolName}' is not installed or not in PATH`, "tool-validation");
   }
 }
 
@@ -270,7 +270,7 @@ export function validateChoice<T extends string>(
 
   if (!choices.includes(value)) {
     const type = isOption ? "option" : "argument";
-    throw new CommandError(
+    throw createCommandError(
       `Invalid ${type} '${argOrOptionName}': ${value}. Must be one of: ${choices.join(", ")}`,
       "validation",
     );
@@ -282,7 +282,7 @@ export function validateChoice<T extends string>(
 /**
  * Utility for parsing numeric values with validation
  */
-export function parseNumber(
+export function validateNumber(
   context: CommandContext,
   argOrOptionName: string,
   options?: {
@@ -292,25 +292,28 @@ export function parseNumber(
     isOption?: boolean;
   },
 ): number {
-  const { logger } = context;
   const value = options?.isOption ? context.options[argOrOptionName] : context.args[argOrOptionName];
+
+  if (value === undefined || value === null) {
+    throw createCommandError(`Missing required argument: ${argOrOptionName}`, "validation");
+  }
 
   const num = Number(value);
 
   if (isNaN(num)) {
-    throw new CommandError(`Invalid number for ${argOrOptionName}: ${value}`, "validation");
+    throw createCommandError(`Invalid number for ${argOrOptionName}: ${value}`, "validation");
   }
 
   if (options?.integer && !Number.isInteger(num)) {
-    throw new CommandError(`${argOrOptionName} must be an integer, got: ${value}`, "validation");
+    throw createCommandError(`${argOrOptionName} must be an integer, got: ${value}`, "validation");
   }
 
   if (options?.min !== undefined && num < options.min) {
-    throw new CommandError(`${argOrOptionName} must be at least ${options.min}, got: ${num}`, "validation");
+    throw createCommandError(`${argOrOptionName} must be at least ${options.min}, got: ${num}`, "validation");
   }
 
   if (options?.max !== undefined && num > options.max) {
-    throw new CommandError(`${argOrOptionName} must be at most ${options.max}, got: ${num}`, "validation");
+    throw createCommandError(`${argOrOptionName} must be at most ${options.max}, got: ${num}`, "validation");
   }
 
   return num;
