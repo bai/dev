@@ -24,6 +24,8 @@ describe("CommandLoader", () => {
         getAll: vi.fn(),
       };
 
+      const mockCommand = {} as any;
+
       // Create a test command with variadic arguments
       const testCommand: DevCommand = {
         name: "test",
@@ -38,7 +40,6 @@ describe("CommandLoader", () => {
       // Simulate commander.js args array: [task, [variadic_args], options]
       // Commander.js collects variadic arguments into an array automatically
       const commanderArgs = ["build", ["--watch", "--production", "output.js"], {}];
-      const mockCommand = {} as any;
 
       // Use the functional buildContext directly
       const context = buildContext(testCommand, commanderArgs, mockCommand, mockLogger, mockConfig);
@@ -68,6 +69,8 @@ describe("CommandLoader", () => {
         getAll: vi.fn(),
       };
 
+      const mockCommand = {} as any;
+
       const testCommand: DevCommand = {
         name: "test",
         description: "Test command",
@@ -81,7 +84,6 @@ describe("CommandLoader", () => {
       // Only task provided, no additional args
       // Commander.js provides an empty array for variadic args when none are provided
       const commanderArgs = ["lint", [], {}];
-      const mockCommand = {} as any;
 
       const context = buildContext(testCommand, commanderArgs, mockCommand, mockLogger, mockConfig);
 
@@ -106,6 +108,8 @@ describe("CommandLoader", () => {
         getAll: vi.fn(),
       };
 
+      const mockCommand = {} as any;
+
       const testCommand: DevCommand = {
         name: "test",
         description: "Test command",
@@ -117,7 +121,6 @@ describe("CommandLoader", () => {
       };
 
       const commanderArgs = ["value1", "value2", {}];
-      const mockCommand = {} as any;
 
       const context = buildContext(testCommand, commanderArgs, mockCommand, mockLogger, mockConfig);
 
@@ -142,6 +145,8 @@ describe("CommandLoader", () => {
         getAll: vi.fn(),
       };
 
+      const mockCommand = {} as any;
+
       const testCommand: DevCommand = {
         name: "test",
         description: "Test command",
@@ -154,7 +159,6 @@ describe("CommandLoader", () => {
       };
 
       const commanderArgs = ["deploy", "production", ["--force", "--dry-run", "--verbose"], {}];
-      const mockCommand = {} as any;
 
       const context = buildContext(testCommand, commanderArgs, mockCommand, mockLogger, mockConfig);
 

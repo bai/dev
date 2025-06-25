@@ -44,27 +44,24 @@ const buildContext = (
   const commanderCmd = args.pop() as Command;
 
   // Get the parsed option values using commander's opts() method
-  // For tests, commanderCmd might be a mock object without opts(), so fall back to {}
   const options = commanderCmd && typeof commanderCmd.opts === "function" ? commanderCmd.opts() : commanderCmd || {};
 
   // Build args object from remaining arguments and command definition
   const argsObj: Record<string, any> = {};
   if (devCommand.arguments) {
-    let argIndex = 0;
-
     devCommand.arguments.forEach((arg, definitionIndex) => {
       let value;
 
       if (arg.variadic) {
         // For variadic arguments, commander.js already collects them into an array
-        value = args[argIndex];
+        value = args[definitionIndex];
         // If the value is not an array or is undefined, use default or empty array
         if (!Array.isArray(value)) {
           value = arg.defaultValue !== undefined ? arg.defaultValue : [];
         }
       } else {
         // For non-variadic arguments, get the value at the current index
-        value = args[argIndex];
+        value = args[definitionIndex];
 
         // Handle default values for undefined arguments
         if (value === undefined && arg.defaultValue !== undefined) {
@@ -73,7 +70,6 @@ const buildContext = (
       }
 
       argsObj[arg.name] = value;
-      argIndex++;
     });
   }
 
@@ -165,25 +161,12 @@ export const loadCommand = (devCommand: DevCommand, program: Command, logger: Lo
     const context = buildContext(devCommand, args, command, logger, config);
 
     try {
-      // Run validation if provided
-      if (devCommand.validate) {
-        const isValid = await devCommand.validate(context);
-        if (!isValid) {
-          process.exit(1);
-        }
-      }
-
       // Execute the command
       await devCommand.exec(context);
     } catch (error) {
       handleCommandError(error, devCommand.name, logger);
     }
   });
-
-  // Run custom setup if provided
-  if (devCommand.setup) {
-    devCommand.setup(command);
-  }
 };
 
 /**
@@ -198,17 +181,6 @@ export const loadAllCommands = (
   commands.forEach((command) => {
     loadCommand(command, program, logger, config);
   });
-};
-
-/**
- * Functional command loader manager for advanced use cases
- */
-export const commandLoader = {
-  loadCommand,
-  loadAllCommands,
-  buildContext,
-  buildArgumentSyntax,
-  handleCommandError,
 };
 
 // Export individual functions for direct use

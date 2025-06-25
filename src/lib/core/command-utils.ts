@@ -5,8 +5,6 @@ import {
   type CommandArgument,
   type CommandContext,
   type CommandOption,
-  type DevCommand,
-  type Logger,
 } from "~/lib/core/command-types";
 
 /**
@@ -54,42 +52,11 @@ export function option(
 }
 
 /**
- * Utility for creating simple commands
- */
-export function createCommand(config: {
-  name: string;
-  description: string;
-  help?: string;
-  arguments?: CommandArgument[];
-  options?: CommandOption[];
-  aliases?: string[];
-  hidden?: boolean;
-  exec: (context: CommandContext) => Promise<void> | void;
-  setup?: (command: any) => void;
-  validate?: (context: CommandContext) => boolean | Promise<boolean>;
-}): DevCommand {
-  return {
-    name: config.name,
-    description: config.description,
-    help: config.help,
-    arguments: config.arguments,
-    options: config.options,
-    aliases: config.aliases,
-    hidden: config.hidden,
-    exec: config.exec,
-    setup: config.setup,
-    validate: config.validate,
-  };
-}
-
-/**
  * Validate that context has required arguments
  */
 export function validateArgs(context: CommandContext, requiredArgs: string[]): void {
-  const { args, logger } = context;
-
   for (const argName of requiredArgs) {
-    if (args[argName] === undefined || args[argName] === null) {
+    if (context.args[argName] === undefined || context.args[argName] === null) {
       throw createCommandError(`Missing required argument: ${argName}`, "validation");
     }
   }
@@ -198,82 +165,4 @@ export function isGitRepository(cwd?: string): boolean {
   });
 
   return result.exitCode === 0;
-}
-
-/**
- * Utility for getting git repository root
- */
-export function getGitRoot(cwd?: string): string | undefined {
-  const result = spawnCommand(["git", "rev-parse", "--show-toplevel"], {
-    cwd,
-    silent: true,
-  });
-
-  if (result.exitCode === 0 && result.stdout) {
-    return result.stdout.trim();
-  }
-
-  return undefined;
-}
-
-/**
- * Utility for handling common validation patterns
- */
-export function validateChoice<T extends string>(
-  context: CommandContext,
-  argOrOptionName: string,
-  choices: T[],
-  isOption = false,
-): T {
-  const value = isOption ? context.options[argOrOptionName] : context.args[argOrOptionName];
-
-  if (!choices.includes(value)) {
-    const type = isOption ? "option" : "argument";
-    throw createCommandError(
-      `Invalid ${type} '${argOrOptionName}': ${value}. Must be one of: ${choices.join(", ")}`,
-      "validation",
-    );
-  }
-
-  return value;
-}
-
-/**
- * Utility for parsing numeric values with validation
- */
-export function validateNumber(
-  context: CommandContext,
-  argOrOptionName: string,
-  options?: {
-    min?: number;
-    max?: number;
-    integer?: boolean;
-    isOption?: boolean;
-  },
-): number {
-  const value = options?.isOption ? context.options[argOrOptionName] : context.args[argOrOptionName];
-
-  if (value === undefined || value === null) {
-    throw createCommandError(`Missing required argument: ${argOrOptionName}`, "validation");
-  }
-
-  const num = Number(value);
-
-  if (isNaN(num)) {
-    throw createCommandError(`Invalid number for ${argOrOptionName}: ${value}`, "validation");
-  }
-
-  if (options?.integer && !Number.isInteger(num)) {
-    throw createCommandError(`${argOrOptionName} must be an integer, got: ${value}`, "validation");
-  }
-
-  if (options?.min !== undefined && num < options.min) {
-    throw createCommandError(`${argOrOptionName} must be at least ${options.min}, got: ${num}`, "validation");
-  }
-
-  if (options?.max !== undefined && num > options.max) {
-    throw createCommandError(`${argOrOptionName} must be at most ${options.max}, got: ${num}`, "validation");
-  }
-
-  return num;
 }

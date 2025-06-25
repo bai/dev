@@ -208,9 +208,6 @@ Examples:
       logger.info(`   ✅ Registry initialized successfully`);
       logger.info(`   📊 Total commands: ${stats.total}`);
       logger.info(`   📂 Commands directory: ${path.join(cmdDir, "commands")}`);
-      logger.info(`   🔍 Auto-discovered: ${stats.autoDiscovered}`);
-      logger.info(`   📝 Manually registered: ${stats.manuallyRegistered}`);
-      logger.info(`   🔒 Hidden commands: ${stats.hidden}`);
       logger.info(`   🏷️  Commands with aliases: ${stats.withAliases}`);
 
       if (stats.total > 0) {

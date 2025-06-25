@@ -17,7 +17,7 @@ Examples:
   `,
 
   async exec(context) {
-    const { logger, config } = context;
+    const { logger } = context;
 
     logger.info("🚀 dev: A CLI tool for quick directory navigation and environment management.");
     logger.info("");
@@ -26,11 +26,12 @@ Examples:
     // Get all commands from the registry through the command context
     const registry = (context as any).registry;
     if (registry) {
-      const commands = registry.getVisible().sort((a: DevCommand, b: DevCommand) => a.name.localeCompare(b.name));
+      const commands = registry
+        .getAll()
+        .filter((cmd: DevCommand) => cmd.name !== "help") // Skip showing help for help command
+        .sort((a: DevCommand, b: DevCommand) => a.name.localeCompare(b.name));
 
       for (const command of commands) {
-        if (command.name === "help") continue; // Skip showing help for help command
-
         const aliasText = command.aliases ? ` (aliases: ${command.aliases.join(", ")})` : "";
         logger.info(`  dev ${command.name.padEnd(20)} ${command.description}${aliasText}`);
       }

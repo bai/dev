@@ -24,15 +24,6 @@ export interface DevCommand {
 
   /** Main execution function */
   exec(context: CommandContext): Promise<void> | void;
-
-  /** Optional setup function called before exec */
-  setup?(command: Command): void;
-
-  /** Optional validation function */
-  validate?(context: CommandContext): boolean | Promise<boolean>;
-
-  /** Whether this command should be hidden from help (optional) */
-  hidden?: boolean;
 }
 
 /**
@@ -129,7 +120,7 @@ export interface ConfigManager {
  */
 export interface CommandRegistration {
   command: DevCommand;
-  filePath?: string; // For auto-discovered commands
+  filePath?: string;
   source: "auto-discovered" | "manually-registered";
 }
 
