@@ -14,6 +14,18 @@ export default tseslint.config(
   },
 
   {
+    rules: {
+      "no-process-exit": ["error"],
+    },
+  },
+  {
+    files: ["src/index.ts"],
+    rules: {
+      "no-process-exit": "off", // Allow only in main entry point
+    },
+  },
+
+  {
     rules: eslintConfigPrettier,
   },
 

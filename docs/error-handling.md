@@ -16,6 +16,8 @@ This document describes the modern, typed error handling architecture for our Bu
    The logger presents errors; the error handler decides when to exit.
 6. **Graceful degradation**
    Provide recovery mechanisms and meaningful fallbacks where possible.
+7. **CLI-specific error types**
+   Specialized error classes for common CLI operations like tool upgrades, directory navigation, and fuzzy search.
 
 ## 2  Error Classes & Exit Codes
 
@@ -26,6 +28,21 @@ export interface ErrorContext {
   args?: Record<string, unknown>;
   cwd?: string;
   toolCommand?: string[];
+  timestamp?: string;
+  userId?: string;
+  sessionId?: string;
+  environment?: 'development' | 'production' | 'test';
+  platform?: NodeJS.Platform;
+  nodeVersion?: string;
+  // For file operations
+  fileOperationId?: string;
+  // For network operations
+  requestId?: string;
+  retryAttempt?: number;
+  // For tool operations
+  currentVersion?: string;
+  requiredVersion?: string;
+  reason?: string;
   [key: string]: unknown;
 }
 
@@ -100,6 +117,45 @@ export class NetworkError extends ExternalToolError {
   }
 }
 
+export class ToolUpgradeError extends ExternalToolError {
+  constructor(
+    tool: string,
+    currentVersion?: string,
+    requiredVersion?: string,
+    context?: ErrorContext
+  ) {
+    super(`${tool} upgrade failed`, tool, undefined, undefined, {
+      ...context,
+      currentVersion,
+      requiredVersion
+    });
+  }
+}
+
+export class DirectoryNavigationError extends CLIError {
+  readonly exitCode = 5;
+  constructor(
+    targetPath: string,
+    reason: 'not_found' | 'permission_denied' | 'not_directory',
+    context?: ErrorContext
+  ) {
+    super(
+      `Cannot navigate to directory: ${targetPath}`,
+      { ...context, path: targetPath, operation: 'navigation', reason }
+    );
+  }
+}
+
+export class FuzzySearchError extends ExternalToolError {
+  constructor(
+    message: string,
+    exitCode?: number,
+    context?: ErrorContext
+  ) {
+    super(`Fuzzy search failed: ${message}`, 'fzf', exitCode, undefined, context);
+  }
+}
+
 export class ConfigurationError extends CLIError {
   readonly exitCode = 4;
   constructor(message: string, public readonly configPath?: string, context?: ErrorContext) {
@@ -123,6 +179,41 @@ export abstract class RecoverableError extends CLIError {
   abstract recover(): Promise<void> | void;
 }
 
+export class NetworkErrorWithFallback extends RecoverableError {
+  readonly exitCode = 3;
+
+  constructor(
+    message: string,
+    private fallbackAction: () => Promise<void>,
+    context?: ErrorContext
+  ) {
+    super(message, context);
+  }
+
+  async recover(): Promise<void> {
+    logger.warn('⚠️  Network unavailable, using fallback strategy...');
+    await this.fallbackAction();
+  }
+}
+
+export class ToolMissingError extends RecoverableError {
+  readonly exitCode = 3;
+
+  constructor(
+    public readonly toolName: string,
+    public readonly installCommand: string,
+    context?: ErrorContext
+  ) {
+    super(`Required tool '${toolName}' is not installed`, context);
+  }
+
+  async recover(): Promise<void> {
+    logger.warn(`⚠️  Installing missing tool: ${this.toolName}`);
+    logger.info(`💡 Run: ${this.installCommand}`);
+    // Could implement auto-installation logic here
+  }
+}
+
 export class UnexpectedError extends CLIError {
   readonly exitCode = 99;
 }
@@ -142,29 +233,63 @@ export interface SerializedError {
 
 Exit-code summary:
 
-| Code | Class                | Typical cause                        |
-|-----:|----------------------|--------------------------------------|
-|  0   | —                    | Success                              |
-|  1   | `CLIError`           | Generic command failure              |
-|  2   | `UserInputError`     | Invalid argument / flag / path       |
-|  3   | `ExternalToolError`  | `git`, `fzf`, `mise`, etc.           |
-|  4   | `ConfigurationError` | Invalid or missing configuration     |
-|  5   | `FileSystemError`    | File/directory access issues         |
-| 99   | `UnexpectedError`    | Uncaught, truly unexpected exceptions|
+| Code | Class                         | Typical cause                        |
+|-----:|-------------------------------|--------------------------------------|
+|  0   | —                             | Success                              |
+|  1   | `CLIError`                    | Generic command failure              |
+|  2   | `UserInputError`              | Invalid argument / flag / path       |
+|  3   | `ExternalToolError`           | `git`, `fzf`, `mise`, etc.           |
+|  3   | `ToolUpgradeError`            | Tool upgrade failures                |
+|  3   | `FuzzySearchError`            | fzf search failures                  |
+|  3   | `NetworkErrorWithFallback`    | Network errors with recovery         |
+|  3   | `ToolMissingError`            | Missing required tools               |
+|  4   | `ConfigurationError`          | Invalid or missing configuration     |
+|  5   | `FileSystemError`             | File/directory access issues         |
+|  5   | `DirectoryNavigationError`    | CD navigation failures               |
+| 99   | `UnexpectedError`             | Uncaught, truly unexpected exceptions|
 
-## 3  Central Error Handler
+## 3  Enhanced Central Error Handler
 
 ```ts
 // src/lib/handle-error.ts
+export interface ErrorHandlerOptions {
+  maxSameError?: number;
+  enableRecovery?: boolean;
+  enableTelemetry?: boolean;
+  suppressSpam?: boolean;
+}
+
 const errorCounts = new Map<string, number>();
 const MAX_SAME_ERROR = 3;
 
-export function handleFatal(err: unknown, log: Logger): never {
-  const errorKey = err instanceof Error ? `${err.name}:${err.message}` : 'unknown';
+export function handleFatal(
+  err: unknown,
+  log: Logger,
+  options: ErrorHandlerOptions = {}
+): never {
+  const {
+    maxSameError = MAX_SAME_ERROR,
+    enableRecovery = true,
+    suppressSpam = true
+  } = options;
+
+  // Enhanced error tracking with truncated messages to avoid memory issues
+  const errorKey = err instanceof Error ?
+    `${err.name}:${err.message.slice(0, 100)}` : 'unknown';
   const count = errorCounts.get(errorKey) || 0;
 
+  // Try recovery first for recoverable errors
+  if (enableRecovery && isRecoverableError(err)) {
+    try {
+      await err.recover();
+      return; // Recovery successful, don't exit
+    } catch (recoveryError) {
+      log.error('❌ Recovery failed, proceeding with fatal error handling');
+    }
+  }
+
   if (isCLIError(err)) {
-    if (count < MAX_SAME_ERROR) {
+    if (count < maxSameError) {
       log.error(`❌ ${err.message}`);
 
       // Show context in debug mode
@@ -178,7 +303,7 @@ export function handleFatal(err: unknown, log: Logger): never {
       }
 
       errorCounts.set(errorKey, count + 1);
-    } else if (count === MAX_SAME_ERROR) {
+    } else if (count === maxSameError && suppressSpam) {
       log.error(`❌ Suppressing further instances of: ${err.name}`);
       errorCounts.set(errorKey, count + 1);
     }
@@ -187,7 +312,7 @@ export function handleFatal(err: unknown, log: Logger): never {
   }
 
   // Handle unexpected errors
-  if (count < MAX_SAME_ERROR) {
+  if (count < maxSameError) {
     log.error("💥 Unexpected error:", err);
     errorCounts.set(errorKey, count + 1);
   }
@@ -279,146 +404,315 @@ export const mapResult = <T, U, E extends CLIError>(
   return result.ok ? ok(fn(result.value)) : result;
 };
 
-// Example usage
-export const tryParseConfig = (): Result<DevConfig, ConfigurationError> => {
+// CLI-specific result helpers
+export const tryToolOperation = <T>(
+  operation: () => T,
+  toolName: string,
+  context?: ErrorContext
+): Result<T, ExternalToolError> => {
   try {
-    return ok(getDevConfig());
+    return ok(operation());
   } catch (error) {
     if (error instanceof CLIError) {
-      return err(error as ConfigurationError);
+      return err(error as ExternalToolError);
     }
-    return err(new ConfigurationError('Failed to parse config', undefined, { cause: error }));
+    return err(new ExternalToolError(
+      `Tool operation failed: ${error}`,
+      toolName,
+      undefined,
+      undefined,
+      context
+    ));
+  }
+};
+
+export const tryFileOperation = <T>(
+  operation: () => T,
+  path: string,
+  operationType: string,
+  context?: ErrorContext
+): Result<T, FileSystemError> => {
+  try {
+    return ok(operation());
+  } catch (error) {
+    if (error instanceof CLIError) {
+      return err(error as FileSystemError);
+    }
+    return err(new FileSystemError(
+      `File operation failed: ${error}`,
+      path,
+      operationType,
+      context
+    ));
   }
 };
 ```
 
-## 6  Migration Strategy
+## 6  Enhanced Testing Patterns
 
-1. **Create error infrastructure** - implement `errors.ts`, `handle-error.ts`, and `result-types.ts`
-2. **Update entry point** - implement centralized error handling with process event handlers
-3. **Replace `process.exit` calls systematically**:
-   - Command validation → `UserInputError` or `ValidationError`
-   - Tool failures → `ExternalToolError`, `GitError`, `NetworkError`
-   - File operations → `FileSystemError`
-   - Config issues → `ConfigurationError`
-   - Unknown errors → `UnexpectedError`
-4. **Update command implementations** - use proper error throwing instead of exits
-5. **Enhance tests** - assert on typed errors with context validation
-6. **Add ESLint rule** - forbid `process.exit` outside `src/index.ts`
+```ts
+// src/lib/test-utils.ts
+import { describe, expect, it, vi } from 'vitest';
+import type { Command } from 'commander';
+import type { CommandContext, Logger, ConfigManager } from '~/lib/core/command-types';
 
-## 7  Coding Guidelines
+export const createTestLogger = (): Logger => ({
+  info: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+  debug: vi.fn(),
+  success: vi.fn(),
+  child: vi.fn(() => createTestLogger())
+});
 
-- **Be specific with error types** - use `GitError` instead of generic `ExternalToolError`
-- **Include rich context** - add relevant details via `ErrorContext`
+export const createTestConfig = (): ConfigManager => ({
+  get: vi.fn(),
+  set: vi.fn(),
+  has: vi.fn(),
+  getAll: vi.fn(() => ({}))
+});
+
+export const createTestContext = (overrides: Partial<CommandContext> = {}): CommandContext => ({
+  args: {},
+  options: {},
+  command: {} as Command,
+  logger: createTestLogger(),
+  config: createTestConfig(),
+  ...overrides
+});
+
+export const expectCLIError = async <T extends CLIError>(
+  operation: () => Promise<any>,
+  ErrorClass: new (...args: any[]) => T,
+  expectedProps?: Partial<T>
+) => {
+  await expect(operation()).rejects.toThrow(ErrorClass);
+
+  if (expectedProps) {
+    try {
+      await operation();
+    } catch (error) {
+      if (error instanceof ErrorClass) {
+        Object.entries(expectedProps).forEach(([key, value]) => {
+          expect((error as any)[key]).toEqual(value);
+        });
+      }
+    }
+  }
+};
+
+export const expectErrorWithContext = async (
+  operation: () => Promise<any>,
+  expectedContext: Partial<ErrorContext>
+) => {
+  try {
+    await operation();
+    throw new Error('Expected operation to throw');
+  } catch (error) {
+    if (error instanceof CLIError && error.context) {
+      Object.entries(expectedContext).forEach(([key, value]) => {
+        expect(error.context![key]).toEqual(value);
+      });
+    } else {
+      throw new Error('Error does not have expected context');
+    }
+  }
+};
+
+// Usage examples
+describe('error handling integration', () => {
+  it('handles tool upgrade failures with proper context', async () => {
+    await expectCLIError(
+      () => ensureMiseVersionOrUpgrade(),
+      ToolUpgradeError,
+      { tool: 'mise', exitCode: 3 }
+    );
+  });
+
+  it('handles directory navigation with detailed context', async () => {
+    await expectErrorWithContext(
+      () => handleCdToPath('/nonexistent/path'),
+      {
+        path: '/nonexistent/path',
+        operation: 'navigation',
+        reason: 'not_found'
+      }
+    );
+  });
+
+  it('provides recovery for network errors', async () => {
+    const fallbackCalled = vi.fn();
+    const networkError = new NetworkErrorWithFallback(
+      'Connection failed',
+      fallbackCalled
+    );
+
+    await networkError.recover();
+    expect(fallbackCalled).toHaveBeenCalled();
+  });
+});
+```
+
+## 7  JSON Output Support
+
+```ts
+// src/lib/json-output.ts
+export interface CLIResult<T = any> {
+  success: boolean;
+  data?: T;
+  error?: SerializedError;
+  metadata: {
+    command: string;
+    timestamp: string;
+    duration: number;
+    version: string;
+    platform: string;
+    nodeVersion: string;
+  };
+}
+
+export function formatSuccessResult<T>(
+  result: T,
+  context: CommandContext,
+  startTime: number
+): CLIResult<T> {
+  return {
+    success: true,
+    data: result,
+    metadata: {
+      command: context.command.name(),
+      timestamp: new Date().toISOString(),
+      duration: Date.now() - startTime,
+      version: getCurrentGitCommitSha(),
+      platform: process.platform,
+      nodeVersion: process.version
+    }
+  };
+}
+
+export function formatErrorResult(
+  error: CLIError,
+  context: CommandContext,
+  startTime: number
+): CLIResult {
+  return {
+    success: false,
+    error: error.toJSON(),
+    metadata: {
+      command: context.command.name(),
+      timestamp: new Date().toISOString(),
+      duration: Date.now() - startTime,
+      version: getCurrentGitCommitSha(),
+      platform: process.platform,
+      nodeVersion: process.version
+    }
+  };
+}
+
+// Usage in commands that support --json flag
+export function withJSONOutput<T>(
+  operation: () => Promise<T>,
+  context: CommandContext
+): Promise<void> {
+  return new Promise(async (resolve, reject) => {
+    const startTime = Date.now();
+
+    try {
+      const result = await operation();
+
+      if (context.options.json) {
+        console.log(JSON.stringify(formatSuccessResult(result, context, startTime), null, 2));
+      }
+
+      resolve();
+    } catch (error) {
+      if (context.options.json && isCLIError(error)) {
+        console.log(JSON.stringify(formatErrorResult(error, context, startTime), null, 2));
+        Bun.exit(error.exitCode);
+      }
+
+      reject(error);
+    }
+  });
+}
+```
+
+## 8  Coding Guidelines
+
+- **Use specific error types** - prefer `ToolUpgradeError` over generic `ExternalToolError`
+- **Include rich context** - add all relevant details via `ErrorContext`
 - **Aggregate validation errors** - collect all issues before throwing `ValidationError`
 - **Use Result types for expected failures** - operations that commonly fail gracefully
 - **Provide actionable error messages** - tell users what went wrong and how to fix it
 - **Never swallow errors** - re-throw with additional context if needed
 - **Prefer early validation** - catch issues before expensive operations
+- **Implement recovery for transient failures** - network issues, missing tools, etc.
+- **Use structured logging** - consistent error formatting across the CLI
 
-## 8  Testing Patterns
+## 9  Recovery Implementation Examples
 
 ```ts
-// src/lib/test-utils.ts
-export const expectError = <T extends CLIError>(
-  ErrorClass: new (...args: any[]) => T,
-  expectedMessage?: string | RegExp
-) => ({
-  async toThrow(promise: Promise<any>) {
-    await expect(promise).rejects.toThrow(ErrorClass);
-    if (expectedMessage) {
-      await expect(promise).rejects.toThrow(expectedMessage);
-    }
-  }
-});
-
-// Usage examples
-describe('config validation', () => {
-  test('throws ValidationError for missing required fields', async () => {
-    await expectError(ValidationError, /required field/).toThrow(
-      validateConfig({})
+// Network operations with intelligent fallback
+export async function fetchWithFallback<T>(
+  primaryFetch: () => Promise<T>,
+  fallbackFetch: () => Promise<T>,
+  context?: ErrorContext
+): Promise<T> {
+  try {
+    return await primaryFetch();
+  } catch (error) {
+    const networkError = new NetworkErrorWithFallback(
+      'Primary fetch failed, using fallback',
+      fallbackFetch,
+      context
     );
-  });
 
-  test('includes context in errors', async () => {
-    try {
-      await parseInvalidConfig();
-    } catch (error) {
-      expect(error).toBeInstanceOf(ConfigurationError);
-      expect(error.context).toMatchObject({
-        configPath: expect.any(String)
-      });
-    }
-  });
-});
+    await networkError.recover();
+    return fallbackFetch();
+  }
+}
 
-describe('result types', () => {
-  test('handles success cases', () => {
-    const result = tryParseConfig();
-    if (result.ok) {
-      expect(result.value).toHaveProperty('baseSearchDir');
-    }
-  });
+// Tool installation with auto-recovery
+export async function ensureToolOrInstall(
+  toolName: string,
+  installCommand: string,
+  validator: () => boolean
+): Promise<void> {
+  if (validator()) return;
 
-  test('handles error cases gracefully', () => {
-    const result = tryParseInvalidConfig();
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.error).toBeInstanceOf(ConfigurationError);
-    }
-  });
-});
+  const toolError = new ToolMissingError(toolName, installCommand);
+  await handleWithRecovery(toolError, logger);
+
+  // Verify installation succeeded
+  if (!validator()) {
+    throw new ExternalToolError(
+      `Failed to install ${toolName}`,
+      toolName,
+      1,
+      undefined,
+      { installCommand }
+    );
+  }
+}
 ```
 
-## 9  Recovery Examples
+## 10  ESLint Configuration
 
 ```ts
-// Network operations with fallback
-export class NetworkError extends RecoverableError {
-  readonly exitCode = 3;
-
-  async recover() {
-    logger.warn('Network unavailable, using cached data...');
-    // Implement fallback logic
-  }
-}
-
-// Usage in commands
-async function updateCommand(context: CommandContext) {
-  try {
-    await fetchLatestData();
-  } catch (error) {
-    if (isRecoverableError(error)) {
-      await error.recover();
-      return; // Continue with fallback behavior
+// eslint.config.ts - Add this rule to prevent process.exit outside main entry point
+export default [
+  {
+    rules: {
+      'no-process-exit': ['error'],
     }
-    throw error; // Re-throw non-recoverable errors
+  },
+  {
+    files: ['src/index.ts'],
+    rules: {
+      'no-process-exit': 'off' // Allow only in main entry point
+    }
   }
-}
+];
 ```
 
-## 10  JSON Output Support
-
-```ts
-// In commands that support --json flag
-if (context.flags.json) {
-  try {
-    const result = await executeOperation();
-    console.log(JSON.stringify({ success: true, data: result }));
-  } catch (error) {
-    if (isCLIError(error)) {
-      console.log(JSON.stringify({ success: false, error: error.toJSON() }));
-      Bun.exit(error.exitCode);
-    }
-    throw error;
-  }
-}
-```
-
-## 11  Future Extensions
-
-- **Contextual help suggestions** - recommend fixes based on error type and context
-- **Error analytics** - track common error patterns for UX improvements
-- **Retry mechanisms** - automatic retry for transient failures with exponential backoff
-- **Error reporting** - optional telemetry for production deployments
-- **Interactive error resolution** - prompt users for common fixes
+This error handling architecture provides a robust, type-safe foundation for the CLI with comprehensive error classification, recovery mechanisms, and excellent developer experience through detailed context and testing utilities.
