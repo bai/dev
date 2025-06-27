@@ -200,8 +200,8 @@ describe("CD Command", () => {
       };
 
       // Mock Bun spawn function
-      spawnSpy = vi.spyOn(Bun, "spawn");
-      spawnSpy.mockReturnValue(mockProc);
+      vi.stubGlobal("Bun", { spawn: vi.fn().mockReturnValue(mockProc) });
+      spawnSpy = vi.mocked(Bun.spawn);
     });
 
     test("should handle successful fzf selection", async () => {
