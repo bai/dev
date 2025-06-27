@@ -4,6 +4,7 @@ import path from "path";
 import type { DevCommand } from "~/lib/core/command-types";
 import { arg, getArg, hasOption, option, runCommand } from "~/lib/core/command-utils";
 import { devConfig } from "~/lib/dev-config";
+import { ExternalToolError, FileSystemError, UserInputError } from "~/lib/errors";
 import { expandToFullGitUrl, parseRepoUrlToPath } from "~/lib/get-repo-url";
 import { handleCdToPath } from "~/lib/handle-cd-to-path";
 
@@ -42,41 +43,42 @@ Examples:
   async exec(context) {
     const { logger } = context;
 
-    try {
-      const repoArg = getArg(context, "repo");
-      const forceGitlab = hasOption(context, "gitlab");
-      const forceGithub = hasOption(context, "github");
+    const repoArg = getArg(context, "repo");
+    const forceGitlab = hasOption(context, "gitlab");
+    const forceGithub = hasOption(context, "github");
 
-      if (forceGitlab && forceGithub) {
-        throw new Error("Cannot specify both --gitlab and --github options");
-      }
-
-      // Convert to forced provider format for expandToFullGitUrl
-      let forceProvider: "github" | "gitlab" | undefined;
-      if (forceGitlab) {
-        forceProvider = "gitlab";
-      } else if (forceGithub) {
-        forceProvider = "github";
-      }
-
-      // Expand shorthand to full URL
-      const repoUrl = expandToFullGitUrl(repoArg, devConfig.defaultOrg, devConfig.orgToProvider, forceProvider);
-
-      // Parse URL to get local path
-      const repoPath = parseRepoUrlToPath(repoUrl);
-      if (!repoPath) {
-        throw new Error("Could not determine local path for repository");
-      }
-
-      logger.info("🚀 Cloning repository...");
-      logger.info(`   Repository: ${repoUrl}`);
-      logger.info(`   Local path: ${repoPath}`);
-
-      await cloneRepository(repoUrl, repoPath, logger, context);
-    } catch (error: any) {
-      logger.error(`Clone command failed: ${error.message}`);
-      throw error;
+    if (forceGitlab && forceGithub) {
+      throw new UserInputError("Cannot specify both --gitlab and --github options", {
+        command: "clone",
+        extra: { forceGitlab, forceGithub },
+      });
     }
+
+    // Convert to forced provider format for expandToFullGitUrl
+    let forceProvider: "github" | "gitlab" | undefined;
+    if (forceGitlab) {
+      forceProvider = "gitlab";
+    } else if (forceGithub) {
+      forceProvider = "github";
+    }
+
+    // Expand shorthand to full URL
+    const repoUrl = expandToFullGitUrl(repoArg, devConfig.defaultOrg, devConfig.orgToProvider, forceProvider);
+
+    // Parse URL to get local path
+    const repoPath = parseRepoUrlToPath(repoUrl);
+    if (!repoPath) {
+      throw new UserInputError("Could not determine local path for repository", {
+        command: "clone",
+        extra: { repoArg, repoUrl },
+      });
+    }
+
+    logger.info("🚀 Cloning repository...");
+    logger.info(`   Repository: ${repoUrl}`);
+    logger.info(`   Local path: ${repoPath}`);
+
+    await cloneRepository(repoUrl, repoPath, logger, context);
   },
 };
 
@@ -105,7 +107,10 @@ async function cloneRepository(repoUrl: string, targetPath: string, logger: any,
       } else if (error.code === "ENOSPC") {
         errorMessage += "\n💡 No space left on device. Free up some disk space and try again.";
       }
-      throw new Error(errorMessage);
+      throw new FileSystemError(errorMessage, {
+        command: "clone",
+        extra: { targetPath, parentDir, errorCode: error.code },
+      });
     }
   }
 
@@ -132,16 +137,26 @@ async function cloneRepository(repoUrl: string, targetPath: string, logger: any,
     }
 
     // Add more context for common git errors
-    let errorMessage = error.message;
     if (error.message.includes("exit code 128")) {
-      errorMessage += "\n💡 Repository might not exist or you may not have permission to access it.";
-      errorMessage += "\n   - Check if the repository URL is correct";
-      errorMessage += "\n   - Verify you have access to the repository";
-      errorMessage += "\n   - Try authenticating with 'dev auth'";
+      throw new ExternalToolError(
+        `Repository clone failed: Repository might not exist or you may not have permission to access it.\n` +
+          `💡 Troubleshooting:\n` +
+          `   - Check if the repository URL is correct\n` +
+          `   - Verify you have access to the repository\n` +
+          `   - Try authenticating with 'dev auth'`,
+        {
+          command: "clone",
+          extra: { repoUrl, targetPath, tool: "git", exitCode: 128 },
+        },
+      );
     } else if (error.message.includes("exit code 130")) {
-      errorMessage += "\n💡 Operation was interrupted by the user.";
+      throw new ExternalToolError("Operation was interrupted by the user.", {
+        command: "clone",
+        extra: { repoUrl, targetPath, tool: "git", exitCode: 130 },
+      });
     }
 
-    throw new Error(errorMessage);
+    // Re-throw other errors as-is if they're already CLI errors, otherwise wrap them
+    throw error;
   }
 }

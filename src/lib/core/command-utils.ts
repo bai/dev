@@ -1,9 +1,5 @@
-import {
-  createCommandError,
-  type CommandArgument,
-  type CommandContext,
-  type CommandOption,
-} from "~/lib/core/command-types";
+import { type CommandArgument, type CommandContext, type CommandOption } from "~/lib/core/command-types";
+import { ExternalToolError, UserInputError } from "~/lib/errors";
 
 /**
  * Utility for creating command arguments
@@ -55,7 +51,9 @@ export function option(
 export function validateArgs(context: CommandContext, requiredArgs: string[]): void {
   for (const argName of requiredArgs) {
     if (context.args[argName] === undefined || context.args[argName] === null) {
-      throw createCommandError(`Missing required argument: ${argName}`, "validation");
+      throw new UserInputError(`Missing required argument: ${argName}`, {
+        extra: { argName, requiredArgs },
+      });
     }
   }
 }
@@ -129,11 +127,9 @@ export function runCommand(
   const result = spawnCommand(command, options);
 
   if (result.exitCode !== 0) {
-    throw createCommandError(
-      `Command failed: ${command.join(" ")} (exit code: ${result.exitCode})`,
-      "command-execution",
-      result.exitCode,
-    );
+    throw new ExternalToolError(`Command failed: ${command.join(" ")} (exit code: ${result.exitCode})`, {
+      extra: { command, exitCode: result.exitCode, stderr: result.stderr },
+    });
   }
 
   return {
@@ -149,7 +145,9 @@ export function validateTool(toolName: string, context: CommandContext): void {
   const result = spawnCommand(["which", toolName], { silent: true });
 
   if (result.exitCode !== 0) {
-    throw createCommandError(`Required tool '${toolName}' is not installed or not in PATH`, "tool-validation");
+    throw new ExternalToolError(`Required tool '${toolName}' is not installed or not in PATH`, {
+      extra: { tool: toolName },
+    });
   }
 }
 

@@ -1,14 +1,14 @@
 import { Option, type Command } from "commander";
 
 import {
-  createCommandError,
-  isCommandError,
   type CommandArgument,
   type CommandContext,
   type ConfigManager,
   type DevCommand,
   type Logger,
 } from "~/lib/core/command-types";
+import { isCLIError, UserInputError } from "~/lib/errors";
+import { ExitCode } from "~/lib/exit-code";
 import { isDebugMode } from "~/lib/is-debug-mode";
 
 /**
@@ -86,24 +86,21 @@ const buildContext = (
  * Handle command execution errors
  */
 const handleCommandError = (error: any, commandName: string, logger: Logger): never => {
-  if (isCommandError(error)) {
+  if (isCLIError(error)) {
     logger.error(`Command '${commandName}' failed: ${error.message}`);
-    if (error.cause) {
-      logger.error(`Caused by: ${error.cause.message}`);
-    }
     if (isDebugMode()) {
       logger.error(error.stack || "");
     }
-    process.exit(error.exitCode);
+    throw error; // Re-throw CLI errors to be handled by central error handler
   } else if (error instanceof Error) {
     logger.error(`Unexpected error in command '${commandName}': ${error.message}`);
     if (isDebugMode()) {
       logger.error(error.stack || "");
     }
-    process.exit(1);
+    throw new UserInputError(error.message, { command: commandName }, { cause: error });
   } else {
     logger.error(`Unknown error in command '${commandName}':`, error);
-    process.exit(1);
+    throw new UserInputError("Unknown error occurred", { command: commandName, extra: { error } });
   }
 };
 

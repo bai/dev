@@ -19,9 +19,9 @@ export default tseslint.config(
     },
   },
   {
-    files: ["src/index.ts"],
+    files: ["src/index.ts", "src/lib/handle-error.ts", "src/lib/handle-cd-to-path.ts"],
     rules: {
-      "no-process-exit": "off", // Allow only in main entry point
+      "no-process-exit": "off", // Allow only in main entry point, central error handler, and shell integration
     },
   },
 

@@ -1,5 +1,6 @@
 import { spawn, spawnSync } from "bun";
 
+import { ExternalToolError } from "~/lib/errors";
 import { isDebugMode } from "~/lib/is-debug-mode";
 import { logger } from "~/lib/logger";
 
@@ -287,27 +288,32 @@ export const ensureBunVersionOrUpgrade = async (): Promise<void> => {
     const updateSuccess = await runBunUpgrade();
 
     if (!updateSuccess) {
-      logger.error(`❌ Failed to update bun to required version`);
-      logger.error(`💡 Try manually upgrading bun:`);
-      logger.error(`   • Run: bun upgrade`);
-      logger.error(`   • Or reinstall: curl -fsSL https://bun.sh/install | bash`);
-      logger.error(`   • Visit: https://bun.sh/docs/installation`);
-      process.exit(1);
+      throw new ExternalToolError(
+        `Failed to update bun to required version.\n💡 Try manually upgrading bun:\n   • Run: bun upgrade\n   • Or reinstall: curl -fsSL https://bun.sh/install | bash\n   • Visit: https://bun.sh/docs/installation`,
+        { extra: { tool: "bun", operation: "upgrade" } },
+      );
     }
 
     // After upgrade, check again
     const { isValid: isValidAfterUpgrade, currentVersion: versionAfterUpgrade } = checkBunVersion();
 
     if (!isValidAfterUpgrade) {
-      logger.error(`❌ Bun upgrade completed but version still doesn't meet requirement`);
-      if (versionAfterUpgrade) {
-        logger.error(`   Current: ${versionAfterUpgrade}, Required: ${bunMinVersion}`);
-      }
-      logger.error(`💡 This might be due to:`);
-      logger.error(`   • PATH issues - try 'which bun' to check location`);
-      logger.error(`   • Multiple bun installations`);
-      logger.error(`   • Installation conflicts`);
-      process.exit(1);
+      throw new ExternalToolError(
+        `Bun upgrade completed but version still doesn't meet requirement.\n` +
+          `Current: ${versionAfterUpgrade || "unknown"}, Required: ${bunMinVersion}\n` +
+          `💡 This might be due to:\n` +
+          `   • PATH issues - try 'which bun' to check location\n` +
+          `   • Multiple bun installations\n` +
+          `   • Installation conflicts`,
+        {
+          extra: {
+            tool: "bun",
+            operation: "version-check",
+            currentVersion: versionAfterUpgrade,
+            requiredVersion: bunMinVersion,
+          },
+        },
+      );
     }
 
     if (currentVersion && versionAfterUpgrade) {
@@ -316,10 +322,11 @@ export const ensureBunVersionOrUpgrade = async (): Promise<void> => {
       logger.success(`✨ Bun upgraded to version ${versionAfterUpgrade}`);
     }
   } catch (error: any) {
-    logger.error(`❌ Unexpected error during bun upgrade: ${error.message}`);
-    if (isDebugMode()) {
-      logger.debug(`Full error:`, error);
+    if (error instanceof ExternalToolError) {
+      throw error; // Re-throw CLI errors as-is
     }
-    process.exit(1);
+    throw new ExternalToolError(`Unexpected error during bun upgrade: ${error.message}`, {
+      extra: { tool: "bun", operation: "upgrade", originalError: error.message },
+    });
   }
 };

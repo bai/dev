@@ -1,6 +1,7 @@
 import fs from "fs";
 
 import { baseSearchDir } from "~/lib/constants";
+import { FileSystemError } from "~/lib/errors";
 import { logger } from "~/lib/logger";
 
 export function ensureBaseDirectoryExists() {
@@ -9,14 +10,15 @@ export function ensureBaseDirectoryExists() {
       fs.mkdirSync(baseSearchDir, { recursive: true });
       logger.info(`📁 Created base search directory: ${baseSearchDir}`);
     } catch (error: any) {
-      logger.error(`❌ Error: Failed to create base search directory: ${baseSearchDir}`);
-      logger.error(`   ${error.message}`);
+      let errorMessage = `Failed to create base search directory: ${baseSearchDir} - ${error.message}`;
       if (error.code === "EACCES") {
-        logger.error("💡 Permission denied. Run `dev status` to check environment health.");
+        errorMessage += "\n💡 Permission denied. Run `dev status` to check environment health.";
       } else if (error.code === "ENOSPC") {
-        logger.error("💡 No space left on device. Free up some disk space and try again.");
+        errorMessage += "\n💡 No space left on device. Free up some disk space and try again.";
       }
-      throw error;
+      throw new FileSystemError(errorMessage, {
+        extra: { baseSearchDir, errorCode: error.code },
+      });
     }
   }
 }

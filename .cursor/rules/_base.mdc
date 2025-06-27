@@ -33,3 +33,5 @@ Adhere to the following guidelines in your code:
 - If you think there might not be a correct answer, say so. If you do not know the answer, say so instead of guessing.
 - In tests, always avoid mocking the filesystem. Use real files and directories, in temporary directories if needed.
 - In tests, prefer to have as little shared state between tests as possible. Avoid beforeAll and afterAll.
+
+To run tests, use `bun run test`.

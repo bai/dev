@@ -145,7 +145,6 @@ describe("CD Command", () => {
       await expect(cdCommand.exec(context)).rejects.toThrow("Folder 'non-existent-folder' not found");
 
       expect(handleCdToPathSpy).not.toHaveBeenCalled();
-      expect(mockLogger.error).toHaveBeenCalledWith(expect.stringContaining("CD command failed"));
     });
 
     test("should throw error for whitespace-only folder name", async () => {
@@ -334,7 +333,7 @@ describe("CD Command", () => {
   });
 
   describe("Error Handling", () => {
-    test("should catch and log errors from direct cd", async () => {
+    test("should propagate errors from direct cd", async () => {
       findDirsSpy.mockImplementation(() => {
         throw new Error("File system error");
       });
@@ -345,10 +344,9 @@ describe("CD Command", () => {
       };
 
       await expect(cdCommand.exec(context)).rejects.toThrow("File system error");
-      expect(mockLogger.error).toHaveBeenCalledWith(expect.stringContaining("CD command failed: File system error"));
     });
 
-    test("should catch and log errors from interactive cd", async () => {
+    test("should propagate errors from interactive cd", async () => {
       findDirsSpy.mockImplementation(() => {
         throw new Error("Glob pattern error");
       });
@@ -359,7 +357,6 @@ describe("CD Command", () => {
       };
 
       await expect(cdCommand.exec(context)).rejects.toThrow("Glob pattern error");
-      expect(mockLogger.error).toHaveBeenCalledWith(expect.stringContaining("CD command failed: Glob pattern error"));
     });
   });
 });

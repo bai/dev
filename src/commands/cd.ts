@@ -1,6 +1,7 @@
 import { baseSearchDir } from "~/lib/constants";
 import type { DevCommand } from "~/lib/core/command-types";
-import { arg, getArg, spawnCommand } from "~/lib/core/command-utils";
+import { arg, getArg } from "~/lib/core/command-utils";
+import { ExternalToolError, UserInputError } from "~/lib/errors";
 import { findDirs } from "~/lib/find-dirs";
 import { handleCdToPath } from "~/lib/handle-cd-to-path";
 import { filter } from "~/lib/match";
@@ -23,25 +24,18 @@ Examples:
   dev cd proj             # Fuzzy match to any directory containing 'proj'
   `,
 
-  arguments: [
-    arg("folder_name", "Name of the folder to navigate to", { required: false }),
-  ],
+  arguments: [arg("folder_name", "Name of the folder to navigate to", { required: false })],
 
   async exec(context) {
     const { logger } = context;
     const folderName = getArg(context, "folder_name");
 
-    try {
-      if (folderName) {
-        // Direct cd mode
-        await handleDirectCd(folderName, logger);
-      } else {
-        // Interactive cd mode
-        await handleInteractiveCd(logger);
-      }
-    } catch (error: any) {
-      logger.error(`CD command failed: ${error.message}`);
-      throw error;
+    if (folderName) {
+      // Direct cd mode
+      await handleDirectCd(folderName, logger);
+    } else {
+      // Interactive cd mode
+      await handleInteractiveCd(logger);
     }
   },
 };
@@ -54,7 +48,10 @@ Examples:
 async function handleDirectCd(folderName: string, logger: any): Promise<void> {
   // Basic check to ensure folder name is not empty
   if (!folderName || folderName.trim() === "") {
-    throw new Error("Folder name for 'cd' command cannot be empty.");
+    throw new UserInputError("Folder name for 'cd' command cannot be empty.", {
+      command: "cd",
+      extra: { folderName },
+    });
   }
 
   const directories = findDirs();
@@ -70,7 +67,10 @@ async function handleDirectCd(folderName: string, logger: any): Promise<void> {
   }
 
   // Nothing found or no directories
-  throw new Error(`Folder '${folderName}' not found in ${baseSearchDir}`);
+  throw new UserInputError(`Folder '${folderName}' not found in ${baseSearchDir}`, {
+    command: "cd",
+    extra: { folderName, baseSearchDir, directoriesFound: directories.length },
+  });
 }
 
 /**
@@ -103,8 +103,10 @@ async function handleInteractiveCd(logger: any): Promise<void> {
       await proc.stdin.write(directoryList);
       await proc.stdin.end();
     } catch (error: any) {
-      logger.error(`Error writing to fzf: ${error.message}`);
-      return;
+      throw new ExternalToolError(`Error writing to fzf: ${error.message}`, {
+        command: "cd",
+        extra: { tool: "fzf", operation: "write" },
+      });
     }
   }
 
@@ -121,8 +123,10 @@ async function handleInteractiveCd(logger: any): Promise<void> {
         return; // Path handled, function complete
       }
     } catch (error: any) {
-      logger.error(`Error reading from fzf: ${error.message}`);
-      return;
+      throw new ExternalToolError(`Error reading from fzf: ${error.message}`, {
+        command: "cd",
+        extra: { tool: "fzf", operation: "read" },
+      });
     }
   }
 
@@ -130,7 +134,10 @@ async function handleInteractiveCd(logger: any): Promise<void> {
   // Exit codes 1 (no match) and 130 (cancelled by SIGINT/Ctrl+C) are considered normal non-selection cases.
   if (exitCode !== 0 && exitCode !== 1 && exitCode !== 130) {
     // For other non-zero exit codes, it's an unexpected error from fzf.
-    throw new Error(`Error during fzf execution. Exit code: ${exitCode}`);
+    throw new ExternalToolError(`Error during fzf execution. Exit code: ${exitCode}`, {
+      command: "cd",
+      extra: { tool: "fzf", exitCode },
+    });
   }
 
   // If no path was selected (e.g., fzf cancelled or no output), we simply do nothing.
