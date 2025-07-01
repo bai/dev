@@ -1,5 +1,6 @@
 import { spawn, spawnSync } from "bun";
 
+import { ExternalToolError } from "~/lib/errors";
 import { isDebugMode } from "~/lib/is-debug-mode";
 import { logger } from "~/lib/logger";
 
@@ -149,7 +150,9 @@ export const ensureGitVersionOrUpgrade = async (): Promise<void> => {
   if (!updateSuccess) {
     logger.error(`❌ Failed to update git to required version`);
     logger.error(`💡 Try manually installing git via mise: mise install git@latest`);
-    process.exit(1);
+    throw new ExternalToolError("Failed to update git", {
+      extra: { tool: "git", requiredVersion: gitMinVersion, currentVersion },
+    });
   }
 
   // Verify upgrade
@@ -159,7 +162,13 @@ export const ensureGitVersionOrUpgrade = async (): Promise<void> => {
     if (versionAfterUpgrade) {
       logger.error(`   Current: ${versionAfterUpgrade}, Required: ${gitMinVersion}`);
     }
-    process.exit(1);
+    throw new ExternalToolError("Git upgrade failed", {
+      extra: {
+        tool: "git",
+        requiredVersion: gitMinVersion,
+        currentVersion: versionAfterUpgrade,
+      },
+    });
   }
 
   if (versionAfterUpgrade) {

@@ -3,6 +3,7 @@ import path from "path";
 import { spawn, spawnSync } from "bun";
 
 import { homeDir } from "~/lib/constants";
+import { ExternalToolError } from "~/lib/errors";
 import { isDebugMode } from "~/lib/is-debug-mode";
 import { logger } from "~/lib/logger";
 
@@ -194,7 +195,9 @@ export const ensureGcloudVersionOrUpgrade = async (): Promise<void> => {
   if (!updateSuccess) {
     logger.error(`❌ Failed to update gcloud to required version`);
     logger.error(`💡 Try manually installing gcloud via mise: mise install gcloud@latest`);
-    process.exit(1);
+    throw new ExternalToolError("Failed to update gcloud", {
+      extra: { tool: "gcloud", requiredVersion: gcloudMinVersion, currentVersion },
+    });
   }
 
   // Verify upgrade
@@ -204,7 +207,13 @@ export const ensureGcloudVersionOrUpgrade = async (): Promise<void> => {
     if (versionAfterUpgrade) {
       logger.error(`   Current: ${versionAfterUpgrade}, Required: ${gcloudMinVersion}`);
     }
-    process.exit(1);
+    throw new ExternalToolError("Gcloud upgrade failed", {
+      extra: {
+        tool: "gcloud",
+        requiredVersion: gcloudMinVersion,
+        currentVersion: versionAfterUpgrade,
+      },
+    });
   }
 
   if (versionAfterUpgrade) {

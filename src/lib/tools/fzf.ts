@@ -1,5 +1,6 @@
 import { spawn, spawnSync } from "bun";
 
+import { ExternalToolError } from "~/lib/errors";
 import { isDebugMode } from "~/lib/is-debug-mode";
 import { logger } from "~/lib/logger";
 
@@ -149,7 +150,9 @@ export const ensureFzfVersionOrUpgrade = async (): Promise<void> => {
   if (!updateSuccess) {
     logger.error(`❌ Failed to update fzf to required version`);
     logger.error(`💡 Try manually installing fzf via mise: mise install fzf@latest`);
-    process.exit(1);
+    throw new ExternalToolError("Failed to update fzf", {
+      extra: { tool: "fzf", requiredVersion: fzfMinVersion, currentVersion },
+    });
   }
 
   // Verify upgrade
@@ -159,7 +162,13 @@ export const ensureFzfVersionOrUpgrade = async (): Promise<void> => {
     if (versionAfterUpgrade) {
       logger.error(`   Current: ${versionAfterUpgrade}, Required: ${fzfMinVersion}`);
     }
-    process.exit(1);
+    throw new ExternalToolError("Fzf upgrade failed", {
+      extra: {
+        tool: "fzf",
+        requiredVersion: fzfMinVersion,
+        currentVersion: versionAfterUpgrade,
+      },
+    });
   }
 
   if (versionAfterUpgrade) {

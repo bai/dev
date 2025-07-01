@@ -6,6 +6,7 @@ import z from "zod/v4";
 
 import { homeDir } from "~/lib/constants";
 import { devConfig } from "~/lib/dev-config";
+import { ExternalToolError } from "~/lib/errors";
 import { isDebugMode } from "~/lib/is-debug-mode";
 import { logger } from "~/lib/logger";
 
@@ -371,7 +372,9 @@ export const ensureMiseVersionOrUpgrade = async (): Promise<void> => {
       logger.error(`   • If installed via Homebrew: brew upgrade mise`);
       logger.error(`   • If installed via curl: curl https://mise.run | sh`);
       logger.error(`   • Visit: https://mise.jdx.dev/getting-started.html`);
-      process.exit(1);
+      throw new ExternalToolError("Failed to update mise", {
+        extra: { tool: "mise", requiredVersion: miseMinVersion, currentVersion },
+      });
     }
 
     // After upgrade, check again
@@ -386,7 +389,13 @@ export const ensureMiseVersionOrUpgrade = async (): Promise<void> => {
       logger.error(`   • PATH issues - try 'which mise' to check location`);
       logger.error(`   • Multiple mise installations`);
       logger.error(`   • Package manager conflicts`);
-      process.exit(1);
+      throw new ExternalToolError("Mise upgrade failed", {
+        extra: {
+          tool: "mise",
+          requiredVersion: miseMinVersion,
+          currentVersion: versionAfterUpgrade,
+        },
+      });
     }
 
     if (currentVersion && versionAfterUpgrade) {
@@ -395,11 +404,18 @@ export const ensureMiseVersionOrUpgrade = async (): Promise<void> => {
       logger.success(`✨ Mise upgraded to version ${versionAfterUpgrade}`);
     }
   } catch (error: any) {
+    // Re-throw ExternalToolError instances as-is to preserve specific error context
+    if (error instanceof ExternalToolError) {
+      throw error;
+    }
+
     logger.error(`❌ Unexpected error during mise upgrade: ${error.message}`);
     if (isDebugMode()) {
       logger.debug(`Full error:`, error);
     }
-    process.exit(1);
+    throw new ExternalToolError("Mise upgrade encountered an unexpected error", {
+      extra: { tool: "mise", originalError: error.message },
+    });
   }
 };
 
