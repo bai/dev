@@ -1,16 +1,13 @@
-import { exitCode } from "../../domain/errors";
-import type { CliCommandSpec, CommandContext } from "../../domain/models";
-import type { FileSystem } from "../../domain/ports/FileSystem";
-import type { Git } from "../../domain/ports/Git";
-import type { Mise } from "../../domain/ports/Mise";
-import type { Network } from "../../domain/ports/Network";
+import { Effect } from "effect";
 
-interface StatusContext extends CommandContext {
-  mise: Mise;
-  git: Git;
-  fileSystem: FileSystem;
-  network: Network;
-}
+import { exitCode, unknownError, type DevError } from "../../domain/errors";
+import { LoggerService, type CliCommandSpec, type CommandContext } from "../../domain/models";
+import { FileSystemService } from "../../domain/ports/FileSystem";
+import { GitService } from "../../domain/ports/Git";
+import { MiseService } from "../../domain/ports/Mise";
+import { NetworkService } from "../../domain/ports/Network";
+
+// Interface removed - services now accessed via Effect Context
 
 interface StatusItem {
   component: string;
@@ -45,144 +42,137 @@ This command checks:
     },
   ],
 
-  async exec(context: CommandContext): Promise<void> {
-    const ctx = context as StatusContext;
-    const jsonOutput = ctx.options.json;
+  exec(context: CommandContext): Effect.Effect<void, DevError, any> {
+    return Effect.gen(function* () {
+      const logger = yield* LoggerService;
+      const mise = yield* MiseService;
+      const git = yield* GitService;
+      const network = yield* NetworkService;
+      const fileSystem = yield* FileSystemService;
+      const jsonOutput = context.options.json;
 
-    const statusItems: StatusItem[] = [];
+      const statusItems: StatusItem[] = [];
 
-    // Check Mise
-    try {
-      const miseInfo = await ctx.mise.checkInstallation();
-
-      if (typeof miseInfo === "object" && "_tag" in miseInfo) {
+      // Check Mise
+      const miseResult = yield* Effect.either(mise.checkInstallation());
+      if (miseResult._tag === "Left") {
         statusItems.push({
           component: "mise",
           status: "error",
           message: "Mise is not installed or not working",
-          details: miseInfo,
+          details: miseResult.left,
         });
       } else {
         statusItems.push({
           component: "mise",
           status: "ok",
-          message: `Mise ${miseInfo.version} is installed`,
-          details: miseInfo,
+          message: `Mise ${miseResult.right.version} is installed`,
+          details: miseResult.right,
         });
       }
-    } catch (error) {
-      statusItems.push({
-        component: "mise",
-        status: "error",
-        message: "Failed to check mise installation",
-        details: error,
-      });
-    }
 
-    // Check Git
-    try {
-      const gitVersion = await ctx.git.getCurrentCommitSha();
-
-      if (typeof gitVersion === "object" && "_tag" in gitVersion) {
+      // Check Git
+      const gitResult = yield* Effect.either(git.getCurrentCommitSha());
+      if (gitResult._tag === "Left") {
         statusItems.push({
           component: "git",
           status: "error",
           message: "Git is not available or not in a git repository",
-          details: gitVersion,
+          details: gitResult.left,
         });
       } else {
         statusItems.push({
           component: "git",
           status: "ok",
           message: "Git is available",
-          details: { currentSha: gitVersion },
+          details: { currentSha: gitResult.right },
         });
       }
-    } catch (error) {
-      statusItems.push({
-        component: "git",
-        status: "error",
-        message: "Failed to check git status",
-        details: error,
-      });
-    }
 
-    // Check Network connectivity
-    try {
-      const isConnected = await ctx.network.checkConnectivity("https://github.com");
-
-      statusItems.push({
-        component: "network",
-        status: isConnected ? "ok" : "warning",
-        message: isConnected ? "Network connectivity is good" : "Network connectivity issues detected",
-      });
-    } catch (error) {
-      statusItems.push({
-        component: "network",
-        status: "error",
-        message: "Failed to check network connectivity",
-        details: error,
-      });
-    }
-
-    // Check file system permissions for base directory
-    try {
-      const baseDir = ctx.config.get("paths.base", "~/src");
-      const resolvedPath = ctx.fileSystem.resolvePath(baseDir);
-
-      if (await ctx.fileSystem.exists(resolvedPath)) {
+      // Check Network connectivity
+      const networkResult = yield* Effect.either(network.checkConnectivity("https://github.com"));
+      if (networkResult._tag === "Left") {
         statusItems.push({
-          component: "filesystem",
-          status: "ok",
-          message: `Base directory ${baseDir} exists and is accessible`,
+          component: "network",
+          status: "error",
+          message: "Failed to check network connectivity",
+          details: networkResult.left,
         });
       } else {
+        const isConnected = networkResult.right;
         statusItems.push({
-          component: "filesystem",
-          status: "warning",
-          message: `Base directory ${baseDir} does not exist`,
+          component: "network",
+          status: isConnected ? "ok" : "warning",
+          message: isConnected ? "Network connectivity is good" : "Network connectivity issues detected",
         });
       }
-    } catch (error) {
-      statusItems.push({
-        component: "filesystem",
-        status: "error",
-        message: "Failed to check file system status",
-        details: error,
-      });
-    }
 
-    // Output results
-    if (jsonOutput) {
-      console.log(JSON.stringify(statusItems, null, 2));
-    } else {
-      ctx.logger.info("System Status:");
-      ctx.logger.info("");
+      // Check file system permissions for base directory
+      const filesystemResult = yield* Effect.either(
+        Effect.gen(function* () {
+          const baseDir = "~/src"; // TODO: Get from config when config service is available
+          const resolvedPath = fileSystem.resolvePath(baseDir);
+          const exists = yield* fileSystem.exists(resolvedPath);
+          return { baseDir, exists };
+        }),
+      );
 
-      for (const item of statusItems) {
-        const icon = item.status === "ok" ? "✅" : item.status === "warning" ? "⚠️" : "❌";
-        ctx.logger.info(`${icon} ${item.component}: ${item.message}`);
-      }
-
-      ctx.logger.info("");
-
-      const errorCount = statusItems.filter((item) => item.status === "error").length;
-      const warningCount = statusItems.filter((item) => item.status === "warning").length;
-
-      if (errorCount > 0) {
-        ctx.logger.error(`Found ${errorCount} error(s) and ${warningCount} warning(s)`);
-      } else if (warningCount > 0) {
-        ctx.logger.warn(`Found ${warningCount} warning(s)`);
+      if (filesystemResult._tag === "Left") {
+        statusItems.push({
+          component: "filesystem",
+          status: "error",
+          message: "Failed to check file system status",
+          details: filesystemResult.left,
+        });
       } else {
-        ctx.logger.success("All systems are operational");
+        const { baseDir, exists } = filesystemResult.right;
+        if (exists) {
+          statusItems.push({
+            component: "filesystem",
+            status: "ok",
+            message: `Base directory ${baseDir} exists and is accessible`,
+          });
+        } else {
+          statusItems.push({
+            component: "filesystem",
+            status: "warning",
+            message: `Base directory ${baseDir} does not exist`,
+          });
+        }
       }
-    }
 
-    // Exit with error code if there are errors (as specified in the spec)
-    const hasErrors = statusItems.some((item) => item.status === "error");
-    if (hasErrors) {
-      // Set exit code via process.exitCode instead of process.exit()
-      process.exitCode = 3; // As specified in the spec: "exits 3 if any error item"
-    }
+      // Output results
+      if (jsonOutput) {
+        console.log(JSON.stringify(statusItems, null, 2));
+      } else {
+        yield* logger.info("System Status:");
+        yield* logger.info("");
+
+        for (const item of statusItems) {
+          const icon = item.status === "ok" ? "✅" : item.status === "warning" ? "⚠️" : "❌";
+          yield* logger.info(`${icon} ${item.component}: ${item.message}`);
+        }
+
+        yield* logger.info("");
+
+        const errorCount = statusItems.filter((item) => item.status === "error").length;
+        const warningCount = statusItems.filter((item) => item.status === "warning").length;
+
+        if (errorCount > 0) {
+          yield* logger.error(`Found ${errorCount} error(s) and ${warningCount} warning(s)`);
+        } else if (warningCount > 0) {
+          yield* logger.warn(`Found ${warningCount} warning(s)`);
+        } else {
+          yield* logger.success("All systems are operational");
+        }
+      }
+
+      // Exit with error code if there are errors (as specified in the spec)
+      const hasErrors = statusItems.some((item) => item.status === "error");
+      if (hasErrors) {
+        // Set exit code via process.exitCode instead of process.exit()
+        process.exitCode = 3; // As specified in the spec: "exits 3 if any error item"
+      }
+    });
   },
 };

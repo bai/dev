@@ -1,9 +1,10 @@
-import type { CliCommandSpec, CommandContext } from "../../domain/models";
-import type { Keychain } from "../../domain/ports/Keychain";
+import { Effect } from "effect";
 
-interface AuthContext extends CommandContext {
-  keychain: Keychain;
-}
+import { unknownError, type DevError } from "../../domain/errors";
+import { LoggerService, type CliCommandSpec, type CommandContext } from "../../domain/models";
+import { KeychainService } from "../../domain/ports/Keychain";
+
+// Interface removed - services now accessed via Effect Context
 
 export const authCommand: CliCommandSpec = {
   name: "auth",
@@ -35,83 +36,79 @@ Examples:
     },
   ],
 
-  async exec(context: CommandContext): Promise<void> {
-    const ctx = context as AuthContext;
-    const service = ctx.args.service;
-    const account = ctx.args.account;
+  exec(context: CommandContext): Effect.Effect<void, DevError, any> {
+    return Effect.gen(function* () {
+      const logger = yield* LoggerService;
+      const keychain = yield* KeychainService;
+      const service = context.args.service;
+      const account = context.args.account;
 
-    if (service === "list") {
-      ctx.logger.info("Credential management is handled through the system keychain");
-      ctx.logger.info("Use 'Keychain Access' app on macOS to view stored credentials");
-      return;
-    }
-
-    if (service === "remove") {
-      if (!account) {
-        ctx.logger.error("Account name is required for remove command");
+      if (service === "list") {
+        yield* logger.info("Credential management is handled through the system keychain");
+        yield* logger.info("Use 'Keychain Access' app on macOS to view stored credentials");
         return;
       }
 
-      const result = await ctx.keychain.removeCredential("dev-cli", account);
+      if (service === "remove") {
+        if (!account) {
+          yield* logger.error("Account name is required for remove command");
+          return yield* Effect.fail(unknownError("Account name is required for remove command"));
+        }
 
-      if (typeof result === "object" && "_tag" in result) {
-        ctx.logger.error(`Failed to remove credentials: ${result.reason}`);
-        throw result;
+        yield* keychain.removeCredential("dev-cli", account);
+        yield* logger.success(`Credentials for ${account} removed successfully`);
+        return;
       }
 
-      ctx.logger.success(`Credentials for ${account} removed successfully`);
-      return;
-    }
+      // Set credentials for a service
+      const serviceName = service.toLowerCase();
+      const supportedServices = ["github", "gitlab"];
 
-    // Set credentials for a service
-    const serviceName = service.toLowerCase();
-    const supportedServices = ["github", "gitlab"];
+      if (!supportedServices.includes(serviceName)) {
+        yield* logger.error(`Unsupported service: ${serviceName}`);
+        yield* logger.info(`Supported services: ${supportedServices.join(", ")}`);
+        return yield* Effect.fail(unknownError(`Unsupported service: ${serviceName}`));
+      }
 
-    if (!supportedServices.includes(serviceName)) {
-      ctx.logger.error(`Unsupported service: ${serviceName}`);
-      ctx.logger.info(`Supported services: ${supportedServices.join(", ")}`);
-      return;
-    }
+      // Prompt for username
+      const username = yield* promptInputEffect("Username: ");
+      if (!username) {
+        yield* logger.error("Username is required");
+        return yield* Effect.fail(unknownError("Username is required"));
+      }
 
-    // Prompt for username
-    const username = await promptInput("Username: ");
-    if (!username) {
-      ctx.logger.error("Username is required");
-      return;
-    }
+      // Prompt for token/password
+      const token = yield* promptPasswordEffect("Token/Password: ");
+      if (!token) {
+        yield* logger.error("Token/Password is required");
+        return yield* Effect.fail(unknownError("Token/Password is required"));
+      }
 
-    // Prompt for token/password
-    const token = await promptPassword("Token/Password: ");
-    if (!token) {
-      ctx.logger.error("Token/Password is required");
-      return;
-    }
-
-    // Store in keychain
-    const result = await ctx.keychain.setCredential(`dev-cli-${serviceName}`, username, token);
-
-    if (typeof result === "object" && "_tag" in result) {
-      ctx.logger.error(`Failed to store credentials: ${result.reason}`);
-      throw result;
-    }
-
-    ctx.logger.success(`Credentials for ${serviceName} stored successfully`);
+      // Store in keychain
+      yield* keychain.setCredential(`dev-cli-${serviceName}`, username, token);
+      yield* logger.success(`Credentials for ${serviceName} stored successfully`);
+    });
   },
 };
 
 // Helper functions for input (these would ideally use a proper CLI input library)
-async function promptInput(prompt: string): Promise<string> {
-  process.stdout.write(prompt);
+function promptInputEffect(prompt: string): Effect.Effect<string, DevError> {
+  return Effect.tryPromise({
+    try: async () => {
+      process.stdout.write(prompt);
 
-  for await (const line of console) {
-    return line.trim();
-  }
+      for await (const line of console) {
+        return line.trim();
+      }
 
-  return "";
+      return "";
+    },
+    catch: (error) => unknownError(`Failed to get input: ${error}`),
+  });
 }
 
-async function promptPassword(prompt: string): Promise<string> {
+function promptPasswordEffect(prompt: string): Effect.Effect<string, DevError> {
   // In a real implementation, this would hide the input
   // For now, just use regular input
-  return await promptInput(prompt);
+  return promptInputEffect(prompt);
 }

@@ -1,15 +1,13 @@
-import { type ConfigLoader } from "../../config/loader";
-import type { CliCommandSpec, CommandContext } from "../../domain/models";
-import type { FileSystem } from "../../domain/ports/FileSystem";
-import type { Git } from "../../domain/ports/Git";
-import type { Network } from "../../domain/ports/Network";
+import { Effect } from "effect";
 
-interface UpgradeContext extends CommandContext {
-  network: Network;
-  fileSystem: FileSystem;
-  git: Git;
-  configLoader: ConfigLoader;
-}
+import { ConfigLoaderService, type ConfigLoader } from "../../config/loader";
+import { unknownError, type DevError } from "../../domain/errors";
+import { LoggerService, type CliCommandSpec, type CommandContext } from "../../domain/models";
+import { FileSystemService } from "../../domain/ports/FileSystem";
+import { GitService } from "../../domain/ports/Git";
+import { NetworkService } from "../../domain/ports/Network";
+
+// Interface removed - services now accessed via Effect Context
 
 export const upgradeCommand: CliCommandSpec = {
   name: "upgrade",
@@ -35,75 +33,76 @@ This command will:
     },
   ],
 
-  async exec(context: CommandContext): Promise<void> {
-    const ctx = context as UpgradeContext;
-    const regenerateCompletions = ctx.options["regenerate-completions"];
+  exec(context: CommandContext): Effect.Effect<void, DevError, any> {
+    return Effect.gen(function* () {
+      const logger = yield* LoggerService;
+      const configLoader = yield* ConfigLoaderService;
+      const regenerateCompletions = context.options["regenerate-completions"];
 
-    ctx.logger.info("Starting dev CLI upgrade...");
+      yield* logger.info("Starting dev CLI upgrade...");
 
-    // Step 1: Download latest binary (placeholder - would need actual implementation)
-    ctx.logger.info("⬇️ Downloading latest binary...");
-    // TODO: Implement binary download logic
-    ctx.logger.info("✅ Binary updated (placeholder)");
+      // Step 1: Download latest binary (placeholder - would need actual implementation)
+      yield* logger.info("⬇️ Downloading latest binary...");
+      // TODO: Implement binary download logic
+      yield* logger.info("✅ Binary updated (placeholder)");
 
-    // Step 2: Refresh remote configuration
-    ctx.logger.info("🔄 Refreshing configuration from remote...");
+      // Step 2: Refresh remote configuration
+      yield* logger.info("🔄 Refreshing configuration from remote...");
 
-    const configResult = await ctx.configLoader.refresh();
+      const configResult = yield* configLoader.refresh();
 
-    if (typeof configResult === "object" && "_tag" in configResult) {
-      ctx.logger.error(`Failed to refresh configuration: ${configResult.reason}`);
-      throw configResult;
-    }
+      yield* logger.success("✅ Configuration refreshed successfully");
 
-    ctx.logger.success("✅ Configuration refreshed successfully");
+      // Step 3: Update Git plugins
+      yield* logger.info("🔌 Updating Git plugins...");
 
-    // Step 3: Update Git plugins
-    ctx.logger.info("🔌 Updating Git plugins...");
+      const gitPlugins = configResult.plugins.git;
 
-    const gitPlugins = configResult.plugins.git;
-
-    for (const pluginUrl of gitPlugins) {
-      try {
-        await updateGitPlugin(pluginUrl, ctx);
-        ctx.logger.info(`✅ Updated plugin: ${pluginUrl}`);
-      } catch (error) {
-        ctx.logger.warn(`⚠️ Failed to update plugin ${pluginUrl}: ${error}`);
+      for (const pluginUrl of gitPlugins) {
+        const updateResult = yield* Effect.either(updateGitPluginEffect(pluginUrl));
+        if (updateResult._tag === "Left") {
+          yield* logger.warn(`⚠️ Failed to update plugin ${pluginUrl}: ${updateResult.left}`);
+        } else {
+          yield* logger.info(`✅ Updated plugin: ${pluginUrl}`);
+        }
       }
-    }
 
-    // Step 4: Generate completions if requested
-    if (regenerateCompletions) {
-      ctx.logger.info("📝 Regenerating shell completions...");
-      // TODO: Implement completion generation
-      ctx.logger.info("✅ Shell completions regenerated (placeholder)");
-    }
+      // Step 4: Generate completions if requested
+      if (regenerateCompletions) {
+        yield* logger.info("📝 Regenerating shell completions...");
+        // TODO: Implement completion generation
+        yield* logger.info("✅ Shell completions regenerated (placeholder)");
+      }
 
-    // Step 5: Report final version
-    ctx.logger.info("🎉 Upgrade completed successfully!");
-    ctx.logger.info("Run 'dev status' to verify your installation");
+      // Step 5: Report final version
+      yield* logger.info("🎉 Upgrade completed successfully!");
+      yield* logger.info("Run 'dev status' to verify your installation");
+    });
   },
 };
 
-async function updateGitPlugin(pluginUrl: string, ctx: UpgradeContext): Promise<void> {
-  // Extract plugin name from URL
-  const pluginName = pluginUrl.split("/").pop()?.replace(".git", "") || "unknown";
+function updateGitPluginEffect(pluginUrl: string): Effect.Effect<void, DevError, any> {
+  return Effect.gen(function* () {
+    const fileSystem = yield* FileSystemService;
+    const git = yield* GitService;
 
-  // Use XDG_CACHE_HOME or fallback to ~/.cache
-  const cacheDir = process.env.XDG_CACHE_HOME || ctx.fileSystem.resolvePath("~/.cache");
-  const pluginDir = `${cacheDir}/dev/plugins/${pluginName}`;
+    // Extract plugin name from URL
+    const pluginName = pluginUrl.split("/").pop()?.replace(".git", "") || "unknown";
 
-  // Check if plugin directory exists
-  if (await ctx.fileSystem.exists(pluginDir)) {
-    // Fetch updates
-    const fetchResult = await ctx.git.fetch(pluginDir);
+    // Use XDG_CACHE_HOME or fallback to ~/.cache
+    const cacheDir = process.env.XDG_CACHE_HOME || fileSystem.resolvePath("~/.cache");
+    const pluginDir = `${cacheDir}/dev/plugins/${pluginName}`;
 
-    if (typeof fetchResult === "object" && "_tag" in fetchResult) {
-      throw new Error(`Git fetch failed: ${fetchResult.reason}`);
+    // Check if plugin directory exists
+    const exists = yield* fileSystem.exists(pluginDir);
+
+    if (exists) {
+      // Fetch updates
+      yield* git.fetch(pluginDir);
+    } else {
+      // Clone plugin
+      // This is simplified - would need to create proper Repository object
+      return yield* Effect.fail(unknownError("Plugin cloning not yet implemented"));
     }
-  } else {
-    // Clone plugin
-    // This is simplified - would need to create proper Repository object
-    throw new Error("Plugin cloning not yet implemented");
-  }
+  });
 }

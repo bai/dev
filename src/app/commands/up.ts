@@ -1,11 +1,11 @@
-import type { CliCommandSpec, CommandContext } from "../../domain/models";
-import type { FileSystem } from "../../domain/ports/FileSystem";
-import type { Mise } from "../../domain/ports/Mise";
+import { Effect } from "effect";
 
-interface UpContext extends CommandContext {
-  mise: Mise;
-  fileSystem: FileSystem;
-}
+import { unknownError, type DevError } from "../../domain/errors";
+import { LoggerService, type CliCommandSpec, type CommandContext } from "../../domain/models";
+import { FileSystemService } from "../../domain/ports/FileSystem";
+import { MiseService } from "../../domain/ports/Mise";
+
+// Interface removed - services now accessed via Effect Context
 
 export const upCommand: CliCommandSpec = {
   name: "up",
@@ -22,41 +22,35 @@ This command will:
 3. Set up the development environment
   `,
 
-  async exec(context: CommandContext): Promise<void> {
-    const ctx = context as UpContext;
+  exec(context: CommandContext): Effect.Effect<void, DevError, any> {
+    return Effect.gen(function* () {
+      const logger = yield* LoggerService;
+      const mise = yield* MiseService;
+      const fileSystem = yield* FileSystemService;
 
-    ctx.logger.info("Setting up development environment...");
+      yield* logger.info("Setting up development environment...");
 
-    // Check mise installation
-    const miseInfo = await ctx.mise.checkInstallation();
+      // Check mise installation - attempt to get installation info
+      const miseInfo = yield* Effect.either(mise.checkInstallation());
 
-    if (typeof miseInfo === "object" && "_tag" in miseInfo) {
-      ctx.logger.warn("Mise is not installed. Installing...");
+      if (miseInfo._tag === "Left") {
+        yield* logger.warn("Mise is not installed. Installing...");
 
-      const installResult = await ctx.mise.install();
-      if (typeof installResult === "object" && "_tag" in installResult) {
-        ctx.logger.error(`Failed to install mise: ${installResult.reason}`);
-        throw installResult;
+        yield* mise.install();
+        yield* logger.success("Mise installed successfully");
+      } else {
+        yield* logger.info(`Mise version: ${miseInfo.right.version}`);
       }
 
-      ctx.logger.success("Mise installed successfully");
-    } else {
-      ctx.logger.info(`Mise version: ${miseInfo.version}`);
-    }
+      // Get current working directory
+      const cwd = yield* fileSystem.getCwd();
 
-    // Get current working directory
-    const cwd = await ctx.fileSystem.getCwd();
+      // Install tools for the current directory
+      yield* logger.info("Installing development tools...");
 
-    // Install tools for the current directory
-    ctx.logger.info("Installing development tools...");
+      yield* mise.installTools(cwd);
 
-    const installResult = await ctx.mise.installTools(cwd);
-
-    if (typeof installResult === "object" && "_tag" in installResult) {
-      ctx.logger.error(`Failed to install tools: ${installResult.reason}`);
-      throw installResult;
-    }
-
-    ctx.logger.success("Development environment setup complete!");
+      yield* logger.success("Development environment setup complete!");
+    });
   },
 };

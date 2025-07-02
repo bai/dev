@@ -1,11 +1,11 @@
-import type { CliCommandSpec, CommandContext } from "../../domain/models";
-import type { FileSystem } from "../../domain/ports/FileSystem";
-import type { Mise } from "../../domain/ports/Mise";
+import { Effect } from "effect";
 
-interface RunContext extends CommandContext {
-  mise: Mise;
-  fileSystem: FileSystem;
-}
+import { unknownError, type DevError } from "../../domain/errors";
+import { LoggerService, type CliCommandSpec, type CommandContext } from "../../domain/models";
+import { FileSystemService } from "../../domain/ports/FileSystem";
+import { MiseService } from "../../domain/ports/Mise";
+
+// Interface removed - services now accessed via Effect Context
 
 export const runCommand: CliCommandSpec = {
   name: "run",
@@ -31,43 +31,37 @@ Examples:
     },
   ],
 
-  async exec(context: CommandContext): Promise<void> {
-    const ctx = context as RunContext;
-    const taskName = ctx.args.task;
+  exec(context: CommandContext): Effect.Effect<void, DevError, any> {
+    return Effect.gen(function* () {
+      const logger = yield* LoggerService;
+      const mise = yield* MiseService;
+      const fileSystem = yield* FileSystemService;
+      const taskName = context.args.task;
 
-    const cwd = await ctx.fileSystem.getCwd();
+      const cwd = yield* fileSystem.getCwd();
 
-    if (!taskName) {
-      // List available tasks
-      ctx.logger.info("Available tasks:");
+      if (!taskName) {
+        // List available tasks
+        yield* logger.info("Available tasks:");
 
-      const tasks = await ctx.mise.getTasks(cwd);
+        const tasks = yield* mise.getTasks(cwd);
 
-      if (typeof tasks === "object" && "_tag" in tasks) {
-        ctx.logger.error(`Failed to get tasks: ${tasks.reason}`);
-        throw tasks;
-      }
+        if (tasks.length === 0) {
+          yield* logger.info("No tasks found in current directory");
+          return;
+        }
 
-      if (tasks.length === 0) {
-        ctx.logger.info("No tasks found in current directory");
+        for (const task of tasks) {
+          yield* logger.info(`  ${task}`);
+        }
         return;
       }
 
-      for (const task of tasks) {
-        ctx.logger.info(`  ${task}`);
-      }
-      return;
-    }
+      yield* logger.info(`Running task: ${taskName}`);
 
-    ctx.logger.info(`Running task: ${taskName}`);
+      yield* mise.runTask(taskName, cwd);
 
-    const result = await ctx.mise.runTask(taskName, cwd);
-
-    if (typeof result === "object" && "_tag" in result) {
-      ctx.logger.error(`Task failed: ${result.reason}`);
-      throw result;
-    }
-
-    ctx.logger.success(`Task '${taskName}' completed successfully`);
+      yield* logger.success(`Task '${taskName}' completed successfully`);
+    });
   },
 };
