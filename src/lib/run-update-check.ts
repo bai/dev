@@ -1,8 +1,9 @@
 import { desc, eq } from "drizzle-orm";
 
 import { logger } from "~/lib/logger";
-import { db } from "~/drizzle";
-import { runs } from "~/drizzle/schema";
+
+import { db } from "../../drizzle";
+import { runs } from "../../drizzle/schema";
 
 const upgradeFrequency = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
 

@@ -1,0 +1,21 @@
+import { Effect, Layer } from "effect";
+
+import { ClockService } from "../domain/models";
+
+export interface Clock {
+  now(): Effect.Effect<Date>;
+  timestamp(): Effect.Effect<number>;
+}
+
+export class ClockLive implements Clock {
+  now(): Effect.Effect<Date> {
+    return Effect.sync(() => new Date());
+  }
+
+  timestamp(): Effect.Effect<number> {
+    return Effect.sync(() => Date.now());
+  }
+}
+
+// Effect Layer for dependency injection
+export const ClockLiveLayer = Layer.succeed(ClockService, new ClockLive());

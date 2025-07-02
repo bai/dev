@@ -1,7 +1,8 @@
 import { logger } from "~/lib/logger";
 import { getCurrentGitCommitSha } from "~/lib/version";
-import { db } from "~/drizzle";
-import { runs } from "~/drizzle/schema";
+
+import { db } from "../../drizzle";
+import { runs } from "../../drizzle/schema";
 
 /**
  * Records the current CLI run in the database.
