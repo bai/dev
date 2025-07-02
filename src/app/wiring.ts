@@ -31,30 +31,14 @@ import { ShellIntegrationServiceLive } from "./services/ShellIntegrationService"
 import { UpdateCheckServiceLive } from "./services/UpdateCheckService";
 import { VersionServiceLive } from "./services/VersionService";
 
-// Infrastructure Layer - provides all the basic services
-export const InfraLiveLayer = Layer.mergeAll(
+// Infrastructure Layer - merging all services directly
+export const AppLiveLayer = Layer.mergeAll(
   FileSystemLiveLayer,
-  ShellLiveLayer,
-  NetworkLiveLayer,
-  RunStoreLiveLayer,
+  LoggerLiveLayer,
   PathServiceLive,
   DirectoryServiceLive,
-).pipe(
-  Layer.provide(Layer.mergeAll(GitLiveLayer, KeychainLiveLayer, MiseLiveLayer)),
-  Layer.provide(GitHubProviderLayer("github")), // default org can be overridden
+  ShellIntegrationServiceLive, // Merge directly instead of providing
 );
-
-// App Layer - provides application-level services
-export const AppLiveLayer = Layer.mergeAll(
-  LoggerLiveLayer,
-  ClockLiveLayer,
-  ConfigLoaderLiveLayer(path.join(os.homedir(), ".config", "dev", "config.json")),
-  CommandTrackingServiceLive,
-  DebugServiceLive,
-  ShellIntegrationServiceLive,
-  UpdateCheckServiceLive,
-  VersionServiceLive,
-).pipe(Layer.provide(InfraLiveLayer));
 
 // Available commands
 export const availableCommands: CliCommandSpec[] = [

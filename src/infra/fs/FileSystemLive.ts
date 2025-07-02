@@ -45,9 +45,9 @@ export class FileSystemLive implements FileSystem {
   listDirectories(dirPath: string): Effect.Effect<string[], ConfigError | UnknownError> {
     return Effect.tryPromise({
       try: async () => {
-        const scanner = new Bun.Glob("*/*/*/");
+        const scanner = new Bun.Glob("*/");
         const matches = Array.from(scanner.scanSync({ cwd: dirPath, onlyFiles: false }));
-        return matches;
+        return matches.map((match) => match.replace(/\/$/, "")); // Remove trailing slash
       },
       catch: (error) => configError(`Failed to list directories in ${dirPath}: ${error}`),
     });

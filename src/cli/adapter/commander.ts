@@ -93,23 +93,12 @@ export class CommanderAdapter implements CliAdapter {
       // 4. Consider alternative tracking approaches (interceptors, middleware)
 
       // Create and execute the main command program
-      const program = Effect.gen(function* () {
-        // Get services from the Effect Context
-        const logger = yield* LoggerService;
-        const fileSystem = yield* FileSystemService;
-        const shell = yield* ShellService;
-
-        // Create enhanced context with services
-        const context: CommandContext = {
+      const program = commandSpec
+        .exec({
           args: parsedArgs,
           options: commanderCommand.opts(),
-        };
-
-        // Execute the command (with service dependency workaround)
-        // This type assertion bypasses the service resolution issue
-        // TODO: Fix service dependency resolution properly
-        yield* commandSpec.exec(context) as Effect.Effect<void, DevError, never>;
-      }).pipe(Effect.provide(AppLiveLayer));
+        })
+        .pipe(Effect.provide(AppLiveLayer));
 
       // Run with runtime
       const exit = await Runtime.runPromiseExit(this.runtime)(program);

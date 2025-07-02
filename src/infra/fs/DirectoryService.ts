@@ -85,5 +85,5 @@ export class DirectoryServiceImpl implements DirectoryService {
 // Service tag for Effect Context system
 export class DirectoryServiceTag extends Context.Tag("DirectoryService")<DirectoryServiceTag, DirectoryService>() {}
 
-// Layer that provides DirectoryService
+// Layer that provides DirectoryService with proper dependency injection
 export const DirectoryServiceLive = Layer.succeed(DirectoryServiceTag, new DirectoryServiceImpl());
