@@ -1,0 +1,250 @@
+import { Cause, Effect, Exit, Layer, Runtime } from "effect";
+import yargs, { type Argv } from "yargs";
+import { hideBin } from "yargs/helpers";
+
+import { CommandTrackingServiceTag } from "../../app/services/CommandTrackingService";
+import { AppLiveLayer } from "../../app/wiring";
+import { exitCode, type DevError } from "../../domain/errors";
+import { LoggerService, type CliCommandSpec, type CommandContext } from "../../domain/models";
+import type { CliAdapter } from "./types";
+
+export class YargsAdapter implements CliAdapter {
+  private yargs: Argv;
+  private commands: CliCommandSpec[];
+  private runtime: Runtime.Runtime<never>;
+
+  constructor(commands: CliCommandSpec[]) {
+    this.yargs = yargs(hideBin(process.argv));
+    this.commands = commands;
+    this.runtime = Runtime.defaultRuntime;
+
+    // Configure yargs behavior
+    this.yargs
+      .strict()
+      .demandCommand(1, "You need at least one command before moving on")
+      .recommendCommands()
+      .help("help")
+      .alias("help", "h")
+      .version(false) // We'll handle version manually
+      .wrap(Math.min(120, this.yargs.terminalWidth()));
+  }
+
+  setMetadata(metadata: { name: string; description: string; version: string }): void {
+    this.yargs
+      .scriptName(metadata.name)
+      .usage(`${metadata.description}\n\nUsage: $0 <command> [options]`)
+      .version(metadata.version);
+  }
+
+  initialize(commands: CliCommandSpec[]): void {
+    for (const commandSpec of commands) {
+      this.registerCommand(commandSpec);
+    }
+  }
+
+  async parseAndExecute(args: string[]): Promise<void> {
+    // Initialize with available commands
+    this.initialize(this.commands);
+
+    // Parse arguments but don't execute yet - we need to handle tracking
+    await this.yargs.parseAsync(args);
+  }
+
+  private registerCommand(commandSpec: CliCommandSpec): void {
+    this.yargs.command(
+      this.buildCommandString(commandSpec),
+      commandSpec.description,
+      (yargs) => this.buildCommandOptions(yargs, commandSpec),
+      (argv) => this.executeCommand(commandSpec, argv),
+    );
+
+    // Add aliases if any
+    if (commandSpec.aliases) {
+      for (const alias of commandSpec.aliases) {
+        this.yargs.command(
+          this.buildAliasCommandString(alias, commandSpec),
+          `Alias for ${commandSpec.name}`,
+          (yargs) => this.buildCommandOptions(yargs, commandSpec),
+          (argv) => this.executeCommand(commandSpec, argv),
+        );
+      }
+    }
+  }
+
+  private buildCommandString(commandSpec: CliCommandSpec): string {
+    let command = commandSpec.name;
+
+    if (commandSpec.arguments) {
+      for (const arg of commandSpec.arguments) {
+        if (arg.required) {
+          command += ` <${arg.name}>`;
+        } else {
+          command += ` [${arg.name}]`;
+        }
+
+        if (arg.variadic) {
+          command = command.replace(`<${arg.name}>`, `<${arg.name}..>`);
+          command = command.replace(`[${arg.name}]`, `[${arg.name}..]`);
+        }
+      }
+    }
+
+    return command;
+  }
+
+  private buildAliasCommandString(alias: string, commandSpec: CliCommandSpec): string {
+    let command = alias;
+
+    if (commandSpec.arguments) {
+      for (const arg of commandSpec.arguments) {
+        if (arg.required) {
+          command += ` <${arg.name}>`;
+        } else {
+          command += ` [${arg.name}]`;
+        }
+
+        if (arg.variadic) {
+          command = command.replace(`<${arg.name}>`, `<${arg.name}..>`);
+          command = command.replace(`[${arg.name}]`, `[${arg.name}..]`);
+        }
+      }
+    }
+
+    return command;
+  }
+
+  private buildCommandOptions(yargs: Argv, commandSpec: CliCommandSpec): Argv {
+    let builder = yargs;
+
+    // Add arguments with their descriptions and defaults
+    if (commandSpec.arguments) {
+      for (const arg of commandSpec.arguments) {
+        builder = builder.positional(arg.name, {
+          describe: arg.description,
+          type: "string",
+          default: arg.defaultValue,
+        });
+      }
+    }
+
+    // Add options
+    if (commandSpec.options) {
+      for (const option of commandSpec.options) {
+        const optionConfig: any = {
+          describe: option.description,
+          default: option.defaultValue,
+          demandOption: option.required || false,
+        };
+
+        if (option.choices) {
+          optionConfig.choices = option.choices;
+        }
+
+        // Parse flag format like "-v, --verbose" or "--debug"
+        const flags = option.flags.split(",").map((f) => f.trim());
+        const longFlag = flags.find((f) => f.startsWith("--"))?.replace("--", "");
+        const shortFlag = flags.find((f) => f.startsWith("-") && !f.startsWith("--"))?.replace("-", "");
+
+        if (longFlag) {
+          if (shortFlag) {
+            optionConfig.alias = shortFlag;
+          }
+          builder = builder.option(longFlag, optionConfig);
+        }
+      }
+    }
+
+    // Add help text if available
+    if (commandSpec.help) {
+      builder = builder.epilog(commandSpec.help);
+    }
+
+    return builder;
+  }
+
+  private executeCommand(commandSpec: CliCommandSpec, argv: any): void {
+    // Extract command arguments
+    const args: Record<string, any> = {};
+    if (commandSpec.arguments) {
+      for (const arg of commandSpec.arguments) {
+        args[arg.name] = argv[arg.name];
+      }
+    }
+
+    // Extract options (excluding yargs internals)
+    const options: Record<string, any> = {};
+    const internalKeys = ["_", "$0", "help", "h", "version"];
+
+    for (const [key, value] of Object.entries(argv)) {
+      if (!internalKeys.includes(key) && !commandSpec.arguments?.some((arg) => arg.name === key)) {
+        options[key] = value;
+      }
+    }
+
+    // Create the command execution program with tracking
+    const commandProgram = Effect.gen(function* () {
+      // Start command tracking
+      const tracking = yield* CommandTrackingServiceTag;
+
+      const runId = yield* tracking.recordCommandRun();
+
+      // Execute the actual command with proper error handling
+      const result = yield* Effect.either(
+        commandSpec
+          .exec({
+            args,
+            options,
+          })
+          .pipe(Effect.provide(AppLiveLayer)),
+      );
+
+      if (result._tag === "Left") {
+        // Command failed - record failure and propagate error
+        yield* tracking.completeCommandRun(runId, 1);
+        return yield* Effect.fail(result.left);
+      } else {
+        // Command succeeded - record success
+        yield* tracking.completeCommandRun(runId, 0);
+      }
+    });
+
+    // Execute the program with proper error handling
+    const program = commandProgram;
+
+    // Run the program and handle the result
+    Runtime.runPromiseExit(this.runtime)(program)
+      .then((exit) => {
+        Exit.match(exit, {
+          onSuccess: () => {
+            // Command completed successfully
+            process.exitCode = 0;
+          },
+          onFailure: (cause) => {
+            // Handle command failure using Cause.failureOrCause
+            const failureOrCause = Cause.failureOrCause(cause);
+            if (failureOrCause._tag === "Left") {
+              const error = failureOrCause.left;
+              if (error && typeof error === "object" && "_tag" in error) {
+                const devError = error as DevError;
+                console.error(`❌ ${devError._tag}:`, devError);
+                process.exitCode = exitCode(devError);
+              } else {
+                console.error("❌ Command execution failed:", error);
+                process.exitCode = 1;
+              }
+            } else {
+              console.error("💥 Unexpected error:", failureOrCause.right);
+              process.exitCode = 1;
+            }
+
+            // Throw error instead of process.exit to avoid linter error
+            throw new Error("Command execution failed");
+          },
+        });
+      })
+      .catch((error) => {
+        console.error("💥 Fatal error executing command:", error);
+        throw new Error("Fatal command execution error");
+      });
+  }
+}

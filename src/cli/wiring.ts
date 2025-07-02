@@ -1,8 +1,8 @@
 import { Layer } from "effect";
 
 import { AppLiveLayer, availableCommands } from "../app/wiring";
-import { CommanderAdapter } from "./adapter/commander";
 import type { CliAdapter } from "./adapter/types";
+import { YargsAdapter } from "./adapter/yargs";
 
 // CLI Layer - provides CLI-specific services on top of App layer
 export const CliLiveLayer = AppLiveLayer;
@@ -12,5 +12,5 @@ export const CliLiveLayer = AppLiveLayer;
 
 // Create CLI adapter with available commands
 export function createCliAdapter(): CliAdapter {
-  return new CommanderAdapter(availableCommands);
+  return new YargsAdapter(availableCommands);
 }

@@ -33,11 +33,31 @@ import { VersionServiceLive } from "./services/VersionService";
 
 // Infrastructure Layer - merging all services directly
 export const AppLiveLayer = Layer.mergeAll(
+  // Core infrastructure
   FileSystemLiveLayer,
   LoggerLiveLayer,
+  ClockLiveLayer,
+  ConfigLoaderLiveLayer(path.join(os.homedir(), ".config", "dev", "config.json")),
+
+  // Domain services
   PathServiceLive,
+
+  // Infrastructure services
   DirectoryServiceLive,
-  ShellIntegrationServiceLive, // Merge directly instead of providing
+  ShellLiveLayer,
+  NetworkLiveLayer,
+  GitLiveLayer,
+  MiseLiveLayer,
+  KeychainLiveLayer,
+  RunStoreLiveLayer,
+  GitHubProviderLayer("acme"), // Default org from config
+
+  // App services
+  ShellIntegrationServiceLive,
+  CommandTrackingServiceLive,
+  VersionServiceLive,
+  DebugServiceLive,
+  UpdateCheckServiceLive,
 );
 
 // Available commands
