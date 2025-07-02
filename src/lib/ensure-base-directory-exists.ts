@@ -5,9 +5,9 @@ import { Effect } from "effect";
 import { baseSearchDir } from "~/lib/constants";
 import { logger } from "~/lib/logger";
 
-import { configError } from "../domain/errors";
+import { configError, type ConfigError } from "../domain/errors";
 
-export function ensureBaseDirectoryExists(): Effect.Effect<void, import("../domain/errors").ConfigError> {
+export function ensureBaseDirectoryExists(): Effect.Effect<void, ConfigError> {
   return Effect.gen(function* () {
     // Check if directory exists using sync method for simplicity
     const exists = fs.existsSync(baseSearchDir);

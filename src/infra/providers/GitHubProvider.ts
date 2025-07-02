@@ -1,6 +1,6 @@
 import { Effect, Layer } from "effect";
 
-import { networkError, unknownError } from "../../domain/errors";
+import { networkError, unknownError, type NetworkError, type UnknownError } from "../../domain/errors";
 import type { GitProvider, Repository } from "../../domain/models";
 import { NetworkService, type Network } from "../../domain/ports/Network";
 import { RepoProviderService, type RepoProvider } from "../../domain/ports/RepoProvider";
@@ -16,13 +16,7 @@ export class GitHubProvider implements RepoProvider {
     private defaultOrg = "octocat",
   ) {}
 
-  resolveRepository(
-    name: string,
-    org?: string,
-  ): Effect.Effect<
-    Repository,
-    import("../../domain/errors").NetworkError | import("../../domain/errors").UnknownError
-  > {
+  resolveRepository(name: string, org?: string): Effect.Effect<Repository, NetworkError | UnknownError> {
     const organization = org || this.defaultOrg;
     const cloneUrl = `${this.provider.baseUrl}/${organization}/${name}.git`;
 
@@ -56,43 +50,30 @@ export class GitHubProvider implements RepoProvider {
     return this.provider;
   }
 
-  searchRepositories(
-    query: string,
-    org?: string,
-  ): Effect.Effect<
-    Repository[],
-    import("../../domain/errors").NetworkError | import("../../domain/errors").UnknownError
-  > {
+  searchRepositories(query: string, org?: string): Effect.Effect<Repository[], NetworkError | UnknownError> {
     const searchQuery = org ? `${query} org:${org}` : query;
     const apiUrl = `https://api.github.com/search/repositories?q=${encodeURIComponent(searchQuery)}`;
 
     return this.network.get(apiUrl).pipe(
-      Effect.flatMap(
-        (
-          response,
-        ): Effect.Effect<
-          Repository[],
-          import("../../domain/errors").NetworkError | import("../../domain/errors").UnknownError
-        > => {
-          if (response.status !== 200) {
-            return Effect.fail(networkError(`GitHub search API error: ${response.status} ${response.statusText}`));
-          }
+      Effect.flatMap((response): Effect.Effect<Repository[], NetworkError | UnknownError> => {
+        if (response.status !== 200) {
+          return Effect.fail(networkError(`GitHub search API error: ${response.status} ${response.statusText}`));
+        }
 
-          try {
-            const data = JSON.parse(response.body);
-            const repositories: Repository[] = data.items.map((item: any) => ({
-              name: item.name,
-              organization: item.owner.login,
-              provider: this.provider,
-              cloneUrl: item.clone_url,
-            }));
+        try {
+          const data = JSON.parse(response.body);
+          const repositories: Repository[] = data.items.map((item: any) => ({
+            name: item.name,
+            organization: item.owner.login,
+            provider: this.provider,
+            cloneUrl: item.clone_url,
+          }));
 
-            return Effect.succeed(repositories);
-          } catch (error) {
-            return Effect.fail(unknownError(`Failed to parse GitHub API response: ${error}`));
-          }
-        },
-      ),
+          return Effect.succeed(repositories);
+        } catch (error) {
+          return Effect.fail(unknownError(`Failed to parse GitHub API response: ${error}`));
+        }
+      }),
     );
   }
 }

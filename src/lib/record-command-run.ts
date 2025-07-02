@@ -5,7 +5,7 @@ import { getCurrentGitCommitSha } from "~/lib/version";
 
 import { db } from "../../drizzle";
 import { runs } from "../../drizzle/schema";
-import { unknownError } from "../domain/errors";
+import { unknownError, type UnknownError } from "../domain/errors";
 
 /**
  * Records the current CLI run in the database.
@@ -16,7 +16,7 @@ import { unknownError } from "../domain/errors";
  *
  * @returns Effect that resolves when the recording is complete
  */
-export const recordCommandRun = (): Effect.Effect<void, import("../domain/errors").UnknownError> => {
+export const recordCommandRun = (): Effect.Effect<void, UnknownError> => {
   return Effect.gen(function* () {
     // Gather run information
     const commandName = process.argv[2] || "help";

@@ -1,22 +1,15 @@
 import { Context, Effect, Layer } from "effect";
 
-import { configError, unknownError } from "../domain/errors";
+import { configError, unknownError, type ConfigError, type NetworkError, type UnknownError } from "../domain/errors";
 import { FileSystemService, type FileSystem } from "../domain/ports/FileSystem";
 import { NetworkService, type Network } from "../domain/ports/Network";
 import { migrateConfig } from "./migrations";
 import { configSchema, defaultConfig, type Config } from "./schema";
 
 export interface ConfigLoader {
-  load(): Effect.Effect<Config, import("../domain/errors").ConfigError | import("../domain/errors").UnknownError>;
-  save(
-    config: Config,
-  ): Effect.Effect<void, import("../domain/errors").ConfigError | import("../domain/errors").UnknownError>;
-  refresh(): Effect.Effect<
-    Config,
-    | import("../domain/errors").ConfigError
-    | import("../domain/errors").NetworkError
-    | import("../domain/errors").UnknownError
-  >;
+  load(): Effect.Effect<Config, ConfigError | UnknownError>;
+  save(config: Config): Effect.Effect<void, ConfigError | UnknownError>;
+  refresh(): Effect.Effect<Config, ConfigError | NetworkError | UnknownError>;
 }
 
 export class ConfigLoaderLive implements ConfigLoader {
@@ -26,7 +19,7 @@ export class ConfigLoaderLive implements ConfigLoader {
     private configPath: string,
   ) {}
 
-  load(): Effect.Effect<Config, import("../domain/errors").ConfigError | import("../domain/errors").UnknownError> {
+  load(): Effect.Effect<Config, ConfigError | UnknownError> {
     return this.fileSystem.exists(this.configPath).pipe(
       Effect.flatMap((exists) => {
         if (!exists) {
@@ -50,19 +43,12 @@ export class ConfigLoaderLive implements ConfigLoader {
     );
   }
 
-  save(
-    config: Config,
-  ): Effect.Effect<void, import("../domain/errors").ConfigError | import("../domain/errors").UnknownError> {
+  save(config: Config): Effect.Effect<void, ConfigError | UnknownError> {
     const content = JSON.stringify(config, null, 2);
     return this.fileSystem.writeFile(this.configPath, content);
   }
 
-  refresh(): Effect.Effect<
-    Config,
-    | import("../domain/errors").ConfigError
-    | import("../domain/errors").NetworkError
-    | import("../domain/errors").UnknownError
-  > {
+  refresh(): Effect.Effect<Config, ConfigError | NetworkError | UnknownError> {
     return this.load().pipe(
       Effect.flatMap((currentConfig) => {
         if (!currentConfig.configUrl) {

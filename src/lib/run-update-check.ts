@@ -5,7 +5,7 @@ import { logger } from "~/lib/logger";
 
 import { db } from "../../drizzle";
 import { runs } from "../../drizzle/schema";
-import { unknownError } from "../domain/errors";
+import { unknownError, type UnknownError } from "../domain/errors";
 
 const upgradeFrequency = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
 
@@ -17,7 +17,7 @@ const upgradeFrequency = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
  *
  * @returns Effect that resolves when the check is complete
  */
-export const runPeriodicUpgradeCheck = (): Effect.Effect<void, import("../domain/errors").UnknownError> => {
+export const runPeriodicUpgradeCheck = (): Effect.Effect<void, UnknownError> => {
   return Effect.gen(function* () {
     const commandName = process.argv[2] || "help";
 

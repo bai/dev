@@ -1,6 +1,6 @@
 import { Effect, Layer } from "effect";
 
-import { networkError, unknownError } from "../../domain/errors";
+import { networkError, unknownError, type NetworkError, type UnknownError } from "../../domain/errors";
 import { FileSystemService, type FileSystem } from "../../domain/ports/FileSystem";
 import { NetworkService, type HttpResponse, type Network } from "../../domain/ports/Network";
 
@@ -10,10 +10,7 @@ export class NetworkLive implements Network {
   get(
     url: string,
     options: { headers?: Record<string, string> } = {},
-  ): Effect.Effect<
-    HttpResponse,
-    import("../../domain/errors").NetworkError | import("../../domain/errors").UnknownError
-  > {
+  ): Effect.Effect<HttpResponse, NetworkError | UnknownError> {
     return Effect.tryPromise({
       try: async () => {
         const response = await fetch(url, {
@@ -39,10 +36,7 @@ export class NetworkLive implements Network {
     });
   }
 
-  downloadFile(
-    url: string,
-    destinationPath: string,
-  ): Effect.Effect<void, import("../../domain/errors").NetworkError | import("../../domain/errors").UnknownError> {
+  downloadFile(url: string, destinationPath: string): Effect.Effect<void, NetworkError | UnknownError> {
     const fileSystem = this.fileSystem;
     return Effect.gen(function* () {
       const response = yield* Effect.tryPromise({

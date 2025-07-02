@@ -1,6 +1,6 @@
 import { Effect, Layer } from "effect";
 
-import { gitError, unknownError } from "../../domain/errors";
+import { gitError, unknownError, type GitError, type UnknownError } from "../../domain/errors";
 import type { Repository } from "../../domain/models";
 import { GitService, type Git } from "../../domain/ports/Git";
 import { ShellService, type Shell } from "../../domain/ports/Shell";
@@ -8,10 +8,7 @@ import { ShellService, type Shell } from "../../domain/ports/Shell";
 export class GitLive implements Git {
   constructor(private shell: Shell) {}
 
-  clone(
-    repository: Repository,
-    destinationPath: string,
-  ): Effect.Effect<void, import("../../domain/errors").GitError | import("../../domain/errors").UnknownError> {
+  clone(repository: Repository, destinationPath: string): Effect.Effect<void, GitError | UnknownError> {
     return this.shell.exec("git", ["clone", repository.cloneUrl, destinationPath]).pipe(
       Effect.flatMap((result) => {
         if (result.exitCode !== 0) {
@@ -22,9 +19,7 @@ export class GitLive implements Git {
     );
   }
 
-  fetch(
-    repositoryPath: string,
-  ): Effect.Effect<void, import("../../domain/errors").GitError | import("../../domain/errors").UnknownError> {
+  fetch(repositoryPath: string): Effect.Effect<void, GitError | UnknownError> {
     return this.shell.exec("git", ["fetch"], { cwd: repositoryPath }).pipe(
       Effect.flatMap((result) => {
         if (result.exitCode !== 0) {
@@ -42,9 +37,7 @@ export class GitLive implements Git {
     );
   }
 
-  getCurrentCommitSha(
-    repositoryPath?: string,
-  ): Effect.Effect<string, import("../../domain/errors").GitError | import("../../domain/errors").UnknownError> {
+  getCurrentCommitSha(repositoryPath?: string): Effect.Effect<string, GitError | UnknownError> {
     return this.shell.exec("git", ["rev-parse", "HEAD"], { cwd: repositoryPath }).pipe(
       Effect.flatMap((result) => {
         if (result.exitCode !== 0) {
@@ -55,9 +48,7 @@ export class GitLive implements Git {
     );
   }
 
-  getRemoteUrl(
-    repositoryPath: string,
-  ): Effect.Effect<string, import("../../domain/errors").GitError | import("../../domain/errors").UnknownError> {
+  getRemoteUrl(repositoryPath: string): Effect.Effect<string, GitError | UnknownError> {
     return this.shell.exec("git", ["config", "--get", "remote.origin.url"], { cwd: repositoryPath }).pipe(
       Effect.flatMap((result) => {
         if (result.exitCode !== 0) {

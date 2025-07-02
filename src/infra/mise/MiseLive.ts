@@ -1,13 +1,13 @@
 import { Effect, Layer } from "effect";
 
-import { unknownError } from "../../domain/errors";
+import { unknownError, type UnknownError } from "../../domain/errors";
 import { MiseService, type Mise, type MiseInfo } from "../../domain/ports/Mise";
 import { ShellService, type Shell } from "../../domain/ports/Shell";
 
 export class MiseLive implements Mise {
   constructor(private shell: Shell) {}
 
-  checkInstallation(): Effect.Effect<MiseInfo, import("../../domain/errors").UnknownError> {
+  checkInstallation(): Effect.Effect<MiseInfo, UnknownError> {
     return this.shell.exec("mise", ["--version"]).pipe(
       Effect.flatMap((result) => {
         if (result.exitCode !== 0) {
@@ -47,7 +47,7 @@ export class MiseLive implements Mise {
     );
   }
 
-  install(): Effect.Effect<void, import("../../domain/errors").UnknownError> {
+  install(): Effect.Effect<void, UnknownError> {
     return this.shell
       .exec("curl", [
         "-sSfL",
@@ -65,7 +65,7 @@ export class MiseLive implements Mise {
       );
   }
 
-  installTools(cwd?: string): Effect.Effect<void, import("../../domain/errors").UnknownError> {
+  installTools(cwd?: string): Effect.Effect<void, UnknownError> {
     return this.shell.exec("mise", ["install"], { cwd }).pipe(
       Effect.flatMap((result) => {
         if (result.exitCode !== 0) {
@@ -76,7 +76,7 @@ export class MiseLive implements Mise {
     );
   }
 
-  runTask(taskName: string, cwd?: string): Effect.Effect<void, import("../../domain/errors").UnknownError> {
+  runTask(taskName: string, cwd?: string): Effect.Effect<void, UnknownError> {
     return this.shell.execInteractive("mise", ["run", taskName], { cwd }).pipe(
       Effect.flatMap((exitCode) => {
         if (exitCode !== 0) {
@@ -87,7 +87,7 @@ export class MiseLive implements Mise {
     );
   }
 
-  getTasks(cwd?: string): Effect.Effect<string[], import("../../domain/errors").UnknownError> {
+  getTasks(cwd?: string): Effect.Effect<string[], UnknownError> {
     return this.shell.exec("mise", ["tasks", "--list"], { cwd }).pipe(
       Effect.flatMap((result) => {
         if (result.exitCode !== 0) {

@@ -1,17 +1,13 @@
 import { Effect, Layer } from "effect";
 
-import { authError, unknownError } from "../../domain/errors";
+import { authError, unknownError, type AuthError, type UnknownError } from "../../domain/errors";
 import { KeychainService, type Keychain } from "../../domain/ports/Keychain";
 import { ShellService, type Shell } from "../../domain/ports/Shell";
 
 export class KeychainLive implements Keychain {
   constructor(private shell: Shell) {}
 
-  setCredential(
-    service: string,
-    account: string,
-    password: string,
-  ): Effect.Effect<void, import("../../domain/errors").AuthError | import("../../domain/errors").UnknownError> {
+  setCredential(service: string, account: string, password: string): Effect.Effect<void, AuthError | UnknownError> {
     return this.shell
       .exec("security", [
         "add-generic-password",
@@ -33,10 +29,7 @@ export class KeychainLive implements Keychain {
       );
   }
 
-  getCredential(
-    service: string,
-    account: string,
-  ): Effect.Effect<string, import("../../domain/errors").AuthError | import("../../domain/errors").UnknownError> {
+  getCredential(service: string, account: string): Effect.Effect<string, AuthError | UnknownError> {
     return this.shell
       .exec("security", [
         "find-generic-password",
@@ -56,10 +49,7 @@ export class KeychainLive implements Keychain {
       );
   }
 
-  removeCredential(
-    service: string,
-    account: string,
-  ): Effect.Effect<void, import("../../domain/errors").AuthError | import("../../domain/errors").UnknownError> {
+  removeCredential(service: string, account: string): Effect.Effect<void, AuthError | UnknownError> {
     return this.shell
       .exec("security", [
         "delete-generic-password",

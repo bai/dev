@@ -8,7 +8,7 @@ import { isDebugMode } from "~/lib/is-debug-mode";
 import { logger } from "~/lib/logger";
 import { miseConfigSchema } from "~/lib/tools/mise";
 
-import { configError } from "../domain/errors";
+import { configError, type ConfigError } from "../domain/errors";
 import type { ConfigManager } from "../domain/models";
 
 const gitProviderSchema = z.enum(["github", "gitlab"]);
@@ -38,7 +38,7 @@ let cachedDevConfig: DevConfig | null = null;
 /**
  * Ensure config directory and file exist
  */
-const ensureConfigExists = (): Effect.Effect<void, import("../domain/errors").ConfigError> => {
+const ensureConfigExists = (): Effect.Effect<void, ConfigError> => {
   return Effect.gen(function* () {
     if (!fs.existsSync(devConfigDir)) {
       yield* Effect.tryPromise({
@@ -68,7 +68,7 @@ const ensureConfigExists = (): Effect.Effect<void, import("../domain/errors").Co
 /**
  * Get the dev configuration from file
  */
-export const getDevConfig = (): Effect.Effect<DevConfig, import("../domain/errors").ConfigError> => {
+export const getDevConfig = (): Effect.Effect<DevConfig, ConfigError> => {
   return Effect.gen(function* () {
     if (cachedDevConfig) {
       return cachedDevConfig;
@@ -108,7 +108,7 @@ export const getDevConfig = (): Effect.Effect<DevConfig, import("../domain/error
 /**
  * Refresh dev configuration from remote URL
  */
-export const refreshDevConfigFromRemoteUrl = (): Effect.Effect<void, import("../domain/errors").ConfigError> => {
+export const refreshDevConfigFromRemoteUrl = (): Effect.Effect<void, ConfigError> => {
   return Effect.gen(function* () {
     logger.info("🔄 Refreshing dev configuration...");
 
@@ -165,7 +165,7 @@ export const clearDevConfigCache = (): void => {
 /**
  * Simple ConfigManager implementation
  */
-export const createConfig = (): Effect.Effect<ConfigManager, import("../domain/errors").ConfigError> => {
+export const createConfig = (): Effect.Effect<ConfigManager, ConfigError> => {
   return Effect.gen(function* () {
     const config = yield* getDevConfig();
 

@@ -4,13 +4,13 @@ import { Effect } from "effect";
 
 import { baseSearchDir } from "~/lib/constants";
 
-import { configError } from "../domain/errors";
+import { configError, type ConfigError } from "../domain/errors";
 
 /**
  * Parses repository URL to determine the local filesystem path.
  * Supports HTTPS and SSH URLs from GitHub/GitLab style hosts.
  */
-export function parseRepoUrlToPath(repoUrl: string): Effect.Effect<string, import("../domain/errors").ConfigError> {
+export function parseRepoUrlToPath(repoUrl: string): Effect.Effect<string, ConfigError> {
   return Effect.gen(function* () {
     let orgName = "";
     let repoName = "";

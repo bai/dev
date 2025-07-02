@@ -6,7 +6,7 @@ import { Effect } from "effect";
 import { baseSearchDir } from "~/lib/constants";
 import { logger } from "~/lib/logger";
 
-import { configError } from "../domain/errors";
+import { configError, type ConfigError } from "../domain/errors";
 
 /**
  * Handles changing directory through shell wrapper by outputting a special format.
@@ -17,7 +17,7 @@ import { configError } from "../domain/errors";
  * @param targetPath - The path (absolute or relative to baseSearchDir) to change directory to
  * @returns Effect that succeeds if the directory exists and handles the CD operation
  */
-export function handleCdToPath(targetPath: string): Effect.Effect<void, import("../domain/errors").ConfigError> {
+export function handleCdToPath(targetPath: string): Effect.Effect<void, ConfigError> {
   return Effect.gen(function* () {
     let absolutePath: string;
     const cleanedTargetPath = targetPath.replace(/\/$/, ""); // Remove trailing slash

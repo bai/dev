@@ -6,7 +6,7 @@ import { desc, eq, lt } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/bun-sqlite";
 import { Effect, Layer } from "effect";
 
-import { configError, unknownError } from "../../domain/errors";
+import { configError, unknownError, type ConfigError, type UnknownError } from "../../domain/errors";
 import type { CommandRun } from "../../domain/models";
 import { RunStoreService, type RunStore } from "../../domain/ports/RunStore";
 import { runs } from "./schema";
@@ -20,9 +20,7 @@ export class RunStoreLive implements RunStore {
     this.db = drizzle(sqlite);
   }
 
-  record(
-    run: Omit<CommandRun, "id" | "duration_ms">,
-  ): Effect.Effect<string, import("../../domain/errors").ConfigError | import("../../domain/errors").UnknownError> {
+  record(run: Omit<CommandRun, "id" | "duration_ms">): Effect.Effect<string, ConfigError | UnknownError> {
     return Effect.tryPromise({
       try: async () => {
         const id = crypto.randomUUID();
@@ -42,11 +40,7 @@ export class RunStoreLive implements RunStore {
     });
   }
 
-  complete(
-    id: string,
-    exitCode: number,
-    finishedAt: Date,
-  ): Effect.Effect<void, import("../../domain/errors").ConfigError | import("../../domain/errors").UnknownError> {
+  complete(id: string, exitCode: number, finishedAt: Date): Effect.Effect<void, ConfigError | UnknownError> {
     return Effect.tryPromise({
       try: async () => {
         await this.db
@@ -61,9 +55,7 @@ export class RunStoreLive implements RunStore {
     });
   }
 
-  prune(
-    keepDays: number,
-  ): Effect.Effect<void, import("../../domain/errors").ConfigError | import("../../domain/errors").UnknownError> {
+  prune(keepDays: number): Effect.Effect<void, ConfigError | UnknownError> {
     return Effect.tryPromise({
       try: async () => {
         const cutoffDate = new Date();
@@ -75,12 +67,7 @@ export class RunStoreLive implements RunStore {
     });
   }
 
-  getRecentRuns(
-    limit: number,
-  ): Effect.Effect<
-    CommandRun[],
-    import("../../domain/errors").ConfigError | import("../../domain/errors").UnknownError
-  > {
+  getRecentRuns(limit: number): Effect.Effect<CommandRun[], ConfigError | UnknownError> {
     return Effect.tryPromise({
       try: async () => {
         const result = await this.db.select().from(runs).orderBy(runs.started_at.desc()).limit(limit);

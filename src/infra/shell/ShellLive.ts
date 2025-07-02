@@ -2,15 +2,11 @@ import { spawn } from "bun";
 
 import { Effect, Layer } from "effect";
 
-import { unknownError } from "../../domain/errors";
+import { unknownError, type UnknownError } from "../../domain/errors";
 import { ShellService, type Shell, type SpawnResult } from "../../domain/ports/Shell";
 
 export class ShellLive implements Shell {
-  exec(
-    command: string,
-    args: string[] = [],
-    options: { cwd?: string } = {},
-  ): Effect.Effect<SpawnResult, import("../../domain/errors").UnknownError> {
+  exec(command: string, args: string[] = [], options: { cwd?: string } = {}): Effect.Effect<SpawnResult, UnknownError> {
     return Effect.tryPromise({
       try: async () => {
         const proc = spawn([command, ...args], {
@@ -41,7 +37,7 @@ export class ShellLive implements Shell {
     command: string,
     args: string[] = [],
     options: { cwd?: string } = {},
-  ): Effect.Effect<number, import("../../domain/errors").UnknownError> {
+  ): Effect.Effect<number, UnknownError> {
     return Effect.tryPromise({
       try: async () => {
         const proc = spawn([command, ...args], {

@@ -4,23 +4,18 @@ import path from "path";
 
 import { Effect, Layer } from "effect";
 
-import { configError, unknownError } from "../../domain/errors";
+import { configError, unknownError, type ConfigError, type UnknownError } from "../../domain/errors";
 import { FileSystemService, type FileSystem } from "../../domain/ports/FileSystem";
 
 export class FileSystemLive implements FileSystem {
-  readFile(
-    filePath: string,
-  ): Effect.Effect<string, import("../../domain/errors").ConfigError | import("../../domain/errors").UnknownError> {
+  readFile(filePath: string): Effect.Effect<string, ConfigError | UnknownError> {
     return Effect.tryPromise({
       try: () => fs.readFile(filePath, "utf-8"),
       catch: (error) => configError(`Failed to read file ${filePath}: ${error}`),
     });
   }
 
-  writeFile(
-    filePath: string,
-    content: string,
-  ): Effect.Effect<void, import("../../domain/errors").ConfigError | import("../../domain/errors").UnknownError> {
+  writeFile(filePath: string, content: string): Effect.Effect<void, ConfigError | UnknownError> {
     return Effect.tryPromise({
       try: async () => {
         const dir = path.dirname(filePath);
@@ -40,19 +35,14 @@ export class FileSystemLive implements FileSystem {
     );
   }
 
-  mkdir(
-    dirPath: string,
-    recursive = true,
-  ): Effect.Effect<void, import("../../domain/errors").ConfigError | import("../../domain/errors").UnknownError> {
+  mkdir(dirPath: string, recursive = true): Effect.Effect<void, ConfigError | UnknownError> {
     return Effect.tryPromise({
       try: () => fs.mkdir(dirPath, { recursive }),
       catch: (error) => configError(`Failed to create directory ${dirPath}: ${error}`),
     });
   }
 
-  listDirectories(
-    dirPath: string,
-  ): Effect.Effect<string[], import("../../domain/errors").ConfigError | import("../../domain/errors").UnknownError> {
+  listDirectories(dirPath: string): Effect.Effect<string[], ConfigError | UnknownError> {
     return Effect.tryPromise({
       try: async () => {
         const scanner = new Bun.Glob("*/*/*/");
