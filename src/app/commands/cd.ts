@@ -1,20 +1,12 @@
 import { Effect } from "effect";
 
 import { unknownError, type DevError } from "../../domain/errors";
-import type { CliCommandSpec, CommandContext, Logger } from "../../domain/models";
-import type { FileSystem } from "../../domain/ports/FileSystem";
-import type { Shell } from "../../domain/ports/Shell";
-import { findDirs } from "../../lib/find-dirs";
-import { handleCdToPath } from "../../lib/handle-cd-to-path";
-import { filter } from "../../lib/match";
-
-// Extended command context that includes all services
-interface ExtendedCommandContext extends CommandContext {
-  logger: Logger;
-  fileSystem: FileSystem;
-  shell: Shell;
-  baseDir: string;
-}
+import { filter } from "../../domain/matching";
+import type { CliCommandSpec, CommandContext } from "../../domain/models";
+import { FileSystemService } from "../../domain/ports/FileSystem";
+import { ShellService } from "../../domain/ports/Shell";
+import { DirectoryServiceTag } from "../../infra/fs/DirectoryService";
+import { ShellIntegrationServiceTag } from "../services/ShellIntegrationService";
 
 export const cdCommand: CliCommandSpec = {
   name: "cd",
@@ -42,34 +34,28 @@ Examples:
     },
   ],
 
-  exec(context: CommandContext): Effect.Effect<void, never, any> {
+  exec(context: CommandContext): Effect.Effect<void, DevError, any> {
     return Effect.gen(function* () {
-      const ctx = context as ExtendedCommandContext;
-      const folderName = ctx.args.folder_name;
+      const folderName = context.args.folder_name;
 
       if (folderName) {
-        yield* handleDirectCd(folderName, ctx);
+        yield* handleDirectCd(folderName);
       } else {
-        yield* handleInteractiveCd(ctx);
+        yield* handleInteractiveCd();
       }
-    }).pipe(
-      Effect.catchAll((error) => {
-        // Handle all errors and convert to success to match the never error type
-        console.error("Command failed:", error);
-        return Effect.succeed(void 0);
-      }),
-    );
+    });
   },
 };
 
-function handleDirectCd(folderName: string, ctx: ExtendedCommandContext): Effect.Effect<void, DevError> {
+function handleDirectCd(folderName: string): Effect.Effect<void, DevError, any> {
   return Effect.gen(function* () {
     if (!folderName || folderName.trim() === "") {
       return yield* Effect.fail(unknownError("Folder name for 'cd' command cannot be empty."));
     }
 
-    // Use findDirs() to get directories, wrapped in Effect
-    const directories = yield* Effect.sync(() => findDirs());
+    // Use DirectoryService to get directories
+    const directoryService = yield* DirectoryServiceTag;
+    const directories = yield* directoryService.findDirs();
 
     if (directories.length > 0) {
       // Use filter() for fuzzy matching instead of simple includes
@@ -77,25 +63,27 @@ function handleDirectCd(folderName: string, ctx: ExtendedCommandContext): Effect
 
       if (fuzzyMatches.length > 0 && fuzzyMatches[0]) {
         const targetPath = fuzzyMatches[0].str; // This is a relative path
-        // Use handleCdToPath instead of direct shell.changeDirectory
-        yield* handleCdToPath(targetPath);
+        // Use ShellIntegrationService instead of direct handleCdToPath
+        const shellIntegration = yield* ShellIntegrationServiceTag;
+        yield* shellIntegration.handleCdToPathLegacy(targetPath);
         return; // Successfully changed directory
       }
     }
 
     // Nothing found or no directories
-    yield* ctx.logger.error(`Folder '${folderName}' not found`);
+    yield* Effect.logError(`Folder '${folderName}' not found`);
     return yield* Effect.fail(unknownError(`Folder '${folderName}' not found`));
   });
 }
 
-function handleInteractiveCd(ctx: ExtendedCommandContext): Effect.Effect<void, DevError> {
+function handleInteractiveCd(): Effect.Effect<void, DevError, any> {
   return Effect.gen(function* () {
-    // Use findDirs() to get directories, wrapped in Effect
-    const directories = yield* Effect.sync(() => findDirs());
+    // Use DirectoryService to get directories
+    const directoryService = yield* DirectoryServiceTag;
+    const directories = yield* directoryService.findDirs();
 
     if (directories.length === 0) {
-      yield* ctx.logger.error("No directories found");
+      yield* Effect.logError("No directories found");
       return;
     }
 
@@ -128,8 +116,9 @@ function handleInteractiveCd(ctx: ExtendedCommandContext): Effect.Effect<void, D
     });
 
     if (selectedPath) {
-      // Use handleCdToPath instead of direct shell.changeDirectory
-      yield* handleCdToPath(selectedPath);
+      // Use ShellIntegrationService instead of direct handleCdToPath
+      const shellIntegration = yield* ShellIntegrationServiceTag;
+      yield* shellIntegration.handleCdToPathLegacy(selectedPath);
     }
   });
 }

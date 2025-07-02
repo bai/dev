@@ -1,8 +1,7 @@
 import { spawn, spawnSync } from "bun";
 
-import { ExternalToolError } from "~/lib/errors";
-import { isDebugMode } from "~/lib/is-debug-mode";
-import { logger } from "~/lib/logger";
+import { ExternalToolError } from "../../domain/errors";
+import { isDebugMode } from "../is-debug-mode";
 
 export const fzfMinVersion = "0.62.0";
 

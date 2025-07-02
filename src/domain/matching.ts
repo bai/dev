@@ -1,4 +1,6 @@
-import { isDebugMode } from "~/lib/is-debug-mode";
+// Pure fuzzy string matching algorithms
+// Based on fzf-style scoring with no external dependencies
+// This is pure domain logic with no side effects
 
 const SCORE_MIN = -Infinity;
 const SCORE_MAX = Infinity;
@@ -180,136 +182,71 @@ export function score(needle: string, haystack: string): number {
   }
 
   // D and M matrices for dynamic programming
-  const D: number[][] = [
-    new Array(MATCH_MAX_LEN).fill(SCORE_MIN),
-    new Array(MATCH_MAX_LEN).fill(SCORE_MIN),
-  ];
-  const M: number[][] = [
-    new Array(MATCH_MAX_LEN).fill(SCORE_MIN),
-    new Array(MATCH_MAX_LEN).fill(SCORE_MIN),
-  ];
+  const D0 = new Array(MATCH_MAX_LEN).fill(SCORE_MIN) as number[];
+  const D1 = new Array(MATCH_MAX_LEN).fill(SCORE_MIN) as number[];
+  const M0 = new Array(MATCH_MAX_LEN).fill(SCORE_MIN) as number[];
+  const M1 = new Array(MATCH_MAX_LEN).fill(SCORE_MIN) as number[];
 
-  let lastD = null;
-  let lastM = null;
-  let currD = D[0];
-  let currM = M[0];
+  let lastD: number[] | null = null;
+  let lastM: number[] | null = null;
+  let currD = D0;
+  let currM = M0;
 
   for (let i = 0; i < needleLen; i++) {
     if (i > 0) {
       lastD = currD;
       lastM = currM;
-      currD = D[i % 2];
-      currM = M[i % 2];
+      currD = i % 2 === 0 ? D0 : D1;
+      currM = i % 2 === 0 ? M0 : M1;
     }
 
-    if (currD && currM) {
-      matchRow(match, i, currD, currM, lastD || null, lastM || null);
-    }
+    matchRow(match, i, currD, currM, lastD, lastM);
   }
 
-  return currM?.[haystackLen - 1] ?? SCORE_MIN;
+  return currM[haystackLen - 1] ?? SCORE_MIN;
 }
 
 export function positions(needle: string, haystack: string): number[] | null {
-  if (!needle) return null;
+  if (!needle) return [];
 
   const match = setupMatchStruct(needle, haystack);
   if (!match) return null;
 
-  const { needleLen, haystackLen, lowerNeedle, lowerHaystack, matchBonus } = match;
+  const { needleLen, haystackLen } = match;
 
   if (needleLen === haystackLen) {
     return Array.from({ length: needleLen }, (_, i) => i);
   }
 
-  // Full D and M matrices for backtracking
-  const D: number[][] = new Array(needleLen);
-  const M: number[][] = new Array(needleLen);
+  // D and M matrices for dynamic programming
+  const D: number[][] = [];
+  const M: number[][] = [];
+
+  for (let i = 0; i <= needleLen; i++) {
+    D[i] = new Array(haystackLen).fill(SCORE_MIN) as number[];
+    M[i] = new Array(haystackLen).fill(SCORE_MIN) as number[];
+  }
+
   for (let i = 0; i < needleLen; i++) {
-    D[i] = new Array(haystackLen).fill(SCORE_MIN);
-    M[i] = new Array(haystackLen).fill(SCORE_MIN);
+    const lastD: number[] | null = i > 0 ? D[i - 1]! : null;
+    const lastM: number[] | null = i > 0 ? M[i - 1]! : null;
+    matchRow(match, i, D[i]!, M[i]!, lastD, lastM);
   }
 
-  // Fill matrices
-  for (let i = 0; i < needleLen; i++) {
-    const needleCh = lowerNeedle.charAt(i);
-    let prevScore = SCORE_MIN;
-    const gapScore = i === needleLen - 1 ? SCORE_GAP_TRAILING : SCORE_GAP_INNER;
+  // Backtrack to find positions
+  const result: number[] = [];
+  let i = needleLen - 1;
+  let j = haystackLen - 1;
 
-    for (let j = 0; j < haystackLen; j++) {
-      if (needleCh === lowerHaystack.charAt(j)) {
-        let score = SCORE_MIN;
-        if (i === 0) {
-          score = j * SCORE_GAP_LEADING + (matchBonus[j] || 0);
-        } else if (j > 0 && i > 0) {
-          const prevD = D[i - 1];
-          const prevM = M[i - 1];
-          if (prevD && prevM) {
-            const prevDVal = prevD[j - 1];
-            const prevMVal = prevM[j - 1];
-            const bonus = matchBonus[j] || 0;
-            if (prevDVal !== undefined && prevMVal !== undefined) {
-              score = Math.max(prevMVal + bonus, prevDVal + SCORE_MATCH_CONSECUTIVE);
-            }
-          }
-        }
-        const currD = D[i];
-        const currM = M[i];
-        if (currD && currM) {
-          currD[j] = score;
-          currM[j] = prevScore = Math.max(score, prevScore + gapScore);
-        }
-      } else {
-        const currD = D[i];
-        const currM = M[i];
-        if (currD && currM) {
-          currD[j] = SCORE_MIN;
-          currM[j] = prevScore = prevScore + gapScore;
-        }
-      }
+  while (i >= 0 && j >= 0) {
+    if (match.lowerNeedle.charAt(i) === match.lowerHaystack.charAt(j)) {
+      result.unshift(j);
+      i--;
     }
+    j--;
   }
 
-  // Backtrace to find positions
-  const positions = new Array(needleLen).fill(-1);
-  let matchRequired = false;
-
-  for (let i = needleLen - 1; i >= 0; i--) {
-    for (let j = haystackLen - 1; j >= 0; j--) {
-      if (i === needleLen - 1 && j === haystackLen - 1) {
-        matchRequired = true;
-      }
-
-      const currD = D[i];
-      const currM = M[i];
-      if (!currD || !currM) continue;
-
-      const dVal = currD[j];
-      const mVal = currM[j];
-
-      if (dVal !== undefined && mVal !== undefined && (matchRequired || dVal === mVal)) {
-        if (dVal !== SCORE_MIN) {
-          if (i > 0 && j > 0) {
-            const prevD = D[i - 1];
-            if (prevD) {
-              const prevDVal = prevD[j - 1];
-              if (prevDVal !== undefined) {
-                matchRequired = mVal === prevDVal + SCORE_MATCH_CONSECUTIVE;
-              }
-            }
-          } else {
-            matchRequired = false;
-          }
-          positions[i] = j;
-          if (i === 0) break;
-          j--;
-          break;
-        }
-      }
-    }
-  }
-
-  return positions;
+  return result.length === needleLen ? result : null;
 }
 
 export interface Choice {
@@ -325,26 +262,20 @@ export function filter(needle: string, choices: string[]): Choice[] {
 
   const results: Choice[] = [];
 
-  for (const str of choices) {
-    if (hasMatch(needle, str)) {
-      const choiceScore = score(needle, str);
-      results.push({ str, score: choiceScore });
+  for (const choice of choices) {
+    if (hasMatch(needle, choice)) {
+      const matchScore = score(needle, choice);
+      const matchPositions = positions(needle, choice);
+      results.push({
+        str: choice,
+        score: matchScore,
+        positions: matchPositions ?? undefined,
+      });
     }
   }
 
-  // Sort by score descending
+  // Sort by score (higher is better)
   results.sort((a, b) => b.score - a.score);
-
-  // Debug logging for top 5 matches
-  if (isDebugMode()) {
-    const top5 = results.slice(0, 5);
-    console.log(`🐛 Top 5 matches for "${needle}":`);
-    top5.forEach((result, index) => {
-      const pos = positions(needle, result.str);
-      const positionsStr = pos ? `[${pos.join(", ")}]` : "[]";
-      console.log(`  ${index + 1}. "${result.str}" (score: ${result.score.toFixed(3)}, positions: ${positionsStr})`);
-    });
-  }
 
   return results;
 }

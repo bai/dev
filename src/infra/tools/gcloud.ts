@@ -2,10 +2,9 @@ import fs from "fs";
 import path from "path";
 import { spawn, spawnSync } from "bun";
 
-import { homeDir } from "~/lib/constants";
-import { ExternalToolError } from "~/lib/errors";
-import { isDebugMode } from "~/lib/is-debug-mode";
-import { logger } from "~/lib/logger";
+import { ExternalToolError } from "../../domain/errors";
+import { homeDir } from "../constants";
+import { isDebugMode } from "../is-debug-mode";
 
 export const gcloudMinVersion = "527.0.0";
 

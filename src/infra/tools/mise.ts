@@ -4,11 +4,10 @@ import path from "path";
 import { stringify } from "@iarna/toml";
 import z from "zod/v4";
 
-import { homeDir } from "~/lib/constants";
-import { devConfig } from "~/lib/dev-config";
-import { ExternalToolError } from "~/lib/errors";
-import { isDebugMode } from "~/lib/is-debug-mode";
-import { logger } from "~/lib/logger";
+import { ExternalToolError } from "../../domain/errors";
+import { homeDir } from "../constants";
+import { devConfig } from "../dev-config";
+import { isDebugMode } from "../is-debug-mode";
 
 export const globalMiseConfigDir = path.join(homeDir, ".config", "mise");
 export const globalMiseConfigPath = path.join(globalMiseConfigDir, "config.toml");

@@ -1,21 +1,11 @@
 import { Context, type Effect, type Layer } from "effect";
 
-// Core domain models
+import type { DevError } from "./errors";
 
-export interface Config {
-  version: number;
-  configUrl: string;
-  defaultOrg: string;
-  paths: {
-    base: string;
-  };
-  telemetry: {
-    enabled: boolean;
-  };
-  plugins: {
-    git: string[];
-  };
-}
+// Re-export Config from config schema to avoid duplication
+export type { Config, MiseConfig } from "../config/schema";
+
+// Core domain models
 
 export interface CommandRun {
   id: string;
@@ -48,7 +38,7 @@ export interface CliCommandSpec {
   aliases?: string[];
   arguments?: CommandArgument[];
   options?: CommandOption[];
-  exec: (context: CommandContext) => Effect.Effect<void, never, any>;
+  exec: (context: CommandContext) => Effect.Effect<void, DevError, any>;
 }
 
 export interface CommandArgument {

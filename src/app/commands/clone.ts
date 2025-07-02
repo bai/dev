@@ -1,15 +1,10 @@
-import { unknownError } from "../../domain/errors";
-import type { CliCommandSpec, CommandContext } from "../../domain/models";
-import type { FileSystem } from "../../domain/ports/FileSystem";
-import type { Git } from "../../domain/ports/Git";
-import type { RepoProvider } from "../../domain/ports/RepoProvider";
+import { Effect } from "effect";
 
-interface CloneContext extends CommandContext {
-  git: Git;
-  repoProvider: RepoProvider;
-  fileSystem: FileSystem;
-  baseDir: string;
-}
+import { unknownError, type DevError } from "../../domain/errors";
+import type { CliCommandSpec, CommandContext } from "../../domain/models";
+import { FileSystemService } from "../../domain/ports/FileSystem";
+import { GitService } from "../../domain/ports/Git";
+import { RepoProviderService } from "../../domain/ports/RepoProvider";
 
 export const cloneCommand: CliCommandSpec = {
   name: "clone",
@@ -34,50 +29,46 @@ Examples:
     },
   ],
 
-  async exec(context: CommandContext): Promise<void> {
-    const ctx = context as CloneContext;
-    const repoArg = ctx.args.repo;
+  exec(context: CommandContext): Effect.Effect<void, DevError, any> {
+    return Effect.gen(function* () {
+      // Get services from Effect Context
+      const git = yield* GitService;
+      const repoProvider = yield* RepoProviderService;
+      const fileSystem = yield* FileSystemService;
 
-    if (!repoArg) {
-      throw unknownError("Repository name is required");
-    }
+      const repoArg = context.args.repo;
 
-    // Parse org/repo or just repo
-    const [orgOrRepo, repoName] = repoArg.includes("/") ? repoArg.split("/", 2) : [undefined, repoArg];
+      if (!repoArg) {
+        return yield* Effect.fail(unknownError("Repository name is required"));
+      }
 
-    const org = orgOrRepo;
-    const repo = repoName || orgOrRepo;
+      // Parse org/repo or just repo
+      const [orgOrRepo, repoName] = repoArg.includes("/") ? repoArg.split("/", 2) : [undefined, repoArg];
 
-    ctx.logger.info(`Resolving repository: ${org ? `${org}/${repo}` : repo}`);
+      const org = orgOrRepo;
+      const repo = repoName || orgOrRepo;
 
-    // Resolve repository details
-    const repository = await ctx.repoProvider.resolveRepository(repo, org);
+      yield* Effect.log(`Resolving repository: ${org ? `${org}/${repo}` : repo}`);
 
-    if (typeof repository === "object" && "_tag" in repository) {
-      ctx.logger.error(`Failed to resolve repository: ${repository.reason}`);
-      throw repository;
-    }
+      // Resolve repository details
+      const repository = yield* repoProvider.resolveRepository(repo, org);
 
-    // Determine destination path
-    const baseDir = ctx.fileSystem.resolvePath(ctx.baseDir);
-    const destinationPath = `${baseDir}/${repository.name}`;
+      // Determine destination path
+      const baseDir = fileSystem.resolvePath("~/src"); // TODO: Get from config
+      const destinationPath = `${baseDir}/${repository.name}`;
 
-    // Check if destination already exists
-    if (await ctx.fileSystem.exists(destinationPath)) {
-      ctx.logger.error(`Directory ${repository.name} already exists`);
-      throw unknownError(`Directory ${repository.name} already exists`);
-    }
+      // Check if destination already exists
+      const exists = yield* fileSystem.exists(destinationPath);
+      if (exists) {
+        return yield* Effect.fail(unknownError(`Directory ${repository.name} already exists`));
+      }
 
-    ctx.logger.info(`Cloning ${repository.organization}/${repository.name}...`);
+      yield* Effect.log(`Cloning ${repository.organization}/${repository.name}...`);
 
-    // Clone the repository
-    const cloneResult = await ctx.git.clone(repository, destinationPath);
+      // Clone the repository
+      yield* git.clone(repository, destinationPath);
 
-    if (typeof cloneResult === "object" && "_tag" in cloneResult) {
-      ctx.logger.error(`Failed to clone repository: ${cloneResult.reason}`);
-      throw cloneResult;
-    }
-
-    ctx.logger.success(`Successfully cloned ${repository.organization}/${repository.name} to ${repository.name}`);
+      yield* Effect.log(`Successfully cloned ${repository.organization}/${repository.name} to ${repository.name}`);
+    });
   },
 };

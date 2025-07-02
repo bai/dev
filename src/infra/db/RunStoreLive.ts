@@ -1,9 +1,11 @@
+import fs from "fs";
 import os from "os";
 import path from "path";
 
 import { Database } from "bun:sqlite";
 import { desc, eq, lt } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/bun-sqlite";
+import { migrate } from "drizzle-orm/bun-sqlite/migrator";
 import { Effect, Layer } from "effect";
 
 import { configError, unknownError, type ConfigError, type UnknownError } from "../../domain/errors";
@@ -15,9 +17,28 @@ export class RunStoreLive implements RunStore {
   private db: ReturnType<typeof drizzle>;
 
   constructor(dbPath: string) {
+    // Ensure directory exists
+    const dbDir = path.dirname(dbPath);
+    if (!fs.existsSync(dbDir)) {
+      fs.mkdirSync(dbDir, { recursive: true });
+    }
+
     const sqlite = new Database(dbPath);
     sqlite.exec("PRAGMA journal_mode = WAL;");
     this.db = drizzle(sqlite);
+
+    // Run migrations
+    this.runMigrations();
+  }
+
+  private runMigrations(): void {
+    try {
+      // Use migrations from the infra layer
+      migrate(this.db, { migrationsFolder: path.join(__dirname, "migrations") });
+    } catch (error) {
+      // Log migration errors but don't fail initialization
+      console.warn("Warning: Database migration failed:", error);
+    }
   }
 
   record(run: Omit<CommandRun, "id" | "duration_ms">): Effect.Effect<string, ConfigError | UnknownError> {
@@ -30,8 +51,8 @@ export class RunStoreLive implements RunStore {
           command_name: run.command_name,
           arguments: run.arguments,
           cwd: run.cwd,
-          started_at: run.started_at.getTime(),
-          finished_at: run.finished_at?.getTime(),
+          started_at: run.started_at,
+          finished_at: run.finished_at,
           exit_code: run.exit_code,
         });
         return id;
@@ -47,7 +68,7 @@ export class RunStoreLive implements RunStore {
           .update(runs)
           .set({
             exit_code: exitCode,
-            finished_at: finishedAt.getTime(),
+            finished_at: finishedAt,
           })
           .where(eq(runs.id, id));
       },
@@ -61,7 +82,7 @@ export class RunStoreLive implements RunStore {
         const cutoffDate = new Date();
         cutoffDate.setDate(cutoffDate.getDate() - keepDays);
 
-        await this.db.delete(runs).where(lt(runs.started_at, cutoffDate.getTime()));
+        await this.db.delete(runs).where(lt(runs.started_at, cutoffDate));
       },
       catch: (error) => configError(`Failed to prune old runs: ${error}`),
     });
@@ -70,7 +91,7 @@ export class RunStoreLive implements RunStore {
   getRecentRuns(limit: number): Effect.Effect<CommandRun[], ConfigError | UnknownError> {
     return Effect.tryPromise({
       try: async () => {
-        const result = await this.db.select().from(runs).orderBy(runs.started_at.desc()).limit(limit);
+        const result = await this.db.select().from(runs).orderBy(desc(runs.started_at)).limit(limit);
 
         return result.map((row) => ({
           id: row.id,
@@ -115,8 +136,10 @@ export const RunStoreLiveLayer = Layer.sync(RunStoreService, () => {
     return new RunStoreNoOp();
   }
 
-  // Create database directory if it doesn't exist
-  const stateDir = path.join(os.homedir(), ".dev", "state");
+  // Use XDG-compliant state directory
+  const stateDir = process.env.XDG_DATA_HOME
+    ? path.join(process.env.XDG_DATA_HOME, "dev")
+    : path.join(os.homedir(), ".local", "share", "dev");
   const dbPath = path.join(stateDir, "dev.db");
 
   return new RunStoreLive(dbPath);

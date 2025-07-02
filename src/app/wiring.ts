@@ -5,9 +5,11 @@ import { Layer } from "effect";
 
 import { ConfigLoaderLiveLayer } from "../config/loader";
 import type { CliCommandSpec } from "../domain/models";
+import { PathServiceLive } from "../domain/services/PathService";
 import { ClockLiveLayer } from "../effect/Clock";
 import { LoggerLiveLayer } from "../effect/LoggerLive";
 import { RunStoreLiveLayer } from "../infra/db/RunStoreLive";
+import { DirectoryServiceLive } from "../infra/fs/DirectoryService";
 import { FileSystemLiveLayer } from "../infra/fs/FileSystemLive";
 import { GitLiveLayer } from "../infra/git/GitLive";
 import { KeychainLiveLayer } from "../infra/keychain/KeychainLive";
@@ -23,6 +25,11 @@ import { runCommand } from "./commands/run";
 import { statusCommand } from "./commands/status";
 import { upCommand } from "./commands/up";
 import { upgradeCommand } from "./commands/upgrade";
+import { CommandTrackingServiceLive } from "./services/CommandTrackingService";
+import { DebugServiceLive } from "./services/DebugService";
+import { ShellIntegrationServiceLive } from "./services/ShellIntegrationService";
+import { UpdateCheckServiceLive } from "./services/UpdateCheckService";
+import { VersionServiceLive } from "./services/VersionService";
 
 // Infrastructure Layer - provides all the basic services
 export const InfraLiveLayer = Layer.mergeAll(
@@ -30,6 +37,8 @@ export const InfraLiveLayer = Layer.mergeAll(
   ShellLiveLayer,
   NetworkLiveLayer,
   RunStoreLiveLayer,
+  PathServiceLive,
+  DirectoryServiceLive,
 ).pipe(
   Layer.provide(Layer.mergeAll(GitLiveLayer, KeychainLiveLayer, MiseLiveLayer)),
   Layer.provide(GitHubProviderLayer("github")), // default org can be overridden
@@ -40,6 +49,11 @@ export const AppLiveLayer = Layer.mergeAll(
   LoggerLiveLayer,
   ClockLiveLayer,
   ConfigLoaderLiveLayer(path.join(os.homedir(), ".config", "dev", "config.json")),
+  CommandTrackingServiceLive,
+  DebugServiceLive,
+  ShellIntegrationServiceLive,
+  UpdateCheckServiceLive,
+  VersionServiceLive,
 ).pipe(Layer.provide(InfraLiveLayer));
 
 // Available commands
