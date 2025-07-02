@@ -1,22 +1,44 @@
+import { Effect } from "effect";
+
 import { devDir } from "~/lib/constants";
+
+import { unknownError } from "../domain/errors";
 
 /**
  * Gets the current Git commit SHA for the dev directory.
  *
- * @returns The short (7-character) Git commit SHA, or "unknown" if unable to retrieve
+ * @returns Effect that succeeds with the short (7-character) Git commit SHA, or falls back to "unknown"
  */
-export const getCurrentGitCommitSha = (): string => {
-  try {
-    const result = Bun.spawnSync(["git", "rev-parse", "--short=7", "HEAD"], {
-      cwd: devDir,
+export const getCurrentGitCommitSha = (): Effect.Effect<string, never> => {
+  return Effect.gen(function* () {
+    const result = yield* Effect.tryPromise({
+      try: () => {
+        return new Promise<string>((resolve, reject) => {
+          const proc = Bun.spawn(["git", "rev-parse", "--short=7", "HEAD"], {
+            cwd: devDir,
+            stdout: "pipe",
+            stderr: "pipe",
+          });
+
+          proc.exited.then((exitCode) => {
+            if (exitCode === 0 && proc.stdout) {
+              const reader = proc.stdout.getReader();
+              reader.read().then(({ value }) => {
+                if (value) {
+                  resolve(new TextDecoder().decode(value).trim());
+                } else {
+                  reject(new Error("No stdout"));
+                }
+              });
+            } else {
+              reject(new Error(`Git command failed with exit code ${exitCode}`));
+            }
+          });
+        });
+      },
+      catch: (error) => unknownError(`Failed to get git commit SHA: ${error}`),
     });
 
-    if (result.success && result.stdout) {
-      return result.stdout.toString().trim();
-    }
-
-    return "unknown";
-  } catch (error) {
-    return "unknown";
-  }
+    return result;
+  }).pipe(Effect.catchAll(() => Effect.succeed("unknown")));
 };

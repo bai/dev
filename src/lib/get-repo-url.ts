@@ -1,13 +1,17 @@
 import path from "path";
 
+import { Effect } from "effect";
+
 import { baseSearchDir } from "~/lib/constants";
+
+import { configError } from "../domain/errors";
 
 /**
  * Parses repository URL to determine the local filesystem path.
  * Supports HTTPS and SSH URLs from GitHub/GitLab style hosts.
  */
-export function parseRepoUrlToPath(repoUrl: string): string | null {
-  try {
+export function parseRepoUrlToPath(repoUrl: string): Effect.Effect<string, import("../domain/errors").ConfigError> {
+  return Effect.gen(function* () {
     let orgName = "";
     let repoName = "";
     let domain = "";
@@ -23,7 +27,12 @@ export function parseRepoUrlToPath(repoUrl: string): string | null {
 
     // Normalize URLs like git+ssh:// and ssh://
     const cleaned = repoUrl.replace(/^git\+/, "");
-    const url = new URL(cleaned);
+
+    const url = yield* Effect.tryPromise({
+      try: () => Promise.resolve(new URL(cleaned)),
+      catch: (error: any) => configError(`Invalid repository URL: ${repoUrl} - ${error.message}`),
+    });
+
     domain = url.hostname;
     const pathParts = url.pathname.split("/").filter(Boolean);
 
@@ -33,10 +42,8 @@ export function parseRepoUrlToPath(repoUrl: string): string | null {
       return path.join(baseSearchDir, domain, orgName, repoName);
     }
 
-    throw new Error(`URL path does not contain organization and repository: ${repoUrl}`);
-  } catch (error: any) {
-    throw new Error(`Invalid repository URL: ${repoUrl} - ${error.message}`);
-  }
+    return yield* Effect.fail(configError(`URL path does not contain organization and repository: ${repoUrl}`));
+  });
 }
 
 /**

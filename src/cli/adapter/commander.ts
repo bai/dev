@@ -1,16 +1,17 @@
 import { Command } from "commander";
+import { Runtime, type Effect } from "effect";
 
-import type { AppServices } from "../../app/wiring";
+import { availableCommands } from "../../app/wiring";
 import type { CliCommandSpec, CommandContext } from "../../domain/models";
 import type { CliAdapter } from "./types";
 
 export class CommanderAdapter implements CliAdapter {
   private program: Command;
-  private services: AppServices;
+  private commands: CliCommandSpec[];
 
-  constructor(services: AppServices) {
+  constructor(commands: CliCommandSpec[]) {
     this.program = new Command();
-    this.services = services;
+    this.commands = commands;
     this.program.exitOverride(); // Convert Commander failures into typed errors
   }
 
@@ -25,6 +26,8 @@ export class CommanderAdapter implements CliAdapter {
   }
 
   async parseAndExecute(args: string[]): Promise<void> {
+    // Initialize with available commands
+    this.initialize(this.commands);
     await this.program.parseAsync(args);
   }
 
@@ -67,30 +70,23 @@ export class CommanderAdapter implements CliAdapter {
       const commandArgs = args.slice(0, -1); // Remove the Command object
       const commanderCommand = args[args.length - 1] as Command;
 
-      // Create context for command execution
+      // Create basic context for command execution
       const context: CommandContext = {
         args: this.parseArguments(commandSpec, commandArgs),
         options: commanderCommand.opts(),
-        logger: this.services.logger,
-        config: await this.createConfigManager(),
-        // Add other services without duplicating logger
-        fileSystem: this.services.fileSystem,
-        shell: this.services.shell,
-        git: this.services.git,
-        network: this.services.network,
-        keychain: this.services.keychain,
-        mise: this.services.mise,
-        repoProvider: this.services.repoProvider,
-        runStore: this.services.runStore,
-        clock: this.services.clock,
-        configLoader: this.services.configLoader,
       };
 
-      try {
-        await commandSpec.exec(context);
-      } catch (error) {
-        this.services.logger.error(`Command failed: ${error}`);
-        throw error;
+      // Run the Effect-based command using the Effect runtime
+      const runtime = Runtime.defaultRuntime;
+      const effect = commandSpec.exec(context) as Effect.Effect<void, never, never>;
+
+      const exit = await Runtime.runPromiseExit(runtime)(effect);
+
+      if (exit._tag === "Failure") {
+        // Command failed - the error should have been handled by the command itself
+        // since it returns Effect<void, never, any>
+        console.error("Command execution failed:", exit.cause);
+        throw new Error("Command execution failed");
       }
     });
   }
@@ -108,49 +104,5 @@ export class CommanderAdapter implements CliAdapter {
     }
 
     return parsed;
-  }
-
-  private async createConfigManager() {
-    // Load configuration and create a manager
-    const config = await this.services.configLoader.load();
-
-    if (typeof config === "object" && "_tag" in config) {
-      // Use default config if loading fails
-      return {
-        get: (key: string, defaultValue?: any) => defaultValue,
-        set: () => {
-          throw new Error("Config modification not supported");
-        },
-        has: () => false,
-        getAll: () => ({}),
-      };
-    }
-
-    return {
-      get: (key: string, defaultValue?: any) => {
-        const keys = key.split(".");
-        let value: any = config;
-
-        for (const k of keys) {
-          value = value?.[k];
-        }
-
-        return value !== undefined ? value : defaultValue;
-      },
-      set: () => {
-        throw new Error("Config modification not supported");
-      },
-      has: (key: string) => {
-        const keys = key.split(".");
-        let value: any = config;
-
-        for (const k of keys) {
-          value = value?.[k];
-        }
-
-        return value !== undefined;
-      },
-      getAll: () => ({ ...config }),
-    };
   }
 }

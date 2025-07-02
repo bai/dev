@@ -1,12 +1,15 @@
 import fs from "fs";
 
+import { Effect } from "effect";
 import { z } from "zod/v4";
 
 import { devConfigDir, devConfigPath } from "~/lib/constants";
-import type { ConfigManager } from "~/lib/core/command-types";
 import { isDebugMode } from "~/lib/is-debug-mode";
 import { logger } from "~/lib/logger";
 import { miseConfigSchema } from "~/lib/tools/mise";
+
+import { configError } from "../domain/errors";
+import type { ConfigManager } from "../domain/models";
 
 const gitProviderSchema = z.enum(["github", "gitlab"]);
 
@@ -29,66 +32,66 @@ export const devConfigSchema = z.object({
 
 export type DevConfig = z.infer<typeof devConfigSchema>;
 
-/**
- * Factory function to create ConfigError
- */
-export const createConfigError = (message: string, cause?: unknown): Error & { cause?: unknown } => {
-  const error = new Error(message) as Error & { cause?: unknown };
-  error.name = "ConfigError";
-  error.cause = cause;
-  return error;
-};
-
-/**
- * Type guard to check if an error is a ConfigError
- */
-export const isConfigError = (error: any): error is Error & { cause?: unknown } => {
-  return error && error.name === "ConfigError";
-};
-
 // Simple caching
 let cachedDevConfig: DevConfig | null = null;
 
 /**
  * Ensure config directory and file exist
  */
-const ensureConfigExists = (): void => {
-  if (!fs.existsSync(devConfigDir)) {
-    fs.mkdirSync(devConfigDir, { recursive: true });
-  }
-
-  if (!fs.existsSync(devConfigPath)) {
-    const result = devConfigSchema.safeParse({});
-    if (!result.success) {
-      throw createConfigError(
-        `Default config creation failed: ${result.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`).join(", ")}`,
-        result.error,
-      );
+const ensureConfigExists = (): Effect.Effect<void, import("../domain/errors").ConfigError> => {
+  return Effect.gen(function* () {
+    if (!fs.existsSync(devConfigDir)) {
+      yield* Effect.tryPromise({
+        try: () => fs.promises.mkdir(devConfigDir, { recursive: true }),
+        catch: (error: any) => configError(`Failed to create config directory: ${error.message}`),
+      });
     }
 
-    fs.writeFileSync(devConfigPath, JSON.stringify(result.data, null, 2));
-  }
+    if (!fs.existsSync(devConfigPath)) {
+      const result = devConfigSchema.safeParse({});
+      if (!result.success) {
+        return yield* Effect.fail(
+          configError(
+            `Default config creation failed: ${result.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`).join(", ")}`,
+          ),
+        );
+      }
+
+      yield* Effect.tryPromise({
+        try: () => fs.promises.writeFile(devConfigPath, JSON.stringify(result.data, null, 2)),
+        catch: (error: any) => configError(`Failed to write default config: ${error.message}`),
+      });
+    }
+  });
 };
 
 /**
  * Get the dev configuration from file
  */
-export const getDevConfig = (): DevConfig => {
-  if (cachedDevConfig) {
-    return cachedDevConfig;
-  }
+export const getDevConfig = (): Effect.Effect<DevConfig, import("../domain/errors").ConfigError> => {
+  return Effect.gen(function* () {
+    if (cachedDevConfig) {
+      return cachedDevConfig;
+    }
 
-  ensureConfigExists();
+    yield* ensureConfigExists();
 
-  try {
-    const jsonText = fs.readFileSync(devConfigPath, "utf-8");
-    const parsedJson = JSON.parse(jsonText);
+    const jsonText = yield* Effect.tryPromise({
+      try: () => fs.promises.readFile(devConfigPath, "utf-8"),
+      catch: (error: any) => configError(`Failed to read config file: ${error.message}`),
+    });
+
+    const parsedJson = yield* Effect.tryPromise({
+      try: () => Promise.resolve(JSON.parse(jsonText)),
+      catch: (error: any) => configError(`Invalid JSON in config file: ${devConfigPath} - ${error.message}`),
+    });
 
     const result = devConfigSchema.safeParse(parsedJson);
     if (!result.success) {
-      throw createConfigError(
-        `Invalid config schema: ${result.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`).join(", ")}`,
-        result.error,
+      return yield* Effect.fail(
+        configError(
+          `Invalid config schema: ${result.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`).join(", ")}`,
+        ),
       );
     }
 
@@ -99,58 +102,57 @@ export const getDevConfig = (): DevConfig => {
     }
 
     return cachedDevConfig;
-  } catch (error) {
-    if (error instanceof SyntaxError) {
-      throw createConfigError(`Invalid JSON in config file: ${devConfigPath}`, error);
-    }
-    if (isConfigError(error)) {
-      throw error;
-    }
-    throw createConfigError("Failed to load config", error);
-  }
+  });
 };
 
 /**
  * Refresh dev configuration from remote URL
  */
-export const refreshDevConfigFromRemoteUrl = async (): Promise<void> => {
-  logger.info("🔄 Refreshing dev configuration...");
+export const refreshDevConfigFromRemoteUrl = (): Effect.Effect<void, import("../domain/errors").ConfigError> => {
+  return Effect.gen(function* () {
+    logger.info("🔄 Refreshing dev configuration...");
 
-  const currentConfig = getDevConfig();
-  const { configUrl } = currentConfig;
+    const currentConfig = yield* getDevConfig();
+    const { configUrl } = currentConfig;
 
-  try {
-    const response = await fetch(configUrl);
+    const response = yield* Effect.tryPromise({
+      try: () => fetch(configUrl),
+      catch: (error: any) => configError(`Failed to fetch remote config from ${configUrl}: ${error.message}`),
+    });
 
     if (!response.ok) {
-      throw createConfigError(
-        `Failed to fetch remote config from ${configUrl}: ${response.status} ${response.statusText}`,
+      return yield* Effect.fail(
+        configError(`Failed to fetch remote config from ${configUrl}: ${response.status} ${response.statusText}`),
       );
     }
 
-    const configText = await response.text();
-    const remoteConfig = JSON.parse(configText);
+    const configText = yield* Effect.tryPromise({
+      try: () => response.text(),
+      catch: (error: any) => configError(`Failed to read response body: ${error.message}`),
+    });
+
+    const remoteConfig = yield* Effect.tryPromise({
+      try: () => Promise.resolve(JSON.parse(configText)),
+      catch: (error: any) => configError(`Remote config contains invalid JSON: ${error.message}`),
+    });
+
     const result = devConfigSchema.safeParse(remoteConfig);
-
     if (!result.success) {
-      throw createConfigError(
-        `Remote config validation failed: ${result.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`).join(", ")}`,
-        result.error,
+      return yield* Effect.fail(
+        configError(
+          `Remote config validation failed: ${result.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`).join(", ")}`,
+        ),
       );
     }
 
-    await Bun.write(devConfigPath, JSON.stringify(result.data, null, 2));
+    yield* Effect.tryPromise({
+      try: () => Bun.write(devConfigPath, JSON.stringify(result.data, null, 2)),
+      catch: (error: any) => configError(`Failed to write updated config: ${error.message}`),
+    });
+
     cachedDevConfig = null; // Clear cache
     logger.info("✅ Dev configuration refreshed successfully");
-  } catch (error) {
-    if (isConfigError(error)) {
-      throw error;
-    }
-    if (error instanceof SyntaxError) {
-      throw createConfigError("Remote config contains invalid JSON", error);
-    }
-    throw createConfigError("Failed to refresh config from remote", error);
-  }
+  });
 };
 
 /**
@@ -163,23 +165,25 @@ export const clearDevConfigCache = (): void => {
 /**
  * Simple ConfigManager implementation
  */
-export const createConfig = (): ConfigManager => {
-  const config = getDevConfig();
+export const createConfig = (): Effect.Effect<ConfigManager, import("../domain/errors").ConfigError> => {
+  return Effect.gen(function* () {
+    const config = yield* getDevConfig();
 
-  return {
-    get: <T = any>(key: string, defaultValue?: T): T => {
-      // Simple key access - no complex dot notation needed
-      const value = (config as any)[key];
-      return value !== undefined ? value : (defaultValue as T);
-    },
-    set: () => {
-      throw new Error("Config modification not supported in simple implementation");
-    },
-    has: (key: string): boolean => {
-      return (config as any)[key] !== undefined;
-    },
-    getAll: (): Record<string, any> => ({ ...config }),
-  };
+    return {
+      get: <T = any>(key: string, defaultValue?: T): T => {
+        // Simple key access - no complex dot notation needed
+        const value = (config as any)[key];
+        return value !== undefined ? value : (defaultValue as T);
+      },
+      set: () => {
+        throw new Error("Config modification not supported in simple implementation");
+      },
+      has: (key: string): boolean => {
+        return (config as any)[key] !== undefined;
+      },
+      getAll: (): Record<string, any> => ({ ...config }),
+    };
+  });
 };
 
 // Export the config for backward compatibility
