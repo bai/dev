@@ -55,8 +55,9 @@ export class FileSystemLive implements FileSystem {
   ): Effect.Effect<string[], import("../../domain/errors").ConfigError | import("../../domain/errors").UnknownError> {
     return Effect.tryPromise({
       try: async () => {
-        const entries = await fs.readdir(dirPath, { withFileTypes: true });
-        return entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name);
+        const scanner = new Bun.Glob("*/*/*/");
+        const matches = Array.from(scanner.scanSync({ cwd: dirPath, onlyFiles: false }));
+        return matches;
       },
       catch: (error) => configError(`Failed to list directories in ${dirPath}: ${error}`),
     });

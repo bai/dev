@@ -1,18 +1,27 @@
 import { Command } from "commander";
-import { Runtime, type Effect } from "effect";
+import { Effect, Layer, Runtime } from "effect";
 
-import { availableCommands } from "../../app/wiring";
-import type { CliCommandSpec, CommandContext } from "../../domain/models";
+import { LoggerService, type CliCommandSpec, type CommandContext } from "../../domain/models";
+import { FileSystemService } from "../../domain/ports/FileSystem";
+import { ShellService } from "../../domain/ports/Shell";
+// Import specific services and their implementations
+import { LoggerLiveLayer } from "../../effect/LoggerLive";
+import { FileSystemLiveLayer } from "../../infra/fs/FileSystemLive";
+import { ShellLiveLayer } from "../../infra/shell/ShellLive";
 import type { CliAdapter } from "./types";
 
 export class CommanderAdapter implements CliAdapter {
   private program: Command;
   private commands: CliCommandSpec[];
+  private runtime: Runtime.Runtime<never>;
 
   constructor(commands: CliCommandSpec[]) {
     this.program = new Command();
     this.commands = commands;
     this.program.exitOverride(); // Convert Commander failures into typed errors
+
+    // Create runtime with app layers
+    this.runtime = Runtime.defaultRuntime;
   }
 
   setMetadata(metadata: { name: string; description: string; version: string }): void {
@@ -70,21 +79,37 @@ export class CommanderAdapter implements CliAdapter {
       const commandArgs = args.slice(0, -1); // Remove the Command object
       const commanderCommand = args[args.length - 1] as Command;
 
-      // Create basic context for command execution
-      const context: CommandContext = {
-        args: this.parseArguments(commandSpec, commandArgs),
-        options: commanderCommand.opts(),
-      };
+      // Parse arguments outside the Effect.gen to avoid 'this' binding issues
+      const parsedArgs = this.parseArguments(commandSpec, commandArgs);
 
-      // Run the Effect-based command using the Effect runtime
-      const runtime = Runtime.defaultRuntime;
-      const effect = commandSpec.exec(context) as Effect.Effect<void, never, never>;
+      // Create minimal layer with essential services
+      const MinimalAppLayer = Layer.mergeAll(LoggerLiveLayer, FileSystemLiveLayer, ShellLiveLayer);
 
-      const exit = await Runtime.runPromiseExit(runtime)(effect);
+      // Create an Effect that provides services and runs the command
+      const program = Effect.gen(function* () {
+        // Get services from the Effect Context
+        const logger = yield* LoggerService;
+        const fileSystem = yield* FileSystemService;
+        const shell = yield* ShellService;
+
+        // Create enhanced context with services
+        const context = {
+          args: parsedArgs,
+          options: commanderCommand.opts(),
+          logger,
+          fileSystem,
+          shell,
+          baseDir: process.env.HOME + "/src", // Default base directory
+        } as any; // Type assertion since we're extending CommandContext
+
+        // Execute the command
+        yield* commandSpec.exec(context);
+      }).pipe(Effect.provide(MinimalAppLayer)) as Effect.Effect<void, never, never>;
+
+      // Run with runtime
+      const exit = await Runtime.runPromiseExit(this.runtime)(program);
 
       if (exit._tag === "Failure") {
-        // Command failed - the error should have been handled by the command itself
-        // since it returns Effect<void, never, any>
         console.error("Command execution failed:", exit.cause);
         throw new Error("Command execution failed");
       }
