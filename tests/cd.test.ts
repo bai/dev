@@ -5,7 +5,8 @@ import path from "path";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { CommandContext } from "~/lib/core/command-types";
-import { cdCommand } from "~/commands/cd";
+
+import { cdCommand } from "../legacy/commands/cd";
 
 describe("CD Command", () => {
   let tempDir: string;

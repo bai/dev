@@ -4,6 +4,9 @@ import { unknownError, type DevError } from "../../domain/errors";
 import type { CliCommandSpec, CommandContext, Logger } from "../../domain/models";
 import type { FileSystem } from "../../domain/ports/FileSystem";
 import type { Shell } from "../../domain/ports/Shell";
+import { findDirs } from "../../lib/find-dirs";
+import { handleCdToPath } from "../../lib/handle-cd-to-path";
+import { filter } from "../../lib/match";
 
 // Extended command context that includes all services
 interface ExtendedCommandContext extends CommandContext {
@@ -65,39 +68,34 @@ function handleDirectCd(folderName: string, ctx: ExtendedCommandContext): Effect
       return yield* Effect.fail(unknownError("Folder name for 'cd' command cannot be empty."));
     }
 
-    const baseDir = ctx.fileSystem.resolvePath(ctx.baseDir);
-    const directories = yield* ctx.fileSystem.listDirectories(baseDir);
+    // Use findDirs() to get directories, wrapped in Effect
+    const directories = yield* Effect.sync(() => findDirs());
 
-    if (typeof directories === "object" && "_tag" in directories) {
-      throw directories;
+    if (directories.length > 0) {
+      // Use filter() for fuzzy matching instead of simple includes
+      const fuzzyMatches = yield* Effect.sync(() => filter(folderName, directories));
+
+      if (fuzzyMatches.length > 0 && fuzzyMatches[0]) {
+        const targetPath = fuzzyMatches[0].str; // This is a relative path
+        // Use handleCdToPath instead of direct shell.changeDirectory
+        yield* handleCdToPath(targetPath);
+        return; // Successfully changed directory
+      }
     }
 
-    // Simple fuzzy matching - find directories that contain the search term
-    const matches = directories.filter((dir) => dir.toLowerCase().includes(folderName.toLowerCase()));
-
-    if (matches.length > 0) {
-      const targetPath = `${baseDir}/${matches[0]}`;
-      yield* ctx.shell.changeDirectory(targetPath);
-      yield* ctx.logger.success(`Changed to ${matches[0]}`);
-      return;
-    }
-
-    yield* ctx.logger.error(`Folder '${folderName}' not found in ${ctx.baseDir}`);
+    // Nothing found or no directories
+    yield* ctx.logger.error(`Folder '${folderName}' not found`);
     return yield* Effect.fail(unknownError(`Folder '${folderName}' not found`));
   });
 }
 
 function handleInteractiveCd(ctx: ExtendedCommandContext): Effect.Effect<void, DevError> {
   return Effect.gen(function* () {
-    const baseDir = ctx.fileSystem.resolvePath(ctx.baseDir);
-    const directories = yield* ctx.fileSystem.listDirectories(baseDir);
-
-    if (typeof directories === "object" && "_tag" in directories) {
-      throw directories;
-    }
+    // Use findDirs() to get directories, wrapped in Effect
+    const directories = yield* Effect.sync(() => findDirs());
 
     if (directories.length === 0) {
-      yield* ctx.logger.error(`No directories found in ${ctx.baseDir}`);
+      yield* ctx.logger.error("No directories found");
       return;
     }
 
@@ -130,9 +128,8 @@ function handleInteractiveCd(ctx: ExtendedCommandContext): Effect.Effect<void, D
     });
 
     if (selectedPath) {
-      const targetPath = `${baseDir}/${selectedPath}`;
-      yield* ctx.shell.changeDirectory(targetPath);
-      yield* ctx.logger.success(`Changed to ${selectedPath}`);
+      // Use handleCdToPath instead of direct shell.changeDirectory
+      yield* handleCdToPath(selectedPath);
     }
   });
 }

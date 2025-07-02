@@ -5,7 +5,8 @@ import path from "path";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { CommandContext } from "~/lib/core/command-types";
-import { runCommand } from "~/commands/run";
+
+import { runCommand } from "../legacy/commands/run";
 
 describe("Integration Tests", () => {
   let tempDir: string;
