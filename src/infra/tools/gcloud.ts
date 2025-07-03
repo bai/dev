@@ -22,7 +22,7 @@ export interface GcloudToolsService {
   checkVersion(): Effect.Effect<{ isValid: boolean; currentVersion: string | null }, UnknownError>;
   performUpgrade(): Effect.Effect<boolean, UnknownError>;
   ensureVersionOrUpgrade(): Effect.Effect<void, ExternalToolError | UnknownError>;
-  setupConfig(): Effect.Effect<void, UnknownError | ConfigError>;
+  setupConfig(): Effect.Effect<void, UnknownError>;
 }
 
 export class GcloudToolsLive implements GcloudToolsService {
@@ -105,7 +105,7 @@ export class GcloudToolsLive implements GcloudToolsService {
     );
   }
 
-  setupConfig(): Effect.Effect<void, UnknownError | ConfigError> {
+  setupConfig(): Effect.Effect<void, UnknownError> {
     return Effect.gen(
       function* (this: GcloudToolsLive) {
         yield* this.logger.info("☁️  Setting up Google Cloud configuration...");
@@ -119,8 +119,8 @@ export class GcloudToolsLive implements GcloudToolsService {
           yield* this.filesystem
             .mkdir(gcloudConfigDir, true)
             .pipe(
-              Effect.catchTag("ConfigError", (error) =>
-                Effect.fail(unknownError(`Failed to create directory: ${error.reason}`)),
+              Effect.mapError((error) =>
+                unknownError(`Failed to create directory: ${error._tag === "FileSystemError" ? error.reason : error}`),
               ),
             );
         }

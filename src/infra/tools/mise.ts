@@ -40,7 +40,7 @@ export interface MiseToolsService {
   checkVersion(): Effect.Effect<{ isValid: boolean; currentVersion: string | null }, UnknownError>;
   performUpgrade(): Effect.Effect<boolean, UnknownError>;
   ensureVersionOrUpgrade(): Effect.Effect<void, ExternalToolError | UnknownError>;
-  setupGlobalConfig(): Effect.Effect<void, UnknownError | ConfigError>;
+  setupGlobalConfig(): Effect.Effect<void, UnknownError>;
 }
 
 export class MiseToolsLive implements MiseToolsService {
@@ -118,7 +118,7 @@ export class MiseToolsLive implements MiseToolsService {
     );
   }
 
-  setupGlobalConfig(): Effect.Effect<void, UnknownError | ConfigError> {
+  setupGlobalConfig(): Effect.Effect<void, UnknownError> {
     return Effect.gen(
       function* (this: MiseToolsLive) {
         yield* this.logger.info("🔧 Setting up mise global configuration...");
@@ -130,14 +130,28 @@ export class MiseToolsLive implements MiseToolsService {
         const configDirExists = yield* this.filesystem.exists(miseConfigDir);
         if (!configDirExists) {
           yield* this.logger.info("   📂 Creating mise config directory...");
-          yield* this.filesystem.mkdir(miseConfigDir, true).pipe(Effect.ignore);
+          yield* this.filesystem
+            .mkdir(miseConfigDir, true)
+            .pipe(
+              Effect.mapError((error) =>
+                unknownError(
+                  `Failed to create mise config directory: ${error._tag === "FileSystemError" ? error.reason : error}`,
+                ),
+              ),
+            );
         }
 
         // Write mise global config
         const config = devConfig.miseGlobalConfig;
         const tomlContent = stringify(config);
 
-        yield* this.filesystem.writeFile(miseConfigFile, tomlContent);
+        yield* this.filesystem
+          .writeFile(miseConfigFile, tomlContent)
+          .pipe(
+            Effect.mapError((error) =>
+              unknownError(`Failed to write mise config: ${error._tag === "FileSystemError" ? error.reason : error}`),
+            ),
+          );
         yield* this.logger.info("   ✅ Mise global config ready");
       }.bind(this),
     );

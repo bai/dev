@@ -57,7 +57,9 @@ export class NetworkLive implements Network {
         .writeFile(destinationPath, content)
         .pipe(
           Effect.mapError((error) =>
-            error._tag === "ConfigError" ? networkError(`Failed to write file: ${error.reason}`) : error,
+            error._tag === "FileSystemError"
+              ? networkError(`Failed to write file: ${error.reason}`)
+              : networkError(`Failed to write file: ${error}`),
           ),
         );
     });
