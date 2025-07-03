@@ -1,6 +1,4 @@
-// Pure fuzzy string matching algorithms
-// Based on fzf-style scoring with no external dependencies
-// This is pure domain logic with no side effects
+// Fuzzy string matching algorithm. This is pure domain logic with no side effects
 
 const SCORE_MIN = -Infinity;
 const SCORE_MAX = Infinity;
