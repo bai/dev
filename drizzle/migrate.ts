@@ -1,5 +1,5 @@
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
 
-import { db } from ".";
+import { db } from "./index";
 
-migrate(db, { migrationsFolder: "./src/drizzle/migrations" });
+migrate(db, { migrationsFolder: "./drizzle/migrations" });
