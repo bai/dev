@@ -13,8 +13,7 @@
     "prettier:fix": "prettier '**/*.{cjs,mjs,ts,tsx,md,json}' --ignore-path ./.gitignore --ignore-path ./.prettierignore --ignore-unknown --no-error-on-unmatched-pattern --write",
     "test": "vitest --no-file-parallelism --bail=1 --no-watch",
     "test:bench": "vitest bench --no-file-parallelism --bail=1 --no-watch",
-    "db:generate": "drizzle-kit generate",
-    "db:migrate": "bun run drizzle/migrate.ts"
+    "db:generate": "drizzle-kit generate"
   },
   "dependencies": {
     "@effect/platform-bun": "^0.72.9",

@@ -1,8 +1,11 @@
+import os from "os";
+import path from "path";
+
 import type { Config } from "drizzle-kit";
 
-import { PathServiceImpl } from "./src/domain/services/PathService";
-
-const pathService = new PathServiceImpl();
+// XDG Base Directory Specification compliant path resolution
+const XDG_DATA_HOME = process.env.XDG_DATA_HOME || path.join(os.homedir(), ".local", "share");
+const dbPath = path.join(XDG_DATA_HOME, "dev", "dev.db");
 
 export default {
   out: "./drizzle/migrations",
@@ -13,6 +16,6 @@ export default {
     casing: "preserve",
   },
   dbCredentials: {
-    url: `file:${pathService.dbPath}`,
+    url: `file:${dbPath}`,
   },
 } satisfies Config;
