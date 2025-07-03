@@ -149,8 +149,8 @@ This command checks:
 
       // Output results
       if (jsonOutput) {
-        // Use Effect.sync to wrap console output in Effect context
-        yield* Effect.sync(() => console.log(JSON.stringify(statusItems, null, 2)));
+        // Use Effect's logging system for consistent output handling
+        yield* Effect.logInfo(JSON.stringify(statusItems, null, 2));
       } else {
         yield* Effect.logInfo("System Status:");
         yield* Effect.logInfo("");
@@ -166,9 +166,9 @@ This command checks:
         const warningCount = statusItems.filter((item) => item.status === "warning").length;
 
         if (errorCount > 0) {
-          yield* Effect.log(`❌ ERROR: Found ${errorCount} error(s) and ${warningCount} warning(s)`);
+          yield* Effect.logError(`❌ ERROR: Found ${errorCount} error(s) and ${warningCount} warning(s)`);
         } else if (warningCount > 0) {
-          yield* Effect.log(`WARN: ⚠️ Found ${warningCount} warning(s)`);
+          yield* Effect.logWarning(`WARN: ⚠️ Found ${warningCount} warning(s)`);
         } else {
           yield* Effect.logInfo("✅ All systems are operational");
         }

@@ -15,10 +15,7 @@ export const makeGitLive = (shell: Shell): Git => ({
       Effect.gen(function* () {
         // Add cleanup finalizer for failed clone operations
         yield* Effect.addFinalizer(() =>
-          Effect.sync(() => {
-            // Log cleanup attempt - actual cleanup would depend on filesystem service
-            console.debug(`Git clone operation finalizer called for ${destinationPath}`);
-          }),
+          Effect.logDebug(`Git clone operation finalizer called for ${destinationPath}`),
         );
 
         const result = yield* shell.exec("git", ["clone", repository.cloneUrl, destinationPath]);
