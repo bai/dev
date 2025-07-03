@@ -1,6 +1,6 @@
 import { Context, Effect, Layer } from "effect";
 
-import { externalToolError, type ExternalToolError, type UnknownError } from "../../domain/errors";
+import { externalToolError, unknownError, type ExternalToolError, type UnknownError } from "../../domain/errors";
 import { ShellService, type Shell } from "../../domain/ports/Shell";
 
 export const FZF_MIN_VERSION = "0.35.0";
@@ -14,6 +14,12 @@ export interface FzfToolsService {
   checkVersion(): Effect.Effect<{ isValid: boolean; currentVersion: string | null }, UnknownError>;
   performUpgrade(): Effect.Effect<boolean, UnknownError>;
   ensureVersionOrUpgrade(): Effect.Effect<void, ExternalToolError | UnknownError>;
+
+  /**
+   * Present a list of choices to the user for interactive selection
+   * Returns the selected choice, or null if the user cancels
+   */
+  interactiveSelect(choices: string[]): Effect.Effect<string | null, UnknownError>;
 }
 
 // Helper function for version comparison
@@ -70,15 +76,15 @@ export const makeFzfToolsLive = (shell: Shell): FzfToolsService => ({
 
   performUpgrade: (): Effect.Effect<boolean, UnknownError> =>
     Effect.gen(function* () {
-      yield* Effect.log("⏳ Updating fzf via mise...");
+      yield* Effect.logInfo("⏳ Updating fzf via mise...");
 
       const result = yield* shell.exec("mise", ["install", "fzf@latest"]);
 
       if (result.exitCode === 0) {
-        yield* Effect.log("✅ Fzf updated successfully via mise");
+        yield* Effect.logInfo("✅ Fzf updated successfully via mise");
         return true;
       } else {
-        yield* Effect.log(`❌ Fzf update failed with exit code: ${result.exitCode}`);
+        yield* Effect.logError(`❌ Fzf update failed with exit code: ${result.exitCode}`);
         return false;
       }
     }),
@@ -93,17 +99,17 @@ export const makeFzfToolsLive = (shell: Shell): FzfToolsService => ({
       }
 
       if (currentVersion) {
-        yield* Effect.log(`⚠️  Fzf version ${currentVersion} is older than required ${FZF_MIN_VERSION}`);
+        yield* Effect.logWarning(`⚠️  Fzf version ${currentVersion} is older than required ${FZF_MIN_VERSION}`);
       } else {
-        yield* Effect.log(`⚠️  Unable to determine fzf version`);
+        yield* Effect.logWarning(`⚠️  Unable to determine fzf version`);
       }
 
-      yield* Effect.log(`🚀 Starting fzf upgrade via mise...`);
+      yield* Effect.logInfo(`🚀 Starting fzf upgrade via mise...`);
 
       const updateSuccess = yield* fzfTools.performUpgrade();
       if (!updateSuccess) {
-        yield* Effect.log(`❌ Failed to update fzf to required version`);
-        yield* Effect.log(`💡 Try manually installing fzf via mise: mise install fzf@latest`);
+        yield* Effect.logError(`❌ Failed to update fzf to required version`);
+        yield* Effect.logError(`💡 Try manually installing fzf via mise: mise install fzf@latest`);
         return yield* Effect.fail(
           externalToolError("Failed to update fzf", {
             tool: "fzf",
@@ -116,9 +122,9 @@ export const makeFzfToolsLive = (shell: Shell): FzfToolsService => ({
       // Verify upgrade
       const { isValid: isValidAfterUpgrade, currentVersion: versionAfterUpgrade } = yield* fzfTools.checkVersion();
       if (!isValidAfterUpgrade) {
-        yield* Effect.log(`❌ Fzf upgrade completed but version still doesn't meet requirement`);
+        yield* Effect.logError(`❌ Fzf upgrade completed but version still doesn't meet requirement`);
         if (versionAfterUpgrade) {
-          yield* Effect.log(`   Current: ${versionAfterUpgrade}, Required: ${FZF_MIN_VERSION}`);
+          yield* Effect.logError(`   Current: ${versionAfterUpgrade}, Required: ${FZF_MIN_VERSION}`);
         }
         return yield* Effect.fail(
           externalToolError("Fzf upgrade failed", {
@@ -130,8 +136,37 @@ export const makeFzfToolsLive = (shell: Shell): FzfToolsService => ({
       }
 
       if (versionAfterUpgrade) {
-        yield* Effect.log(`✨ Fzf successfully upgraded to version ${versionAfterUpgrade}`);
+        yield* Effect.logInfo(`✨ Fzf successfully upgraded to version ${versionAfterUpgrade}`);
       }
+    }),
+
+  interactiveSelect: (choices: string[]): Effect.Effect<string | null, UnknownError> =>
+    Effect.tryPromise({
+      try: async () => {
+        const directoryList = choices.join("\n") + "\n";
+
+        const proc = Bun.spawn(["fzf"], {
+          stdin: "pipe",
+          stdout: "pipe",
+          stderr: "pipe",
+        });
+
+        if (proc.stdin) {
+          await proc.stdin.write(directoryList);
+          await proc.stdin.end();
+        }
+
+        const exitCode = await proc.exited;
+
+        if (exitCode === 0 && proc.stdout) {
+          const output = await new Response(proc.stdout).text();
+          return output.trim();
+        }
+
+        // fzf returns 130 on ESC/Ctrl-C, which is cancellation, not an error
+        return null;
+      },
+      catch: (error) => unknownError(`Failed to run fzf: ${error}`),
     }),
 });
 

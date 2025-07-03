@@ -6,6 +6,7 @@ import type { CliCommandSpec, CommandContext } from "../../domain/models";
 import { DirectoryServiceTag } from "../../domain/ports/DirectoryService";
 import { FileSystemService } from "../../domain/ports/FileSystem";
 import { ShellService } from "../../domain/ports/Shell";
+import { FzfToolsServiceTag } from "../../infra/tools/fzf";
 import { ShellIntegrationServiceTag } from "../services/ShellIntegrationService";
 
 export const cdCommand: CliCommandSpec = {
@@ -87,33 +88,9 @@ function handleInteractiveCd(): Effect.Effect<void, DevError, any> {
       return;
     }
 
-    // Use fzf for interactive selection
-    const directoryList = directories.join("\n") + "\n";
-
-    const selectedPath = yield* Effect.tryPromise({
-      try: async () => {
-        const proc = Bun.spawn(["fzf"], {
-          stdin: "pipe",
-          stdout: "pipe",
-          stderr: "pipe",
-        });
-
-        if (proc.stdin) {
-          await proc.stdin.write(directoryList);
-          await proc.stdin.end();
-        }
-
-        const exitCode = await proc.exited;
-
-        if (exitCode === 0 && proc.stdout) {
-          const output = await new Response(proc.stdout).text();
-          return output.trim();
-        }
-
-        return null;
-      },
-      catch: (error) => unknownError(`Failed to run fzf: ${error}`),
-    });
+    // Use FzfToolsService for interactive selection
+    const fzfService = yield* FzfToolsServiceTag;
+    const selectedPath = yield* fzfService.interactiveSelect(directories);
 
     if (selectedPath) {
       // Use ShellIntegrationService instead of direct handleCdToPath

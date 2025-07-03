@@ -27,6 +27,7 @@ import { MiseLiveLayer } from "./infra/mise/MiseLive";
 import { NetworkLiveLayer } from "./infra/network/NetworkLive";
 import { GitHubProviderLayer } from "./infra/providers/GitHubProvider";
 import { ShellLiveLayer } from "./infra/shell/ShellLive";
+import { FzfToolsLiveLayer } from "./infra/tools/fzf";
 
 /**
  * Composition Root - Wires all layers together
@@ -63,6 +64,7 @@ const ConfigLayer = Layer.provide(
 const ToolServicesLayer = Layer.mergeAll(
   Layer.provide(MiseLiveLayer, BaseInfraLayer),
   Layer.provide(KeychainLiveLayer, BaseInfraLayer),
+  Layer.provide(FzfToolsLiveLayer, BaseInfraLayer),
 );
 
 // Complete Infrastructure Layer with explicit dependency management
