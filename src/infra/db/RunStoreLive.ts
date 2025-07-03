@@ -118,15 +118,6 @@ export const makeRunStoreLive = (db: ReturnType<typeof drizzle>, sqlite: Databas
   };
 };
 
-// No-op implementation when storage is disabled as plain object
-export const RunStoreNoOp: RunStore = {
-  record: () => Effect.succeed("noop"),
-  complete: () => Effect.void,
-  prune: () => Effect.void,
-  getRecentRuns: () => Effect.succeed([]),
-  completeIncompleteRuns: () => Effect.void,
-};
-
 /**
  * Create and initialize database with migrations
  */
@@ -160,11 +151,6 @@ const createDatabase = (dbPath: string) =>
 export const RunStoreLiveLayer = Layer.scoped(
   RunStoreService,
   Effect.gen(function* () {
-    // Check if storage is disabled
-    if (process.env.DEV_CLI_STORE === "0") {
-      return RunStoreNoOp;
-    }
-
     const pathService = yield* PathServiceTag;
     const dbPath = pathService.dbPath;
 

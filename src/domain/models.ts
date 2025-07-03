@@ -19,11 +19,13 @@ export interface MiseConfig {
 }
 
 export type GitProviderType = "github" | "gitlab";
+export type LogLevel = "debug" | "info" | "warn" | "error";
 
 export interface Config {
   version: 3;
   configUrl: string;
   defaultOrg: string;
+  logLevel?: LogLevel;
   paths: {
     base: string;
   };

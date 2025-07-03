@@ -142,7 +142,6 @@ export const runs = sqliteTable("runs", {
 * **Port** `RunStore` with `record` & `prune`.
 * **Adapter** `RunStoreLive` stores rows in `~/.dev/state/dev.db` (WAL mode).
 * Insert row *before* executing handler (`started_at`), finalise on exit (`finished_at`, `exit_code`).
-* Respect `DEV_CLI_STORE=0` → supply no-op implementation.
 
 *Local store is independent of telemetry; it never leaves the machine.*
 

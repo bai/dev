@@ -12,7 +12,6 @@ import { statusCommand } from "./app/commands/status";
 import { upCommand } from "./app/commands/up";
 import { upgradeCommand } from "./app/commands/upgrade";
 import { CommandTrackingServiceLive } from "./app/services/CommandTrackingService";
-import { DebugServiceLive } from "./app/services/DebugService";
 import { ShellIntegrationServiceLive } from "./app/services/ShellIntegrationService";
 import { UpdateCheckServiceLive } from "./app/services/UpdateCheckService";
 import { VersionServiceLive } from "./app/services/VersionService";
@@ -87,7 +86,6 @@ export const AppLiveLayer = Layer.mergeAll(
   ShellIntegrationServiceLive,
   CommandTrackingServiceLive,
   VersionServiceLive,
-  DebugServiceLive,
   UpdateCheckServiceLive,
 );
 

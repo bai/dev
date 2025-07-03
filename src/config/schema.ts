@@ -1,6 +1,9 @@
 import { z } from "zod";
 
-import type { Config, GitProviderType, MiseConfig } from "../domain/models";
+import type { Config, GitProviderType, LogLevel, MiseConfig } from "../domain/models";
+
+// Log level schema
+const logLevelSchema: z.ZodType<LogLevel> = z.enum(["debug", "info", "warn", "error"]);
 
 // Mise configuration schema (matching domain types)
 const miseConfigSchema: z.ZodType<MiseConfig> = z.object({
@@ -33,6 +36,7 @@ export const configSchema: z.ZodType<Config> = z.object({
   version: z.literal(3),
   configUrl: z.string().url(),
   defaultOrg: z.string(),
+  logLevel: logLevelSchema.optional().default("info"),
   paths: z.object({
     base: z.string(),
   }),
@@ -59,6 +63,7 @@ export const defaultConfig: Config = {
   version: 3,
   configUrl: "https://raw.githubusercontent.com/acme/dev-configs/main/org.json",
   defaultOrg: "acme",
+  logLevel: "info",
   paths: {
     base: "~/src",
   },
@@ -74,4 +79,4 @@ export const defaultConfig: Config = {
 };
 
 // Re-export schema for other modules
-export { miseConfigSchema };
+export { miseConfigSchema, logLevelSchema };

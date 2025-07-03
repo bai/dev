@@ -2,7 +2,6 @@ import { Context, Effect, Layer } from "effect";
 
 import { externalToolError, type ExternalToolError, type UnknownError } from "../../domain/errors";
 import { LoggerService, type Logger } from "../../domain/models";
-import { DebugServiceTag, type DebugService } from "../../domain/ports/DebugService";
 import { ShellService, type Shell } from "../../domain/ports/Shell";
 
 export const GIT_MIN_VERSION = "2.50.0";
@@ -39,7 +38,7 @@ const compareVersions = (version1: string, version2: string): number => {
 };
 
 // Factory function to create GitToolsService implementation
-export const makeGitToolsLive = (shell: Shell, logger: Logger, debugService: DebugService): GitToolsService => ({
+export const makeGitToolsLive = (shell: Shell, logger: Logger): GitToolsService => ({
   getCurrentVersion: (): Effect.Effect<string | null, UnknownError> =>
     shell.exec("git", ["--version"]).pipe(
       Effect.map((result) => {
@@ -56,7 +55,7 @@ export const makeGitToolsLive = (shell: Shell, logger: Logger, debugService: Deb
 
   checkVersion: (): Effect.Effect<{ isValid: boolean; currentVersion: string | null }, UnknownError> =>
     Effect.gen(function* () {
-      const gitTools = makeGitToolsLive(shell, logger, debugService);
+      const gitTools = makeGitToolsLive(shell, logger);
       const currentVersion = yield* gitTools.getCurrentVersion();
 
       if (!currentVersion) {
@@ -64,13 +63,6 @@ export const makeGitToolsLive = (shell: Shell, logger: Logger, debugService: Deb
       }
 
       const comparison = compareVersions(currentVersion, GIT_MIN_VERSION);
-      const isDebug = yield* debugService.isDebugMode;
-
-      if (isDebug) {
-        yield* logger.debug(
-          `Git version check: ${currentVersion} vs ${GIT_MIN_VERSION} (${comparison >= 0 ? "valid" : "invalid"})`,
-        );
-      }
 
       return {
         isValid: comparison >= 0,
@@ -95,14 +87,10 @@ export const makeGitToolsLive = (shell: Shell, logger: Logger, debugService: Deb
 
   ensureVersionOrUpgrade: (): Effect.Effect<void, ExternalToolError | UnknownError> =>
     Effect.gen(function* () {
-      const gitTools = makeGitToolsLive(shell, logger, debugService);
+      const gitTools = makeGitToolsLive(shell, logger);
       const { isValid, currentVersion } = yield* gitTools.checkVersion();
 
       if (isValid) {
-        const isDebug = yield* debugService.isDebugMode;
-        if (isDebug && currentVersion) {
-          yield* logger.debug(`Git version ${currentVersion} meets minimum requirement ${GIT_MIN_VERSION}`);
-        }
         return;
       }
 
@@ -158,7 +146,6 @@ export const GitToolsLiveLayer = Layer.effect(
   Effect.gen(function* () {
     const shell = yield* ShellService;
     const logger = yield* LoggerService;
-    const debugService = yield* DebugServiceTag;
-    return makeGitToolsLive(shell, logger, debugService);
+    return makeGitToolsLive(shell, logger);
   }),
 );
