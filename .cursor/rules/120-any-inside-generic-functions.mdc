@@ -1,5 +1,5 @@
 ---
-alwaysApply: false
+alwaysApply: true
 ---
 When building generic functions, you may need to use any inside the function body.
 
