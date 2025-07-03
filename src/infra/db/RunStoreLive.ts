@@ -36,7 +36,8 @@ export class RunStoreLive implements RunStore {
       // Use migrations from the infra layer
       migrate(this.db, { migrationsFolder: path.join(__dirname, "migrations") });
     } catch (error) {
-      // Log migration errors but don't fail initialization
+      // Note: console.warn is acceptable here as this is initialization code
+      // outside the Effect context. In Effect context, we would use Effect.logWarning
       console.warn("Warning: Database migration failed:", error);
     }
   }

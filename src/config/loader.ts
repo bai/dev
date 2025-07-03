@@ -1,15 +1,21 @@
 import { Context, Effect, Layer } from "effect";
 
-import { configError, unknownError, type ConfigError, type NetworkError, type UnknownError } from "../domain/errors";
+import {
+  configError,
+  type ConfigError,
+  type FileSystemError,
+  type NetworkError,
+  type UnknownError,
+} from "../domain/errors";
 import { FileSystemService, type FileSystem } from "../domain/ports/FileSystem";
 import { NetworkService, type Network } from "../domain/ports/Network";
 import { migrateConfig } from "./migrations";
 import { configSchema, defaultConfig, type Config } from "./schema";
 
 export interface ConfigLoader {
-  load(): Effect.Effect<Config, ConfigError | UnknownError>;
-  save(config: Config): Effect.Effect<void, ConfigError | UnknownError>;
-  refresh(): Effect.Effect<Config, ConfigError | NetworkError | UnknownError>;
+  load(): Effect.Effect<Config, ConfigError | FileSystemError | UnknownError>;
+  save(config: Config): Effect.Effect<void, FileSystemError | UnknownError>;
+  refresh(): Effect.Effect<Config, ConfigError | FileSystemError | NetworkError | UnknownError>;
 }
 
 export class ConfigLoaderLive implements ConfigLoader {
@@ -19,7 +25,7 @@ export class ConfigLoaderLive implements ConfigLoader {
     private configPath: string,
   ) {}
 
-  load(): Effect.Effect<Config, ConfigError | UnknownError> {
+  load(): Effect.Effect<Config, ConfigError | FileSystemError | UnknownError> {
     return this.fileSystem.exists(this.configPath).pipe(
       Effect.flatMap((exists) => {
         if (!exists) {
@@ -29,26 +35,26 @@ export class ConfigLoaderLive implements ConfigLoader {
 
         return this.fileSystem.readFile(this.configPath).pipe(
           Effect.flatMap((content) => {
-            try {
-              const rawConfig = JSON.parse(content);
-              const migratedConfig = migrateConfig(rawConfig);
-              const validatedConfig = configSchema.parse(migratedConfig);
-              return Effect.succeed(validatedConfig);
-            } catch (error) {
-              return Effect.fail(configError(`Invalid config file: ${error}`));
-            }
+            return Effect.try({
+              try: () => {
+                const rawConfig = JSON.parse(content);
+                const migratedConfig = migrateConfig(rawConfig);
+                return configSchema.parse(migratedConfig);
+              },
+              catch: (error) => configError(`Invalid config file: ${error}`),
+            });
           }),
         );
       }),
     );
   }
 
-  save(config: Config): Effect.Effect<void, ConfigError | UnknownError> {
+  save(config: Config): Effect.Effect<void, FileSystemError | UnknownError> {
     const content = JSON.stringify(config, null, 2);
     return this.fileSystem.writeFile(this.configPath, content);
   }
 
-  refresh(): Effect.Effect<Config, ConfigError | NetworkError | UnknownError> {
+  refresh(): Effect.Effect<Config, ConfigError | FileSystemError | NetworkError | UnknownError> {
     return this.load().pipe(
       Effect.flatMap((currentConfig) => {
         if (!currentConfig.configUrl) {
@@ -63,16 +69,16 @@ export class ConfigLoaderLive implements ConfigLoader {
               );
             }
 
-            try {
-              const remoteConfig = JSON.parse(response.body);
-              const migratedConfig = migrateConfig(remoteConfig);
-              const validatedConfig = configSchema.parse(migratedConfig);
-
-              // Save the updated config
-              return this.save(validatedConfig).pipe(Effect.map(() => validatedConfig));
-            } catch (error) {
-              return Effect.fail(configError(`Invalid remote config: ${error}`));
-            }
+            return Effect.try({
+              try: () => {
+                const remoteConfig = JSON.parse(response.body);
+                const migratedConfig = migrateConfig(remoteConfig);
+                return configSchema.parse(migratedConfig);
+              },
+              catch: (error) => configError(`Invalid remote config: ${error}`),
+            }).pipe(
+              Effect.flatMap((validatedConfig) => this.save(validatedConfig).pipe(Effect.map(() => validatedConfig))),
+            );
           }),
           // Fall back to current config if remote fetch fails
           Effect.catchAll(() => Effect.succeed(currentConfig)),

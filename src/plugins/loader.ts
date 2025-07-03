@@ -1,7 +1,9 @@
+import { Effect } from "effect";
+
 import { unknownError, type DevError } from "../domain/errors";
 import type { AppModule } from "../domain/models";
-import type { FileSystem } from "../domain/ports/FileSystem";
-import type { Git } from "../domain/ports/Git";
+import { FileSystemService, type FileSystem } from "../domain/ports/FileSystem";
+import { GitService, type Git } from "../domain/ports/Git";
 
 export class PluginLoader {
   constructor(
@@ -9,108 +11,122 @@ export class PluginLoader {
     private git: Git,
   ) {}
 
-  async loadAllPlugins(): Promise<AppModule[]> {
-    const modules: AppModule[] = [];
+  loadAllPlugins(): Effect.Effect<AppModule[], DevError> {
+    const fileSystem = this.fileSystem;
 
-    // 1. Load local plugins from ~/.dev/plugins/**
-    const localModules = await this.loadLocalPlugins();
-    modules.push(...localModules);
+    return Effect.gen(function* () {
+      const modules: AppModule[] = [];
 
-    // 2. Load from node_modules/@*/dev-plugin-*
-    const nodeModules = await this.loadNodeModulesPlugins();
-    modules.push(...nodeModules);
+      // 1. Load local plugins from ~/.dev/plugins/**
+      const localModules = yield* loadLocalPlugins(fileSystem);
+      modules.push(...localModules);
 
-    // 3. Git URL plugins are handled during upgrade
-    // They're cloned to $XDG_CACHE_HOME/dev/plugins/<hash>
-    const gitModules = await this.loadGitPlugins();
-    modules.push(...gitModules);
+      // 2. Load from node_modules/@*/dev-plugin-*
+      const nodeModules = yield* loadNodeModulesPlugins();
+      modules.push(...nodeModules);
 
-    return modules;
+      // 3. Git URL plugins are handled during upgrade
+      // They're cloned to $XDG_CACHE_HOME/dev/plugins/<hash>
+      const gitModules = yield* loadGitPlugins(fileSystem);
+      modules.push(...gitModules);
+
+      return modules;
+    });
   }
+}
 
-  private async loadLocalPlugins(): Promise<AppModule[]> {
-    const pluginsDir = this.fileSystem.resolvePath("~/.dev/plugins");
+// Standalone functions to avoid "this" context issues
+function loadLocalPlugins(fileSystem: FileSystem): Effect.Effect<AppModule[], DevError> {
+  return Effect.gen(function* () {
+    const pluginsDir = fileSystem.resolvePath("~/.dev/plugins");
 
-    if (!(await this.fileSystem.exists(pluginsDir))) {
+    const exists = yield* fileSystem.exists(pluginsDir);
+    if (!exists) {
       return [];
     }
 
-    return await this.loadPluginsFromDirectory(pluginsDir);
-  }
+    return yield* loadPluginsFromDirectory(fileSystem, pluginsDir);
+  });
+}
 
-  private async loadNodeModulesPlugins(): Promise<AppModule[]> {
-    // This would scan node_modules for @*/dev-plugin-* packages
-    // For now, return empty array as it requires more complex logic
-    return [];
-  }
+function loadNodeModulesPlugins(): Effect.Effect<AppModule[], DevError> {
+  // This would scan node_modules for @*/dev-plugin-* packages
+  // For now, return empty array as it requires more complex logic
+  return Effect.succeed([]);
+}
 
-  private async loadGitPlugins(): Promise<AppModule[]> {
+function loadGitPlugins(fileSystem: FileSystem): Effect.Effect<AppModule[], DevError> {
+  return Effect.gen(function* () {
     // Load plugins from XDG_CACHE_HOME/dev/plugins/
-    const cacheDir = process.env.XDG_CACHE_HOME || this.fileSystem.resolvePath("~/.cache");
+    const cacheDir = process.env.XDG_CACHE_HOME || fileSystem.resolvePath("~/.cache");
     const gitPluginsDir = `${cacheDir}/dev/plugins`;
 
-    if (!(await this.fileSystem.exists(gitPluginsDir))) {
+    const exists = yield* fileSystem.exists(gitPluginsDir);
+    if (!exists) {
       return [];
     }
 
-    return await this.loadPluginsFromDirectory(gitPluginsDir);
-  }
+    return yield* loadPluginsFromDirectory(fileSystem, gitPluginsDir);
+  });
+}
 
-  private async loadPluginsFromDirectory(directory: string): Promise<AppModule[]> {
+function loadPluginsFromDirectory(fileSystem: FileSystem, directory: string): Effect.Effect<AppModule[], DevError> {
+  return Effect.gen(function* () {
     const modules: AppModule[] = [];
 
-    try {
-      const entries = await this.fileSystem.listDirectories(directory);
+    // Get directory entries using Effect
+    const entries = yield* fileSystem.listDirectories(directory);
 
-      if (typeof entries === "object" && "_tag" in entries) {
-        return modules; // Return empty on error
-      }
+    for (const entry of entries) {
+      const moduleResult = yield* Effect.either(loadPlugin(fileSystem, `${directory}/${entry}`));
 
-      for (const entry of entries) {
-        try {
-          const module = await this.loadPlugin(`${directory}/${entry}`);
-          if (module) {
-            modules.push(module);
-          }
-        } catch (error) {
-          // Log error but continue loading other plugins
-          console.warn(`Failed to load plugin from ${entry}: ${error}`);
-        }
+      if (moduleResult._tag === "Right" && moduleResult.right) {
+        modules.push(moduleResult.right);
       }
-    } catch (error) {
-      // Directory doesn't exist or can't be read
+      // Ignore individual plugin load failures to allow other plugins to load
     }
 
     return modules;
-  }
+  });
+}
 
-  private async loadPlugin(pluginPath: string): Promise<AppModule | null> {
-    try {
-      // Try to load index.js or index.ts from plugin directory
-      const indexPath = `${pluginPath}/index.js`;
+function loadPlugin(fileSystem: FileSystem, pluginPath: string): Effect.Effect<AppModule | null, DevError> {
+  return Effect.gen(function* () {
+    // Try to load index.js or index.ts from plugin directory
+    const indexPath = `${pluginPath}/index.js`;
 
-      if (await this.fileSystem.exists(indexPath)) {
-        // Dynamic import of the plugin
-        const pluginModule = await import(indexPath);
+    const exists = yield* fileSystem.exists(indexPath);
+    if (!exists) {
+      return null;
+    }
 
-        // Verify it exports default as AppModule
-        if (pluginModule.default && this.isValidAppModule(pluginModule.default)) {
-          return pluginModule.default as AppModule;
-        }
-      }
-    } catch (error) {
-      throw unknownError(`Failed to load plugin from ${pluginPath}: ${error}`);
+    // Dynamic import of the plugin using Effect.tryPromise
+    const pluginModule = yield* Effect.tryPromise({
+      try: () => import(indexPath),
+      catch: (error) => unknownError(`Failed to load plugin from ${pluginPath}: ${error}`),
+    });
+
+    // Verify it exports default as AppModule
+    if (pluginModule.default && isValidAppModule(pluginModule.default)) {
+      return pluginModule.default as AppModule;
     }
 
     return null;
-  }
-
-  private isValidAppModule(module: any): boolean {
-    return (
-      module &&
-      typeof module === "object" &&
-      Array.isArray(module.commands) &&
-      module.commands.every((cmd: any) => cmd.name && cmd.description && typeof cmd.exec === "function")
-    );
-  }
+  });
 }
+
+function isValidAppModule(module: any): boolean {
+  return (
+    module &&
+    typeof module === "object" &&
+    Array.isArray(module.commands) &&
+    module.commands.every((cmd: any) => cmd.name && cmd.description && typeof cmd.exec === "function")
+  );
+}
+
+// Effect Layer for dependency injection
+export const PluginLoaderLive = Effect.gen(function* () {
+  const fileSystem = yield* FileSystemService;
+  const git = yield* GitService;
+  return new PluginLoader(fileSystem, git);
+});

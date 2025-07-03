@@ -1,8 +1,10 @@
+import path from "path";
+
 import { Context, Effect, Layer } from "effect";
 
-import { configError, type ConfigError, type UnknownError } from "../../domain/errors";
-import { FileSystemService } from "../../domain/ports/FileSystem";
-import { PathServiceTag } from "../../domain/services/PathService";
+import { configError, type ConfigError, type FileSystemError, type UnknownError } from "../../domain/errors";
+import { FileSystemService, type FileSystem } from "../../domain/ports/FileSystem";
+import { PathServiceTag, type PathService } from "../../domain/services/PathService";
 
 /**
  * Directory service for managing development directories
@@ -10,9 +12,11 @@ import { PathServiceTag } from "../../domain/services/PathService";
  */
 export interface DirectoryService {
   ensureBaseDirectoryExists(): Effect.Effect<void, ConfigError | UnknownError, FileSystemService | PathServiceTag>;
-  findDirs(): Effect.Effect<string[], ConfigError | UnknownError, FileSystemService | PathServiceTag>;
-  findDirsLegacy(): Effect.Effect<string[], ConfigError | UnknownError, PathServiceTag>;
+  findDirs(): Effect.Effect<string[], ConfigError | FileSystemError | UnknownError>;
+  findDirsLegacy(): Effect.Effect<string[], ConfigError | UnknownError>;
 }
+
+export const DirectoryServiceTag = Context.GenericTag<DirectoryService>("DirectoryService");
 
 export class DirectoryServiceImpl implements DirectoryService {
   ensureBaseDirectoryExists(): Effect.Effect<void, ConfigError | UnknownError, FileSystemService | PathServiceTag> {
@@ -29,12 +33,19 @@ export class DirectoryServiceImpl implements DirectoryService {
     });
   }
 
-  findDirs(): Effect.Effect<string[], ConfigError | UnknownError, FileSystemService | PathServiceTag> {
+  findDirs(): Effect.Effect<string[], ConfigError | FileSystemError | UnknownError> {
     return Effect.gen(function* () {
       const pathService = yield* PathServiceTag;
       const fileSystem = yield* FileSystemService;
 
       const baseDir = pathService.baseSearchDir;
+
+      // Ensure base directory exists
+      const exists = yield* fileSystem.exists(baseDir);
+      if (!exists) {
+        yield* fileSystem.mkdir(baseDir, true);
+        return []; // Return empty array for new base directory
+      }
 
       // Use FileSystem port to get directory listing
       // Note: This is a simplified implementation - in a real scenario,
@@ -65,7 +76,7 @@ export class DirectoryServiceImpl implements DirectoryService {
     });
   }
 
-  findDirsLegacy(): Effect.Effect<string[], ConfigError | UnknownError, PathServiceTag> {
+  findDirsLegacy(): Effect.Effect<string[], ConfigError | UnknownError> {
     return Effect.gen(function* () {
       const pathService = yield* PathServiceTag;
 
@@ -81,9 +92,6 @@ export class DirectoryServiceImpl implements DirectoryService {
     });
   }
 }
-
-// Service tag for Effect Context system
-export class DirectoryServiceTag extends Context.Tag("DirectoryService")<DirectoryServiceTag, DirectoryService>() {}
 
 // Layer that provides DirectoryService with proper dependency injection
 export const DirectoryServiceLive = Layer.succeed(DirectoryServiceTag, new DirectoryServiceImpl());

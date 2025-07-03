@@ -1,17 +1,17 @@
 import { Context, type Effect } from "effect";
 
-import type { ConfigError, UnknownError } from "../errors";
+import type { FileSystemError, UnknownError } from "../errors";
 
 export interface FileSystem {
   /**
    * Read a file as text
    */
-  readFile(path: string): Effect.Effect<string, ConfigError | UnknownError>;
+  readFile(path: string): Effect.Effect<string, FileSystemError | UnknownError>;
 
   /**
    * Write text to a file
    */
-  writeFile(path: string, content: string): Effect.Effect<void, ConfigError | UnknownError>;
+  writeFile(path: string, content: string): Effect.Effect<void, FileSystemError | UnknownError>;
 
   /**
    * Check if a file or directory exists
@@ -21,12 +21,12 @@ export interface FileSystem {
   /**
    * Create a directory (and parent directories if needed)
    */
-  mkdir(path: string, recursive?: boolean): Effect.Effect<void, ConfigError | UnknownError>;
+  mkdir(path: string, recursive?: boolean): Effect.Effect<void, FileSystemError | UnknownError>;
 
   /**
    * List directories in a path
    */
-  listDirectories(path: string): Effect.Effect<string[], ConfigError | UnknownError>;
+  listDirectories(path: string): Effect.Effect<string[], FileSystemError | UnknownError>;
 
   /**
    * Get the current working directory
