@@ -41,6 +41,11 @@ export class CLIError extends Data.TaggedError("CLIError")<{
   readonly reason: string;
 }> {}
 
+export class StatusCheckError extends Data.TaggedError("StatusCheckError")<{
+  readonly reason: string;
+  readonly failedComponents: string[];
+}> {}
+
 // Union type for all domain errors
 export type DevError =
   | ConfigError
@@ -51,7 +56,8 @@ export type DevError =
   | ExternalToolError
   | FileSystemError
   | UserInputError
-  | CLIError;
+  | CLIError
+  | StatusCheckError;
 
 // Exit code mapping
 export const exitCode = (error: DevError): number => {
@@ -72,6 +78,8 @@ export const exitCode = (error: DevError): number => {
       return 8;
     case "CLIError":
       return 9;
+    case "StatusCheckError":
+      return 3;
     case "UnknownError":
       return 1;
     default:
@@ -91,6 +99,8 @@ export const externalToolError = (message: string, options?: { tool?: string; ex
 export const fileSystemError = (reason: string, path?: string) => new FileSystemError({ reason, path });
 export const userInputError = (reason: string) => new UserInputError({ reason });
 export const cliError = (reason: string) => new CLIError({ reason });
+export const statusCheckError = (reason: string, failedComponents: string[]) =>
+  new StatusCheckError({ reason, failedComponents });
 
 // Type guards (using Effect's built-in error matching)
 export const isConfigError = (e: DevError): e is ConfigError => e._tag === "ConfigError";
@@ -102,3 +112,4 @@ export const isExternalToolError = (e: DevError): e is ExternalToolError => e._t
 export const isFileSystemError = (e: DevError): e is FileSystemError => e._tag === "FileSystemError";
 export const isUserInputError = (e: DevError): e is UserInputError => e._tag === "UserInputError";
 export const isCLIError = (e: DevError): e is CLIError => e._tag === "CLIError";
+export const isStatusCheckError = (e: DevError): e is StatusCheckError => e._tag === "StatusCheckError";

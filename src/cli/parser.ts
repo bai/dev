@@ -235,6 +235,9 @@ export class DevCli {
             case "CLIError":
               yield* Effect.log(error.reason);
               break;
+            case "StatusCheckError":
+              yield* Effect.log(error.reason);
+              break;
             case "UnknownError":
               yield* Effect.log(String(error.reason));
               break;

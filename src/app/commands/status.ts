@@ -1,6 +1,6 @@
 import { Effect } from "effect";
 
-import { exitCode, unknownError, type DevError } from "../../domain/errors";
+import { exitCode, statusCheckError, unknownError, type DevError } from "../../domain/errors";
 import { type CliCommandSpec, type CommandContext } from "../../domain/models";
 import { FileSystemService } from "../../domain/ports/FileSystem";
 import { GitService } from "../../domain/ports/Git";
@@ -177,8 +177,14 @@ This command checks:
       // Exit with error code if there are errors (as specified in the spec)
       const hasErrors = statusItems.some((item) => item.status === "error");
       if (hasErrors) {
-        // Set exit code via process.exitCode instead of process.exit()
-        process.exitCode = 3; // As specified in the spec: "exits 3 if any error item"
+        const failedComponents = statusItems.filter((item) => item.status === "error").map((item) => item.component);
+
+        const errorCount = statusItems.filter((item) => item.status === "error").length;
+        const warningCount = statusItems.filter((item) => item.status === "warning").length;
+
+        return yield* Effect.fail(
+          statusCheckError(`Found ${errorCount} error(s) and ${warningCount} warning(s)`, failedComponents),
+        );
       }
     });
   },
