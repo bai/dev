@@ -1,7 +1,5 @@
 ---
-description:
-globs:
-alwaysApply: false
+alwaysApply: true
 ---
 Use `readonly` properties for object types by default. This will prevent accidental mutation at runtime.
 

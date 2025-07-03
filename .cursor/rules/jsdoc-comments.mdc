@@ -1,6 +1,4 @@
 ---
-description:
-globs:
 alwaysApply: false
 ---
 Use JSDoc comments to annotate functions and types.

@@ -1,6 +1,4 @@
 ---
-description:
-globs:
 alwaysApply: false
 ---
 Use import type whenever you are importing a type.

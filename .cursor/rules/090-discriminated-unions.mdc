@@ -1,7 +1,5 @@
 ---
-description:
-globs:
-alwaysApply: false
+alwaysApply: true
 ---
 Proactively use discriminated unions to model data that can be in one of a few different shapes.
 

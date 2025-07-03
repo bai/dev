@@ -1,7 +1,5 @@
 ---
-description:
-globs:
-alwaysApply: false
+alwaysApply: true
 ---
 Do not introduce new enums into the codebase. Retain existing enums.
 

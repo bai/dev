@@ -1,6 +1,4 @@
 ---
-description:
-globs:
 alwaysApply: true
 ---
 - Use kebab-case for file names (e.g., `my-component.ts`)

@@ -1,6 +1,4 @@
 ---
-description:
-globs:
 alwaysApply: false
 ---
 When building generic functions, you may need to use any inside the function body.
