@@ -1,41 +1,48 @@
-import { Effect, Layer } from "effect";
+import { Clock, Effect, Layer } from "effect";
 
 import { LoggerService, type Logger } from "../domain/models";
 
-// Helper function for formatting messages
-const formatMessage = (prefix: string, icon: string, message: string): string => {
-  const timestamp = new Date().toISOString();
-  const prefixPart = prefix ? `[${prefix}] ` : "";
-  return `${icon} ${timestamp} ${prefixPart}${message}`;
-};
+// Helper function for formatting messages using Effect's Clock
+const formatMessage = (prefix: string, icon: string, message: string): Effect.Effect<string> =>
+  Effect.gen(function* () {
+    const now = yield* Clock.currentTimeMillis;
+    const timestamp = new Date(now).toISOString();
+    const prefixPart = prefix ? `[${prefix}] ` : "";
+    return `${icon} ${timestamp} ${prefixPart}${message}`;
+  });
 
 // Factory function to create Logger implementation
 export const makeLoggerLive = (prefix = ""): Logger => ({
   info: (message: string, ...args: any[]): Effect.Effect<void> =>
-    Effect.sync(() => {
-      console.log(formatMessage(prefix, "ℹ️", message), ...args);
+    Effect.gen(function* () {
+      const formattedMessage = yield* formatMessage(prefix, "ℹ️", message);
+      yield* Effect.sync(() => console.log(formattedMessage, ...args));
     }),
 
   warn: (message: string, ...args: any[]): Effect.Effect<void> =>
-    Effect.sync(() => {
-      console.warn(formatMessage(prefix, "⚠️", message), ...args);
+    Effect.gen(function* () {
+      const formattedMessage = yield* formatMessage(prefix, "⚠️", message);
+      yield* Effect.sync(() => console.warn(formattedMessage, ...args));
     }),
 
   error: (message: string, ...args: any[]): Effect.Effect<void> =>
-    Effect.sync(() => {
-      console.error(formatMessage(prefix, "❌", message), ...args);
+    Effect.gen(function* () {
+      const formattedMessage = yield* formatMessage(prefix, "❌", message);
+      yield* Effect.sync(() => console.error(formattedMessage, ...args));
     }),
 
   debug: (message: string, ...args: any[]): Effect.Effect<void> =>
-    Effect.sync(() => {
+    Effect.gen(function* () {
       if (process.env.DEBUG || process.env.DEV_DEBUG) {
-        console.debug(formatMessage(prefix, "🐛", message), ...args);
+        const formattedMessage = yield* formatMessage(prefix, "🐛", message);
+        yield* Effect.sync(() => console.debug(formattedMessage, ...args));
       }
     }),
 
   success: (message: string, ...args: any[]): Effect.Effect<void> =>
-    Effect.sync(() => {
-      console.log(formatMessage(prefix, "✅", message), ...args);
+    Effect.gen(function* () {
+      const formattedMessage = yield* formatMessage(prefix, "✅", message);
+      yield* Effect.sync(() => console.log(formattedMessage, ...args));
     }),
 
   child: (childPrefix: string): Logger => {

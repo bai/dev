@@ -2,7 +2,7 @@ import { Database } from "bun:sqlite";
 import { desc, eq, isNull, lt } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/bun-sqlite";
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
-import { Effect, Layer } from "effect";
+import { Clock, Effect, Layer } from "effect";
 
 import { runs } from "../../../drizzle/schema";
 import { configError, unknownError, type ConfigError, type UnknownError } from "../../domain/errors";
@@ -62,14 +62,17 @@ export const makeRunStoreLive = (db: ReturnType<typeof drizzle>, sqlite: Databas
     });
 
   const prune = (keepDays: number): Effect.Effect<void, ConfigError | UnknownError> =>
-    Effect.tryPromise({
-      try: async () => {
-        const cutoffDate = new Date();
-        cutoffDate.setDate(cutoffDate.getDate() - keepDays);
+    Effect.gen(function* () {
+      const currentTimeMs = yield* Clock.currentTimeMillis;
+      const cutoffDate = new Date(currentTimeMs);
+      cutoffDate.setDate(cutoffDate.getDate() - keepDays);
 
-        await db.delete(runs).where(lt(runs.started_at, cutoffDate));
-      },
-      catch: (error) => configError(`Failed to prune old runs: ${error}`),
+      yield* Effect.tryPromise({
+        try: async () => {
+          await db.delete(runs).where(lt(runs.started_at, cutoffDate));
+        },
+        catch: (error) => configError(`Failed to prune old runs: ${error}`),
+      });
     });
 
   const getRecentRuns = (limit: number): Effect.Effect<CommandRun[], ConfigError | UnknownError> =>
@@ -93,19 +96,23 @@ export const makeRunStoreLive = (db: ReturnType<typeof drizzle>, sqlite: Databas
     });
 
   const completeIncompleteRuns = (): Effect.Effect<void, ConfigError | UnknownError> =>
-    Effect.tryPromise({
-      try: async () => {
-        const now = new Date();
-        // Mark any runs that don't have a finished_at as interrupted
-        await db
-          .update(runs)
-          .set({
-            exit_code: 130, // Standard exit code for SIGINT (Ctrl+C)
-            finished_at: now,
-          })
-          .where(isNull(runs.finished_at));
-      },
-      catch: (error) => configError(`Failed to complete incomplete runs: ${error}`),
+    Effect.gen(function* () {
+      const currentTimeMs = yield* Clock.currentTimeMillis;
+      const now = new Date(currentTimeMs);
+
+      yield* Effect.tryPromise({
+        try: async () => {
+          // Mark any runs that don't have a finished_at as interrupted
+          await db
+            .update(runs)
+            .set({
+              exit_code: 130, // Standard exit code for SIGINT (Ctrl+C)
+              finished_at: now,
+            })
+            .where(isNull(runs.finished_at));
+        },
+        catch: (error) => configError(`Failed to complete incomplete runs: ${error}`),
+      });
     });
 
   return {

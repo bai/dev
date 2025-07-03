@@ -1,4 +1,4 @@
-import { Context, Effect, Layer } from "effect";
+import { Clock, Context, Effect, Layer } from "effect";
 
 import { type ConfigError, type UnknownError } from "../../domain/errors";
 import { type GitService } from "../../domain/ports/Git";
@@ -34,7 +34,8 @@ const recordCommandRun = Effect.gen(function* () {
   const args = process.argv.slice(3);
   const cliVersion = yield* versionService.getCurrentGitCommitSha;
   const cwd = process.cwd();
-  const startedAt = new Date();
+  const startedAtMs = yield* Clock.currentTimeMillis;
+  const startedAt = new Date(startedAtMs);
 
   // Record this run
   const runId = yield* runStore.record({
@@ -51,7 +52,8 @@ const recordCommandRun = Effect.gen(function* () {
 const completeCommandRun = (id: string, exitCode: number) =>
   Effect.gen(function* () {
     const runStore = yield* RunStoreService;
-    const finishedAt = new Date();
+    const finishedAtMs = yield* Clock.currentTimeMillis;
+    const finishedAt = new Date(finishedAtMs);
 
     yield* runStore.complete(id, exitCode, finishedAt);
   });

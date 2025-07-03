@@ -1,4 +1,4 @@
-import { Context, Duration, Effect, Layer } from "effect";
+import { Clock, Context, Duration, Effect, Layer } from "effect";
 
 import { type ConfigError, type UnknownError } from "../../domain/errors";
 import { LoggerService } from "../../domain/models";
@@ -27,10 +27,10 @@ const runPeriodicUpgradeCheck = Effect.gen(function* () {
     // Find the most recent upgrade command
     const lastUpgradeRun = recentRuns.find((run) => run.command_name === "upgrade");
 
+    const currentTime = yield* Clock.currentTimeMillis;
     const shouldUpdate =
       !lastUpgradeRun ||
-      (lastUpgradeRun &&
-        new Date().getTime() - lastUpgradeRun.started_at.getTime() > Duration.toMillis(upgradeFrequency));
+      (lastUpgradeRun && currentTime - lastUpgradeRun.started_at.getTime() > Duration.toMillis(upgradeFrequency));
 
     if (shouldUpdate) {
       yield* logger.warn("🔄 [dev] It's been more than 7 days since your last upgrade.");

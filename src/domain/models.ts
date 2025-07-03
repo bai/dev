@@ -126,11 +126,3 @@ export interface AppModule {
 export class LoggerService extends Context.Tag("LoggerService")<LoggerService, Logger>() {}
 
 export class ConfigService extends Context.Tag("ConfigService")<ConfigService, ConfigManager>() {}
-
-export class ClockService extends Context.Tag("ClockService")<
-  ClockService,
-  {
-    now(): Effect.Effect<Date>;
-    timestamp(): Effect.Effect<number>;
-  }
->() {}
