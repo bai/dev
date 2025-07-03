@@ -8,10 +8,10 @@ import { drizzle } from "drizzle-orm/bun-sqlite";
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
 import { Effect, Layer } from "effect";
 
+import { runs } from "../../../drizzle/schema";
 import { configError, unknownError, type ConfigError, type UnknownError } from "../../domain/errors";
 import type { CommandRun } from "../../domain/models";
 import { RunStoreService, type RunStore } from "../../domain/ports/RunStore";
-import { runs } from "./schema";
 
 export class RunStoreLive implements RunStore {
   private db: ReturnType<typeof drizzle>;
