@@ -2,8 +2,8 @@
 import { BunRuntime } from "@effect/platform-bun";
 import { Effect } from "effect";
 
-import { createDevCli } from "./cli/wiring";
 import { exitCode, unknownError, type DevError } from "./domain/errors";
+import { createDevCli } from "./wiring";
 
 const program = Effect.scoped(
   Effect.gen(function* () {

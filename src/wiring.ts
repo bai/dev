@@ -15,6 +15,7 @@ import { CommandTrackingServiceLive } from "./app/services/CommandTrackingServic
 import { ShellIntegrationServiceLive } from "./app/services/ShellIntegrationService";
 import { UpdateCheckServiceLive } from "./app/services/UpdateCheckService";
 import { VersionServiceLive } from "./app/services/VersionService";
+import { DevCli } from "./cli/parser";
 import { ConfigLoaderLiveLayer } from "./config/loader";
 import type { CliCommandSpec } from "./domain/models";
 import { PathServiceLive } from "./domain/services/PathService";
@@ -89,9 +90,6 @@ export const AppLiveLayer = Layer.mergeAll(
   UpdateCheckServiceLive,
 );
 
-// CLI Layer
-export const CliLiveLayer = AppLiveLayer;
-
 // Available commands - exported for CLI layer
 export const availableCommands: CliCommandSpec[] = [
   cdCommand,
@@ -103,3 +101,8 @@ export const availableCommands: CliCommandSpec[] = [
   upgradeCommand,
   helpCommand,
 ];
+
+// Create CLI instance with available commands
+export function createDevCli(): DevCli {
+  return new DevCli(availableCommands);
+}
