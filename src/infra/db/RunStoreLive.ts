@@ -33,8 +33,8 @@ export class RunStoreLive implements RunStore {
 
   private runMigrations(): void {
     try {
-      // Use migrations from the infra layer
-      migrate(this.db, { migrationsFolder: path.join(__dirname, "migrations") });
+      // Use migrations from the drizzle folder
+      migrate(this.db, { migrationsFolder: path.join(__dirname, "../../../drizzle/migrations") });
     } catch (error) {
       // Note: console.warn is acceptable here as this is initialization code
       // outside the Effect context. In Effect context, we would use Effect.logWarning
