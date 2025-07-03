@@ -6,7 +6,6 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "build": "bun build --compile --minify --sourcemap --bytecode src/index.ts --outfile dist/dev",
     "typecheck": "bun tsc --noEmit",
     "lint": "eslint . --ext .ts,.tsx",
     "lint:fix": "eslint . --ext .ts,.tsx --fix",
@@ -15,7 +14,7 @@
     "test": "vitest --no-file-parallelism --bail=1 --no-watch",
     "test:bench": "vitest bench --no-file-parallelism --bail=1 --no-watch",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "bun run src/drizzle/migrate.ts"
+    "db:migrate": "bun run drizzle/migrate.ts"
   },
   "dependencies": {
     "@iarna/toml": "2.2.5",

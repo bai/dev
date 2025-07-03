@@ -1,12 +1,8 @@
-# **`dev` CLI – Engineering Implementation Specification**
-
----
+# `dev` CLI – Engineering Implementation Specification
 
 ## 1 · Purpose
 
-`dev` is a single-binary macOS CLI that streamlines navigation, repo cloning, environment setup and diagnostics while remaining **hexagonal**, **test-friendly** and **plugin-extensible**.
-
----
+`dev` is a CLI that streamlines navigation, repo cloning, environment setup and diagnostics while remaining **hexagonal**, **test-friendly** and **plugin-extensible**.
 
 ## 2 · Technology Stack
 
@@ -15,12 +11,9 @@
 | Runtime / Compiler | **Bun**                          | 1.2.17          |
 | Language           | **TypeScript**                   | 5.8.3           |
 | FP Runtime         | **Effect**                       | 3.16.11         |
-| Lint + Format      | **Biome**                        | 2.0.6           |
 | Test Runner        | **Vitest**                       | 3.2.4           |
 | Relational Store   | **SQLite 3** via **drizzle-orm** | latest          |
 | Git CLI            | `git` ≥ 2.40                     | —               |
-
----
 
 ## 3 · Architectural Overview
 
@@ -40,8 +33,6 @@ bin/dev  →  CLI Front-end (Yargs)    →  CliLive Layer
 * **Hexagonal / Ports & Adapters** – domain code imports only ports.
 * **Effect Layers** – DI, resource scoping, cancellation.
 * **CLI layer** uses Yargs for argument parsing and is not pluggable.
-
----
 
 ## 4 · Repository Layout
 
@@ -95,8 +86,6 @@ dev/
 └─ .github/workflows/ci.yml
 ```
 
----
-
 ## 5 · Layers
 
 | Layer         | Services Included                                                      |
@@ -106,8 +95,6 @@ dev/
 | **CliLive**   | Console, Telemetry *(optional)* **+ AppLive**                          |
 
 Tests compose only needed layers (e.g. swap `FileSystemLive` with in-memory fake).
-
----
 
 ## 6 · Domain Error Model
 
@@ -129,8 +116,6 @@ export const exitCode = (e: DevError): number => ({
 ```
 
 All command handlers must raise one of these variants.
-
----
 
 ## 7 · Local Run Analytics
 
@@ -161,8 +146,6 @@ export const runs = sqliteTable("runs", {
 
 *Local store is independent of telemetry; it never leaves the machine.*
 
----
-
 ## 8 · Config File (Schema v 3)
 
 ```jsonc
@@ -183,8 +166,6 @@ export const runs = sqliteTable("runs", {
 
 * Loader steps: read → migrate chain → validate.
 * `configUrl` is stored; **`dev upgrade`** re-fetches, migrates and overwrites if content changed.
-
----
 
 ## 9 · Plugins
 
@@ -208,8 +189,6 @@ export interface AppModule {
    * Checked on every `dev upgrade`.
 4. Load plugin via dynamic `import()`; verify it exports `default` as `AppModule`.
 
----
-
 ## 10 · Commands
 
 | Command             | Synopsis                                 | Primary Ports                 |
@@ -225,15 +204,11 @@ export interface AppModule {
 
 `doctor` returns JSON on `--json`, exits `3` if any error item.
 
----
-
 ## 11 · Shell Completions
 
 * `scripts/generate-completions.ts` dumps Zsh/Bash/Fish to `/completions`.
 * Installer copies to user shell paths or falls back to `eval "$(dev completion zsh)"`.
 * `--regenerate-completions` flag on `dev upgrade`.
-
----
 
 ## 12 · `dev upgrade` Sequence
 
@@ -242,59 +217,3 @@ export interface AppModule {
 3. For each Git plugin URL → fetch or clone.
 4. Generate completions if `--regenerate-completions`.
 5. Report final version.
-
----
-
-## 13 · Tooling
-
-### 13.1 Biome
-
-```json
-// biome.json
-{
-  "$schema": "https://biomejs.dev/schemas/biome.json",
-  "formatter": { "enabled": true },
-  "linter": { "recommended": true },
-  "organizeImports": true
-}
-```
-
-* Scripts:
-
-  * `bun lint`  → `biome ci .`
-  * `bun format` → `biome format . --write`
-
-### 13.2 Vitest
-
-* Config (`vitest.config.ts`) – default ESM, threads = 4.
-* Version pinned to 3.2.4.
-
----
-
-## 14 · CI (GitHub Actions)
-
-```yaml
-steps:
-  - uses: actions/checkout@v4
-  - uses: oven-sh/setup-bun@v1
-    with: { bun-version: '1.2.17' }
-  - run: bun install --frozen-lockfile
-  - run: bun run lint            # Biome
-  - run: bun run test            # Vitest
-  - run: bun run build:release
-```
-
----
-
-## 15 · Acceptance Checklist
-
-1. **`dev doctor`** passes on fresh macOS.
-2. Executing any command appends row to `~/.dev/state/dev.db`.
-3. `dev upgrade` pulls new binary + updates config + refreshes plugins.
-4. Plugins from Git URLs appear in `dev help` after upgrade.
-5. `biome ci .` has no errors; `vitest` reports 0 failures.
-6. Exit codes follow `DevError → exitCode()` table.
-
----
-
-### ✅ Ready for engineering implementation   🚀

@@ -1,2 +1,2 @@
-src/drizzle/migrations
+drizzle/migrations
 docs/**/*.md

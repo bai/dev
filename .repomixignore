@@ -10,5 +10,5 @@ docs
 prettier.config.js
 README.md
 repomix.config.json
-src/drizzle/migrations
+drizzle/migrations
 tsconfig.json

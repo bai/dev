@@ -18,10 +18,6 @@ _.file = [
 description = "Test task that echoes all arguments"
 run = "echo 'Task received arguments:' \"$@\""
 
-[tasks.build]
-description = "Build the project"
-run = "bun run build"
-
 [tasks.lint]
 description = "Run linting"
 run = "bun run lint"
