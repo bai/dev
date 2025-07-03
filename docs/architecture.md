@@ -55,7 +55,7 @@ graph TB
     end
 
     subgraph "Core Domain"
-        Business[Business Logic<br/>(Pure Functions)]
+        Business[Business Logic<br/>Pure Functions]
     end
 
     CLI --> CLIAdapter
