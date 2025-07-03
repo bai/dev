@@ -1,16 +1,5 @@
 # **`dev` CLI – Engineering Implementation Specification**
 
-**Version 1.1 – 2 July 2025**
-
----
-
-## 0 · Change Log
-
-| Version | Date       | Summary                                                                                                                                                                                                              |
-| ------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **1.0** | 1 Jul 2025 | Initial spec                                                                                                                                                                                                         |
-| **1.1** | 2 Jul 2025 | • Replace ESLint + Prettier → **Biome 2.0**  • Vitest 3.2.4 • Local SQLite tracking via drizzle-orm • `configUrl` auto-refresh on `dev upgrade` • Git-based plugin loader • Clarified adapter swap (build-time only) |
-
 ---
 
 ## 1 · Purpose
@@ -26,7 +15,7 @@
 | Runtime / Compiler | **Bun**                          | 1.2.17          |
 | Language           | **TypeScript**                   | 5.8.3           |
 | FP Runtime         | **Effect**                       | 3.16.11         |
-| Lint + Format      | **Biome**                        | 2.0 “ultracite” |
+| Lint + Format      | **Biome**                        | 2.0.6           |
 | Test Runner        | **Vitest**                       | 3.2.4           |
 | Relational Store   | **SQLite 3** via **drizzle-orm** | latest          |
 | Git CLI            | `git` ≥ 2.40                     | —               |
@@ -36,7 +25,7 @@
 ## 3 · Architectural Overview
 
 ```
-bin/dev  →  CLI Adapter (Commander)  →  CliLive Layer
+bin/dev  →  CLI Front-end (Yargs)    →  CliLive Layer
                          │
                          ▼
                 App Commands (pure Effects)  →  AppLive Layer
@@ -50,7 +39,7 @@ bin/dev  →  CLI Adapter (Commander)  →  CliLive Layer
 
 * **Hexagonal / Ports & Adapters** – domain code imports only ports.
 * **Effect Layers** – DI, resource scoping, cancellation.
-* **CLI adapter** is isolated behind `CliAdapter` interface (swap requires rebuild, not runtime switch).
+* **CLI layer** uses Yargs for argument parsing and is not pluggable.
 
 ---
 
@@ -66,9 +55,9 @@ dev/
 ├─ src/
 │  ├─ index.ts            # bootstraps CLI
 │  ├─ cli/
-│  │  ├─ adapter/
-│  │  │  ├─ commander.ts
-│  │  │  └─ types.ts      # interface CliAdapter
+│  │  ├─ parser/
+│  │  │  ├─ yargs.ts      # argument parsing
+│  │  │  └─ types.ts      # internal typings
 │  │  ├─ completions/
 │  │  └─ wiring.ts        # CliLive
 │  ├─ app/
@@ -290,8 +279,8 @@ steps:
   - uses: oven-sh/setup-bun@v1
     with: { bun-version: '1.2.17' }
   - run: bun install --frozen-lockfile
-  - run: bun lint            # Biome
-  - run: bun test            # Vitest
+  - run: bun run lint            # Biome
+  - run: bun run test            # Vitest
   - run: bun run build:release
 ```
 

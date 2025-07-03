@@ -1,28 +1,29 @@
 #!/usr/bin/env bun
 import { Cause, Effect, Exit, Runtime } from "effect";
 
-import { createCliAdapter } from "./cli/wiring";
+import { createDevCli } from "./cli/wiring";
 import { exitCode, type DevError } from "./domain/errors";
 
 const program = Effect.gen(function* () {
-  // Create CLI adapter
-  const adapter = createCliAdapter();
+  // Create CLI instance
+  const cli = createDevCli();
 
   // Set program metadata
-  adapter.setMetadata({
+  cli.setMetadata({
     name: "dev",
     description: "A CLI tool for quick directory navigation and environment management",
     version: "2.0.0",
   });
 
-  // Show help when no command is provided
-  if (process.argv.slice(2).length === 0) {
-    process.argv.push("help");
-  }
+  // Parse and execute command (trim node and script name from argv)
+  let args = process.argv.slice(2);
 
-  // Parse and execute command
+  // Show help when no command is provided
+  if (args.length === 0) {
+    args = ["help"];
+  }
   yield* Effect.tryPromise({
-    try: () => adapter.parseAndExecute(process.argv),
+    try: () => cli.parseAndExecute(args),
     catch: (error) => {
       // Convert unknown errors to DevError
       if (error && typeof error === "object" && "_tag" in error) {

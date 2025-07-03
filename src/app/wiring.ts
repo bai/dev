@@ -37,15 +37,17 @@ export const AppLiveLayer = Layer.mergeAll(
   FileSystemLiveLayer,
   LoggerLiveLayer,
   ClockLiveLayer,
+
+  // Infrastructure services (NetworkLiveLayer must come before ConfigLoaderLiveLayer)
+  NetworkLiveLayer,
   ConfigLoaderLiveLayer(path.join(os.homedir(), ".config", "dev", "config.json")),
 
   // Domain services
   PathServiceLive,
 
-  // Infrastructure services
+  // More infrastructure services
   DirectoryServiceLive,
   ShellLiveLayer,
-  NetworkLiveLayer,
   GitLiveLayer,
   MiseLiveLayer,
   KeychainLiveLayer,

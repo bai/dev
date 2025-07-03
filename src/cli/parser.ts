@@ -1,20 +1,26 @@
-import { Cause, Effect, Exit, Layer, Runtime } from "effect";
+import { Cause, Effect, Exit, Runtime } from "effect";
 import yargs, { type Argv } from "yargs";
 import { hideBin } from "yargs/helpers";
 
-import { CommandTrackingServiceTag } from "../../app/services/CommandTrackingService";
-import { AppLiveLayer } from "../../app/wiring";
-import { exitCode, type DevError } from "../../domain/errors";
-import { LoggerService, type CliCommandSpec, type CommandContext } from "../../domain/models";
-import type { CliAdapter } from "./types";
+import { CommandTrackingServiceTag } from "../app/services/CommandTrackingService";
+import { AppLiveLayer } from "../app/wiring";
+import { exitCode, type DevError } from "../domain/errors";
+import { LoggerService, type CliCommandSpec, type CommandContext } from "../domain/models";
 
-export class YargsAdapter implements CliAdapter {
+export interface CliMetadata {
+  name: string;
+  description: string;
+  version: string;
+}
+
+export class DevCli {
   private yargs: Argv;
   private commands: CliCommandSpec[];
   private runtime: Runtime.Runtime<never>;
+  private metadata?: CliMetadata;
 
   constructor(commands: CliCommandSpec[]) {
-    this.yargs = yargs(hideBin(process.argv));
+    this.yargs = yargs();
     this.commands = commands;
     this.runtime = Runtime.defaultRuntime;
 
@@ -29,24 +35,25 @@ export class YargsAdapter implements CliAdapter {
       .wrap(Math.min(120, this.yargs.terminalWidth()));
   }
 
-  setMetadata(metadata: { name: string; description: string; version: string }): void {
+  setMetadata(metadata: CliMetadata): void {
+    this.metadata = metadata;
     this.yargs
       .scriptName(metadata.name)
       .usage(`${metadata.description}\n\nUsage: $0 <command> [options]`)
       .version(metadata.version);
   }
 
-  initialize(commands: CliCommandSpec[]): void {
-    for (const commandSpec of commands) {
+  initialize(): void {
+    for (const commandSpec of this.commands) {
       this.registerCommand(commandSpec);
     }
   }
 
   async parseAndExecute(args: string[]): Promise<void> {
     // Initialize with available commands
-    this.initialize(this.commands);
+    this.initialize();
 
-    // Parse arguments but don't execute yet - we need to handle tracking
+    // Parse arguments and execute
     await this.yargs.parseAsync(args);
   }
 
@@ -162,7 +169,7 @@ export class YargsAdapter implements CliAdapter {
     return builder;
   }
 
-  private executeCommand(commandSpec: CliCommandSpec, argv: any): void {
+  private executeCommand(commandSpec: CliCommandSpec, argv: any): Promise<void> {
     // Extract command arguments
     const args: Record<string, any> = {};
     if (commandSpec.arguments) {
@@ -182,69 +189,81 @@ export class YargsAdapter implements CliAdapter {
     }
 
     // Create the command execution program with tracking
-    const commandProgram = Effect.gen(function* () {
+    const commandProgram: Effect.Effect<void, DevError, any> = Effect.gen(function* () {
       // Start command tracking
       const tracking = yield* CommandTrackingServiceTag;
+      const logger = yield* LoggerService;
 
       const runId = yield* tracking.recordCommandRun();
 
       // Execute the actual command with proper error handling
       const result = yield* Effect.either(
-        commandSpec
-          .exec({
-            args,
-            options,
-          })
-          .pipe(Effect.provide(AppLiveLayer)),
+        commandSpec.exec({
+          args,
+          options,
+        }),
       );
 
+      // Handle completion and exit code recording
       if (result._tag === "Left") {
-        // Command failed - record failure and propagate error
-        yield* tracking.completeCommandRun(runId, 1);
-        return yield* Effect.fail(result.left);
+        // Command failed
+        const error = result.left;
+        yield* tracking.completeCommandRun(runId, exitCode(error));
+        yield* logger.error(`Command failed: ${error._tag}`);
+        return yield* Effect.fail(error);
       } else {
-        // Command succeeded - record success
+        // Command succeeded
         yield* tracking.completeCommandRun(runId, 0);
+        return result.right;
       }
-    });
+    }).pipe(Effect.provide(AppLiveLayer));
 
-    // Execute the program with proper error handling
-    const program = commandProgram;
+    // Execute the program and return the promise
+    return Runtime.runPromiseExit(this.runtime)(commandProgram).then((exit) => {
+      Exit.match(exit, {
+        onSuccess: () => {
+          // Command completed successfully
+          process.exitCode = 0;
+        },
+        onFailure: (cause) => {
+          // Handle command failure
+          const failureOrCause = Cause.failureOrCause(cause);
+          if (failureOrCause._tag === "Left") {
+            const error = failureOrCause.left;
+            if (error && typeof error === "object" && "_tag" in error) {
+              const devError = error as DevError;
+              console.error(`❌ ${devError._tag}`);
 
-    // Run the program and handle the result
-    Runtime.runPromiseExit(this.runtime)(program)
-      .then((exit) => {
-        Exit.match(exit, {
-          onSuccess: () => {
-            // Command completed successfully
-            process.exitCode = 0;
-          },
-          onFailure: (cause) => {
-            // Handle command failure using Cause.failureOrCause
-            const failureOrCause = Cause.failureOrCause(cause);
-            if (failureOrCause._tag === "Left") {
-              const error = failureOrCause.left;
-              if (error && typeof error === "object" && "_tag" in error) {
-                const devError = error as DevError;
-                console.error(`❌ ${devError._tag}:`, devError);
-                process.exitCode = exitCode(devError);
-              } else {
-                console.error("❌ Command execution failed:", error);
-                process.exitCode = 1;
+              // Handle different error types and their properties
+              switch (devError._tag) {
+                case "ExternalToolError":
+                  console.error(devError.message);
+                  break;
+                case "ConfigError":
+                case "GitError":
+                case "NetworkError":
+                case "AuthError":
+                case "FileSystemError":
+                case "UserInputError":
+                case "CLIError":
+                  console.error(devError.reason);
+                  break;
+                case "UnknownError":
+                  console.error(String(devError.reason));
+                  break;
               }
+
+              process.exitCode = exitCode(devError);
             } else {
-              console.error("💥 Unexpected error:", failureOrCause.right);
+              console.error(`❌ Error:`, error);
               process.exitCode = 1;
             }
-
-            // Throw error instead of process.exit to avoid linter error
-            throw new Error("Command execution failed");
-          },
-        });
-      })
-      .catch((error) => {
-        console.error("💥 Fatal error executing command:", error);
-        throw new Error("Fatal command execution error");
+          } else {
+            console.error(`💥 Unexpected error:`, failureOrCause.right);
+            process.exitCode = 1;
+          }
+        },
       });
+    });
   }
 }
