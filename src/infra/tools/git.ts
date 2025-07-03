@@ -1,8 +1,8 @@
 import { Context, Effect, Layer } from "effect";
 
-import { DebugServiceTag, type DebugService } from "../../app/services/DebugService";
 import { externalToolError, type ExternalToolError, type UnknownError } from "../../domain/errors";
 import { LoggerService, type Logger } from "../../domain/models";
+import { DebugServiceTag, type DebugService } from "../../domain/ports/DebugService";
 import { ShellService, type Shell } from "../../domain/ports/Shell";
 
 export const GIT_MIN_VERSION = "2.50.0";

@@ -1,7 +1,7 @@
 ---
 description:
 globs:
-alwaysApply: false
+alwaysApply: true
 ---
 - Use kebab-case for file names (e.g., `my-component.ts`)
 - Use camelCase for variables and function names (e.g., `myVariable`, `myFunction()`)

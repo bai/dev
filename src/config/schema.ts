@@ -1,7 +1,9 @@
 import { z } from "zod";
 
-// Mise configuration schema (imported from tools/mise.ts concepts)
-const miseConfigSchema = z.object({
+import type { Config, GitProviderType, MiseConfig } from "../domain/models";
+
+// Mise configuration schema (matching domain types)
+const miseConfigSchema: z.ZodType<MiseConfig> = z.object({
   min_version: z.string().optional(),
   env: z
     .record(z.string(), z.any())
@@ -25,9 +27,9 @@ const miseConfigSchema = z.object({
     .optional(),
 });
 
-const gitProviderSchema = z.enum(["github", "gitlab"]);
+const gitProviderSchema: z.ZodType<GitProviderType> = z.enum(["github", "gitlab"]);
 
-export const configSchema = z.object({
+export const configSchema: z.ZodType<Config> = z.object({
   version: z.literal(3),
   configUrl: z.string().url(),
   defaultOrg: z.string(),
@@ -49,7 +51,8 @@ export const configSchema = z.object({
   miseRepoConfig: miseConfigSchema.optional().describe("Mise repository configuration settings"),
 });
 
-export type Config = z.infer<typeof configSchema>;
+// Export Config type that was moved to domain
+export type { Config } from "../domain/models";
 
 // Default configuration
 export const defaultConfig: Config = {
@@ -70,6 +73,5 @@ export const defaultConfig: Config = {
   },
 };
 
-// Re-export mise config types for other modules
-export type MiseConfig = z.infer<typeof miseConfigSchema>;
+// Re-export schema for other modules
 export { miseConfigSchema };

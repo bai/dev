@@ -2,8 +2,41 @@ import { Context, type Effect, type Layer } from "effect";
 
 import type { DevError } from "./errors";
 
-// Re-export Config from config schema to avoid duplication
-export type { Config, MiseConfig } from "../config/schema";
+// Core configuration types (moved from config schema to maintain proper layering)
+export interface MiseConfig {
+  min_version?: string;
+  env?: Record<string, any> & {
+    _?: {
+      path?: string[];
+      file?: string[];
+    };
+  };
+  tools?: Record<string, string | string[]>;
+  settings?: {
+    idiomatic_version_file_enable_tools?: string[];
+    trusted_config_paths?: string[];
+  };
+}
+
+export type GitProviderType = "github" | "gitlab";
+
+export interface Config {
+  version: 3;
+  configUrl: string;
+  defaultOrg: string;
+  paths: {
+    base: string;
+  };
+  telemetry: {
+    enabled: boolean;
+  };
+  plugins: {
+    git: string[];
+  };
+  orgToProvider?: Record<string, GitProviderType>;
+  miseGlobalConfig?: MiseConfig;
+  miseRepoConfig?: MiseConfig;
+}
 
 // Core domain models
 

@@ -3,9 +3,9 @@ import { Effect } from "effect";
 import { unknownError, type DevError } from "../../domain/errors";
 import { filter } from "../../domain/matching";
 import type { CliCommandSpec, CommandContext } from "../../domain/models";
+import { DirectoryServiceTag } from "../../domain/ports/DirectoryService";
 import { FileSystemService } from "../../domain/ports/FileSystem";
 import { ShellService } from "../../domain/ports/Shell";
-import { DirectoryServiceTag } from "../../infra/fs/DirectoryService";
 import { ShellIntegrationServiceTag } from "../services/ShellIntegrationService";
 
 export const cdCommand: CliCommandSpec = {

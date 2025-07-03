@@ -1,25 +1,14 @@
 import path from "path";
 
-import { Context, Effect, Layer } from "effect";
+import { Effect, Layer } from "effect";
 
 import { configError, type ConfigError, type FileSystemError, type UnknownError } from "../../domain/errors";
+import { DirectoryServiceTag, type DirectoryService } from "../../domain/ports/DirectoryService";
 import { FileSystemService, type FileSystem } from "../../domain/ports/FileSystem";
 import { PathServiceTag, type PathService } from "../../domain/services/PathService";
 
-/**
- * Directory service for managing development directories
- * This is infrastructure-level directory operations
- */
-export interface DirectoryService {
-  ensureBaseDirectoryExists(): Effect.Effect<void, ConfigError | UnknownError, FileSystemService | PathServiceTag>;
-  findDirs(): Effect.Effect<string[], ConfigError | FileSystemError | UnknownError>;
-  findDirsLegacy(): Effect.Effect<string[], ConfigError | UnknownError>;
-}
-
-export const DirectoryServiceTag = Context.GenericTag<DirectoryService>("DirectoryService");
-
 export class DirectoryServiceImpl implements DirectoryService {
-  ensureBaseDirectoryExists(): Effect.Effect<void, ConfigError | UnknownError, FileSystemService | PathServiceTag> {
+  ensureBaseDirectoryExists(): Effect.Effect<void, ConfigError | FileSystemError | UnknownError, any> {
     return Effect.gen(function* () {
       const pathService = yield* PathServiceTag;
       const fileSystem = yield* FileSystemService;
@@ -33,7 +22,7 @@ export class DirectoryServiceImpl implements DirectoryService {
     });
   }
 
-  findDirs(): Effect.Effect<string[], ConfigError | FileSystemError | UnknownError> {
+  findDirs(): Effect.Effect<string[], ConfigError | FileSystemError | UnknownError, any> {
     return Effect.gen(function* () {
       const pathService = yield* PathServiceTag;
       const fileSystem = yield* FileSystemService;
@@ -76,7 +65,7 @@ export class DirectoryServiceImpl implements DirectoryService {
     });
   }
 
-  findDirsLegacy(): Effect.Effect<string[], ConfigError | UnknownError> {
+  findDirsLegacy(): Effect.Effect<string[], ConfigError | UnknownError, any> {
     return Effect.gen(function* () {
       const pathService = yield* PathServiceTag;
 
