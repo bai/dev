@@ -47,7 +47,7 @@ export class BunToolsLive implements BunToolsService {
       Effect.map((result) => {
         if (result.exitCode === 0 && result.stdout) {
           const output = result.stdout.trim();
-          // Bun version output is like "1.2.17"
+          // Bun version output is like "1.2.18"
           const match = output.match(/(\d+\.\d+\.\d+)/);
           return match && match[1] ? match[1] : null;
         }
