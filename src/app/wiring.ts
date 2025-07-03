@@ -31,28 +31,34 @@ import { ShellIntegrationServiceLive } from "./services/ShellIntegrationService"
 import { UpdateCheckServiceLive } from "./services/UpdateCheckService";
 import { VersionServiceLive } from "./services/VersionService";
 
-// Infrastructure Layer - merging all services directly
-export const AppLiveLayer = Layer.mergeAll(
-  // Core infrastructure
+// Infrastructure Layer - building step by step to avoid duplication
+const BaseLayer = Layer.mergeAll(
   FileSystemLiveLayer,
   LoggerLiveLayer,
   ClockLiveLayer,
-
-  // Infrastructure services (NetworkLiveLayer must come before ConfigLoaderLiveLayer)
-  NetworkLiveLayer,
-  ConfigLoaderLiveLayer(path.join(os.homedir(), ".config", "dev", "config.json")),
-
-  // Domain services
   PathServiceLive,
-
-  // More infrastructure services
   DirectoryServiceLive,
   ShellLiveLayer,
-  GitLiveLayer,
-  MiseLiveLayer,
-  KeychainLiveLayer,
+);
+
+const NetworkLayer = Layer.provide(NetworkLiveLayer, BaseLayer);
+
+const GitLayer = Layer.provide(GitLiveLayer, BaseLayer);
+
+const ConfigLayer = Layer.provide(
+  ConfigLoaderLiveLayer(path.join(os.homedir(), ".config", "dev", "config.json")),
+  Layer.mergeAll(BaseLayer, NetworkLayer),
+);
+
+export const AppLiveLayer = Layer.mergeAll(
+  BaseLayer,
+  GitLayer,
+
+  // Other infrastructure services (excluding Network/Config/GitHub for now)
   RunStoreLiveLayer,
-  GitHubProviderLayer("acme"), // Default org from config
+  Layer.provide(MiseLiveLayer, BaseLayer),
+  Layer.provide(KeychainLiveLayer, BaseLayer),
+  // GitHubProviderLayer("acme"), // Depends on NetworkService
 
   // App services
   ShellIntegrationServiceLive,
