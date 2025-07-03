@@ -23,6 +23,11 @@ export interface RunStore {
    * Get recent run statistics
    */
   getRecentRuns(limit: number): Effect.Effect<CommandRun[], ConfigError | UnknownError>;
+
+  /**
+   * Complete any incomplete command runs for graceful shutdown
+   */
+  completeIncompleteRuns(): Effect.Effect<void, ConfigError | UnknownError>;
 }
 
 // Service tag for Effect Context system

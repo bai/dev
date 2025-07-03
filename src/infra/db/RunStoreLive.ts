@@ -3,7 +3,7 @@ import os from "os";
 import path from "path";
 
 import { Database } from "bun:sqlite";
-import { desc, eq, lt } from "drizzle-orm";
+import { desc, eq, isNull, lt } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/bun-sqlite";
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
 import { Effect, Layer } from "effect";
@@ -15,6 +15,7 @@ import { RunStoreService, type RunStore } from "../../domain/ports/RunStore";
 
 export class RunStoreLive implements RunStore {
   private db: ReturnType<typeof drizzle>;
+  private sqlite: Database;
 
   constructor(dbPath: string) {
     // Ensure directory exists
@@ -23,12 +24,27 @@ export class RunStoreLive implements RunStore {
       fs.mkdirSync(dbDir, { recursive: true });
     }
 
-    const sqlite = new Database(dbPath);
-    sqlite.exec("PRAGMA journal_mode = WAL;");
-    this.db = drizzle(sqlite);
+    this.sqlite = new Database(dbPath);
+    this.sqlite.exec("PRAGMA journal_mode = WAL;");
+    this.db = drizzle(this.sqlite);
 
     // Run migrations
     this.runMigrations();
+  }
+
+  /**
+   * Close the database connection for graceful shutdown
+   */
+  close(): Effect.Effect<void> {
+    return Effect.gen(
+      function* (this: RunStoreLive) {
+        yield* Effect.logInfo("Closing database connection...");
+        yield* Effect.sync(() => {
+          this.sqlite.close();
+        });
+        yield* Effect.logDebug("Database connection closed");
+      }.bind(this),
+    );
   }
 
   // Resource-safe database operation pattern
@@ -36,7 +52,7 @@ export class RunStoreLive implements RunStore {
     return Effect.acquireUseRelease(
       Effect.sync(() => this.db),
       operation,
-      () => Effect.void, // Database connections are managed by SQLite, no explicit cleanup needed
+      () => Effect.void, // Individual operations don't need cleanup - handled at instance level
     );
   }
 
@@ -126,6 +142,28 @@ export class RunStoreLive implements RunStore {
       }),
     );
   }
+
+  /**
+   * Complete any incomplete command runs for graceful shutdown
+   */
+  completeIncompleteRuns(): Effect.Effect<void, ConfigError | UnknownError> {
+    return this.withTransaction((db) =>
+      Effect.tryPromise({
+        try: async () => {
+          const now = new Date();
+          // Mark any runs that don't have a finished_at as interrupted
+          await db
+            .update(runs)
+            .set({
+              exit_code: 130, // Standard exit code for SIGINT (Ctrl+C)
+              finished_at: now,
+            })
+            .where(isNull(runs.finished_at));
+        },
+        catch: (error) => configError(`Failed to complete incomplete runs: ${error}`),
+      }),
+    );
+  }
 }
 
 // No-op implementation when storage is disabled
@@ -145,20 +183,52 @@ export class RunStoreNoOp implements RunStore {
   getRecentRuns(): Effect.Effect<CommandRun[]> {
     return Effect.succeed([]);
   }
+
+  completeIncompleteRuns(): Effect.Effect<void> {
+    return Effect.void;
+  }
 }
 
-// Effect Layer for dependency injection
-export const RunStoreLiveLayer = Layer.sync(RunStoreService, () => {
-  // Check if storage is disabled
-  if (process.env.DEV_CLI_STORE === "0") {
-    return new RunStoreNoOp();
-  }
+// Effect Layer for dependency injection with proper resource management
+export const RunStoreLiveLayer = Layer.scoped(
+  RunStoreService,
+  Effect.gen(function* () {
+    // Check if storage is disabled
+    if (process.env.DEV_CLI_STORE === "0") {
+      return new RunStoreNoOp();
+    }
 
-  // Use XDG-compliant state directory
-  const stateDir = process.env.XDG_DATA_HOME
-    ? path.join(process.env.XDG_DATA_HOME, "dev")
-    : path.join(os.homedir(), ".local", "share", "dev");
-  const dbPath = path.join(stateDir, "dev.db");
+    // Use XDG-compliant state directory
+    const stateDir = process.env.XDG_DATA_HOME
+      ? path.join(process.env.XDG_DATA_HOME, "dev")
+      : path.join(os.homedir(), ".local", "share", "dev");
+    const dbPath = path.join(stateDir, "dev.db");
 
-  return new RunStoreLive(dbPath);
-});
+    // Create the RunStore with proper resource management
+    const runStore = yield* Effect.acquireRelease(
+      Effect.gen(function* () {
+        yield* Effect.logDebug(`Initializing database at ${dbPath}`);
+        return new RunStoreLive(dbPath);
+      }),
+      (runStore) =>
+        runStore instanceof RunStoreLive
+          ? Effect.gen(function* () {
+              yield* Effect.logInfo("Gracefully shutting down database...");
+              // Complete incomplete runs, but don't fail shutdown if this fails
+              yield* runStore
+                .completeIncompleteRuns()
+                .pipe(
+                  Effect.catchAll((error) =>
+                    Effect.logWarning(`Failed to complete incomplete runs during shutdown: ${error._tag}`),
+                  ),
+                );
+              yield* runStore
+                .close()
+                .pipe(Effect.catchAll((error) => Effect.logWarning(`Failed to close database cleanly: ${error}`)));
+            })
+          : Effect.void,
+    );
+
+    return runStore;
+  }),
+);

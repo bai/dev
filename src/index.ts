@@ -5,36 +5,55 @@ import { Effect } from "effect";
 import { createDevCli } from "./cli/wiring";
 import { exitCode, unknownError, type DevError } from "./domain/errors";
 
-const program = Effect.gen(function* () {
-  // Create CLI instance
-  const cli = createDevCli();
+const program = Effect.scoped(
+  Effect.gen(function* () {
+    // Add shutdown finalizer for graceful cleanup
+    yield* Effect.addFinalizer(() =>
+      Effect.gen(function* () {
+        yield* Effect.logInfo("🛑 Initiating graceful shutdown...");
+        // Log interruption if it was caused by signal
+        if (process.exitCode === 130) {
+          yield* Effect.logInfo("💡 Shutdown initiated by user interrupt (Ctrl+C)");
+        }
+        yield* Effect.logInfo("✅ Shutdown complete");
+      }),
+    );
 
-  // Set program metadata
-  cli.setMetadata({
-    name: "dev",
-    description: "A CLI tool for quick directory navigation and environment management",
-    version: "2.0.0",
-  });
+    // Log application start
+    yield* Effect.logInfo("🚀 Starting dev CLI...");
 
-  // Parse and execute command (trim node and script name from argv)
-  let args = process.argv.slice(2);
+    // Create CLI instance
+    const cli = createDevCli();
 
-  // Show help when no command is provided
-  if (args.length === 0) {
-    args = ["help"];
-  }
+    // Set program metadata
+    cli.setMetadata({
+      name: "dev",
+      description: "A CLI tool for quick directory navigation and environment management",
+      version: "2.0.0",
+    });
 
-  yield* Effect.tryPromise({
-    try: () => cli.parseAndExecute(args),
-    catch: (error) => {
-      // Convert unknown errors to DevError
-      if (error && typeof error === "object" && "_tag" in error) {
-        return error as DevError;
-      }
-      return unknownError(error);
-    },
-  });
-}).pipe(
+    // Parse and execute command (trim node and script name from argv)
+    let args = process.argv.slice(2);
+
+    // Show help when no command is provided
+    if (args.length === 0) {
+      args = ["help"];
+    }
+
+    yield* Effect.tryPromise({
+      try: () => cli.parseAndExecute(args),
+      catch: (error) => {
+        // Convert unknown errors to DevError
+        if (error && typeof error === "object" && "_tag" in error) {
+          return error as DevError;
+        }
+        return unknownError(error);
+      },
+    });
+
+    yield* Effect.logDebug("✅ Command execution completed successfully");
+  }),
+).pipe(
   Effect.catchAll((error: DevError) => {
     // Handle errors and set appropriate exit codes
     return Effect.gen(function* () {
@@ -44,7 +63,17 @@ const program = Effect.gen(function* () {
       });
     });
   }),
+  // Add interruption handling
+  Effect.onInterrupt(() =>
+    Effect.gen(function* () {
+      yield* Effect.logInfo("⚠️  Received interrupt signal, initiating graceful shutdown...");
+      yield* Effect.sync(() => {
+        process.exitCode = 130; // Standard exit code for SIGINT
+      });
+    }),
+  ),
 );
 
 // Use BunRuntime.runMain for proper resource cleanup and graceful shutdown
+// BunRuntime.runMain automatically handles SIGINT and SIGTERM for graceful interruption
 BunRuntime.runMain(program);

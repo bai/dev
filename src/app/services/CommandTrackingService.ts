@@ -17,6 +17,11 @@ export interface CommandTrackingService {
     RunStoreService | VersionServiceTag | GitService | PathServiceTag
   >;
   completeCommandRun(id: string, exitCode: number): Effect.Effect<void, ConfigError | UnknownError, RunStoreService>;
+
+  /**
+   * Gracefully shutdown command tracking by completing any incomplete runs
+   */
+  gracefulShutdown(): Effect.Effect<void, ConfigError | UnknownError, RunStoreService>;
 }
 
 export class CommandTrackingServiceImpl implements CommandTrackingService {
@@ -55,6 +60,15 @@ export class CommandTrackingServiceImpl implements CommandTrackingService {
       const finishedAt = new Date();
 
       yield* runStore.complete(id, exitCode, finishedAt);
+    });
+  }
+
+  gracefulShutdown(): Effect.Effect<void, ConfigError | UnknownError, RunStoreService> {
+    return Effect.gen(function* () {
+      yield* Effect.logInfo("🛑 Gracefully shutting down command tracking...");
+      const runStore = yield* RunStoreService;
+      yield* runStore.completeIncompleteRuns();
+      yield* Effect.logDebug("✅ Command tracking shutdown complete");
     });
   }
 }
