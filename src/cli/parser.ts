@@ -3,9 +3,9 @@ import yargs, { type Argv } from "yargs";
 import { hideBin } from "yargs/helpers";
 
 import { CommandTrackingServiceTag } from "../app/services/CommandTrackingService";
-import { AppLiveLayer } from "../app/wiring";
 import { exitCode, type DevError } from "../domain/errors";
 import { LoggerService, type CliCommandSpec, type CommandContext } from "../domain/models";
+import { AppLiveLayer } from "../wiring";
 
 export interface CliMetadata {
   name: string;

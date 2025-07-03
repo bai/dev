@@ -1,6 +1,6 @@
 import { Layer } from "effect";
 
-import { AppLiveLayer, availableCommands } from "../app/wiring";
+import { AppLiveLayer, availableCommands } from "../wiring";
 import { DevCli } from "./parser";
 
 // CLI Layer - provides CLI-specific services on top of App layer
