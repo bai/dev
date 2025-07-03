@@ -92,8 +92,8 @@ Examples:
 };
 
 // Helper functions for input (these would ideally use a proper CLI input library)
-function promptInputEffect(prompt: string): Effect.Effect<string, DevError> {
-  return Effect.tryPromise({
+const promptInputEffect = (prompt: string): Effect.Effect<string, DevError> =>
+  Effect.tryPromise({
     try: async () => {
       process.stdout.write(prompt);
 
@@ -105,10 +105,8 @@ function promptInputEffect(prompt: string): Effect.Effect<string, DevError> {
     },
     catch: (error) => unknownError(`Failed to get input: ${error}`),
   });
-}
 
-function promptPasswordEffect(prompt: string): Effect.Effect<string, DevError> {
+const promptPasswordEffect = (prompt: string): Effect.Effect<string, DevError> =>
   // In a real implementation, this would hide the input
   // For now, just use regular input
-  return promptInputEffect(prompt);
-}
+  promptInputEffect(prompt);

@@ -53,8 +53,25 @@ This command checks:
 
       const statusItems: StatusItem[] = [];
 
-      // Check Mise
-      const miseResult = yield* Effect.either(mise.checkInstallation());
+      // Run all checks in parallel for better performance
+      const [miseResult, gitResult, networkResult, filesystemResult] = yield* Effect.all(
+        [
+          Effect.either(mise.checkInstallation()),
+          Effect.either(git.getCurrentCommitSha()),
+          Effect.either(network.checkConnectivity("https://github.com")),
+          Effect.either(
+            Effect.gen(function* () {
+              const baseDir = "~/src"; // TODO: Get from config when config service is available
+              const resolvedPath = fileSystem.resolvePath(baseDir);
+              const exists = yield* fileSystem.exists(resolvedPath);
+              return { baseDir, exists };
+            }),
+          ),
+        ],
+        { concurrency: "unbounded" },
+      );
+
+      // Process Mise result
       if (miseResult._tag === "Left") {
         statusItems.push({
           component: "mise",
@@ -71,8 +88,7 @@ This command checks:
         });
       }
 
-      // Check Git
-      const gitResult = yield* Effect.either(git.getCurrentCommitSha());
+      // Process Git result
       if (gitResult._tag === "Left") {
         statusItems.push({
           component: "git",
@@ -89,8 +105,7 @@ This command checks:
         });
       }
 
-      // Check Network connectivity
-      const networkResult = yield* Effect.either(network.checkConnectivity("https://github.com"));
+      // Process Network result
       if (networkResult._tag === "Left") {
         statusItems.push({
           component: "network",
@@ -107,15 +122,7 @@ This command checks:
         });
       }
 
-      // Check file system permissions for base directory
-      const filesystemResult = yield* Effect.either(
-        Effect.gen(function* () {
-          const baseDir = "~/src"; // TODO: Get from config when config service is available
-          const resolvedPath = fileSystem.resolvePath(baseDir);
-          const exists = yield* fileSystem.exists(resolvedPath);
-          return { baseDir, exists };
-        }),
-      );
+      // Process filesystem result
 
       if (filesystemResult._tag === "Left") {
         statusItems.push({

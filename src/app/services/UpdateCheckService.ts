@@ -1,10 +1,10 @@
-import { Context, Effect, Layer } from "effect";
+import { Context, Duration, Effect, Layer } from "effect";
 
 import { type ConfigError, type UnknownError } from "../../domain/errors";
 import { LoggerService } from "../../domain/models";
 import { RunStoreService } from "../../domain/ports/RunStore";
 
-const upgradeFrequency = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
+const upgradeFrequency = Duration.decode("7 days");
 
 /**
  * Update check service for managing upgrade prompts
@@ -30,7 +30,8 @@ export class UpdateCheckServiceImpl implements UpdateCheckService {
 
         const shouldUpdate =
           !lastUpgradeRun ||
-          (lastUpgradeRun && new Date().getTime() - lastUpgradeRun.started_at.getTime() > upgradeFrequency);
+          (lastUpgradeRun &&
+            new Date().getTime() - lastUpgradeRun.started_at.getTime() > Duration.toMillis(upgradeFrequency));
 
         if (shouldUpdate) {
           yield* logger.warn("🔄 [dev] It's been more than 7 days since your last upgrade.");

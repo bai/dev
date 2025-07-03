@@ -53,17 +53,25 @@ This command will:
 
       yield* logger.success("✅ Configuration refreshed successfully");
 
-      // Step 3: Update Git plugins
+      // Step 3: Update Git plugins in parallel
       yield* logger.info("🔌 Updating Git plugins...");
 
       const gitPlugins = configResult.plugins.git;
 
-      for (const pluginUrl of gitPlugins) {
-        const updateResult = yield* Effect.either(updateGitPluginEffect(pluginUrl));
-        if (updateResult._tag === "Left") {
-          yield* logger.warn(`⚠️ Failed to update plugin ${pluginUrl}: ${updateResult.left}`);
-        } else {
-          yield* logger.info(`✅ Updated plugin: ${pluginUrl}`);
+      if (gitPlugins.length > 0) {
+        const updateResults = yield* Effect.all(
+          gitPlugins.map((pluginUrl) =>
+            Effect.either(updateGitPluginEffect(pluginUrl)).pipe(Effect.map((result) => ({ pluginUrl, result }))),
+          ),
+          { concurrency: 3 }, // Limit concurrency to avoid overwhelming git servers
+        );
+
+        for (const { pluginUrl, result } of updateResults) {
+          if (result._tag === "Left") {
+            yield* logger.warn(`⚠️ Failed to update plugin ${pluginUrl}: ${result.left}`);
+          } else {
+            yield* logger.info(`✅ Updated plugin: ${pluginUrl}`);
+          }
         }
       }
 

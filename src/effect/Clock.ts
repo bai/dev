@@ -1,10 +1,11 @@
-import { Effect, Layer } from "effect";
+import { Duration, Effect, Layer } from "effect";
 
 import { ClockService } from "../domain/models";
 
 export interface Clock {
   now(): Effect.Effect<Date>;
   timestamp(): Effect.Effect<number>;
+  delay(duration: Duration.Duration): Effect.Effect<void>;
 }
 
 export class ClockLive implements Clock {
@@ -14,6 +15,10 @@ export class ClockLive implements Clock {
 
   timestamp(): Effect.Effect<number> {
     return Effect.sync(() => Date.now());
+  }
+
+  delay(duration: Duration.Duration): Effect.Effect<void> {
+    return Effect.delay(Effect.void, duration);
   }
 }
 

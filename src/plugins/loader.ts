@@ -15,22 +15,18 @@ export class PluginLoader {
     const fileSystem = this.fileSystem;
 
     return Effect.gen(function* () {
-      const modules: AppModule[] = [];
+      // Load all plugin sources in parallel for better performance
+      const [localModules, nodeModules, gitModules] = yield* Effect.all(
+        [
+          loadLocalPlugins(fileSystem),
+          loadNodeModulesPlugins(),
+          loadGitPlugins(fileSystem),
+        ],
+        { concurrency: "unbounded" },
+      );
 
-      // 1. Load local plugins from ~/.dev/plugins/**
-      const localModules = yield* loadLocalPlugins(fileSystem);
-      modules.push(...localModules);
-
-      // 2. Load from node_modules/@*/dev-plugin-*
-      const nodeModules = yield* loadNodeModulesPlugins();
-      modules.push(...nodeModules);
-
-      // 3. Git URL plugins are handled during upgrade
-      // They're cloned to $XDG_CACHE_HOME/dev/plugins/<hash>
-      const gitModules = yield* loadGitPlugins(fileSystem);
-      modules.push(...gitModules);
-
-      return modules;
+      // Flatten all modules into a single array
+      return [...localModules, ...nodeModules, ...gitModules];
     });
   }
 }
