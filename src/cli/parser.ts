@@ -1,4 +1,5 @@
-import { Cause, Effect, Exit, Runtime } from "effect";
+import { BunRuntime } from "@effect/platform-bun";
+import { Effect } from "effect";
 import yargs, { type Argv } from "yargs";
 import { hideBin } from "yargs/helpers";
 
@@ -16,13 +17,11 @@ export interface CliMetadata {
 export class DevCli {
   private yargs: Argv;
   private commands: CliCommandSpec[];
-  private runtime: Runtime.Runtime<never>;
   private metadata?: CliMetadata;
 
   constructor(commands: CliCommandSpec[]) {
     this.yargs = yargs();
     this.commands = commands;
-    this.runtime = Runtime.defaultRuntime;
 
     // Configure yargs behavior
     this.yargs
@@ -216,55 +215,45 @@ export class DevCli {
         yield* tracking.completeCommandRun(runId, 0);
         return result.right;
       }
-    }).pipe(Effect.provide(AppLiveLayer)) as Effect.Effect<void, DevError, never>;
+    }).pipe(
+      Effect.provide(AppLiveLayer),
+      Effect.catchAll((error: DevError) => {
+        // Handle errors and set appropriate exit codes
+        return Effect.gen(function* () {
+          yield* Effect.logError(`❌ ${error._tag}`);
 
-    // Execute the program and return the promise
-    return Runtime.runPromiseExit(this.runtime)(commandProgram).then((exit) => {
-      Exit.match(exit, {
-        onSuccess: () => {
-          // Command completed successfully
-          process.exitCode = 0;
-        },
-        onFailure: (cause) => {
-          // Handle command failure
-          const failureOrCause = Cause.failureOrCause(cause);
-          if (failureOrCause._tag === "Left") {
-            const error = failureOrCause.left;
-            if (error && typeof error === "object" && "_tag" in error) {
-              const devError = error as DevError;
-              // Use Effect.runSync for synchronous logging in exit handler
-              Effect.runSync(Effect.logError(`❌ ${devError._tag}`));
-
-              // Handle different error types and their properties
-              switch (devError._tag) {
-                case "ExternalToolError":
-                  Effect.runSync(Effect.logError(devError.message));
-                  break;
-                case "ConfigError":
-                case "GitError":
-                case "NetworkError":
-                case "AuthError":
-                case "FileSystemError":
-                case "UserInputError":
-                case "CLIError":
-                  Effect.runSync(Effect.logError(devError.reason));
-                  break;
-                case "UnknownError":
-                  Effect.runSync(Effect.logError(String(devError.reason)));
-                  break;
-              }
-
-              process.exitCode = exitCode(devError);
-            } else {
-              Effect.runSync(Effect.logError(`❌ Error: ${error}`));
-              process.exitCode = 1;
-            }
-          } else {
-            Effect.runSync(Effect.logError(`💥 Unexpected error: ${failureOrCause.right}`));
-            process.exitCode = 1;
+          // Handle different error types and their properties
+          switch (error._tag) {
+            case "ExternalToolError":
+              yield* Effect.logError(error.message);
+              break;
+            case "ConfigError":
+            case "GitError":
+            case "NetworkError":
+            case "AuthError":
+            case "FileSystemError":
+            case "UserInputError":
+            case "CLIError":
+              yield* Effect.logError(error.reason);
+              break;
+            case "UnknownError":
+              yield* Effect.logError(String(error.reason));
+              break;
           }
-        },
-      });
+
+          yield* Effect.sync(() => {
+            process.exitCode = exitCode(error);
+          });
+        });
+      }),
+    ) as Effect.Effect<void, never, never>;
+
+    // Use BunRuntime.runMain for proper resource cleanup and graceful shutdown
+    // Return a Promise that resolves when the command completes
+    return new Promise<void>((resolve) => {
+      BunRuntime.runMain(commandProgram);
+      // Since BunRuntime.runMain handles the process exit, we resolve immediately
+      resolve();
     });
   }
 }

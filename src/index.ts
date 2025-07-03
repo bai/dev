@@ -1,8 +1,9 @@
 #!/usr/bin/env bun
-import { Cause, Effect, Exit, Runtime } from "effect";
+import { BunRuntime } from "@effect/platform-bun";
+import { Effect } from "effect";
 
 import { createDevCli } from "./cli/wiring";
-import { exitCode, type DevError } from "./domain/errors";
+import { exitCode, unknownError, type DevError } from "./domain/errors";
 
 const program = Effect.gen(function* () {
   // Create CLI instance
@@ -22,6 +23,7 @@ const program = Effect.gen(function* () {
   if (args.length === 0) {
     args = ["help"];
   }
+
   yield* Effect.tryPromise({
     try: () => cli.parseAndExecute(args),
     catch: (error) => {
@@ -29,41 +31,20 @@ const program = Effect.gen(function* () {
       if (error && typeof error === "object" && "_tag" in error) {
         return error as DevError;
       }
-      return { _tag: "UnknownError", reason: error } as const;
+      return unknownError(error);
     },
   });
-});
+}).pipe(
+  Effect.catchAll((error: DevError) => {
+    // Handle errors and set appropriate exit codes
+    return Effect.gen(function* () {
+      yield* Effect.logError(`❌ ${error._tag}: ${JSON.stringify(error)}`);
+      yield* Effect.sync(() => {
+        process.exitCode = exitCode(error);
+      });
+    });
+  }),
+);
 
-async function main() {
-  const runtime = Runtime.defaultRuntime;
-  const exit = await Runtime.runPromiseExit(runtime)(program);
-
-  Exit.match(exit, {
-    onSuccess: () => {
-      // Successful execution
-      process.exitCode = 0;
-    },
-    onFailure: (cause) => {
-      // Handle failures using Cause.failureOrCause
-      const failureOrCause = Cause.failureOrCause(cause);
-      if (failureOrCause._tag === "Left") {
-        // It's a failure (error)
-        const error = failureOrCause.left;
-        if (error && typeof error === "object" && "_tag" in error) {
-          const devError = error as DevError;
-          Effect.runSync(Effect.logError(`❌ ${devError._tag}: ${JSON.stringify(devError)}`));
-          process.exitCode = exitCode(devError);
-        } else {
-          Effect.runSync(Effect.logError(`❌ Error: ${error}`));
-          process.exitCode = 1;
-        }
-      } else {
-        // It's a defect (unexpected error)
-        Effect.runSync(Effect.logError(`💥 Unexpected error: ${failureOrCause.right}`));
-        process.exitCode = 1;
-      }
-    },
-  });
-}
-
-main();
+// Use BunRuntime.runMain for proper resource cleanup and graceful shutdown
+BunRuntime.runMain(program);

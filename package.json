@@ -17,6 +17,7 @@
     "db:migrate": "bun run drizzle/migrate.ts"
   },
   "dependencies": {
+    "@effect/platform-bun": "^0.72.9",
     "@iarna/toml": "2.2.5",
     "drizzle-orm": "0.44.2",
     "effect": "3.16.11",
