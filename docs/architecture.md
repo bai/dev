@@ -1,35 +1,57 @@
-# Architecture Documentation
+# System Architecture & Engineering Specification
 
 ## Table of Contents
 
-1. [Overview](#overview)
-2. [Hexagonal Architecture Principles](#hexagonal-architecture-principles)
-3. [Layer Structure](#layer-structure)
-4. [Effect-TS Patterns](#effect-ts-patterns)
-5. [Error Handling](#error-handling)
-6. [Dependency Flow](#dependency-flow)
-7. [Directory Structure](#directory-structure)
-8. [Testing Strategy](#testing-strategy)
-9. [Extending the System](#extending-the-system)
-10. [Common Patterns](#common-patterns)
+1. Purpose & Overview
+2. Technology Stack
+3. Architectural Principles
+4. Layer Structure & Directory Layout
+5. Effect-TS Patterns & Functional Services
+6. Error Handling Model
+7. Ports & Adapters (Domain Interfaces)
+8. Local Run Analytics
+9. Configuration Handling
+10. Plugins & Extensibility
+11. Command Catalogue
+12. Shell Completions
+13. Upgrade Sequence
+14. Testing Strategy
+15. Extending the System
 
-## Overview
+---
 
-This CLI application follows **Hexagonal Architecture** (also known as **Ports & Adapters**) principles, implemented with **Effect-TS** for functional programming patterns. The architecture ensures clean separation of business logic from external concerns like databases, file systems, and external APIs.
+## 1 · Purpose & Overview
+
+`dev` is a **hexagonal**, **plugin-extensible** CLI that streamlines navigation, repo cloning, environment setup and diagnostics.  The design is deeply rooted in *functional programming* and *Effect-TS* best practices.  By treating *services as values* rather than classes, we keep the codebase declarative, composable and trivially testable.
 
 ### Key Benefits
 
-- **Testability**: Easy to test business logic in isolation
-- **Maintainability**: Clear separation of concerns
-- **Flexibility**: Easy to swap implementations (e.g., different databases)
-- **Type Safety**: Full TypeScript compilation with zero errors
-- **Functional Programming**: Idiomatic Effect-TS patterns throughout
+* **Testability** – pure business logic isolated from side-effects
+* **Maintainability** – strict separation of concerns & clear dependency flow
+* **Flexibility** – adapters can be swapped without touching core logic
+* **Type-Safety** – full TypeScript compilation with zero errors
+* **Resource Safety** – Effect-TS manages lifecycles & interruptions automatically
 
-## Hexagonal Architecture Principles
+---
 
-### Core Concept
+## 2 · Technology Stack
 
-The application is structured as concentric layers, with business logic at the center and external concerns at the edges. Dependencies flow **inward** toward the domain core.
+| Concern            | Choice                           | Locked Version |
+| ------------------ | -------------------------------- | ------------- |
+| Runtime / Compiler | **Bun**                          | 1.2.17        |
+| Language           | **TypeScript**                   | 5.8.3         |
+| FP Runtime         | **Effect**                       | 3.16.11       |
+| Test Runner        | **Vitest**                       | 3.2.4         |
+| Relational Store   | **SQLite 3** via **drizzle-orm** | latest        |
+| Git CLI            | `git` ≥ 2.40                     | —             |
+
+---
+
+## 3 · Architectural Principles
+
+### 3.1 Hexagonal / Ports & Adapters
+
+Business rules live at the centre, surrounded by *ports* (interfaces) and *adapters* (concrete implementations).
 
 ```mermaid
 graph TB
@@ -82,818 +104,352 @@ graph TB
     style APIAdapter fill:#9C27B0
 ```
 
-### Dependency Rule
+### 3.2 Dependency Rule
 
-**Dependencies point inward**: Outer layers depend on inner layers, never the reverse.
+*All* arrows point **inwards** – inner layers never import from outer ones.
 
-- ✅ **Application** depends on **Domain**
-- ✅ **Infrastructure** depends on **Domain**
-- ❌ **Domain** never depends on **Application** or **Infrastructure**
-
-## Layer Structure
-
-### Complete Architecture Overview
-
-```mermaid
-graph TB
-    subgraph "CLI Layer (Primary Adapters)"
-        CLI[CLI Parser<br/>Yargs]
-        Tests[Test Harness<br/>Vitest]
-    end
-
-    subgraph "Application Layer"
-        Commands[Commands<br/>clone, cd, up, etc.]
-        AppServices[Application Services<br/>CommandTracking<br/>ShellIntegration<br/>VersionService]
-    end
-
-    subgraph "Domain Layer (Business Core)"
-        subgraph "Ports (Interfaces)"
-            IPorts[Input Ports<br/>CliCommandSpec]
-            OPorts[Output Ports<br/>FileSystem, Git<br/>Network, Shell<br/>DirectoryService]
-        end
-        subgraph "Business Logic"
-            Models[Domain Models<br/>Repository, Config<br/>CommandRun]
-            Errors[Tagged Errors<br/>DevError hierarchy<br/>ConfigError, GitError]
-            DomainServices[Domain Services<br/>PathService<br/>RepositoryService]
-        end
-    end
-
-    subgraph "Infrastructure Layer (Secondary Adapters)"
-        FSAdapter[FileSystemLive<br/>Bun APIs]
-        GitAdapter[GitLive<br/>git CLI]
-        NetAdapter[NetworkLive<br/>fetch API]
-        DBAdapter[RunStoreLive<br/>SQLite + Drizzle]
-        ShellAdapter[ShellLive<br/>child_process]
-        DirAdapter[DirectoryServiceLive<br/>Bun.Glob]
-    end
-
-    subgraph "Composition Root"
-        Wiring[src/wiring.ts<br/>Dependency Injection<br/>Layer Composition]
-    end
-
-    CLI --> Commands
-    Tests --> Commands
-    Commands --> AppServices
-    AppServices --> IPorts
-    Commands --> OPorts
-
-    OPorts --> Models
-    OPorts --> Errors
-    DomainServices --> Models
-
-    Wiring -.-> FSAdapter
-    Wiring -.-> GitAdapter
-    Wiring -.-> NetAdapter
-    Wiring -.-> DBAdapter
-    Wiring -.-> ShellAdapter
-    Wiring -.-> DirAdapter
-    Wiring -.-> Commands
-    Wiring -.-> AppServices
-
-    OPorts -.-> FSAdapter
-    OPorts -.-> GitAdapter
-    OPorts -.-> NetAdapter
-    OPorts -.-> DBAdapter
-    OPorts -.-> ShellAdapter
-    OPorts -.-> DirAdapter
-
-    style Commands fill:#FFC107
-    style AppServices fill:#FFC107
-    style IPorts fill:#2196F3
-    style OPorts fill:#2196F3
-    style Models fill:#4CAF50
-    style Errors fill:#4CAF50
-    style DomainServices fill:#4CAF50
-    style FSAdapter fill:#9C27B0
-    style GitAdapter fill:#9C27B0
-    style NetAdapter fill:#9C27B0
-    style DBAdapter fill:#9C27B0
-    style Wiring fill:#F44336
+```
+CLI  →  Application  →  Domain
+Infra →  Domain
 ```
 
-### 1. Domain Layer (Core Business Logic)
+---
 
-**Location**: `src/domain/`
+## 4 · Layer Structure & Directory Layout
 
-The heart of the application containing pure business logic with zero external dependencies.
+```text
+src/
+├── domain/        # 🏛️ Pure business logic
+│   ├── models.ts
+│   ├── errors.ts
+│   ├── matching.ts
+│   ├── ports/
+│   └── services/
+│
+├── app/           # 🔄 Use-cases (commands & app-services)
+│   ├── commands/
+│   └── services/
+│
+├── infra/         # 🔌 Adapters (FS, Git, DB, …)
+│   ├── fs/
+│   ├── git/
+│   ├── network/
+│   ├── shell/
+│   └── db/
+│
+├── cli/           # 🖥️ CLI parser & wiring
+├── config/        # ⚙️ Config schema, loader & migrations
+├── effect/        # 🔧 Effect-TS specific helpers (optional)
+├── plugins/       # 🧩 Dynamically discovered modules
+├── wiring.ts      # 🏗️ Composition root
+└── index.ts       # 🚀 Entry point
+```
 
-#### Domain Models
+### 4.1 Layer Isolation Rules
 
-```typescript
-// src/domain/models.ts
-export interface Repository {
-  readonly name: string;
-  readonly org: string;
-  readonly provider: GitProviderType;
-  readonly fullName: string;
+| Layer         | Can Import From                 | Must **NOT** Import From |
+| ------------- | ------------------------------- | ------------------------ |
+| **Domain**    | Effect, other domain modules    | App, Infra, CLI         |
+| **App**       | Domain, Effect                  | Infra, CLI               |
+| **Infra**     | Domain, Effect, external libs   | App, CLI                 |
+| **CLI**       | App, Domain, Effect             | Infra                    |
+| **Root**      | Every layer                     | —                        |
+
+### 4.2 Layer Definitions
+
+| Layer         | Services Included                                                      |
+| ------------- | ---------------------------------------------------------------------- |
+| **InfraLive** | FileSystem, RepoProvider, Mise, Shell, Keychain, Network, **RunStore** |
+| **AppLive**   | Config **+ InfraLive**                                  |
+| **CliLive**   | Console, Telemetry *(optional)* **+ AppLive**                          |
+
+Tests compose only the layers they need (e.g. swap `FileSystemLive` for an in-memory fake).
+
+---
+
+## 5 · Effect-TS Patterns & Functional Services
+
+Idiomatic Effect focuses on *values* – no classes, no `this`, no hidden state [[see todo-no-classes.md]].
+
+### 5.1 Service Declaration
+
+```ts
+// src/domain/ports/Git.ts
+export interface Git {
+  clone: (repo: Repository, dest: string) => Effect.Effect<void, GitError>;
+  currentCommitSha: (cwd?: string) => Effect.Effect<string, GitError>;
 }
 
+export const GitTag = Context.Tag<Git>("Git");
+```
+
+### 5.2 Functional Adapter (Factory)
+
+```ts
+// src/infra/git/GitLive.ts
+import { Effect, Layer } from "effect";
+import { Git, GitTag } from "../../domain/ports/Git";
+import { ShellTag } from "../../domain/ports/Shell";
+
+const makeGitLive = (shell: Shell): Git => ({
+  clone: (repo, dest) =>
+    shell.exec("git", ["clone", repo.cloneUrl, dest]),
+
+  currentCommitSha: (cwd) =>
+    shell.exec("git", ["rev-parse", "HEAD"], { cwd }).pipe(
+      Effect.map((r) => r.stdout.trim())
+    ),
+});
+
+export const GitLiveLayer = Layer.effect(
+  GitTag,
+  Effect.gen(function* () {
+    const shell = yield* ShellTag;
+    return makeGitLive(shell);
+  })
+);
+```
+
+No `class`, just a *factory* that returns a plain object implementing `Git`.
+
+### 5.3 Composing Effects
+
+```ts
+// Example command (functional style)
+export const cloneCommand: CliCommandSpec = {
+  name: "clone",
+  description: "Clone a repository",
+  handler: ({ args }) =>
+    Effect.gen(function* () {
+      const git = yield* GitTag;
+      const repo = parseRepository(args.repo);
+      const dest = `${process.env.HOME}/src/${repo.fullName}`;
+      yield* git.clone(repo, dest);
+    }),
+};
+```
+
+---
+
+## 6 · Error Handling Model
+
+```ts
+export type DevError =
+  | { _tag: "ConfigError";   reason: string }
+  | { _tag: "GitError";      reason: string }
+  | { _tag: "NetworkError";  reason: string }
+  | { _tag: "AuthError";     reason: string }
+  | { _tag: "ExternalToolError"; message: string; tool?: string; stderr?: string }
+  | { _tag: "UnknownError";  reason: unknown };
+
+export const exitCode = (e: DevError): number => ({
+  ConfigError:   2,
+  GitError:      3,
+  NetworkError:  4,
+  AuthError:     5,
+  ExternalToolError: 6,
+  UnknownError:  1,
+}[e._tag]);
+```
+
+*Never* use `throw`; propagate errors through the Effect error channel.
+
+---
+
+## 7 · Ports & Adapters (Domain Interfaces)
+
+Each port is a pure TypeScript *interface* + a Context Tag.
+
+```ts
+// src/domain/ports/FileSystem.ts
+export interface FileSystem {
+  exists: (path: string) => Effect.Effect<boolean, FileSystemError>;
+  readFile: (path: string) => Effect.Effect<string, FileSystemError>;
+  writeFile: (path: string, content: string) => Effect.Effect<void, FileSystemError>;
+}
+
+export const FileSystemTag = Context.Tag<FileSystem>("FileSystem");
+```
+
+Adapters live in `src/infra/**` and are wired in the composition root via **Effect Layers**.
+
+---
+
+## 8 · Local Run Analytics
+
+Drizzle stores command runs in `~/.dev/state/dev.db`.
+
+```ts
+import { sqliteTable, text, integer, sql } from "drizzle-orm/sqlite-core";
+
+export const runs = sqliteTable("runs", {
+  id:          text().primaryKey(),
+  cli_version: text().notNull(),
+  command_name:text().notNull(),
+  arguments:   text(),
+  exit_code:   integer(),
+  cwd:         text().notNull(),
+  started_at:  integer({ mode: "timestamp" }).notNull(),
+  finished_at: integer({ mode: "timestamp" }),
+  duration_ms: integer().generatedAlwaysAs(() => sql`finished_at - started_at`),
+});
+```
+
+A tiny adapter (`RunStoreLive`) inserts a row *before* command execution and finalises it on completion.
+
+---
+
+## 9 · Configuration Handling
+
+`ConfigLoader` reads `~/.dev/config.json`, applies migrations and validation, then provides the resulting object via a Context Tag so that any Effect can simply `yield* ConfigTag`.
+
+```ts
 export interface Config {
   version: 3;
   configUrl: string;
   defaultOrg: string;
   paths: { base: string };
-  // ... more config
+  telemetry?: { enabled: boolean };
+  plugins?: { git?: readonly string[] };
 }
+
+export const ConfigTag = Context.Tag<Config>("Config");
 ```
 
-#### Domain Ports (Interfaces)
+### 9.1 Example `config.json` (Schema v3)
 
-```typescript
-// src/domain/ports/FileSystem.ts
-export interface FileSystem {
-  exists(path: string): Effect.Effect<boolean, FileSystemError>;
-  readFile(path: string): Effect.Effect<string, FileSystemError>;
-  writeFile(path: string, content: string): Effect.Effect<void, FileSystemError>;
-  mkdir(path: string, recursive?: boolean): Effect.Effect<void, FileSystemError>;
-}
-```
-
-#### Tagged Errors
-
-```typescript
-// src/domain/errors.ts
-export class ConfigError extends Data.TaggedError("ConfigError")<{
-  readonly reason: string;
-}> {}
-
-export class GitError extends Data.TaggedError("GitError")<{
-  readonly reason: string;
-  readonly command?: string;
-}> {}
-```
-
-### 2. Application Layer (Use Cases)
-
-**Location**: `src/app/`
-
-Orchestrates domain objects to implement application use cases. Contains no business rules, only coordination logic.
-
-#### Commands (Use Cases)
-
-```typescript
-// src/app/commands/clone.ts
-export const cloneCommand: CliCommandSpec = {
-  name: "clone",
-  description: "Clone a repository",
-  handler: (context: CommandContext) =>
-    Effect.gen(function* () {
-      // Orchestrate domain services
-      const git = yield* GitService;
-      const fileSystem = yield* FileSystemService;
-      const pathService = yield* PathServiceTag;
-
-      // Pure coordination logic - no business rules
-      const repository = yield* parseRepository(context.args.repo);
-      const targetPath = pathService.resolveDestinationPath(repository);
-
-      yield* git.clone(repository, targetPath);
-    })
-};
-```
-
-#### Application Services
-
-```typescript
-// src/app/services/CommandTrackingService.ts
-export class CommandTrackingServiceImpl implements CommandTrackingService {
-  recordCommandRun(): Effect.Effect<string, ConfigError | UnknownError, any> {
-    return Effect.gen(function* () {
-      const runStore = yield* RunStoreService;
-      const versionService = yield* VersionServiceTag;
-      const git = yield* GitService;
-
-      // Coordinate multiple domain services
-      const version = yield* versionService.getCurrentVersion();
-      const gitSha = yield* git.getCurrentCommitSha().pipe(
-        Effect.catchAll(() => Effect.succeed("unknown"))
-      );
-
-      return yield* runStore.record({
-        command: process.argv.slice(2).join(" "),
-        version,
-        gitSha,
-        startedAt: new Date(),
-      });
-    });
+```jsonc
+{
+  "version": 3,
+  "configUrl": "https://raw.githubusercontent.com/acme/dev-configs/main/org.json",
+  "defaultOrg": "acme",
+  "paths": { "base": "~/src" },
+  "telemetry": { "enabled": true },
+  "plugins": {
+    "git": [
+      "https://github.com/acme/dev-plugin-docker.git",
+      "ssh://git@example.com/custom/dev-plugin-foo.git"
+    ]
   }
 }
 ```
 
-### 3. Infrastructure Layer (External Concerns)
-
-**Location**: `src/infra/`
-
-Implements domain ports using concrete technologies. Contains all external dependencies.
-
-#### Infrastructure Adapters
-
-```typescript
-// src/infra/fs/FileSystemLive.ts
-export class FileSystemLive implements FileSystem {
-  exists(path: string): Effect.Effect<boolean, FileSystemError> {
-    return Effect.tryPromise({
-      try: () => Bun.file(path).exists(),
-      catch: (error) => fileSystemError(`Failed to check existence: ${error}`)
-    });
-  }
-
-  readFile(path: string): Effect.Effect<string, FileSystemError> {
-    return Effect.tryPromise({
-      try: async () => {
-        const file = Bun.file(path);
-        return await file.text();
-      },
-      catch: (error) => fileSystemError(`Failed to read file: ${error}`)
-    });
-  }
-}
-```
-
-### 4. Composition Root
-
-**Location**: `src/wiring.ts`
-
-The only place where concrete implementations are wired together. Handles dependency injection.
-
-```typescript
-// src/wiring.ts
-export const InfraLiveLayer = Layer.mergeAll(
-  FileSystemLiveLayer,
-  GitLiveLayer,
-  NetworkLiveLayer,
-  // ... other infrastructure layers
-);
-
-export const AppLiveLayer = Layer.mergeAll(
-  InfraLiveLayer,
-  CommandTrackingServiceLive,
-  ShellIntegrationServiceLive,
-  // ... other app services
-);
-```
-
-## Effect-TS Patterns
-
-### Why Effect-TS?
-
-Effect-TS provides:
-
-- **Type-safe error handling** without exceptions
-- **Composable effects** for complex async operations
-- **Dependency injection** through Context
-- **Resource management** with automatic cleanup
-
-### Core Patterns Used
-
-#### 1. Effect.gen for Async Composition
-
-```typescript
-// Instead of async/await with try/catch
-export const cloneRepository = (repo: Repository, path: string) =>
-  Effect.gen(function* () {
-    const git = yield* GitService;
-    const fileSystem = yield* FileSystemService;
-
-    const exists = yield* fileSystem.exists(path);
-    if (exists) {
-      yield* Effect.fail(configError("Directory already exists"));
-    }
-
-    yield* git.clone(repo, path);
-  });
-```
-
-#### 2. Dependency Injection via Context
-
-```typescript
-// Services are injected automatically
-export class FileSystemLiveLayer extends Context.Tag("FileSystem")<
-  FileSystemService,
-  FileSystem
->() {}
-
-// Usage in effects
-const useFileSystem = Effect.gen(function* () {
-  const fs = yield* FileSystemService; // Automatically injected
-  return yield* fs.readFile("config.json");
-});
-```
-
-#### 3. Error Channel Usage
-
-```typescript
-// Errors flow through the error channel, not exceptions
-const readConfig = fileSystem.readFile("config.json").pipe(
-  Effect.catchTag("FileSystemError", (error) =>
-    Effect.fail(configError(`Config not found: ${error.reason}`))
-  )
-);
-```
-
-## Error Handling
-
-### Tagged Error Hierarchy
-
-```mermaid
-graph TD
-    DevError[DevError<br/>Base Union Type]
-
-    DevError --> ConfigError[ConfigError<br/>Configuration issues]
-    DevError --> GitError[GitError<br/>Git operations]
-    DevError --> FileSystemError[FileSystemError<br/>File operations]
-    DevError --> NetworkError[NetworkError<br/>HTTP requests]
-    DevError --> AuthError[AuthError<br/>Authentication]
-    DevError --> ExternalToolError[ExternalToolError<br/>CLI tool failures]
-    DevError --> UnknownError[UnknownError<br/>Unexpected errors]
-
-    style DevError fill:#FF5722
-    style ConfigError fill:#FF9800
-    style GitError fill:#2196F3
-    style FileSystemError fill:#4CAF50
-    style NetworkError fill:#9C27B0
-    style AuthError fill:#F44336
-    style ExternalToolError fill:#607D8B
-    style UnknownError fill:#795548
-```
-
-### Error Handling Patterns
-
-#### Never Use `throw`
-
-```typescript
-// ❌ DON'T: Traditional exception throwing
-function badReadFile(path: string): string {
-  if (!fs.existsSync(path)) {
-    throw new Error("File not found"); // Breaks Effect composition
-  }
-  return fs.readFileSync(path, "utf8");
-}
-
-// ✅ DO: Use Effect error channel
-function goodReadFile(path: string): Effect.Effect<string, FileSystemError> {
-  return Effect.tryPromise({
-    try: () => Bun.file(path).text(),
-    catch: (error) => fileSystemError(`Failed to read file: ${error}`)
-  });
-}
-```
-
-#### Error Transformation
-
-```typescript
-// Transform infrastructure errors to domain errors
-const networkToConfigError = (error: NetworkError): ConfigError =>
-  configError(`Network issue while loading config: ${error.reason}`);
-
-const loadRemoteConfig = network.get(configUrl).pipe(
-  Effect.mapError(networkToConfigError),
-  Effect.flatMap(response => parseConfig(response.body))
-);
-```
-
-## Dependency Flow
-
-### Layer Dependencies
-
-```mermaid
-graph TB
-    subgraph "Dependency Flow"
-        CLI[CLI Layer]
-        App[Application Layer]
-        Domain[Domain Layer]
-        Infra[Infrastructure Layer]
-        Composition[Composition Root]
-    end
-
-    CLI -->|depends on| App
-    App -->|depends on| Domain
-    Infra -->|implements| Domain
-    Composition -->|wires| CLI
-    Composition -->|wires| App
-    Composition -->|wires| Infra
-
-    Domain -.->|"NEVER depends on"| App
-    Domain -.->|"NEVER depends on"| Infra
-    Domain -.->|"NEVER depends on"| CLI
-
-    style Domain fill:#4CAF50
-    style App fill:#FFC107
-    style Infra fill:#9C27B0
-    style CLI fill:#FF9800
-    style Composition fill:#F44336
-```
-
-### Service Dependencies
-
-```mermaid
-graph LR
-    subgraph "Application Services"
-        CommandTracking[CommandTrackingService]
-        ShellIntegration[ShellIntegrationService]
-        VersionService[VersionService]
-    end
-
-    subgraph "Domain Ports"
-        RunStore[RunStore]
-        Git[Git]
-        FileSystem[FileSystem]
-        Shell[Shell]
-        PathService[PathService]
-    end
-
-    subgraph "Infrastructure"
-        RunStoreLive[RunStoreLive<br/>SQLite]
-        GitLive[GitLive<br/>git CLI]
-        FileSystemLive[FileSystemLive<br/>Bun APIs]
-        ShellLive[ShellLive<br/>child_process]
-    end
-
-    CommandTracking --> RunStore
-    CommandTracking --> Git
-    CommandTracking --> VersionService
-
-    ShellIntegration --> FileSystem
-    ShellIntegration --> Shell
-    ShellIntegration --> PathService
-
-    RunStore -.-> RunStoreLive
-    Git -.-> GitLive
-    FileSystem -.-> FileSystemLive
-    Shell -.-> ShellLive
-
-    style CommandTracking fill:#FFC107
-    style ShellIntegration fill:#FFC107
-    style VersionService fill:#FFC107
-    style RunStore fill:#2196F3
-    style Git fill:#2196F3
-    style FileSystem fill:#2196F3
-    style Shell fill:#2196F3
-    style PathService fill:#4CAF50
-```
-
-## Directory Structure
-
-```
-src/
-├── domain/                     # 🏛️ Business Logic Core
-│   ├── models.ts              # Domain entities & value objects
-│   ├── errors.ts              # Tagged error hierarchy
-│   ├── matching.ts            # Business rules for repo matching
-│   ├── ports/                 # Interfaces for external dependencies
-│   │   ├── FileSystem.ts      # File operations interface
-│   │   ├── Git.ts             # Git operations interface
-│   │   ├── Network.ts         # HTTP operations interface
-│   │   ├── Shell.ts           # Shell command interface
-│   │   ├── DirectoryService.ts # Directory management interface
-│   │   └── DebugService.ts    # Debug configuration interface
-│   └── services/              # Domain services (business logic)
-│       ├── PathService.ts     # Path resolution logic
-│       └── RepositoryService.ts # Repository business rules
-│
-├── app/                       # 🔄 Application Use Cases
-│   ├── commands/              # CLI command handlers
-│   │   ├── clone.ts           # Clone repository use case
-│   │   ├── cd.ts              # Change directory use case
-│   │   ├── up.ts              # Project setup use case
-│   │   └── ...
-│   └── services/              # Application orchestration services
-│       ├── CommandTrackingService.ts  # Track command execution
-│       ├── ShellIntegrationService.ts # Shell integration logic
-│       └── VersionService.ts          # Version management
-│
-├── infra/                     # 🔌 Infrastructure Adapters
-│   ├── fs/                    # File system implementations
-│   │   ├── FileSystemLive.ts  # Bun file system adapter
-│   │   └── DirectoryService.ts # Directory scanning implementation
-│   ├── git/                   # Git implementations
-│   │   └── GitLive.ts         # Git CLI adapter
-│   ├── network/               # Network implementations
-│   │   └── NetworkLive.ts     # Fetch API adapter
-│   ├── shell/                 # Shell implementations
-│   │   └── ShellLive.ts       # Child process adapter
-│   ├── db/                    # Database implementations
-│   │   └── RunStoreLive.ts    # SQLite + Drizzle adapter
-│   └── tools/                 # External tool adapters
-│       ├── mise.ts            # Mise tool management
-│       └── gcloud.ts          # Google Cloud CLI management
-│
-├── cli/                       # 🖥️ CLI Interface
-│   ├── parser.ts              # Yargs CLI parser
-│   └── wiring.ts              # CLI-specific wiring
-│
-├── config/                    # ⚙️ Configuration Management
-│   ├── schema.ts              # Configuration schema
-│   ├── loader.ts              # Configuration loading logic
-│   └── migrations/            # Config migration logic
-│
-├── effect/                    # 🔧 Effect-TS Extensions
-│   ├── Clock.ts               # Time service implementation
-│   └── LoggerLive.ts          # Logging service implementation
-│
-├── wiring.ts                  # 🏗️ Composition Root
-└── index.ts                   # 🚀 Application Entry Point
-```
-
-### Layer Isolation Rules
-
-| Layer | Can Import From | Cannot Import From |
-|-------|-----------------|-------------------|
-| **Domain** | Effect, other domain modules | App, Infrastructure, CLI |
-| **Application** | Domain, Effect | Infrastructure, CLI |
-| **Infrastructure** | Domain, Effect, external libs | Application, CLI |
-| **CLI** | Application, Domain, Effect | Infrastructure |
-| **Composition Root** | All layers | None (imports everything) |
-
-## Testing Strategy
-
-### Unit Testing with Effect
-
-```typescript
-// Test domain logic in isolation
-describe("PathService", () => {
-  test("resolves destination path correctly", async () => {
-    const config: Config = {
-      paths: { base: "/dev" },
-      // ... other config
-    };
-
-    const pathService = new PathServiceImpl();
-    const repository: Repository = {
-      name: "myrepo",
-      org: "myorg",
-      provider: "github",
-      fullName: "myorg/myrepo"
-    };
-
-    const result = pathService.resolveDestinationPath(repository, config);
-    expect(result).toBe("/dev/myorg/myrepo");
-  });
-});
-```
-
-### Integration Testing with Test Doubles
-
-```typescript
-// Create test implementations of ports
-class TestFileSystem implements FileSystem {
-  private files = new Map<string, string>();
-
-  exists(path: string): Effect.Effect<boolean, FileSystemError> {
-    return Effect.succeed(this.files.has(path));
-  }
-
-  readFile(path: string): Effect.Effect<string, FileSystemError> {
-    const content = this.files.get(path);
-    return content
-      ? Effect.succeed(content)
-      : Effect.fail(fileSystemError("File not found"));
-  }
-}
-
-// Test application logic with controlled dependencies
-describe("Clone Command", () => {
-  test("clones repository successfully", async () => {
-    const testFS = new TestFileSystem();
-    const testGit = new TestGit();
-
-    const testLayer = Layer.mergeAll(
-      Layer.succeed(FileSystemService, testFS),
-      Layer.succeed(GitService, testGit)
-    );
-
-    const program = cloneCommand.handler({
-      args: { repo: "myorg/myrepo" }
-    });
-
-    const result = await Effect.runPromise(
-      Effect.provide(program, testLayer)
-    );
-
-    expect(result).toEqual(/* expected result */);
-  });
-});
-```
-
-## Extending the System
-
-### Adding a New Command
-
-1. **Create Domain Models** (if needed)
-
-```typescript
-// src/domain/models.ts
-export interface NewFeature {
-  readonly id: string;
-  readonly name: string;
-}
-```
-
-2. **Create Domain Port** (if needed)
-
-```typescript
-// src/domain/ports/NewService.ts
-export interface NewService {
-  doSomething(input: string): Effect.Effect<NewFeature, DevError>;
-}
-```
-
-3. **Implement Infrastructure Adapter**
-
-```typescript
-// src/infra/newservice/NewServiceLive.ts
-export class NewServiceLive implements NewService {
-  doSomething(input: string): Effect.Effect<NewFeature, DevError> {
-    return Effect.tryPromise({
-      try: () => someExternalAPI.call(input),
-      catch: (error) => unknownError(`API call failed: ${error}`)
-    });
-  }
-}
-```
-
-4. **Create Application Command**
-
-```typescript
-// src/app/commands/newcommand.ts
-export const newCommand: CliCommandSpec = {
-  name: "new",
-  description: "Does something new",
-  handler: (context) => Effect.gen(function* () {
-    const newService = yield* NewServiceTag;
-    const result = yield* newService.doSomething(context.args.input);
-    console.log(`Result: ${result.name}`);
-  })
-};
-```
-
-5. **Wire Everything Together**
-
-```typescript
-// src/wiring.ts
-export const AppLiveLayer = Layer.mergeAll(
-  InfraLiveLayer,
-  NewServiceLive, // Add the new service
-  // ... existing services
-);
-
-// Add to available commands
-export const availableCommands = [
-  // ... existing commands
-  newCommand, // Add the new command
-];
-```
-
-### Adding a New Infrastructure Adapter
-
-For example, adding Redis support:
-
-1. **Extend Domain Error Types**
-
-```typescript
-// src/domain/errors.ts
-export class CacheError extends Data.TaggedError("CacheError")<{
-  readonly reason: string;
-}> {}
-```
-
-2. **Create Domain Port**
-
-```typescript
-// src/domain/ports/Cache.ts
-export interface Cache {
-  get(key: string): Effect.Effect<string | null, CacheError>;
-  set(key: string, value: string, ttl?: number): Effect.Effect<void, CacheError>;
-}
-```
-
-3. **Implement Redis Adapter**
-
-```typescript
-// src/infra/cache/CacheLive.ts
-export class CacheLive implements Cache {
-  constructor(private client: RedisClient) {}
-
-  get(key: string): Effect.Effect<string | null, CacheError> {
-    return Effect.tryPromise({
-      try: () => this.client.get(key),
-      catch: (error) => cacheError(`Redis get failed: ${error}`)
-    });
-  }
-}
-```
-
-4. **Add to Composition Root**
-
-```typescript
-// src/wiring.ts
-const CacheLayer = Layer.effect(
-  CacheService,
-  Effect.gen(function* () {
-    const redisClient = createRedisClient();
-    return new CacheLive(redisClient);
-  })
-);
-
-export const InfraLiveLayer = Layer.mergeAll(
-  BaseInfraLayer,
-  CacheLayer, // Add cache layer
-  // ... other layers
-);
-```
-
-## Common Patterns
-
-### Pattern 1: Service Composition
-
-```typescript
-// Compose multiple services for complex operations
-export const setupProject = Effect.gen(function* () {
-  const git = yield* GitService;
-  const fileSystem = yield* FileSystemService;
-  const shell = yield* ShellService;
-  const mise = yield* MiseService;
-
-  // Step 1: Clone repository
-  yield* git.clone(repository, targetPath);
-
-  // Step 2: Setup development environment
-  yield* mise.ensureVersionOrUpgrade();
-
-  // Step 3: Install dependencies
-  yield* shell.exec("bun", ["install"], { cwd: targetPath });
-
-  // Step 4: Create initial config
-  yield* fileSystem.writeFile(
-    `${targetPath}/.env`,
-    "NODE_ENV=development\n"
-  );
-});
-```
-
-### Pattern 2: Error Recovery
-
-```typescript
-// Graceful error handling with fallbacks
-export const loadConfig = Effect.gen(function* () {
-  const fileSystem = yield* FileSystemService;
-  const network = yield* NetworkService;
-
-  // Try to load local config first
-  const localConfig = yield* fileSystem
-    .readFile("config.json")
-    .pipe(
-      Effect.flatMap(parseConfig),
-      Effect.catchTag("FileSystemError", () =>
-        Effect.succeed(null) // Ignore if file doesn't exist
-      )
-    );
-
-  if (localConfig) {
-    return localConfig;
-  }
-
-  // Fallback to remote config
-  return yield* network
-    .get("https://api.example.com/config")
-    .pipe(
-      Effect.flatMap(response => parseConfig(response.body)),
-      Effect.catchAll(() =>
-        Effect.succeed(defaultConfig) // Ultimate fallback
-      )
-    );
-});
-```
-
-### Pattern 3: Resource Management
-
-```typescript
-// Automatic resource cleanup with Effect.gen
-export const processLargeFile = (filePath: string) =>
-  Effect.gen(function* () {
-    const fileSystem = yield* FileSystemService;
-
-    // Resource is automatically cleaned up
-    yield* Effect.acquireUseRelease(
-      fileSystem.openFile(filePath), // Acquire
-      (file) => processFile(file),    // Use
-      (file) => fileSystem.closeFile(file) // Release
-    );
-  });
-```
+*The loader migrates and validates this on startup; `dev upgrade` refreshes it from `configUrl` if the remote version differs.*
 
 ---
 
-## Conclusion
+## 10 · Plugins & Extensibility
 
-This architecture provides a robust, maintainable, and testable foundation for the CLI application. The hexagonal architecture ensures business logic remains isolated from external concerns, while Effect-TS provides type-safe, composable patterns for handling complexity.
+Plugins implement an `AppModule` contract.
 
-Key takeaways:
+```ts
+export interface AppModule {
+  readonly commands: readonly CliCommandSpec[];
+  readonly layers?: Layer.Layer<any>;
+  readonly hooks?:  { readonly onStart?: Effect.Effect<void> };
+}
+```
 
-- **Business logic is pure** and isolated in the domain layer
-- **All external concerns** are abstracted behind ports
-- **Effect-TS patterns** eliminate exceptions and provide composability
-- **Dependency injection** makes testing and extension straightforward
-- **Clear layer separation** makes the codebase maintainable and understandable
+Discovery order:
 
-For questions or clarifications about this architecture, refer to the individual source files or the Effect-TS documentation.
+1. `~/.dev/plugins/**`
+2. `node_modules/@*/dev-plugin-*`
+3. Git URLs declared in `config.plugins.git`
+
+---
+
+## 11 · Command Catalogue
+
+| Command             | Synopsis                                 |
+| ------------------- | ---------------------------------------- |
+| **cd**              | `dev cd [name]`                          |
+| **clone**           | `dev clone <repo>`                       |
+| **up**              | `dev up`                                 |
+| **auth**            | `dev auth [svc]`                         |
+| **status / doctor** | `dev doctor [--json]`                    |
+| **run**             | `dev run <task>`                         |
+| **upgrade**         | `dev upgrade [--regenerate-completions]` |
+| **help**            | `dev help`                               |
+
+---
+
+## 12 · Shell Completions
+
+`scripts/generate-completions.ts` emits Zsh/Bash/Fish completion scripts to `/completions`.  They can be installed globally or sourced on-the-fly via `eval "$(dev completion zsh)"`.
+
+---
+
+## 13 · Upgrade Sequence
+
+1. Download latest binary.
+2. Fetch remote `configUrl`, migrate & overwrite local.
+3. Fetch / clone Git plugins declared in config.
+4. Regenerate completions if `--regenerate-completions`.
+5. Print final version.
+
+---
+
+## 14 · Testing Strategy
+
+### 14.1 Co-located Unit Tests
+
+Place pure unit tests beside the code they test:
+
+```text
+src/app/commands/
+  ├ clone.ts
+  └ clone.test.ts
+```
+
+Use in-memory fakes to avoid I/O.
+
+### 14.2 Integration & E2E Suites
+
+```
+tests/
+├─ integration/
+└─ e2e/
+```
+
+Integration tests wire multiple layers together with real SQLite; E2E drives the compiled CLI in a temp directory.
+
+---
+
+## 15 · Extending the System
+
+### Adding a New Command
+
+1. **Define / reuse domain models & ports**.
+2. **Implement functional adapter(s)** if new infrastructure is needed.
+3. **Write the command** as a pure Effect value.
+4. **Wire** everything in `wiring.ts`.
+
+### Adding a New Infrastructure Adapter (Example: Redis Cache)
+
+```ts
+// 1. Extend error types
+export interface CacheError extends DevError { _tag: "CacheError" }
+
+// 2. Domain port
+export interface Cache {
+  get: (key: string) => Effect.Effect<string | null, CacheError>;
+  set: (key: string, value: string, ttl?: number) => Effect.Effect<void, CacheError>;
+}
+export const CacheTag = Context.Tag<Cache>("Cache");
+
+// 3. Functional adapter factory
+const makeRedisCache = (client: RedisClient): Cache => ({
+  get: (k) => Effect.promise(() => client.get(k)),
+  set: (k, v, ttl) => Effect.promise(() => client.set(k, v, "EX", ttl ?? 60)),
+});
+
+export const CacheLayer = Layer.effect(
+  CacheTag,
+  Effect.gen(function* () {
+    const client = createRedisClient();
+    return makeRedisCache(client);
+  })
+);
+```
+
+That's it — the system remains *pure*, *composable* and *idiomatically Effect-TS*.
