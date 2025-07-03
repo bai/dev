@@ -146,7 +146,7 @@ export const runs = sqliteTable("runs", {
 
 *Local store is independent of telemetry; it never leaves the machine.*
 
-## 8 · Config File (Schema v 3)
+## 8 · Config File (Schema v3)
 
 ```jsonc
 {
