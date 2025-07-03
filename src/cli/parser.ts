@@ -6,6 +6,7 @@ import { CommandTrackingServiceTag } from "../app/services/CommandTrackingServic
 import { AppLiveLayer } from "../app/wiring";
 import { exitCode, type DevError } from "../domain/errors";
 import { LoggerService, type CliCommandSpec, type CommandContext } from "../domain/models";
+import { CompletionGeneratorImpl } from "./completions/generator";
 
 export interface CliMetadata {
   name: string;
@@ -20,19 +21,27 @@ export class DevCli {
   private metadata?: CliMetadata;
 
   constructor(commands: CliCommandSpec[]) {
-    this.yargs = yargs();
+    this.yargs = yargs(hideBin(process.argv));
     this.commands = commands;
     this.runtime = Runtime.defaultRuntime;
 
-    // Configure yargs behavior
+    // Configure yargs behavior with enhanced settings
     this.yargs
       .strict()
       .demandCommand(1, "You need at least one command before moving on")
       .recommendCommands()
       .help("help")
       .alias("help", "h")
+      .alias("version", "v")
       .version(false) // We'll handle version manually
-      .wrap(Math.min(120, this.yargs.terminalWidth()));
+      .wrap(Math.min(120, this.yargs.terminalWidth()))
+      .showHelpOnFail(false, "Use --help for available options")
+      .fail((msg, err, yargs) => {
+        if (err) throw err;
+        console.error("❌ Error:", msg);
+        console.error("\n" + yargs.help());
+        process.exit(1);
+      });
   }
 
   setMetadata(metadata: CliMetadata): void {
@@ -44,6 +53,13 @@ export class DevCli {
   }
 
   initialize(): void {
+    // Add completion command
+    this.addCompletionCommand();
+    
+    // Add version command
+    this.addVersionCommand();
+    
+    // Register all available commands
     for (const commandSpec of this.commands) {
       this.registerCommand(commandSpec);
     }
@@ -55,6 +71,82 @@ export class DevCli {
 
     // Parse arguments and execute
     await this.yargs.parseAsync(args);
+  }
+
+  private addCompletionCommand(): void {
+    this.yargs.command(
+      "completion [shell]",
+      "Generate shell completion scripts",
+      (yargs) => yargs
+        .positional("shell", {
+          describe: "Shell type (bash, zsh, fish)",
+          choices: ["bash", "zsh", "fish"],
+          default: "bash",
+        })
+        .option("install", {
+          describe: "Install completion for current shell",
+          type: "boolean",
+          default: false,
+        }),
+      (argv) => this.handleCompletion(argv.shell as string, argv.install as boolean),
+    );
+  }
+
+  private addVersionCommand(): void {
+    this.yargs.command(
+      "version",
+      "Show version information",
+      {},
+      () => {
+        if (this.metadata) {
+          console.log(`${this.metadata.name} v${this.metadata.version}`);
+        } else {
+          console.log("Version information not available");
+        }
+        process.exit(0);
+      },
+    );
+  }
+
+  private async handleCompletion(shell: string, install: boolean): Promise<void> {
+    const generator = new CompletionGeneratorImpl();
+    const programName = this.metadata?.name || "dev";
+
+    try {
+      let completionScript: string;
+      
+      switch (shell) {
+        case "bash":
+          completionScript = await Runtime.runPromise(this.runtime)(
+            generator.generateBashCompletion(this.commands, programName)
+          );
+          break;
+        case "zsh":
+          completionScript = await Runtime.runPromise(this.runtime)(
+            generator.generateZshCompletion(this.commands, programName)
+          );
+          break;
+        case "fish":
+          completionScript = await Runtime.runPromise(this.runtime)(
+            generator.generateFishCompletion(this.commands, programName)
+          );
+          break;
+        default:
+          console.error(`Unsupported shell: ${shell}`);
+          return;
+      }
+
+      if (install) {
+        console.log(`Installing ${shell} completions...`);
+        // For now, just show the script. Installation would require file system operations
+        console.log("To install manually, save the following to your shell completion directory:");
+        console.log(completionScript);
+      } else {
+        console.log(completionScript);
+      }
+    } catch (error) {
+      console.error("Error generating completions:", error);
+    }
   }
 
   private registerCommand(commandSpec: CliCommandSpec): void {
@@ -180,7 +272,7 @@ export class DevCli {
 
     // Extract options (excluding yargs internals)
     const options: Record<string, any> = {};
-    const internalKeys = ["_", "$0", "help", "h", "version"];
+    const internalKeys = ["_", "$0", "help", "h", "version", "v"];
 
     for (const [key, value] of Object.entries(argv)) {
       if (!internalKeys.includes(key) && !commandSpec.arguments?.some((arg) => arg.name === key)) {
@@ -188,7 +280,7 @@ export class DevCli {
       }
     }
 
-    // Create the command execution program with tracking
+    // Create the command execution program with enhanced tracking
     const commandProgram: Effect.Effect<void, DevError, any> = Effect.gen(function* () {
       // Start command tracking
       const tracking = yield* CommandTrackingServiceTag;
@@ -201,7 +293,7 @@ export class DevCli {
         commandSpec.exec({
           args,
           options,
-        }),
+        })
       );
 
       // Handle completion and exit code recording
@@ -209,11 +301,12 @@ export class DevCli {
         // Command failed
         const error = result.left;
         yield* tracking.completeCommandRun(runId, exitCode(error));
-        yield* logger.error(`Command failed: ${error._tag}`);
+        yield* logger.error(`Command '${commandSpec.name}' failed: ${error._tag}`);
         return yield* Effect.fail(error);
       } else {
         // Command succeeded
         yield* tracking.completeCommandRun(runId, 0);
+        yield* logger.debug(`Command '${commandSpec.name}' completed successfully`);
         return result.right;
       }
     }).pipe(Effect.provide(AppLiveLayer));
@@ -238,6 +331,9 @@ export class DevCli {
               switch (devError._tag) {
                 case "ExternalToolError":
                   console.error(devError.message);
+                  if (devError.stderr) {
+                    console.error("STDERR:", devError.stderr);
+                  }
                   break;
                 case "ConfigError":
                 case "GitError":

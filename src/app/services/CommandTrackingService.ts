@@ -29,18 +29,18 @@ export class CommandTrackingServiceImpl implements CommandTrackingService {
       const runStore = yield* RunStoreService;
       const versionService = yield* VersionServiceTag;
 
-      // Gather run information
-      const commandName = process.argv[2] || "help";
-      const args = process.argv.slice(3);
+      // Gather enhanced run information
+      const commandName = CommandTrackingServiceImpl.extractCommandName();
+      const args = CommandTrackingServiceImpl.extractCommandArgs();
       const cliVersion = yield* versionService.getCurrentGitCommitSha;
       const cwd = process.cwd();
       const startedAt = new Date();
 
-      // Record this run
+      // Record this run with enhanced metadata
       const runId = yield* runStore.record({
         cli_version: cliVersion,
         command_name: commandName,
-        arguments: args.length > 0 ? JSON.stringify(args) : undefined,
+        arguments: args.length > 0 ? JSON.stringify(args) : "",
         cwd,
         started_at: startedAt,
       });
@@ -56,6 +56,29 @@ export class CommandTrackingServiceImpl implements CommandTrackingService {
 
       yield* runStore.complete(id, exitCode, finishedAt);
     });
+  }
+
+  private static extractCommandName(): string {
+    // Extract command name from process.argv, handling sub-commands and aliases
+    const args = process.argv.slice(2);
+    if (args.length === 0) return "help";
+    
+    const command = args[0];
+    // Handle special commands
+    if (command === "completion" || command === "version") {
+      return command;
+    }
+    
+    return command;
+  }
+
+  private static extractCommandArgs(): string[] {
+    // Extract arguments excluding the command name itself
+    const args = process.argv.slice(2);
+    if (args.length <= 1) return [];
+    
+    // Skip the command name, return the rest
+    return args.slice(1);
   }
 }
 
