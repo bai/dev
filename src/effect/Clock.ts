@@ -1,4 +1,4 @@
-import { Duration, Effect, Layer } from "effect";
+import { type Duration, Effect, Layer } from "effect";
 
 import { ClockService } from "../domain/models";
 
