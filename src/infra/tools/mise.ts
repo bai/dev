@@ -2,34 +2,16 @@ import path from "path";
 
 import { stringify } from "@iarna/toml";
 import { Context, Effect, Layer } from "effect";
-import z from "zod/v4";
 
-import {
-  externalToolError,
-  unknownError,
-  type ConfigError,
-  type ExternalToolError,
-  type UnknownError,
-} from "../../domain/errors";
+import devConfig from "../../config/mise-dev-config.toml" with { type: "json" };
+import { externalToolError, unknownError, type ExternalToolError, type UnknownError } from "../../domain/errors";
 import { LoggerService, type Logger } from "../../domain/models";
 import { FileSystemService, type FileSystem } from "../../domain/ports/FileSystem";
 import { ShellService, type Shell } from "../../domain/ports/Shell";
 
-export const MISE_MIN_VERSION = "2024.12.11";
+export const MISE_MIN_VERSION = "2024.11.0";
 
-// Local constants that were previously imported from non-existent modules
 const homeDir = process.env.HOME || process.env.USERPROFILE || "";
-
-// Default dev config structure
-const devConfig = {
-  miseGlobalConfig: {
-    tools: {},
-    settings: {
-      trusted_config_paths: [],
-      idiomatic_version_file_enable_tools: [],
-    },
-  },
-};
 
 /**
  * Mise tools service for version checking and management
@@ -43,14 +25,10 @@ export interface MiseToolsService {
   setupGlobalConfig(): Effect.Effect<void, UnknownError>;
 }
 
-export class MiseToolsLive implements MiseToolsService {
-  constructor(
-    private shell: Shell,
-    private logger: Logger,
-    private filesystem: FileSystem,
-  ) {}
-
-  private compareVersions = (version1: string, version2: string): number => {
+// Factory function that creates MiseToolsService with dependencies
+export const makeMiseToolsLive = (shell: Shell, logger: Logger, filesystem: FileSystem): MiseToolsService => {
+  // Helper function for version comparison
+  const compareVersions = (version1: string, version2: string): number => {
     const v1Parts = version1.split(".").map(Number);
     const v2Parts = version2.split(".").map(Number);
 
@@ -69,8 +47,9 @@ export class MiseToolsLive implements MiseToolsService {
     return 0;
   };
 
-  getCurrentVersion(): Effect.Effect<string | null, UnknownError> {
-    return this.shell.exec("mise", ["--version"]).pipe(
+  // Individual functions implementing the service methods
+  const getCurrentVersion = (): Effect.Effect<string | null, UnknownError> =>
+    shell.exec("mise", ["--version"]).pipe(
       Effect.map((result) => {
         if (result.exitCode === 0 && result.stdout) {
           const output = result.stdout.trim();
@@ -82,153 +61,150 @@ export class MiseToolsLive implements MiseToolsService {
       }),
       Effect.catchAll(() => Effect.succeed(null)),
     );
-  }
 
-  checkVersion(): Effect.Effect<{ isValid: boolean; currentVersion: string | null }, UnknownError> {
-    return this.getCurrentVersion().pipe(
+  const checkVersion = (): Effect.Effect<{ isValid: boolean; currentVersion: string | null }, UnknownError> =>
+    getCurrentVersion().pipe(
       Effect.map((currentVersion) => {
         if (!currentVersion) {
           return { isValid: false, currentVersion: null };
         }
 
-        const comparison = this.compareVersions(currentVersion, MISE_MIN_VERSION);
+        const comparison = compareVersions(currentVersion, MISE_MIN_VERSION);
         return {
           isValid: comparison >= 0,
           currentVersion,
         };
       }),
     );
-  }
 
-  performUpgrade(): Effect.Effect<boolean, UnknownError> {
-    return Effect.gen(
-      function* (this: MiseToolsLive) {
-        yield* this.logger.info("⏳ Updating mise to latest version...");
+  const performUpgrade = (): Effect.Effect<boolean, UnknownError> =>
+    Effect.gen(function* () {
+      yield* logger.info("⏳ Updating mise to latest version...");
 
-        const result = yield* this.shell.exec("mise", ["self-update"]);
+      const result = yield* shell.exec("mise", ["self-update"]);
 
-        if (result.exitCode === 0) {
-          yield* this.logger.success("✅ Mise updated successfully");
-          return true;
-        } else {
-          yield* this.logger.error(`❌ Mise update failed with exit code: ${result.exitCode}`);
-          return false;
-        }
-      }.bind(this),
-    );
-  }
+      if (result.exitCode === 0) {
+        yield* logger.success("✅ Mise updated successfully");
+        return true;
+      } else {
+        yield* logger.error(`❌ Mise update failed with exit code: ${result.exitCode}`);
+        return false;
+      }
+    });
 
-  setupGlobalConfig(): Effect.Effect<void, UnknownError> {
-    return Effect.gen(
-      function* (this: MiseToolsLive) {
-        yield* this.logger.info("🔧 Setting up mise global configuration...");
+  const setupGlobalConfig = (): Effect.Effect<void, UnknownError> =>
+    Effect.gen(function* () {
+      yield* logger.info("🔧 Setting up mise global configuration...");
 
-        const miseConfigDir = path.join(homeDir, ".config", "mise");
-        const miseConfigFile = path.join(miseConfigDir, "config.toml");
+      const miseConfigDir = path.join(homeDir, ".config", "mise");
+      const miseConfigFile = path.join(miseConfigDir, "config.toml");
 
-        // Create config directory if it doesn't exist
-        const configDirExists = yield* this.filesystem.exists(miseConfigDir);
-        if (!configDirExists) {
-          yield* this.logger.info("   📂 Creating mise config directory...");
-          yield* this.filesystem.mkdir(miseConfigDir, true).pipe(
-            Effect.mapError((error) => {
-              switch (error._tag) {
-                case "FileSystemError":
-                  return unknownError(`Failed to create mise config directory: ${error.reason}`);
-                case "UnknownError":
-                  return unknownError(`Failed to create mise config directory: ${String(error.reason)}`);
-                default:
-                  return unknownError(`Failed to create mise config directory: ${error}`);
-              }
-            }),
-          );
-        }
-
-        // Write mise global config
-        const config = devConfig.miseGlobalConfig;
-        const tomlContent = stringify(config);
-
-        yield* this.filesystem.writeFile(miseConfigFile, tomlContent).pipe(
+      // Create config directory if it doesn't exist
+      const configDirExists = yield* filesystem.exists(miseConfigDir);
+      if (!configDirExists) {
+        yield* logger.info("   📂 Creating mise config directory...");
+        yield* filesystem.mkdir(miseConfigDir, true).pipe(
           Effect.mapError((error) => {
             switch (error._tag) {
               case "FileSystemError":
-                return unknownError(`Failed to write mise config: ${error.reason}`);
+                return unknownError(`Failed to create mise config directory: ${error.reason}`);
               case "UnknownError":
-                return unknownError(`Failed to write mise config: ${String(error.reason)}`);
+                return unknownError(`Failed to create mise config directory: ${String(error.reason)}`);
               default:
-                return unknownError(`Failed to write mise config: ${error}`);
+                return unknownError(`Failed to create mise config directory: ${error}`);
             }
           }),
         );
-        yield* this.logger.info("   ✅ Mise global config ready");
-      }.bind(this),
-    );
-  }
+      }
 
-  ensureVersionOrUpgrade(): Effect.Effect<void, ExternalToolError | UnknownError> {
-    return Effect.gen(
-      function* (this: MiseToolsLive) {
-        const { isValid, currentVersion } = yield* this.checkVersion();
+      // Write mise global config
+      const config = devConfig.miseGlobalConfig;
+      const tomlContent = stringify(config);
 
-        if (isValid) {
-          return;
-        }
-
-        if (currentVersion) {
-          yield* this.logger.warn(`⚠️  Mise version ${currentVersion} is older than required ${MISE_MIN_VERSION}`);
-        } else {
-          yield* this.logger.warn(`⚠️  Unable to determine mise version`);
-        }
-
-        yield* this.logger.info(`🚀 Starting mise upgrade...`);
-
-        const updateSuccess = yield* this.performUpgrade();
-        if (!updateSuccess) {
-          yield* this.logger.error(`❌ Failed to update mise to required version`);
-          yield* this.logger.error(`💡 Try manually updating mise: mise self-update`);
-          return yield* Effect.fail(
-            externalToolError("Failed to update mise", {
-              tool: "mise",
-              exitCode: 1,
-              stderr: `Required version: ${MISE_MIN_VERSION}, Current: ${currentVersion}`,
-            }),
-          );
-        }
-
-        // Verify upgrade
-        const { isValid: isValidAfterUpgrade, currentVersion: versionAfterUpgrade } = yield* this.checkVersion();
-        if (!isValidAfterUpgrade) {
-          yield* this.logger.error(`❌ Mise upgrade completed but version still doesn't meet requirement`);
-          if (versionAfterUpgrade) {
-            yield* this.logger.error(`   Current: ${versionAfterUpgrade}, Required: ${MISE_MIN_VERSION}`);
+      yield* filesystem.writeFile(miseConfigFile, tomlContent).pipe(
+        Effect.mapError((error) => {
+          switch (error._tag) {
+            case "FileSystemError":
+              return unknownError(`Failed to write mise config: ${error.reason}`);
+            case "UnknownError":
+              return unknownError(`Failed to write mise config: ${String(error.reason)}`);
+            default:
+              return unknownError(`Failed to write mise config: ${error}`);
           }
-          return yield* Effect.fail(
-            externalToolError("Mise upgrade failed", {
-              tool: "mise",
-              exitCode: 1,
-              stderr: `Required: ${MISE_MIN_VERSION}, Got: ${versionAfterUpgrade}`,
-            }),
-          );
-        }
+        }),
+      );
+      yield* logger.info("   ✅ Mise global config ready");
+    });
 
+  const ensureVersionOrUpgrade = (): Effect.Effect<void, ExternalToolError | UnknownError> =>
+    Effect.gen(function* () {
+      const { isValid, currentVersion } = yield* checkVersion();
+
+      if (isValid) {
+        return;
+      }
+
+      if (currentVersion) {
+        yield* logger.warn(`⚠️  Mise version ${currentVersion} is older than required ${MISE_MIN_VERSION}`);
+      } else {
+        yield* logger.warn(`⚠️  Unable to determine mise version`);
+      }
+
+      yield* logger.info(`🚀 Starting mise upgrade...`);
+
+      const updateSuccess = yield* performUpgrade();
+      if (!updateSuccess) {
+        yield* logger.error(`❌ Failed to update mise to required version`);
+        yield* logger.error(`💡 Try manually updating mise: mise self-update`);
+        return yield* Effect.fail(
+          externalToolError("Failed to update mise", {
+            tool: "mise",
+            exitCode: 1,
+            stderr: `Required version: ${MISE_MIN_VERSION}, Current: ${currentVersion}`,
+          }),
+        );
+      }
+
+      // Verify upgrade
+      const { isValid: isValidAfterUpgrade, currentVersion: versionAfterUpgrade } = yield* checkVersion();
+      if (!isValidAfterUpgrade) {
+        yield* logger.error(`❌ Mise upgrade completed but version still doesn't meet requirement`);
         if (versionAfterUpgrade) {
-          yield* this.logger.success(`✨ Mise successfully upgraded to version ${versionAfterUpgrade}`);
+          yield* logger.error(`   Current: ${versionAfterUpgrade}, Required: ${MISE_MIN_VERSION}`);
         }
-      }.bind(this),
-    );
-  }
-}
+        return yield* Effect.fail(
+          externalToolError("Mise upgrade failed", {
+            tool: "mise",
+            exitCode: 1,
+            stderr: `Required: ${MISE_MIN_VERSION}, Got: ${versionAfterUpgrade}`,
+          }),
+        );
+      }
+
+      if (versionAfterUpgrade) {
+        yield* logger.success(`✨ Mise successfully upgraded to version ${versionAfterUpgrade}`);
+      }
+    });
+
+  return {
+    getCurrentVersion,
+    checkVersion,
+    performUpgrade,
+    ensureVersionOrUpgrade,
+    setupGlobalConfig,
+  };
+};
 
 // Service tag for Effect Context system
 export class MiseToolsServiceTag extends Context.Tag("MiseToolsService")<MiseToolsServiceTag, MiseToolsService>() {}
 
-// Effect Layer for dependency injection
+// Effect Layer for dependency injection using factory function
 export const MiseToolsLiveLayer = Layer.effect(
   MiseToolsServiceTag,
   Effect.gen(function* () {
     const shell = yield* ShellService;
     const logger = yield* LoggerService;
     const filesystem = yield* FileSystemService;
-    return new MiseToolsLive(shell, logger, filesystem);
+    return makeMiseToolsLive(shell, logger, filesystem);
   }),
 );

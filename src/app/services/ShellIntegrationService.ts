@@ -20,67 +20,66 @@ export interface ShellIntegrationService {
   ): Effect.Effect<void, ConfigError | UnknownError, FileSystemService | PathServiceTag>;
 }
 
-export class ShellIntegrationServiceImpl implements ShellIntegrationService {
-  handleCdToPath(
-    targetPath: string,
-  ): Effect.Effect<void, ConfigError | UnknownError, FileSystemService | PathServiceTag | ShellService> {
-    return Effect.gen(function* () {
-      const pathService = yield* PathServiceTag;
-      const fileSystem = yield* FileSystemService;
-      const shell = yield* ShellService;
+// Individual functions implementing the service methods
+const handleCdToPath = (targetPath: string) =>
+  Effect.gen(function* () {
+    const pathService = yield* PathServiceTag;
+    const fileSystem = yield* FileSystemService;
+    const shell = yield* ShellService;
 
-      let absolutePath: string;
-      const cleanedTargetPath = targetPath.replace(/\/$/, ""); // Remove trailing slash
+    let absolutePath: string;
+    const cleanedTargetPath = targetPath.replace(/\/$/, ""); // Remove trailing slash
 
-      if (path.isAbsolute(cleanedTargetPath)) {
-        absolutePath = cleanedTargetPath;
-      } else {
-        absolutePath = path.join(pathService.baseSearchDir, cleanedTargetPath);
-      }
+    if (path.isAbsolute(cleanedTargetPath)) {
+      absolutePath = cleanedTargetPath;
+    } else {
+      absolutePath = path.join(pathService.baseSearchDir, cleanedTargetPath);
+    }
 
-      // Validate path exists before attempting to cd
-      const exists = yield* fileSystem.exists(absolutePath);
-      if (!exists) {
-        return yield* Effect.fail(new ConfigError({ reason: `Directory does not exist: ${absolutePath}` }));
-      }
+    // Validate path exists before attempting to cd
+    const exists = yield* fileSystem.exists(absolutePath);
+    if (!exists) {
+      return yield* Effect.fail(new ConfigError({ reason: `Directory does not exist: ${absolutePath}` }));
+    }
 
-      // Use Shell port for directory change
-      yield* shell.changeDirectory(absolutePath);
-    });
-  }
+    // Use Shell port for directory change
+    yield* shell.changeDirectory(absolutePath);
+  });
 
-  handleCdToPathLegacy(
-    targetPath: string,
-  ): Effect.Effect<void, ConfigError | UnknownError, FileSystemService | PathServiceTag> {
-    return Effect.gen(function* () {
-      const pathService = yield* PathServiceTag;
-      const fileSystem = yield* FileSystemService;
+const handleCdToPathLegacy = (targetPath: string) =>
+  Effect.gen(function* () {
+    const pathService = yield* PathServiceTag;
+    const fileSystem = yield* FileSystemService;
 
-      let absolutePath: string;
-      const cleanedTargetPath = targetPath.replace(/\/$/, ""); // Remove trailing slash
+    let absolutePath: string;
+    const cleanedTargetPath = targetPath.replace(/\/$/, ""); // Remove trailing slash
 
-      if (path.isAbsolute(cleanedTargetPath)) {
-        absolutePath = cleanedTargetPath;
-      } else {
-        absolutePath = path.join(pathService.baseSearchDir, cleanedTargetPath);
-      }
+    if (path.isAbsolute(cleanedTargetPath)) {
+      absolutePath = cleanedTargetPath;
+    } else {
+      absolutePath = path.join(pathService.baseSearchDir, cleanedTargetPath);
+    }
 
-      // Validate path exists before attempting to cd
-      const exists = yield* fileSystem.exists(absolutePath);
-      if (!exists) {
-        return yield* Effect.fail(new ConfigError({ reason: `Directory does not exist: ${absolutePath}` }));
-      }
+    // Validate path exists before attempting to cd
+    const exists = yield* fileSystem.exists(absolutePath);
+    if (!exists) {
+      return yield* Effect.fail(new ConfigError({ reason: `Directory does not exist: ${absolutePath}` }));
+    }
 
-      // Special format for the shell wrapper to interpret: "CD:<path>"
-      // Use Effect.sync to wrap console output in Effect context
-      yield* Effect.sync(() => console.log(`CD:${absolutePath}`));
+    // Special format for the shell wrapper to interpret: "CD:<path>"
+    // Use Effect.sync to wrap console output in Effect context
+    yield* Effect.sync(() => console.log(`CD:${absolutePath}`));
 
-      // Return successfully - the shell wrapper should handle this output
-      // and the Effect runtime will handle proper process exit codes
-      return yield* Effect.succeed(undefined);
-    });
-  }
-}
+    // Return successfully - the shell wrapper should handle this output
+    // and the Effect runtime will handle proper process exit codes
+    return yield* Effect.succeed(undefined);
+  });
+
+// Functional service implementation as plain object
+export const ShellIntegrationServiceImpl: ShellIntegrationService = {
+  handleCdToPath: handleCdToPath,
+  handleCdToPathLegacy: handleCdToPathLegacy,
+};
 
 // Service tag for Effect Context system
 export class ShellIntegrationServiceTag extends Context.Tag("ShellIntegrationService")<
@@ -88,5 +87,5 @@ export class ShellIntegrationServiceTag extends Context.Tag("ShellIntegrationSer
   ShellIntegrationService
 >() {}
 
-// Layer that provides ShellIntegrationService
-export const ShellIntegrationServiceLive = Layer.succeed(ShellIntegrationServiceTag, new ShellIntegrationServiceImpl());
+// Layer that provides ShellIntegrationService (no `new` keyword)
+export const ShellIntegrationServiceLive = Layer.succeed(ShellIntegrationServiceTag, ShellIntegrationServiceImpl);

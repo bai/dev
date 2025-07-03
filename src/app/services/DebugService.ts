@@ -6,15 +6,17 @@ import { DebugServiceTag, type DebugService } from "../../domain/ports/DebugServ
  * Debug service implementation for checking CLI configuration
  * This is the concrete implementation of the DebugService port
  */
-export class DebugServiceImpl implements DebugService {
-  get isDebugMode(): Effect.Effect<boolean> {
-    return Effect.sync(() => process.env.DEV_CLI_DEBUG === "1");
-  }
 
-  get isStoreEnabled(): Effect.Effect<boolean> {
-    return Effect.sync(() => process.env.DEV_CLI_STORE !== "0");
-  }
-}
+// Individual effect functions
+const isDebugMode = Effect.sync(() => process.env.DEV_CLI_DEBUG === "1");
+
+const isStoreEnabled = Effect.sync(() => process.env.DEV_CLI_STORE !== "0");
+
+// Plain object implementation
+export const DebugServiceImpl: DebugService = {
+  isDebugMode,
+  isStoreEnabled,
+};
 
 // Layer that provides DebugService
-export const DebugServiceLive = Layer.succeed(DebugServiceTag, new DebugServiceImpl());
+export const DebugServiceLive = Layer.succeed(DebugServiceTag, DebugServiceImpl);

@@ -5,79 +5,74 @@ import type { Repository } from "../../domain/models";
 import { GitService, type Git } from "../../domain/ports/Git";
 import { ShellService, type Shell } from "../../domain/ports/Shell";
 
-export class GitLive implements Git {
-  constructor(private shell: Shell) {}
+// Factory function to create Git implementation
+export const makeGitLive = (shell: Shell): Git => ({
+  cloneRepositoryToPath: (
+    repository: Repository,
+    destinationPath: string,
+  ): Effect.Effect<void, GitError | UnknownError> =>
+    Effect.scoped(
+      Effect.gen(function* () {
+        // Add cleanup finalizer for failed clone operations
+        yield* Effect.addFinalizer(() =>
+          Effect.sync(() => {
+            // Log cleanup attempt - actual cleanup would depend on filesystem service
+            console.debug(`Git clone operation finalizer called for ${destinationPath}`);
+          }),
+        );
 
-  cloneRepositoryToPath(repository: Repository, destinationPath: string): Effect.Effect<void, GitError | UnknownError> {
-    return Effect.scoped(
-      Effect.gen(
-        function* (this: GitLive) {
-          // Add cleanup finalizer for failed clone operations
-          yield* Effect.addFinalizer(() =>
-            Effect.sync(() => {
-              // Log cleanup attempt - actual cleanup would depend on filesystem service
-              console.debug(`Git clone operation finalizer called for ${destinationPath}`);
-            }),
-          );
+        const result = yield* shell.exec("git", ["clone", repository.cloneUrl, destinationPath]);
 
-          const result = yield* this.shell.exec("git", ["clone", repository.cloneUrl, destinationPath]);
+        if (result.exitCode !== 0) {
+          return yield* Effect.fail(gitError(`Failed to clone repository: ${result.stderr}`));
+        }
 
-          if (result.exitCode !== 0) {
-            return yield* Effect.fail(gitError(`Failed to clone repository: ${result.stderr}`));
-          }
+        return yield* Effect.void;
+      }),
+    ),
 
-          return yield* Effect.void;
-        }.bind(this),
-      ),
-    );
-  }
-
-  fetchLatestUpdates(repositoryPath: string): Effect.Effect<void, GitError | UnknownError> {
-    return this.shell.exec("git", ["fetch"], { cwd: repositoryPath }).pipe(
+  fetchLatestUpdates: (repositoryPath: string): Effect.Effect<void, GitError | UnknownError> =>
+    shell.exec("git", ["fetch"], { cwd: repositoryPath }).pipe(
       Effect.flatMap((result) => {
         if (result.exitCode !== 0) {
           return Effect.fail(gitError(`Failed to fetch: ${result.stderr}`));
         }
         return Effect.void;
       }),
-    );
-  }
+    ),
 
-  isGitRepository(path: string): Effect.Effect<boolean> {
-    return this.shell.exec("git", ["rev-parse", "--git-dir"], { cwd: path }).pipe(
+  isGitRepository: (path: string): Effect.Effect<boolean> =>
+    shell.exec("git", ["rev-parse", "--git-dir"], { cwd: path }).pipe(
       Effect.map((result) => result.exitCode === 0),
       Effect.catchAll(() => Effect.succeed(false)),
-    );
-  }
+    ),
 
-  getCurrentCommitSha(repositoryPath?: string): Effect.Effect<string, GitError | UnknownError> {
-    return this.shell.exec("git", ["rev-parse", "HEAD"], { cwd: repositoryPath }).pipe(
+  getCurrentCommitSha: (repositoryPath?: string): Effect.Effect<string, GitError | UnknownError> =>
+    shell.exec("git", ["rev-parse", "HEAD"], { cwd: repositoryPath }).pipe(
       Effect.flatMap((result) => {
         if (result.exitCode !== 0) {
           return Effect.fail(gitError(`Failed to get current commit SHA: ${result.stderr}`));
         }
         return Effect.succeed(result.stdout);
       }),
-    );
-  }
+    ),
 
-  getRemoteOriginUrl(repositoryPath: string): Effect.Effect<string, GitError | UnknownError> {
-    return this.shell.exec("git", ["config", "--get", "remote.origin.url"], { cwd: repositoryPath }).pipe(
+  getRemoteOriginUrl: (repositoryPath: string): Effect.Effect<string, GitError | UnknownError> =>
+    shell.exec("git", ["config", "--get", "remote.origin.url"], { cwd: repositoryPath }).pipe(
       Effect.flatMap((result) => {
         if (result.exitCode !== 0) {
           return Effect.fail(gitError(`Failed to get remote URL: ${result.stderr}`));
         }
         return Effect.succeed(result.stdout);
       }),
-    );
-  }
-}
+    ),
+});
 
 // Effect Layer for dependency injection
 export const GitLiveLayer = Layer.effect(
   GitService,
   Effect.gen(function* () {
     const shell = yield* ShellService;
-    return new GitLive(shell);
+    return makeGitLive(shell);
   }),
 );

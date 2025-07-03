@@ -4,14 +4,13 @@ import { networkError, unknownError, type NetworkError, type UnknownError } from
 import { FileSystemService, type FileSystem } from "../../domain/ports/FileSystem";
 import { NetworkService, type HttpResponse, type Network } from "../../domain/ports/Network";
 
-export class NetworkLive implements Network {
-  constructor(private fileSystem: FileSystem) {}
-
-  get(
+// Factory function to create Network implementation
+export const makeNetworkLive = (fileSystem: FileSystem): Network => ({
+  get: (
     url: string,
     options: { headers?: Record<string, string> } = {},
-  ): Effect.Effect<HttpResponse, NetworkError | UnknownError> {
-    return Effect.tryPromise({
+  ): Effect.Effect<HttpResponse, NetworkError | UnknownError> =>
+    Effect.tryPromise({
       try: async () => {
         const response = await fetch(url, {
           method: "GET",
@@ -33,12 +32,10 @@ export class NetworkLive implements Network {
         };
       },
       catch: (error) => networkError(`HTTP request failed: ${error}`),
-    });
-  }
+    }),
 
-  downloadFile(url: string, destinationPath: string): Effect.Effect<void, NetworkError | UnknownError> {
-    const fileSystem = this.fileSystem;
-    return Effect.gen(function* () {
+  downloadFile: (url: string, destinationPath: string): Effect.Effect<void, NetworkError | UnknownError> =>
+    Effect.gen(function* () {
       const response = yield* Effect.tryPromise({
         try: () => fetch(url),
         catch: (error) => networkError(`Failed to fetch ${url}: ${error}`),
@@ -65,25 +62,23 @@ export class NetworkLive implements Network {
           }
         }),
       );
-    });
-  }
+    }),
 
-  checkConnectivity(url: string): Effect.Effect<boolean> {
-    return Effect.tryPromise({
+  checkConnectivity: (url: string): Effect.Effect<boolean> =>
+    Effect.tryPromise({
       try: async () => {
         const response = await fetch(url, { method: "HEAD" });
         return response.ok;
       },
       catch: () => false,
-    }).pipe(Effect.catchAll(() => Effect.succeed(false)));
-  }
-}
+    }).pipe(Effect.catchAll(() => Effect.succeed(false))),
+});
 
 // Effect Layer for dependency injection
 export const NetworkLiveLayer = Layer.effect(
   NetworkService,
   Effect.gen(function* () {
     const fileSystem = yield* FileSystemService;
-    return new NetworkLive(fileSystem);
+    return makeNetworkLive(fileSystem);
   }),
 );

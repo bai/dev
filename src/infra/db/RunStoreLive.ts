@@ -11,31 +11,28 @@ import { FileSystemService } from "../../domain/ports/FileSystem";
 import { RunStoreService, type RunStore } from "../../domain/ports/RunStore";
 import { PathServiceTag } from "../../domain/services/PathService";
 
-export class RunStoreLive implements RunStore {
-  constructor(
-    private readonly db: ReturnType<typeof drizzle>,
-    private readonly sqlite: Database,
-  ) {}
+// Extended RunStore interface that includes close method for resource management
+interface RunStoreWithClose extends RunStore {
+  close(): Effect.Effect<void>;
+}
 
-  /**
-   * Close the database connection for graceful shutdown
-   */
-  close(): Effect.Effect<void> {
-    const sqlite = this.sqlite;
-    return Effect.gen(function* () {
+// Factory function that creates RunStore with database dependencies
+export const makeRunStoreLive = (db: ReturnType<typeof drizzle>, sqlite: Database): RunStoreWithClose => {
+  // Individual functions implementing the service methods
+  const close = (): Effect.Effect<void> =>
+    Effect.gen(function* () {
       yield* Effect.logInfo("Closing database connection...");
       yield* Effect.sync(() => {
         sqlite.close();
       });
       yield* Effect.logDebug("Database connection closed");
     });
-  }
 
-  record(run: Omit<CommandRun, "id" | "duration_ms">): Effect.Effect<string, ConfigError | UnknownError> {
-    return Effect.tryPromise({
+  const record = (run: Omit<CommandRun, "id" | "duration_ms">): Effect.Effect<string, ConfigError | UnknownError> =>
+    Effect.tryPromise({
       try: async () => {
         const id = crypto.randomUUID();
-        await this.db.insert(runs).values({
+        await db.insert(runs).values({
           id,
           cli_version: run.cli_version,
           command_name: run.command_name,
@@ -49,12 +46,11 @@ export class RunStoreLive implements RunStore {
       },
       catch: (error) => configError(`Failed to record command run: ${error}`),
     });
-  }
 
-  complete(id: string, exitCode: number, finishedAt: Date): Effect.Effect<void, ConfigError | UnknownError> {
-    return Effect.tryPromise({
+  const complete = (id: string, exitCode: number, finishedAt: Date): Effect.Effect<void, ConfigError | UnknownError> =>
+    Effect.tryPromise({
       try: async () => {
-        await this.db
+        await db
           .update(runs)
           .set({
             exit_code: exitCode,
@@ -64,24 +60,22 @@ export class RunStoreLive implements RunStore {
       },
       catch: (error) => configError(`Failed to complete command run: ${error}`),
     });
-  }
 
-  prune(keepDays: number): Effect.Effect<void, ConfigError | UnknownError> {
-    return Effect.tryPromise({
+  const prune = (keepDays: number): Effect.Effect<void, ConfigError | UnknownError> =>
+    Effect.tryPromise({
       try: async () => {
         const cutoffDate = new Date();
         cutoffDate.setDate(cutoffDate.getDate() - keepDays);
 
-        await this.db.delete(runs).where(lt(runs.started_at, cutoffDate));
+        await db.delete(runs).where(lt(runs.started_at, cutoffDate));
       },
       catch: (error) => configError(`Failed to prune old runs: ${error}`),
     });
-  }
 
-  getRecentRuns(limit: number): Effect.Effect<CommandRun[], ConfigError | UnknownError> {
-    return Effect.tryPromise({
+  const getRecentRuns = (limit: number): Effect.Effect<CommandRun[], ConfigError | UnknownError> =>
+    Effect.tryPromise({
       try: async () => {
-        const result = await this.db.select().from(runs).orderBy(desc(runs.started_at)).limit(limit);
+        const result = await db.select().from(runs).orderBy(desc(runs.started_at)).limit(limit);
 
         return result.map((row) => ({
           id: row.id,
@@ -97,17 +91,13 @@ export class RunStoreLive implements RunStore {
       },
       catch: (error) => configError(`Failed to get recent runs: ${error}`),
     });
-  }
 
-  /**
-   * Complete any incomplete command runs for graceful shutdown
-   */
-  completeIncompleteRuns(): Effect.Effect<void, ConfigError | UnknownError> {
-    return Effect.tryPromise({
+  const completeIncompleteRuns = (): Effect.Effect<void, ConfigError | UnknownError> =>
+    Effect.tryPromise({
       try: async () => {
         const now = new Date();
         // Mark any runs that don't have a finished_at as interrupted
-        await this.db
+        await db
           .update(runs)
           .set({
             exit_code: 130, // Standard exit code for SIGINT (Ctrl+C)
@@ -117,31 +107,25 @@ export class RunStoreLive implements RunStore {
       },
       catch: (error) => configError(`Failed to complete incomplete runs: ${error}`),
     });
-  }
-}
 
-// No-op implementation when storage is disabled
-export class RunStoreNoOp implements RunStore {
-  record(): Effect.Effect<string> {
-    return Effect.succeed("noop");
-  }
+  return {
+    record,
+    complete,
+    prune,
+    getRecentRuns,
+    completeIncompleteRuns,
+    close,
+  };
+};
 
-  complete(): Effect.Effect<void> {
-    return Effect.void;
-  }
-
-  prune(): Effect.Effect<void> {
-    return Effect.void;
-  }
-
-  getRecentRuns(): Effect.Effect<CommandRun[]> {
-    return Effect.succeed([]);
-  }
-
-  completeIncompleteRuns(): Effect.Effect<void> {
-    return Effect.void;
-  }
-}
+// No-op implementation when storage is disabled as plain object
+export const RunStoreNoOp: RunStore = {
+  record: () => Effect.succeed("noop"),
+  complete: () => Effect.void,
+  prune: () => Effect.void,
+  getRecentRuns: () => Effect.succeed([]),
+  completeIncompleteRuns: () => Effect.void,
+};
 
 /**
  * Create and initialize database with migrations
@@ -169,7 +153,7 @@ const createDatabase = (dbPath: string) =>
 
     yield* Effect.logDebug(`Database initialized at ${dbPath}`);
 
-    return new RunStoreLive(drizzleDb, sqlite);
+    return makeRunStoreLive(drizzleDb, sqlite);
   });
 
 // Effect Layer for dependency injection with proper resource management
@@ -178,7 +162,7 @@ export const RunStoreLiveLayer = Layer.scoped(
   Effect.gen(function* () {
     // Check if storage is disabled
     if (process.env.DEV_CLI_STORE === "0") {
-      return new RunStoreNoOp();
+      return RunStoreNoOp;
     }
 
     const pathService = yield* PathServiceTag;

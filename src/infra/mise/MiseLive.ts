@@ -4,11 +4,10 @@ import { unknownError, type UnknownError } from "../../domain/errors";
 import { MiseService, type Mise, type MiseInfo } from "../../domain/ports/Mise";
 import { ShellService, type Shell } from "../../domain/ports/Shell";
 
-export class MiseLive implements Mise {
-  constructor(private shell: Shell) {}
-
-  checkInstallation(): Effect.Effect<MiseInfo, UnknownError> {
-    return this.shell.exec("mise", ["--version"]).pipe(
+// Factory function to create Mise implementation
+export const makeMiseLive = (shell: Shell): Mise => ({
+  checkInstallation: (): Effect.Effect<MiseInfo, UnknownError> =>
+    shell.exec("mise", ["--version"]).pipe(
       Effect.flatMap((result) => {
         if (result.exitCode !== 0) {
           return Effect.fail(unknownError("Mise is not installed"));
@@ -17,7 +16,7 @@ export class MiseLive implements Mise {
         const version = result.stdout.split(" ")[1] || "unknown";
 
         // Get runtime versions
-        return this.shell.exec("mise", ["current"]).pipe(
+        return shell.exec("mise", ["current"]).pipe(
           Effect.map((currentResult) => {
             const runtimeVersions: Record<string, string> = {};
 
@@ -44,11 +43,10 @@ export class MiseLive implements Mise {
           ),
         );
       }),
-    );
-  }
+    ),
 
-  install(): Effect.Effect<void, UnknownError> {
-    return this.shell
+  install: (): Effect.Effect<void, UnknownError> =>
+    shell
       .exec("curl", [
         "-sSfL",
         "https://mise.run",
@@ -62,33 +60,30 @@ export class MiseLive implements Mise {
           }
           return Effect.void;
         }),
-      );
-  }
+      ),
 
-  installTools(cwd?: string): Effect.Effect<void, UnknownError> {
-    return this.shell.exec("mise", ["install"], { cwd }).pipe(
+  installTools: (cwd?: string): Effect.Effect<void, UnknownError> =>
+    shell.exec("mise", ["install"], { cwd }).pipe(
       Effect.flatMap((result) => {
         if (result.exitCode !== 0) {
           return Effect.fail(unknownError(`Failed to install tools: ${result.stderr}`));
         }
         return Effect.void;
       }),
-    );
-  }
+    ),
 
-  runTask(taskName: string, cwd?: string): Effect.Effect<void, UnknownError> {
-    return this.shell.execInteractive("mise", ["run", taskName], { cwd }).pipe(
+  runTask: (taskName: string, cwd?: string): Effect.Effect<void, UnknownError> =>
+    shell.execInteractive("mise", ["run", taskName], { cwd }).pipe(
       Effect.flatMap((exitCode) => {
         if (exitCode !== 0) {
           return Effect.fail(unknownError(`Task '${taskName}' failed with exit code ${exitCode}`));
         }
         return Effect.void;
       }),
-    );
-  }
+    ),
 
-  getTasks(cwd?: string): Effect.Effect<string[], UnknownError> {
-    return this.shell.exec("mise", ["tasks", "--list"], { cwd }).pipe(
+  getTasks: (cwd?: string): Effect.Effect<string[], UnknownError> =>
+    shell.exec("mise", ["tasks", "--list"], { cwd }).pipe(
       Effect.flatMap((result) => {
         if (result.exitCode !== 0) {
           return Effect.fail(unknownError(`Failed to get tasks: ${result.stderr}`));
@@ -103,15 +98,14 @@ export class MiseLive implements Mise {
 
         return Effect.succeed(tasks);
       }),
-    );
-  }
-}
+    ),
+});
 
 // Effect Layer for dependency injection
 export const MiseLiveLayer = Layer.effect(
   MiseService,
   Effect.gen(function* () {
     const shell = yield* ShellService;
-    return new MiseLive(shell);
+    return makeMiseLive(shell);
   }),
 );

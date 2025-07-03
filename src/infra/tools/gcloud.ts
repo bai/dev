@@ -25,14 +25,10 @@ export interface GcloudToolsService {
   setupConfig(): Effect.Effect<void, UnknownError>;
 }
 
-export class GcloudToolsLive implements GcloudToolsService {
-  constructor(
-    private shell: Shell,
-    private logger: Logger,
-    private filesystem: FileSystem,
-  ) {}
-
-  private compareVersions = (version1: string, version2: string): number => {
+// Factory function that creates GcloudToolsService with dependencies
+export const makeGcloudToolsLive = (shell: Shell, logger: Logger, filesystem: FileSystem): GcloudToolsService => {
+  // Helper function for version comparison
+  const compareVersions = (version1: string, version2: string): number => {
     const v1Parts = version1.split(".").map(Number);
     const v2Parts = version2.split(".").map(Number);
 
@@ -51,8 +47,9 @@ export class GcloudToolsLive implements GcloudToolsService {
     return 0;
   };
 
-  getCurrentVersion(): Effect.Effect<string | null, UnknownError> {
-    return this.shell.exec("gcloud", ["version"]).pipe(
+  // Individual functions implementing the service methods
+  const getCurrentVersion = (): Effect.Effect<string | null, UnknownError> =>
+    shell.exec("gcloud", ["version"]).pipe(
       Effect.map((result) => {
         if (result.exitCode === 0 && result.stdout) {
           const output = result.stdout.trim();
@@ -69,125 +66,122 @@ export class GcloudToolsLive implements GcloudToolsService {
       }),
       Effect.catchAll(() => Effect.succeed(null)),
     );
-  }
 
-  checkVersion(): Effect.Effect<{ isValid: boolean; currentVersion: string | null }, UnknownError> {
-    return this.getCurrentVersion().pipe(
+  const checkVersion = (): Effect.Effect<{ isValid: boolean; currentVersion: string | null }, UnknownError> =>
+    getCurrentVersion().pipe(
       Effect.map((currentVersion) => {
         if (!currentVersion) {
           return { isValid: false, currentVersion: null };
         }
 
-        const comparison = this.compareVersions(currentVersion, GCLOUD_MIN_VERSION);
+        const comparison = compareVersions(currentVersion, GCLOUD_MIN_VERSION);
         return {
           isValid: comparison >= 0,
           currentVersion,
         };
       }),
     );
-  }
 
-  performUpgrade(): Effect.Effect<boolean, UnknownError> {
-    return Effect.gen(
-      function* (this: GcloudToolsLive) {
-        yield* this.logger.info("⏳ Updating gcloud via mise...");
+  const performUpgrade = (): Effect.Effect<boolean, UnknownError> =>
+    Effect.gen(function* () {
+      yield* logger.info("⏳ Updating gcloud via mise...");
 
-        const result = yield* this.shell.exec("mise", ["install", "gcloud@latest"]);
+      const result = yield* shell.exec("mise", ["install", "gcloud@latest"]);
 
-        if (result.exitCode === 0) {
-          yield* this.logger.success("✅ Gcloud updated successfully via mise");
-          return true;
-        } else {
-          yield* this.logger.error(`❌ Gcloud update failed with exit code: ${result.exitCode}`);
-          return false;
-        }
-      }.bind(this),
-    );
-  }
+      if (result.exitCode === 0) {
+        yield* logger.success("✅ Gcloud updated successfully via mise");
+        return true;
+      } else {
+        yield* logger.error(`❌ Gcloud update failed with exit code: ${result.exitCode}`);
+        return false;
+      }
+    });
 
-  setupConfig(): Effect.Effect<void, UnknownError> {
-    return Effect.gen(
-      function* (this: GcloudToolsLive) {
-        yield* this.logger.info("☁️  Setting up Google Cloud configuration...");
+  const setupConfig = (): Effect.Effect<void, UnknownError> =>
+    Effect.gen(function* () {
+      yield* logger.info("☁️  Setting up Google Cloud configuration...");
 
-        const homeDir = process.env.HOME || process.env.USERPROFILE || "";
-        const gcloudConfigDir = `${homeDir}/.config/gcloud`;
+      const homeDir = process.env.HOME || process.env.USERPROFILE || "";
+      const gcloudConfigDir = `${homeDir}/.config/gcloud`;
 
-        const exists = yield* this.filesystem.exists(gcloudConfigDir);
-        if (!exists) {
-          yield* this.logger.info("   📂 Creating gcloud config directory...");
-          yield* this.filesystem.mkdir(gcloudConfigDir, true).pipe(
-            Effect.mapError((error) => {
-              switch (error._tag) {
-                case "FileSystemError":
-                  return unknownError(`Failed to create directory: ${error.reason}`);
-                case "UnknownError":
-                  return unknownError(`Failed to create directory: ${String(error.reason)}`);
-                default:
-                  return unknownError(`Failed to create directory: ${error}`);
-              }
-            }),
-          );
-        }
+      const exists = yield* filesystem.exists(gcloudConfigDir);
+      if (!exists) {
+        yield* logger.info("   📂 Creating gcloud config directory...");
+        yield* filesystem.mkdir(gcloudConfigDir, true).pipe(
+          Effect.mapError((error) => {
+            switch (error._tag) {
+              case "FileSystemError":
+                return unknownError(`Failed to create directory: ${error.reason}`);
+              case "UnknownError":
+                return unknownError(`Failed to create directory: ${String(error.reason)}`);
+              default:
+                return unknownError(`Failed to create directory: ${error}`);
+            }
+          }),
+        );
+      }
 
-        yield* this.logger.info("   ✅ Google Cloud config ready");
-      }.bind(this),
-    );
-  }
+      yield* logger.info("   ✅ Google Cloud config ready");
+    });
 
-  ensureVersionOrUpgrade(): Effect.Effect<void, ExternalToolError | UnknownError> {
-    return Effect.gen(
-      function* (this: GcloudToolsLive) {
-        const { isValid, currentVersion } = yield* this.checkVersion();
+  const ensureVersionOrUpgrade = (): Effect.Effect<void, ExternalToolError | UnknownError> =>
+    Effect.gen(function* () {
+      const { isValid, currentVersion } = yield* checkVersion();
 
-        if (isValid) {
-          return;
-        }
+      if (isValid) {
+        return;
+      }
 
-        if (currentVersion) {
-          yield* this.logger.warn(`⚠️  Gcloud version ${currentVersion} is older than required ${GCLOUD_MIN_VERSION}`);
-        } else {
-          yield* this.logger.warn(`⚠️  Unable to determine gcloud version`);
-        }
+      if (currentVersion) {
+        yield* logger.warn(`⚠️  Gcloud version ${currentVersion} is older than required ${GCLOUD_MIN_VERSION}`);
+      } else {
+        yield* logger.warn(`⚠️  Unable to determine gcloud version`);
+      }
 
-        yield* this.logger.info(`🚀 Starting gcloud upgrade via mise...`);
+      yield* logger.info(`🚀 Starting gcloud upgrade via mise...`);
 
-        const updateSuccess = yield* this.performUpgrade();
-        if (!updateSuccess) {
-          yield* this.logger.error(`❌ Failed to update gcloud to required version`);
-          yield* this.logger.error(`💡 Try manually installing gcloud via mise: mise install gcloud@latest`);
-          return yield* Effect.fail(
-            externalToolError("Failed to update gcloud", {
-              tool: "gcloud",
-              exitCode: 1,
-              stderr: `Required version: ${GCLOUD_MIN_VERSION}, Current: ${currentVersion}`,
-            }),
-          );
-        }
+      const updateSuccess = yield* performUpgrade();
+      if (!updateSuccess) {
+        yield* logger.error(`❌ Failed to update gcloud to required version`);
+        yield* logger.error(`💡 Try manually installing gcloud via mise: mise install gcloud@latest`);
+        return yield* Effect.fail(
+          externalToolError("Failed to update gcloud", {
+            tool: "gcloud",
+            exitCode: 1,
+            stderr: `Required version: ${GCLOUD_MIN_VERSION}, Current: ${currentVersion}`,
+          }),
+        );
+      }
 
-        // Verify upgrade
-        const { isValid: isValidAfterUpgrade, currentVersion: versionAfterUpgrade } = yield* this.checkVersion();
-        if (!isValidAfterUpgrade) {
-          yield* this.logger.error(`❌ Gcloud upgrade completed but version still doesn't meet requirement`);
-          if (versionAfterUpgrade) {
-            yield* this.logger.error(`   Current: ${versionAfterUpgrade}, Required: ${GCLOUD_MIN_VERSION}`);
-          }
-          return yield* Effect.fail(
-            externalToolError("Gcloud upgrade failed", {
-              tool: "gcloud",
-              exitCode: 1,
-              stderr: `Required: ${GCLOUD_MIN_VERSION}, Got: ${versionAfterUpgrade}`,
-            }),
-          );
-        }
-
+      // Verify upgrade
+      const { isValid: isValidAfterUpgrade, currentVersion: versionAfterUpgrade } = yield* checkVersion();
+      if (!isValidAfterUpgrade) {
+        yield* logger.error(`❌ Gcloud upgrade completed but version still doesn't meet requirement`);
         if (versionAfterUpgrade) {
-          yield* this.logger.success(`✨ Gcloud successfully upgraded to version ${versionAfterUpgrade}`);
+          yield* logger.error(`   Current: ${versionAfterUpgrade}, Required: ${GCLOUD_MIN_VERSION}`);
         }
-      }.bind(this),
-    );
-  }
-}
+        return yield* Effect.fail(
+          externalToolError("Gcloud upgrade failed", {
+            tool: "gcloud",
+            exitCode: 1,
+            stderr: `Required: ${GCLOUD_MIN_VERSION}, Got: ${versionAfterUpgrade}`,
+          }),
+        );
+      }
+
+      if (versionAfterUpgrade) {
+        yield* logger.success(`✨ Gcloud successfully upgraded to version ${versionAfterUpgrade}`);
+      }
+    });
+
+  return {
+    getCurrentVersion,
+    checkVersion,
+    performUpgrade,
+    ensureVersionOrUpgrade,
+    setupConfig,
+  };
+};
 
 // Service tag for Effect Context system
 export class GcloudToolsServiceTag extends Context.Tag("GcloudToolsService")<
@@ -195,13 +189,13 @@ export class GcloudToolsServiceTag extends Context.Tag("GcloudToolsService")<
   GcloudToolsService
 >() {}
 
-// Effect Layer for dependency injection
+// Effect Layer for dependency injection using factory function
 export const GcloudToolsLiveLayer = Layer.effect(
   GcloudToolsServiceTag,
   Effect.gen(function* () {
     const shell = yield* ShellService;
     const logger = yield* LoggerService;
     const filesystem = yield* FileSystemService;
-    return new GcloudToolsLive(shell, logger, filesystem);
+    return makeGcloudToolsLive(shell, logger, filesystem);
   }),
 );

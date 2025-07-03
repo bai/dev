@@ -18,34 +18,30 @@ export interface GitToolsService {
   ensureVersionOrUpgrade(): Effect.Effect<void, ExternalToolError | UnknownError>;
 }
 
-export class GitToolsLive implements GitToolsService {
-  constructor(
-    private shell: Shell,
-    private logger: Logger,
-    private debugService: DebugService,
-  ) {}
+// Helper function for version comparison
+const compareVersions = (version1: string, version2: string): number => {
+  const v1Parts = version1.split(".").map(Number);
+  const v2Parts = version2.split(".").map(Number);
 
-  private compareVersions = (version1: string, version2: string): number => {
-    const v1Parts = version1.split(".").map(Number);
-    const v2Parts = version2.split(".").map(Number);
+  const maxLength = Math.max(v1Parts.length, v2Parts.length);
+  while (v1Parts.length < maxLength) v1Parts.push(0);
+  while (v2Parts.length < maxLength) v2Parts.push(0);
 
-    const maxLength = Math.max(v1Parts.length, v2Parts.length);
-    while (v1Parts.length < maxLength) v1Parts.push(0);
-    while (v2Parts.length < maxLength) v2Parts.push(0);
+  for (let i = 0; i < maxLength; i++) {
+    const v1Part = v1Parts[i] ?? 0;
+    const v2Part = v2Parts[i] ?? 0;
 
-    for (let i = 0; i < maxLength; i++) {
-      const v1Part = v1Parts[i] ?? 0;
-      const v2Part = v2Parts[i] ?? 0;
+    if (v1Part < v2Part) return -1;
+    if (v1Part > v2Part) return 1;
+  }
 
-      if (v1Part < v2Part) return -1;
-      if (v1Part > v2Part) return 1;
-    }
+  return 0;
+};
 
-    return 0;
-  };
-
-  getCurrentVersion(): Effect.Effect<string | null, UnknownError> {
-    return this.shell.exec("git", ["--version"]).pipe(
+// Factory function to create GitToolsService implementation
+export const makeGitToolsLive = (shell: Shell, logger: Logger, debugService: DebugService): GitToolsService => ({
+  getCurrentVersion: (): Effect.Effect<string | null, UnknownError> =>
+    shell.exec("git", ["--version"]).pipe(
       Effect.map((result) => {
         if (result.exitCode === 0 && result.stdout) {
           const output = result.stdout.trim();
@@ -56,108 +52,102 @@ export class GitToolsLive implements GitToolsService {
         return null;
       }),
       Effect.catchAll(() => Effect.succeed(null)),
-    );
-  }
+    ),
 
-  checkVersion(): Effect.Effect<{ isValid: boolean; currentVersion: string | null }, UnknownError> {
-    return this.getCurrentVersion().pipe(
-      Effect.map((currentVersion) => {
-        if (!currentVersion) {
-          return { isValid: false, currentVersion: null };
+  checkVersion: (): Effect.Effect<{ isValid: boolean; currentVersion: string | null }, UnknownError> =>
+    Effect.gen(function* () {
+      const gitTools = makeGitToolsLive(shell, logger, debugService);
+      const currentVersion = yield* gitTools.getCurrentVersion();
+
+      if (!currentVersion) {
+        return { isValid: false, currentVersion: null };
+      }
+
+      const comparison = compareVersions(currentVersion, GIT_MIN_VERSION);
+      const isDebug = yield* debugService.isDebugMode;
+
+      if (isDebug) {
+        yield* logger.debug(
+          `Git version check: ${currentVersion} vs ${GIT_MIN_VERSION} (${comparison >= 0 ? "valid" : "invalid"})`,
+        );
+      }
+
+      return {
+        isValid: comparison >= 0,
+        currentVersion,
+      };
+    }),
+
+  performUpgrade: (): Effect.Effect<boolean, UnknownError> =>
+    Effect.gen(function* () {
+      yield* logger.info("⏳ Updating git via mise...");
+
+      const result = yield* shell.exec("mise", ["install", "git@latest"]);
+
+      if (result.exitCode === 0) {
+        yield* logger.success("✅ Git updated successfully via mise");
+        return true;
+      } else {
+        yield* logger.error(`❌ Git update failed with exit code: ${result.exitCode}`);
+        return false;
+      }
+    }),
+
+  ensureVersionOrUpgrade: (): Effect.Effect<void, ExternalToolError | UnknownError> =>
+    Effect.gen(function* () {
+      const gitTools = makeGitToolsLive(shell, logger, debugService);
+      const { isValid, currentVersion } = yield* gitTools.checkVersion();
+
+      if (isValid) {
+        const isDebug = yield* debugService.isDebugMode;
+        if (isDebug && currentVersion) {
+          yield* logger.debug(`Git version ${currentVersion} meets minimum requirement ${GIT_MIN_VERSION}`);
         }
+        return;
+      }
 
-        const comparison = this.compareVersions(currentVersion, GIT_MIN_VERSION);
-        const isDebug = this.debugService.isDebugMode;
+      if (currentVersion) {
+        yield* logger.warn(`⚠️  Git version ${currentVersion} is older than required ${GIT_MIN_VERSION}`);
+      } else {
+        yield* logger.warn(`⚠️  Unable to determine git version`);
+      }
 
-        if (isDebug) {
-          this.logger.debug(
-            `Git version check: ${currentVersion} vs ${GIT_MIN_VERSION} (${comparison >= 0 ? "valid" : "invalid"})`,
-          );
-        }
+      yield* logger.info(`🚀 Starting git upgrade via mise...`);
 
-        return {
-          isValid: comparison >= 0,
-          currentVersion,
-        };
-      }),
-    );
-  }
+      const updateSuccess = yield* gitTools.performUpgrade();
+      if (!updateSuccess) {
+        yield* logger.error(`❌ Failed to update git to required version`);
+        yield* logger.error(`💡 Try manually installing git via mise: mise install git@latest`);
+        return yield* Effect.fail(
+          externalToolError("Failed to update git", {
+            tool: "git",
+            exitCode: 1,
+            stderr: `Required version: ${GIT_MIN_VERSION}, Current: ${currentVersion}`,
+          }),
+        );
+      }
 
-  performUpgrade(): Effect.Effect<boolean, UnknownError> {
-    return Effect.gen(
-      function* (this: GitToolsLive) {
-        yield* this.logger.info("⏳ Updating git via mise...");
-
-        const result = yield* this.shell.exec("mise", ["install", "git@latest"]);
-
-        if (result.exitCode === 0) {
-          yield* this.logger.success("✅ Git updated successfully via mise");
-          return true;
-        } else {
-          yield* this.logger.error(`❌ Git update failed with exit code: ${result.exitCode}`);
-          return false;
-        }
-      }.bind(this),
-    );
-  }
-
-  ensureVersionOrUpgrade(): Effect.Effect<void, ExternalToolError | UnknownError> {
-    return Effect.gen(
-      function* (this: GitToolsLive) {
-        const { isValid, currentVersion } = yield* this.checkVersion();
-
-        if (isValid) {
-          const isDebug = this.debugService.isDebugMode;
-          if (isDebug && currentVersion) {
-            this.logger.debug(`Git version ${currentVersion} meets minimum requirement ${GIT_MIN_VERSION}`);
-          }
-          return;
-        }
-
-        if (currentVersion) {
-          yield* this.logger.warn(`⚠️  Git version ${currentVersion} is older than required ${GIT_MIN_VERSION}`);
-        } else {
-          yield* this.logger.warn(`⚠️  Unable to determine git version`);
-        }
-
-        yield* this.logger.info(`🚀 Starting git upgrade via mise...`);
-
-        const updateSuccess = yield* this.performUpgrade();
-        if (!updateSuccess) {
-          yield* this.logger.error(`❌ Failed to update git to required version`);
-          yield* this.logger.error(`💡 Try manually installing git via mise: mise install git@latest`);
-          return yield* Effect.fail(
-            externalToolError("Failed to update git", {
-              tool: "git",
-              exitCode: 1,
-              stderr: `Required version: ${GIT_MIN_VERSION}, Current: ${currentVersion}`,
-            }),
-          );
-        }
-
-        // Verify upgrade
-        const { isValid: isValidAfterUpgrade, currentVersion: versionAfterUpgrade } = yield* this.checkVersion();
-        if (!isValidAfterUpgrade) {
-          yield* this.logger.error(`❌ Git upgrade completed but version still doesn't meet requirement`);
-          if (versionAfterUpgrade) {
-            yield* this.logger.error(`   Current: ${versionAfterUpgrade}, Required: ${GIT_MIN_VERSION}`);
-          }
-          return yield* Effect.fail(
-            externalToolError("Git upgrade failed", {
-              tool: "git",
-              exitCode: 1,
-              stderr: `Required: ${GIT_MIN_VERSION}, Got: ${versionAfterUpgrade}`,
-            }),
-          );
-        }
-
+      // Verify upgrade
+      const { isValid: isValidAfterUpgrade, currentVersion: versionAfterUpgrade } = yield* gitTools.checkVersion();
+      if (!isValidAfterUpgrade) {
+        yield* logger.error(`❌ Git upgrade completed but version still doesn't meet requirement`);
         if (versionAfterUpgrade) {
-          yield* this.logger.success(`✨ Git successfully upgraded to version ${versionAfterUpgrade}`);
+          yield* logger.error(`   Current: ${versionAfterUpgrade}, Required: ${GIT_MIN_VERSION}`);
         }
-      }.bind(this),
-    );
-  }
-}
+        return yield* Effect.fail(
+          externalToolError("Git upgrade failed", {
+            tool: "git",
+            exitCode: 1,
+            stderr: `Required: ${GIT_MIN_VERSION}, Got: ${versionAfterUpgrade}`,
+          }),
+        );
+      }
+
+      if (versionAfterUpgrade) {
+        yield* logger.success(`✨ Git successfully upgraded to version ${versionAfterUpgrade}`);
+      }
+    }),
+});
 
 // Service tag for Effect Context system
 export class GitToolsServiceTag extends Context.Tag("GitToolsService")<GitToolsServiceTag, GitToolsService>() {}
@@ -169,6 +159,6 @@ export const GitToolsLiveLayer = Layer.effect(
     const shell = yield* ShellService;
     const logger = yield* LoggerService;
     const debugService = yield* DebugServiceTag;
-    return new GitToolsLive(shell, logger, debugService);
+    return makeGitToolsLive(shell, logger, debugService);
   }),
 );

@@ -24,54 +24,51 @@ export interface CommandTrackingService {
   gracefulShutdown(): Effect.Effect<void, ConfigError | UnknownError, RunStoreService>;
 }
 
-export class CommandTrackingServiceImpl implements CommandTrackingService {
-  recordCommandRun(): Effect.Effect<
-    string,
-    ConfigError | UnknownError,
-    RunStoreService | VersionServiceTag | GitService | PathServiceTag
-  > {
-    return Effect.gen(function* () {
-      const runStore = yield* RunStoreService;
-      const versionService = yield* VersionServiceTag;
+// Individual functions implementing the service methods
+const recordCommandRun = Effect.gen(function* () {
+  const runStore = yield* RunStoreService;
+  const versionService = yield* VersionServiceTag;
 
-      // Gather run information
-      const commandName = process.argv[2] || "help";
-      const args = process.argv.slice(3);
-      const cliVersion = yield* versionService.getCurrentGitCommitSha;
-      const cwd = process.cwd();
-      const startedAt = new Date();
+  // Gather run information
+  const commandName = process.argv[2] || "help";
+  const args = process.argv.slice(3);
+  const cliVersion = yield* versionService.getCurrentGitCommitSha;
+  const cwd = process.cwd();
+  const startedAt = new Date();
 
-      // Record this run
-      const runId = yield* runStore.record({
-        cli_version: cliVersion,
-        command_name: commandName,
-        arguments: args.length > 0 ? JSON.stringify(args) : undefined,
-        cwd,
-        started_at: startedAt,
-      });
+  // Record this run
+  const runId = yield* runStore.record({
+    cli_version: cliVersion,
+    command_name: commandName,
+    arguments: args.length > 0 ? JSON.stringify(args) : undefined,
+    cwd,
+    started_at: startedAt,
+  });
 
-      return runId;
-    });
-  }
+  return runId;
+});
 
-  completeCommandRun(id: string, exitCode: number): Effect.Effect<void, ConfigError | UnknownError, RunStoreService> {
-    return Effect.gen(function* () {
-      const runStore = yield* RunStoreService;
-      const finishedAt = new Date();
+const completeCommandRun = (id: string, exitCode: number) =>
+  Effect.gen(function* () {
+    const runStore = yield* RunStoreService;
+    const finishedAt = new Date();
 
-      yield* runStore.complete(id, exitCode, finishedAt);
-    });
-  }
+    yield* runStore.complete(id, exitCode, finishedAt);
+  });
 
-  gracefulShutdown(): Effect.Effect<void, ConfigError | UnknownError, RunStoreService> {
-    return Effect.gen(function* () {
-      yield* Effect.logInfo("🛑 Gracefully shutting down command tracking...");
-      const runStore = yield* RunStoreService;
-      yield* runStore.completeIncompleteRuns();
-      yield* Effect.logDebug("✅ Command tracking shutdown complete");
-    });
-  }
-}
+const gracefulShutdown = Effect.gen(function* () {
+  yield* Effect.logInfo("🛑 Gracefully shutting down command tracking...");
+  const runStore = yield* RunStoreService;
+  yield* runStore.completeIncompleteRuns();
+  yield* Effect.logDebug("✅ Command tracking shutdown complete");
+});
+
+// Functional service implementation as plain object
+export const CommandTrackingServiceImpl: CommandTrackingService = {
+  recordCommandRun: () => recordCommandRun,
+  completeCommandRun: completeCommandRun,
+  gracefulShutdown: () => gracefulShutdown,
+};
 
 // Service tag for Effect Context system
 export class CommandTrackingServiceTag extends Context.Tag("CommandTrackingService")<
@@ -79,5 +76,5 @@ export class CommandTrackingServiceTag extends Context.Tag("CommandTrackingServi
   CommandTrackingService
 >() {}
 
-// Layer that provides CommandTrackingService
-export const CommandTrackingServiceLive = Layer.succeed(CommandTrackingServiceTag, new CommandTrackingServiceImpl());
+// Layer that provides CommandTrackingService (no `new` keyword)
+export const CommandTrackingServiceLive = Layer.succeed(CommandTrackingServiceTag, CommandTrackingServiceImpl);

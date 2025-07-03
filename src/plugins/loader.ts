@@ -5,16 +5,10 @@ import type { AppModule } from "../domain/models";
 import { FileSystemService, type FileSystem } from "../domain/ports/FileSystem";
 import { GitService, type Git } from "../domain/ports/Git";
 
-export class PluginLoader {
-  constructor(
-    private fileSystem: FileSystem,
-    private git: Git,
-  ) {}
-
-  loadAllPlugins(): Effect.Effect<AppModule[], DevError> {
-    const fileSystem = this.fileSystem;
-
-    return Effect.gen(function* () {
+// Factory function that creates PluginLoader with dependencies
+export const makePluginLoader = (fileSystem: FileSystem, git: Git) => {
+  const loadAllPlugins = (): Effect.Effect<AppModule[], DevError> =>
+    Effect.gen(function* () {
       // Load all plugin sources in parallel for better performance
       const [localModules, nodeModules, gitModules] = yield* Effect.all(
         [
@@ -28,8 +22,11 @@ export class PluginLoader {
       // Flatten all modules into a single array
       return [...localModules, ...nodeModules, ...gitModules];
     });
-  }
-}
+
+  return {
+    loadAllPlugins,
+  };
+};
 
 // Standalone functions to avoid "this" context issues
 function loadLocalPlugins(fileSystem: FileSystem): Effect.Effect<AppModule[], DevError> {
@@ -120,9 +117,9 @@ function isValidAppModule(module: any): boolean {
   );
 }
 
-// Effect Layer for dependency injection
+// Effect Layer for dependency injection using factory function
 export const PluginLoaderLive = Effect.gen(function* () {
   const fileSystem = yield* FileSystemService;
   const git = yield* GitService;
-  return new PluginLoader(fileSystem, git);
+  return makePluginLoader(fileSystem, git);
 });

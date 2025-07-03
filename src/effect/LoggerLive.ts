@@ -2,52 +2,50 @@ import { Effect, Layer } from "effect";
 
 import { LoggerService, type Logger } from "../domain/models";
 
-export class LoggerLive implements Logger {
-  constructor(private prefix = "") {}
+// Helper function for formatting messages
+const formatMessage = (prefix: string, icon: string, message: string): string => {
+  const timestamp = new Date().toISOString();
+  const prefixPart = prefix ? `[${prefix}] ` : "";
+  return `${icon} ${timestamp} ${prefixPart}${message}`;
+};
 
-  info(message: string, ...args: any[]): Effect.Effect<void> {
-    return Effect.sync(() => {
-      console.log(this.formatMessage("ℹ️", message), ...args);
-    });
-  }
+// Factory function to create Logger implementation
+export const makeLoggerLive = (prefix = ""): Logger => ({
+  info: (message: string, ...args: any[]): Effect.Effect<void> =>
+    Effect.sync(() => {
+      console.log(formatMessage(prefix, "ℹ️", message), ...args);
+    }),
 
-  warn(message: string, ...args: any[]): Effect.Effect<void> {
-    return Effect.sync(() => {
-      console.warn(this.formatMessage("⚠️", message), ...args);
-    });
-  }
+  warn: (message: string, ...args: any[]): Effect.Effect<void> =>
+    Effect.sync(() => {
+      console.warn(formatMessage(prefix, "⚠️", message), ...args);
+    }),
 
-  error(message: string, ...args: any[]): Effect.Effect<void> {
-    return Effect.sync(() => {
-      console.error(this.formatMessage("❌", message), ...args);
-    });
-  }
+  error: (message: string, ...args: any[]): Effect.Effect<void> =>
+    Effect.sync(() => {
+      console.error(formatMessage(prefix, "❌", message), ...args);
+    }),
 
-  debug(message: string, ...args: any[]): Effect.Effect<void> {
-    return Effect.sync(() => {
+  debug: (message: string, ...args: any[]): Effect.Effect<void> =>
+    Effect.sync(() => {
       if (process.env.DEBUG || process.env.DEV_DEBUG) {
-        console.debug(this.formatMessage("🐛", message), ...args);
+        console.debug(formatMessage(prefix, "🐛", message), ...args);
       }
-    });
-  }
+    }),
 
-  success(message: string, ...args: any[]): Effect.Effect<void> {
-    return Effect.sync(() => {
-      console.log(this.formatMessage("✅", message), ...args);
-    });
-  }
+  success: (message: string, ...args: any[]): Effect.Effect<void> =>
+    Effect.sync(() => {
+      console.log(formatMessage(prefix, "✅", message), ...args);
+    }),
 
-  child(prefix: string): Logger {
-    const childPrefix = this.prefix ? `${this.prefix}:${prefix}` : prefix;
-    return new LoggerLive(childPrefix);
-  }
+  child: (childPrefix: string): Logger => {
+    const combinedPrefix = prefix ? `${prefix}:${childPrefix}` : childPrefix;
+    return makeLoggerLive(combinedPrefix);
+  },
+});
 
-  private formatMessage(icon: string, message: string): string {
-    const timestamp = new Date().toISOString();
-    const prefixPart = this.prefix ? `[${this.prefix}] ` : "";
-    return `${icon} ${timestamp} ${prefixPart}${message}`;
-  }
-}
+// Default implementation with no prefix
+export const LoggerLiveImpl: Logger = makeLoggerLive();
 
 // Effect Layer for dependency injection
-export const LoggerLiveLayer = Layer.succeed(LoggerService, new LoggerLive());
+export const LoggerLiveLayer = Layer.succeed(LoggerService, LoggerLiveImpl);

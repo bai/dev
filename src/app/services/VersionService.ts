@@ -12,27 +12,26 @@ export interface VersionService {
   readonly getVersion: Effect.Effect<string, never, GitService | PathServiceTag>;
 }
 
-export class VersionServiceImpl implements VersionService {
-  get getCurrentGitCommitSha(): Effect.Effect<string, never, GitService | PathServiceTag> {
-    return Effect.gen(function* () {
-      const pathService = yield* PathServiceTag;
-      const gitService = yield* GitService;
+// Individual functions implementing the service methods
+const getCurrentGitCommitSha = Effect.gen(function* () {
+  const pathService = yield* PathServiceTag;
+  const gitService = yield* GitService;
 
-      const result = yield* gitService
-        .getCurrentCommitSha(pathService.devDir)
-        .pipe(Effect.catchAll(() => Effect.succeed("unknown")));
+  const result = yield* gitService
+    .getCurrentCommitSha(pathService.devDir)
+    .pipe(Effect.catchAll(() => Effect.succeed("unknown")));
 
-      return result;
-    });
-  }
+  return result;
+});
 
-  get getVersion(): Effect.Effect<string, never, GitService | PathServiceTag> {
-    return this.getCurrentGitCommitSha;
-  }
-}
+// Functional service implementation as plain object
+export const VersionServiceImpl: VersionService = {
+  getCurrentGitCommitSha: getCurrentGitCommitSha,
+  getVersion: getCurrentGitCommitSha, // Reuse the same effect
+};
 
 // Service tag for Effect Context system
 export class VersionServiceTag extends Context.Tag("VersionService")<VersionServiceTag, VersionService>() {}
 
-// Layer that provides VersionService
-export const VersionServiceLive = Layer.succeed(VersionServiceTag, new VersionServiceImpl());
+// Layer that provides VersionService (no `new` keyword)
+export const VersionServiceLive = Layer.succeed(VersionServiceTag, VersionServiceImpl);

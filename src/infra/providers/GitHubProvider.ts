@@ -5,25 +5,22 @@ import type { GitProvider, Repository } from "../../domain/models";
 import { NetworkService, type Network } from "../../domain/ports/Network";
 import { RepoProviderService, type RepoProvider } from "../../domain/ports/RepoProvider";
 
-export class GitHubProvider implements RepoProvider {
-  private provider: GitProvider = {
+// Factory function that creates GitHubProvider with dependencies
+export const makeGitHubProvider = (network: Network, defaultOrg = "octocat"): RepoProvider => {
+  const provider: GitProvider = {
     name: "github",
     baseUrl: "https://github.com",
   };
 
-  constructor(
-    private network: Network,
-    private defaultOrg = "octocat",
-  ) {}
-
-  resolveRepository(name: string, org?: string): Effect.Effect<Repository, NetworkError | UnknownError> {
-    const organization = org || this.defaultOrg;
-    const cloneUrl = `${this.provider.baseUrl}/${organization}/${name}.git`;
+  // Individual functions implementing the service methods
+  const resolveRepository = (name: string, org?: string): Effect.Effect<Repository, NetworkError | UnknownError> => {
+    const organization = org || defaultOrg;
+    const cloneUrl = `${provider.baseUrl}/${organization}/${name}.git`;
 
     // Verify repository exists by checking the API
     const apiUrl = `https://api.github.com/repos/${organization}/${name}`;
 
-    return this.network.get(apiUrl).pipe(
+    return network.get(apiUrl).pipe(
       Effect.flatMap((response) => {
         if (response.status === 404) {
           return Effect.fail(networkError(`Repository ${organization}/${name} not found`));
@@ -35,26 +32,25 @@ export class GitHubProvider implements RepoProvider {
         return Effect.succeed({
           name,
           organization,
-          provider: this.provider,
+          provider,
           cloneUrl,
         });
       }),
     );
-  }
+  };
 
-  getDefaultOrg(): string {
-    return this.defaultOrg;
-  }
+  const getDefaultOrg = (): string => defaultOrg;
 
-  getProvider(): GitProvider {
-    return this.provider;
-  }
+  const getProvider = (): GitProvider => provider;
 
-  searchRepositories(query: string, org?: string): Effect.Effect<Repository[], NetworkError | UnknownError> {
+  const searchRepositories = (
+    query: string,
+    org?: string,
+  ): Effect.Effect<Repository[], NetworkError | UnknownError> => {
     const searchQuery = org ? `${query} org:${org}` : query;
     const apiUrl = `https://api.github.com/search/repositories?q=${encodeURIComponent(searchQuery)}`;
 
-    return this.network.get(apiUrl).pipe(
+    return network.get(apiUrl).pipe(
       Effect.flatMap((response): Effect.Effect<Repository[], NetworkError | UnknownError> => {
         if (response.status !== 200) {
           return Effect.fail(networkError(`GitHub search API error: ${response.status} ${response.statusText}`));
@@ -65,7 +61,7 @@ export class GitHubProvider implements RepoProvider {
           const repositories: Repository[] = data.items.map((item: any) => ({
             name: item.name,
             organization: item.owner.login,
-            provider: this.provider,
+            provider,
             cloneUrl: item.clone_url,
           }));
 
@@ -75,15 +71,22 @@ export class GitHubProvider implements RepoProvider {
         }
       }),
     );
-  }
-}
+  };
 
-// Effect Layer for dependency injection
+  return {
+    resolveRepository,
+    getDefaultOrg,
+    getProvider,
+    searchRepositories,
+  };
+};
+
+// Effect Layer for dependency injection using factory function
 export const GitHubProviderLayer = (defaultOrg: string) =>
   Layer.effect(
     RepoProviderService,
     Effect.gen(function* () {
       const network = yield* NetworkService;
-      return new GitHubProvider(network, defaultOrg);
+      return makeGitHubProvider(network, defaultOrg);
     }),
   );

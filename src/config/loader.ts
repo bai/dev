@@ -18,22 +18,18 @@ export interface ConfigLoader {
   refresh(): Effect.Effect<Config, ConfigError | FileSystemError | NetworkError | UnknownError>;
 }
 
-export class ConfigLoaderLive implements ConfigLoader {
-  constructor(
-    private fileSystem: FileSystem,
-    private network: Network,
-    private configPath: string,
-  ) {}
-
-  load(): Effect.Effect<Config, ConfigError | FileSystemError | UnknownError> {
-    return this.fileSystem.exists(this.configPath).pipe(
+// Factory function that creates ConfigLoader with dependencies
+export const makeConfigLoaderLive = (fileSystem: FileSystem, network: Network, configPath: string): ConfigLoader => {
+  // Individual functions implementing the service methods
+  const load = (): Effect.Effect<Config, ConfigError | FileSystemError | UnknownError> =>
+    fileSystem.exists(configPath).pipe(
       Effect.flatMap((exists) => {
         if (!exists) {
           // Create default config if it doesn't exist
-          return this.save(defaultConfig).pipe(Effect.map(() => defaultConfig));
+          return save(defaultConfig).pipe(Effect.map(() => defaultConfig));
         }
 
-        return this.fileSystem.readFile(this.configPath).pipe(
+        return fileSystem.readFile(configPath).pipe(
           Effect.flatMap((content) => {
             return Effect.try({
               try: () => {
@@ -47,21 +43,20 @@ export class ConfigLoaderLive implements ConfigLoader {
         );
       }),
     );
-  }
 
-  save(config: Config): Effect.Effect<void, FileSystemError | UnknownError> {
+  const save = (config: Config): Effect.Effect<void, FileSystemError | UnknownError> => {
     const content = JSON.stringify(config, null, 2);
-    return this.fileSystem.writeFile(this.configPath, content);
-  }
+    return fileSystem.writeFile(configPath, content);
+  };
 
-  refresh(): Effect.Effect<Config, ConfigError | FileSystemError | NetworkError | UnknownError> {
-    return this.load().pipe(
+  const refresh = (): Effect.Effect<Config, ConfigError | FileSystemError | NetworkError | UnknownError> =>
+    load().pipe(
       Effect.flatMap((currentConfig) => {
         if (!currentConfig.configUrl) {
           return Effect.succeed(currentConfig);
         }
 
-        return this.network.get(currentConfig.configUrl).pipe(
+        return network.get(currentConfig.configUrl).pipe(
           Effect.flatMap((response) => {
             if (response.status !== 200) {
               return Effect.fail(
@@ -76,28 +71,31 @@ export class ConfigLoaderLive implements ConfigLoader {
                 return configSchema.parse(migratedConfig);
               },
               catch: (error) => configError(`Invalid remote config: ${error}`),
-            }).pipe(
-              Effect.flatMap((validatedConfig) => this.save(validatedConfig).pipe(Effect.map(() => validatedConfig))),
-            );
+            }).pipe(Effect.flatMap((validatedConfig) => save(validatedConfig).pipe(Effect.map(() => validatedConfig))));
           }),
           // Fall back to current config if remote fetch fails
           Effect.catchAll(() => Effect.succeed(currentConfig)),
         );
       }),
     );
-  }
-}
+
+  return {
+    load,
+    save,
+    refresh,
+  };
+};
 
 // Service tag for Effect Context system
 export class ConfigLoaderService extends Context.Tag("ConfigLoaderService")<ConfigLoaderService, ConfigLoader>() {}
 
-// Effect Layer for dependency injection
+// Effect Layer for dependency injection using factory function
 export const ConfigLoaderLiveLayer = (configPath: string) =>
   Layer.effect(
     ConfigLoaderService,
     Effect.gen(function* () {
       const fileSystem = yield* FileSystemService;
       const network = yield* NetworkService;
-      return new ConfigLoaderLive(fileSystem, network, configPath);
+      return makeConfigLoaderLive(fileSystem, network, configPath);
     }),
   );

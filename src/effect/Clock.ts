@@ -1,4 +1,4 @@
-import { type Duration, Effect, Layer } from "effect";
+import { Effect, Layer, type Duration } from "effect";
 
 import { ClockService } from "../domain/models";
 
@@ -8,19 +8,19 @@ export interface Clock {
   delay(duration: Duration.Duration): Effect.Effect<void>;
 }
 
-export class ClockLive implements Clock {
-  now(): Effect.Effect<Date> {
-    return Effect.sync(() => new Date());
-  }
+// Individual effect functions
+const now = (): Effect.Effect<Date> => Effect.sync(() => new Date());
 
-  timestamp(): Effect.Effect<number> {
-    return Effect.sync(() => Date.now());
-  }
+const timestamp = (): Effect.Effect<number> => Effect.sync(() => Date.now());
 
-  delay(duration: Duration.Duration): Effect.Effect<void> {
-    return Effect.delay(Effect.void, duration);
-  }
-}
+const delay = (duration: Duration.Duration): Effect.Effect<void> => Effect.delay(Effect.void, duration);
+
+// Plain object implementation
+export const ClockLiveImpl: Clock = {
+  now,
+  timestamp,
+  delay,
+};
 
 // Effect Layer for dependency injection
-export const ClockLiveLayer = Layer.succeed(ClockService, new ClockLive());
+export const ClockLiveLayer = Layer.succeed(ClockService, ClockLiveImpl);
