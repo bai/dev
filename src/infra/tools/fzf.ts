@@ -1,7 +1,6 @@
 import { Context, Effect, Layer } from "effect";
 
 import { externalToolError, type ExternalToolError, type UnknownError } from "../../domain/errors";
-import { LoggerService, type Logger } from "../../domain/models";
 import { ShellService, type Shell } from "../../domain/ports/Shell";
 
 export const FZF_MIN_VERSION = "0.35.0";
@@ -38,7 +37,7 @@ const compareVersions = (version1: string, version2: string): number => {
 };
 
 // Factory function to create FzfToolsService implementation
-export const makeFzfToolsLive = (shell: Shell, logger: Logger): FzfToolsService => ({
+export const makeFzfToolsLive = (shell: Shell): FzfToolsService => ({
   getCurrentVersion: (): Effect.Effect<string | null, UnknownError> =>
     shell.exec("fzf", ["--version"]).pipe(
       Effect.map((result) => {
@@ -55,7 +54,7 @@ export const makeFzfToolsLive = (shell: Shell, logger: Logger): FzfToolsService 
 
   checkVersion: (): Effect.Effect<{ isValid: boolean; currentVersion: string | null }, UnknownError> =>
     Effect.gen(function* () {
-      const fzfTools = makeFzfToolsLive(shell, logger);
+      const fzfTools = makeFzfToolsLive(shell);
       const currentVersion = yield* fzfTools.getCurrentVersion();
 
       if (!currentVersion) {
@@ -71,22 +70,22 @@ export const makeFzfToolsLive = (shell: Shell, logger: Logger): FzfToolsService 
 
   performUpgrade: (): Effect.Effect<boolean, UnknownError> =>
     Effect.gen(function* () {
-      yield* logger.info("⏳ Updating fzf via mise...");
+      yield* Effect.log("⏳ Updating fzf via mise...");
 
       const result = yield* shell.exec("mise", ["install", "fzf@latest"]);
 
       if (result.exitCode === 0) {
-        yield* logger.success("✅ Fzf updated successfully via mise");
+        yield* Effect.log("✅ Fzf updated successfully via mise");
         return true;
       } else {
-        yield* logger.error(`❌ Fzf update failed with exit code: ${result.exitCode}`);
+        yield* Effect.log(`❌ Fzf update failed with exit code: ${result.exitCode}`);
         return false;
       }
     }),
 
   ensureVersionOrUpgrade: (): Effect.Effect<void, ExternalToolError | UnknownError> =>
     Effect.gen(function* () {
-      const fzfTools = makeFzfToolsLive(shell, logger);
+      const fzfTools = makeFzfToolsLive(shell);
       const { isValid, currentVersion } = yield* fzfTools.checkVersion();
 
       if (isValid) {
@@ -94,17 +93,17 @@ export const makeFzfToolsLive = (shell: Shell, logger: Logger): FzfToolsService 
       }
 
       if (currentVersion) {
-        yield* logger.warn(`⚠️  Fzf version ${currentVersion} is older than required ${FZF_MIN_VERSION}`);
+        yield* Effect.log(`⚠️  Fzf version ${currentVersion} is older than required ${FZF_MIN_VERSION}`);
       } else {
-        yield* logger.warn(`⚠️  Unable to determine fzf version`);
+        yield* Effect.log(`⚠️  Unable to determine fzf version`);
       }
 
-      yield* logger.info(`🚀 Starting fzf upgrade via mise...`);
+      yield* Effect.log(`🚀 Starting fzf upgrade via mise...`);
 
       const updateSuccess = yield* fzfTools.performUpgrade();
       if (!updateSuccess) {
-        yield* logger.error(`❌ Failed to update fzf to required version`);
-        yield* logger.error(`💡 Try manually installing fzf via mise: mise install fzf@latest`);
+        yield* Effect.log(`❌ Failed to update fzf to required version`);
+        yield* Effect.log(`💡 Try manually installing fzf via mise: mise install fzf@latest`);
         return yield* Effect.fail(
           externalToolError("Failed to update fzf", {
             tool: "fzf",
@@ -117,9 +116,9 @@ export const makeFzfToolsLive = (shell: Shell, logger: Logger): FzfToolsService 
       // Verify upgrade
       const { isValid: isValidAfterUpgrade, currentVersion: versionAfterUpgrade } = yield* fzfTools.checkVersion();
       if (!isValidAfterUpgrade) {
-        yield* logger.error(`❌ Fzf upgrade completed but version still doesn't meet requirement`);
+        yield* Effect.log(`❌ Fzf upgrade completed but version still doesn't meet requirement`);
         if (versionAfterUpgrade) {
-          yield* logger.error(`   Current: ${versionAfterUpgrade}, Required: ${FZF_MIN_VERSION}`);
+          yield* Effect.log(`   Current: ${versionAfterUpgrade}, Required: ${FZF_MIN_VERSION}`);
         }
         return yield* Effect.fail(
           externalToolError("Fzf upgrade failed", {
@@ -131,7 +130,7 @@ export const makeFzfToolsLive = (shell: Shell, logger: Logger): FzfToolsService 
       }
 
       if (versionAfterUpgrade) {
-        yield* logger.success(`✨ Fzf successfully upgraded to version ${versionAfterUpgrade}`);
+        yield* Effect.log(`✨ Fzf successfully upgraded to version ${versionAfterUpgrade}`);
       }
     }),
 });
@@ -144,7 +143,6 @@ export const FzfToolsLiveLayer = Layer.effect(
   FzfToolsServiceTag,
   Effect.gen(function* () {
     const shell = yield* ShellService;
-    const logger = yield* LoggerService;
-    return makeFzfToolsLive(shell, logger);
+    return makeFzfToolsLive(shell);
   }),
 );

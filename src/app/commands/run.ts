@@ -1,7 +1,7 @@
 import { Effect } from "effect";
 
 import { unknownError, type DevError } from "../../domain/errors";
-import { LoggerService, type CliCommandSpec, type CommandContext } from "../../domain/models";
+import { type CliCommandSpec, type CommandContext } from "../../domain/models";
 import { FileSystemService } from "../../domain/ports/FileSystem";
 import { MiseService } from "../../domain/ports/Mise";
 
@@ -33,7 +33,7 @@ Examples:
 
   exec(context: CommandContext): Effect.Effect<void, DevError, any> {
     return Effect.gen(function* () {
-      const logger = yield* LoggerService;
+      yield* Effect.logInfo("Running command...");
       const mise = yield* MiseService;
       const fileSystem = yield* FileSystemService;
       const taskName = context.args.task;
@@ -42,26 +42,26 @@ Examples:
 
       if (!taskName) {
         // List available tasks
-        yield* logger.info("Available tasks:");
+        yield* Effect.logInfo("Available tasks:");
 
         const tasks = yield* mise.getTasks(cwd);
 
         if (tasks.length === 0) {
-          yield* logger.info("No tasks found in current directory");
+          yield* Effect.logInfo("No tasks found in current directory");
           return;
         }
 
         for (const task of tasks) {
-          yield* logger.info(`  ${task}`);
+          yield* Effect.logInfo(`  ${task}`);
         }
         return;
       }
 
-      yield* logger.info(`Running task: ${taskName}`);
+      yield* Effect.logInfo(`Running task: ${taskName}`);
 
       yield* mise.runTask(taskName, cwd);
 
-      yield* logger.success(`Task '${taskName}' completed successfully`);
+      yield* Effect.logInfo("✅ Task '${taskName}' completed successfully");
     });
   },
 };

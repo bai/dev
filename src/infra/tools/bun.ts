@@ -1,7 +1,6 @@
 import { Context, Effect, Layer } from "effect";
 
 import { externalToolError, type ExternalToolError, type UnknownError } from "../../domain/errors";
-import { LoggerService, type Logger } from "../../domain/models";
 import { ShellService, type Shell } from "../../domain/ports/Shell";
 
 export const BUN_MIN_VERSION = "1.2.0";
@@ -38,7 +37,7 @@ const compareVersions = (version1: string, version2: string): number => {
 };
 
 // Factory function to create BunToolsService implementation
-export const makeBunToolsLive = (shell: Shell, logger: Logger): BunToolsService => ({
+export const makeBunToolsLive = (shell: Shell): BunToolsService => ({
   getCurrentVersion: (): Effect.Effect<string | null, UnknownError> =>
     shell.exec("bun", ["--version"]).pipe(
       Effect.map((result) => {
@@ -55,7 +54,7 @@ export const makeBunToolsLive = (shell: Shell, logger: Logger): BunToolsService 
 
   checkVersion: (): Effect.Effect<{ isValid: boolean; currentVersion: string | null }, UnknownError> =>
     Effect.gen(function* () {
-      const bunTools = makeBunToolsLive(shell, logger);
+      const bunTools = makeBunToolsLive(shell);
       const currentVersion = yield* bunTools.getCurrentVersion();
 
       if (!currentVersion) {
@@ -71,22 +70,22 @@ export const makeBunToolsLive = (shell: Shell, logger: Logger): BunToolsService 
 
   performUpgrade: (): Effect.Effect<boolean, UnknownError> =>
     Effect.gen(function* () {
-      yield* logger.info("⏳ Updating bun...");
+      yield* Effect.logInfo("⏳ Updating bun...");
 
       const result = yield* shell.exec("bun", ["upgrade"]);
 
       if (result.exitCode === 0) {
-        yield* logger.success("✅ Bun updated successfully");
+        yield* Effect.logInfo("✅ Bun updated successfully");
         return true;
       } else {
-        yield* logger.error(`❌ Bun update failed with exit code: ${result.exitCode}`);
+        yield* Effect.logError(`❌ Bun update failed with exit code: ${result.exitCode}`);
         return false;
       }
     }),
 
   ensureVersionOrUpgrade: (): Effect.Effect<void, ExternalToolError | UnknownError> =>
     Effect.gen(function* () {
-      const bunTools = makeBunToolsLive(shell, logger);
+      const bunTools = makeBunToolsLive(shell);
       const { isValid, currentVersion } = yield* bunTools.checkVersion();
 
       if (isValid) {
@@ -94,16 +93,16 @@ export const makeBunToolsLive = (shell: Shell, logger: Logger): BunToolsService 
       }
 
       if (currentVersion) {
-        yield* logger.warn(`⚠️  Bun version ${currentVersion} is older than required ${BUN_MIN_VERSION}`);
+        yield* Effect.logWarning(`⚠️  Bun version ${currentVersion} is older than required ${BUN_MIN_VERSION}`);
       } else {
-        yield* logger.warn(`⚠️  Unable to determine bun version`);
+        yield* Effect.logWarning(`⚠️  Unable to determine bun version`);
       }
 
-      yield* logger.info(`🚀 Starting bun upgrade...`);
+      yield* Effect.logInfo(`🚀 Starting bun upgrade...`);
 
       const updateSuccess = yield* bunTools.performUpgrade();
       if (!updateSuccess) {
-        yield* logger.error(`❌ Failed to update bun to required version`);
+        yield* Effect.logError(`❌ Failed to update bun to required version`);
         return yield* Effect.fail(
           externalToolError("Failed to update bun", {
             tool: "bun",
@@ -113,12 +112,11 @@ export const makeBunToolsLive = (shell: Shell, logger: Logger): BunToolsService 
         );
       }
 
-      // Verify upgrade
       const { isValid: isValidAfterUpgrade, currentVersion: versionAfterUpgrade } = yield* bunTools.checkVersion();
       if (!isValidAfterUpgrade) {
-        yield* logger.error(`❌ Bun upgrade completed but version still doesn't meet requirement`);
+        yield* Effect.logError(`❌ Bun upgrade completed but version still doesn't meet requirement`);
         if (versionAfterUpgrade) {
-          yield* logger.error(`   Current: ${versionAfterUpgrade}, Required: ${BUN_MIN_VERSION}`);
+          yield* Effect.logError(`   Current: ${versionAfterUpgrade}, Required: ${BUN_MIN_VERSION}`);
         }
         return yield* Effect.fail(
           externalToolError("Bun upgrade failed", {
@@ -130,7 +128,7 @@ export const makeBunToolsLive = (shell: Shell, logger: Logger): BunToolsService 
       }
 
       if (versionAfterUpgrade) {
-        yield* logger.success(`✨ Bun successfully upgraded to version ${versionAfterUpgrade}`);
+        yield* Effect.logInfo(`✨ Bun successfully upgraded to version ${versionAfterUpgrade}`);
       }
     }),
 });
@@ -139,11 +137,10 @@ export const makeBunToolsLive = (shell: Shell, logger: Logger): BunToolsService 
 export class BunToolsServiceTag extends Context.Tag("BunToolsService")<BunToolsServiceTag, BunToolsService>() {}
 
 // Effect Layer for dependency injection
-export const BunToolsLiveLayer = Layer.effect(
+export const BunToolsServiceLive = Layer.effect(
   BunToolsServiceTag,
   Effect.gen(function* () {
     const shell = yield* ShellService;
-    const logger = yield* LoggerService;
-    return makeBunToolsLive(shell, logger);
+    return makeBunToolsLive(shell);
   }),
 );

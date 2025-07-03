@@ -98,15 +98,6 @@ export interface CommandContext {
   options: Record<string, any>;
 }
 
-export interface Logger {
-  info(message: string, ...args: any[]): Effect.Effect<void>;
-  warn(message: string, ...args: any[]): Effect.Effect<void>;
-  error(message: string, ...args: any[]): Effect.Effect<void>;
-  debug(message: string, ...args: any[]): Effect.Effect<void>;
-  success(message: string, ...args: any[]): Effect.Effect<void>;
-  child(prefix: string): Logger;
-}
-
 export interface ConfigManager {
   get<T = any>(key: string, defaultValue?: T): T;
   set(key: string, value: any): Effect.Effect<void>;
@@ -123,6 +114,5 @@ export interface AppModule {
 }
 
 // Service tags for Effect Context system
-export class LoggerService extends Context.Tag("LoggerService")<LoggerService, Logger>() {}
 
 export class ConfigService extends Context.Tag("ConfigService")<ConfigService, ConfigManager>() {}

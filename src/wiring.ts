@@ -18,7 +18,6 @@ import { VersionServiceLive } from "./app/services/VersionService";
 import { ConfigLoaderLiveLayer } from "./config/loader";
 import type { CliCommandSpec } from "./domain/models";
 import { PathServiceLive } from "./domain/services/PathService";
-import { LoggerLiveLayer } from "./effect/LoggerLive";
 import { RunStoreLiveLayer } from "./infra/db/RunStoreLive";
 import { DirectoryServiceLive } from "./infra/fs/DirectoryService";
 import { FileSystemLiveLayer } from "./infra/fs/FileSystemLive";
@@ -36,7 +35,7 @@ import { ShellLiveLayer } from "./infra/shell/ShellLive";
  */
 
 // Base services with no dependencies
-const BaseServicesLayer = Layer.mergeAll(LoggerLiveLayer, PathServiceLive);
+const BaseServicesLayer = PathServiceLive;
 
 // Infrastructure services that depend on base services
 const InfraServicesLayer = Layer.mergeAll(

@@ -5,7 +5,6 @@ import { Context, Effect, Layer } from "effect";
 
 import devConfig from "../../config/mise-dev-config.toml" with { type: "json" };
 import { externalToolError, unknownError, type ExternalToolError, type UnknownError } from "../../domain/errors";
-import { LoggerService, type Logger } from "../../domain/models";
 import { FileSystemService, type FileSystem } from "../../domain/ports/FileSystem";
 import { ShellService, type Shell } from "../../domain/ports/Shell";
 
@@ -26,7 +25,7 @@ export interface MiseToolsService {
 }
 
 // Factory function that creates MiseToolsService with dependencies
-export const makeMiseToolsLive = (shell: Shell, logger: Logger, filesystem: FileSystem): MiseToolsService => {
+export const makeMiseToolsLive = (shell: Shell, filesystem: FileSystem): MiseToolsService => {
   // Helper function for version comparison
   const compareVersions = (version1: string, version2: string): number => {
     const v1Parts = version1.split(".").map(Number);
@@ -79,22 +78,22 @@ export const makeMiseToolsLive = (shell: Shell, logger: Logger, filesystem: File
 
   const performUpgrade = (): Effect.Effect<boolean, UnknownError> =>
     Effect.gen(function* () {
-      yield* logger.info("⏳ Updating mise to latest version...");
+      yield* Effect.logInfo("⏳ Updating mise to latest version...");
 
       const result = yield* shell.exec("mise", ["self-update"]);
 
       if (result.exitCode === 0) {
-        yield* logger.success("✅ Mise updated successfully");
+        yield* Effect.logInfo("✅ Mise updated successfully");
         return true;
       } else {
-        yield* logger.error(`❌ Mise update failed with exit code: ${result.exitCode}`);
+        yield* Effect.logError(`❌ Mise update failed with exit code: ${result.exitCode}`);
         return false;
       }
     });
 
   const setupGlobalConfig = (): Effect.Effect<void, UnknownError> =>
     Effect.gen(function* () {
-      yield* logger.info("🔧 Setting up mise global configuration...");
+      yield* Effect.logInfo("🔧 Setting up mise global configuration...");
 
       const miseConfigDir = path.join(homeDir, ".config", "mise");
       const miseConfigFile = path.join(miseConfigDir, "config.toml");
@@ -102,17 +101,10 @@ export const makeMiseToolsLive = (shell: Shell, logger: Logger, filesystem: File
       // Create config directory if it doesn't exist
       const configDirExists = yield* filesystem.exists(miseConfigDir);
       if (!configDirExists) {
-        yield* logger.info("   📂 Creating mise config directory...");
+        yield* Effect.logInfo("   📂 Creating mise config directory...");
         yield* filesystem.mkdir(miseConfigDir, true).pipe(
           Effect.mapError((error) => {
-            switch (error._tag) {
-              case "FileSystemError":
-                return unknownError(`Failed to create mise config directory: ${error.reason}`);
-              case "UnknownError":
-                return unknownError(`Failed to create mise config directory: ${String(error.reason)}`);
-              default:
-                return unknownError(`Failed to create mise config directory: ${error}`);
-            }
+            return unknownError(`Failed to create mise config directory: ${error}`);
           }),
         );
       }
@@ -123,17 +115,10 @@ export const makeMiseToolsLive = (shell: Shell, logger: Logger, filesystem: File
 
       yield* filesystem.writeFile(miseConfigFile, tomlContent).pipe(
         Effect.mapError((error) => {
-          switch (error._tag) {
-            case "FileSystemError":
-              return unknownError(`Failed to write mise config: ${error.reason}`);
-            case "UnknownError":
-              return unknownError(`Failed to write mise config: ${String(error.reason)}`);
-            default:
-              return unknownError(`Failed to write mise config: ${error}`);
-          }
+          return unknownError(`Failed to write mise config: ${error}`);
         }),
       );
-      yield* logger.info("   ✅ Mise global config ready");
+      yield* Effect.logInfo("   ✅ Mise global config ready");
     });
 
   const ensureVersionOrUpgrade = (): Effect.Effect<void, ExternalToolError | UnknownError> =>
@@ -145,17 +130,17 @@ export const makeMiseToolsLive = (shell: Shell, logger: Logger, filesystem: File
       }
 
       if (currentVersion) {
-        yield* logger.warn(`⚠️  Mise version ${currentVersion} is older than required ${MISE_MIN_VERSION}`);
+        yield* Effect.logWarning(`⚠️  Mise version ${currentVersion} is older than required ${MISE_MIN_VERSION}`);
       } else {
-        yield* logger.warn(`⚠️  Unable to determine mise version`);
+        yield* Effect.logWarning(`⚠️  Unable to determine mise version`);
       }
 
-      yield* logger.info(`🚀 Starting mise upgrade...`);
+      yield* Effect.logInfo(`🚀 Starting mise upgrade...`);
 
       const updateSuccess = yield* performUpgrade();
       if (!updateSuccess) {
-        yield* logger.error(`❌ Failed to update mise to required version`);
-        yield* logger.error(`💡 Try manually updating mise: mise self-update`);
+        yield* Effect.logError(`❌ Failed to update mise to required version`);
+        yield* Effect.logError(`💡 Try manually updating mise: mise self-update`);
         return yield* Effect.fail(
           externalToolError("Failed to update mise", {
             tool: "mise",
@@ -165,12 +150,13 @@ export const makeMiseToolsLive = (shell: Shell, logger: Logger, filesystem: File
         );
       }
 
-      // Verify upgrade
+      yield* setupGlobalConfig();
+
       const { isValid: isValidAfterUpgrade, currentVersion: versionAfterUpgrade } = yield* checkVersion();
       if (!isValidAfterUpgrade) {
-        yield* logger.error(`❌ Mise upgrade completed but version still doesn't meet requirement`);
+        yield* Effect.logError(`❌ Mise upgrade completed but version still doesn't meet requirement`);
         if (versionAfterUpgrade) {
-          yield* logger.error(`   Current: ${versionAfterUpgrade}, Required: ${MISE_MIN_VERSION}`);
+          yield* Effect.logError(`   Current: ${versionAfterUpgrade}, Required: ${MISE_MIN_VERSION}`);
         }
         return yield* Effect.fail(
           externalToolError("Mise upgrade failed", {
@@ -182,7 +168,7 @@ export const makeMiseToolsLive = (shell: Shell, logger: Logger, filesystem: File
       }
 
       if (versionAfterUpgrade) {
-        yield* logger.success(`✨ Mise successfully upgraded to version ${versionAfterUpgrade}`);
+        yield* Effect.logInfo(`✨ Mise successfully upgraded to version ${versionAfterUpgrade}`);
       }
     });
 
@@ -199,12 +185,11 @@ export const makeMiseToolsLive = (shell: Shell, logger: Logger, filesystem: File
 export class MiseToolsServiceTag extends Context.Tag("MiseToolsService")<MiseToolsServiceTag, MiseToolsService>() {}
 
 // Effect Layer for dependency injection using factory function
-export const MiseToolsLiveLayer = Layer.effect(
+export const MiseToolsServiceLive = Layer.effect(
   MiseToolsServiceTag,
   Effect.gen(function* () {
     const shell = yield* ShellService;
-    const logger = yield* LoggerService;
     const filesystem = yield* FileSystemService;
-    return makeMiseToolsLive(shell, logger, filesystem);
+    return makeMiseToolsLive(shell, filesystem);
   }),
 );

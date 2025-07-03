@@ -1,7 +1,7 @@
 import { Effect } from "effect";
 
 import { unknownError, type DevError } from "../../domain/errors";
-import { LoggerService, type CliCommandSpec, type CommandContext } from "../../domain/models";
+import { type CliCommandSpec, type CommandContext } from "../../domain/models";
 import { KeychainService } from "../../domain/ports/Keychain";
 
 // Interface removed - services now accessed via Effect Context
@@ -38,25 +38,24 @@ Examples:
 
   exec(context: CommandContext): Effect.Effect<void, DevError, any> {
     return Effect.gen(function* () {
-      const logger = yield* LoggerService;
       const keychain = yield* KeychainService;
       const service = context.args.service;
       const account = context.args.account;
 
       if (service === "list") {
-        yield* logger.info("Credential management is handled through the system keychain");
-        yield* logger.info("Use 'Keychain Access' app on macOS to view stored credentials");
+        yield* Effect.logInfo("Credential management is handled through the system keychain");
+        yield* Effect.logInfo("Use 'Keychain Access' app on macOS to view stored credentials");
         return;
       }
 
       if (service === "remove") {
         if (!account) {
-          yield* logger.error("Account name is required for remove command");
+          yield* Effect.logError("Account name is required for remove command");
           return yield* Effect.fail(unknownError("Account name is required for remove command"));
         }
 
         yield* keychain.removeCredential("dev-cli", account);
-        yield* logger.success(`Credentials for ${account} removed successfully`);
+        yield* Effect.logInfo(`✅ Credentials for ${account} removed successfully`);
         return;
       }
 
@@ -65,28 +64,28 @@ Examples:
       const supportedServices = ["github", "gitlab"];
 
       if (!supportedServices.includes(serviceName)) {
-        yield* logger.error(`Unsupported service: ${serviceName}`);
-        yield* logger.info(`Supported services: ${supportedServices.join(", ")}`);
+        yield* Effect.logError(`Unsupported service: ${serviceName}`);
+        yield* Effect.logInfo(`Supported services: ${supportedServices.join(", ")}`);
         return yield* Effect.fail(unknownError(`Unsupported service: ${serviceName}`));
       }
 
       // Prompt for username
       const username = yield* promptInputEffect("Username: ");
       if (!username) {
-        yield* logger.error("Username is required");
+        yield* Effect.logError("Username is required");
         return yield* Effect.fail(unknownError("Username is required"));
       }
 
       // Prompt for token/password
       const token = yield* promptPasswordEffect("Token/Password: ");
       if (!token) {
-        yield* logger.error("Token/Password is required");
+        yield* Effect.logError("Token/Password is required");
         return yield* Effect.fail(unknownError("Token/Password is required"));
       }
 
       // Store in keychain
       yield* keychain.setCredential(`dev-cli-${serviceName}`, username, token);
-      yield* logger.success(`Credentials for ${serviceName} stored successfully`);
+      yield* Effect.logInfo(`✅ Credentials for ${serviceName} stored successfully`);
     });
   },
 };

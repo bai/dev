@@ -1,7 +1,7 @@
 import { Effect } from "effect";
 
 import { exitCode, unknownError, type DevError } from "../../domain/errors";
-import { LoggerService, type CliCommandSpec, type CommandContext } from "../../domain/models";
+import { type CliCommandSpec, type CommandContext } from "../../domain/models";
 import { FileSystemService } from "../../domain/ports/FileSystem";
 import { GitService } from "../../domain/ports/Git";
 import { MiseService } from "../../domain/ports/Mise";
@@ -44,7 +44,6 @@ This command checks:
 
   exec(context: CommandContext): Effect.Effect<void, DevError, any> {
     return Effect.gen(function* () {
-      const logger = yield* LoggerService;
       const mise = yield* MiseService;
       const git = yield* GitService;
       const network = yield* NetworkService;
@@ -153,25 +152,25 @@ This command checks:
         // Use Effect.sync to wrap console output in Effect context
         yield* Effect.sync(() => console.log(JSON.stringify(statusItems, null, 2)));
       } else {
-        yield* logger.info("System Status:");
-        yield* logger.info("");
+        yield* Effect.logInfo("System Status:");
+        yield* Effect.logInfo("");
 
         for (const item of statusItems) {
           const icon = item.status === "ok" ? "✅" : item.status === "warning" ? "⚠️" : "❌";
-          yield* logger.info(`${icon} ${item.component}: ${item.message}`);
+          yield* Effect.logInfo(`${icon} ${item.component}: ${item.message}`);
         }
 
-        yield* logger.info("");
+        yield* Effect.logInfo("");
 
         const errorCount = statusItems.filter((item) => item.status === "error").length;
         const warningCount = statusItems.filter((item) => item.status === "warning").length;
 
         if (errorCount > 0) {
-          yield* logger.error(`Found ${errorCount} error(s) and ${warningCount} warning(s)`);
+          yield* Effect.log(`❌ ERROR: Found ${errorCount} error(s) and ${warningCount} warning(s)`);
         } else if (warningCount > 0) {
-          yield* logger.warn(`Found ${warningCount} warning(s)`);
+          yield* Effect.log(`WARN: ⚠️ Found ${warningCount} warning(s)`);
         } else {
-          yield* logger.success("All systems are operational");
+          yield* Effect.logInfo("✅ All systems are operational");
         }
       }
 

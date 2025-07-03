@@ -5,7 +5,7 @@ import { hideBin } from "yargs/helpers";
 
 import { CommandTrackingServiceTag } from "../app/services/CommandTrackingService";
 import { exitCode, type DevError } from "../domain/errors";
-import { LoggerService, type CliCommandSpec, type CommandContext } from "../domain/models";
+import { type CliCommandSpec, type CommandContext } from "../domain/models";
 import { AppLiveLayer } from "../wiring";
 
 export interface CliMetadata {
@@ -191,7 +191,6 @@ export class DevCli {
     const commandProgram: Effect.Effect<void, DevError, never> = Effect.gen(function* () {
       // Start command tracking
       const tracking = yield* CommandTrackingServiceTag;
-      const logger = yield* LoggerService;
 
       const runId = yield* tracking.recordCommandRun();
 
@@ -208,7 +207,7 @@ export class DevCli {
         // Command failed
         const error = result.left;
         yield* tracking.completeCommandRun(runId, exitCode(error));
-        yield* logger.error(`Command failed: ${error._tag}`);
+        yield* Effect.log(`❌ ${error._tag}`);
         return yield* Effect.fail(error);
       } else {
         // Command succeeded
@@ -220,12 +219,12 @@ export class DevCli {
       Effect.catchAll((error: DevError) => {
         // Handle errors and set appropriate exit codes
         return Effect.gen(function* () {
-          yield* Effect.logError(`❌ ${error._tag}`);
+          yield* Effect.log(`❌ ${error._tag}`);
 
           // Handle different error types and their properties
           switch (error._tag) {
             case "ExternalToolError":
-              yield* Effect.logError(error.message);
+              yield* Effect.log(error.message);
               break;
             case "ConfigError":
             case "GitError":
@@ -234,10 +233,10 @@ export class DevCli {
             case "FileSystemError":
             case "UserInputError":
             case "CLIError":
-              yield* Effect.logError(error.reason);
+              yield* Effect.log(error.reason);
               break;
             case "UnknownError":
-              yield* Effect.logError(String(error.reason));
+              yield* Effect.log(String(error.reason));
               break;
           }
 

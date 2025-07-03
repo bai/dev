@@ -2,7 +2,7 @@ import { Effect } from "effect";
 
 import { ConfigLoaderService, type ConfigLoader } from "../../config/loader";
 import { unknownError, type DevError } from "../../domain/errors";
-import { LoggerService, type CliCommandSpec, type CommandContext } from "../../domain/models";
+import { type CliCommandSpec, type CommandContext } from "../../domain/models";
 import { FileSystemService } from "../../domain/ports/FileSystem";
 import { GitService } from "../../domain/ports/Git";
 import { NetworkService } from "../../domain/ports/Network";
@@ -35,26 +35,25 @@ This command will:
 
   exec(context: CommandContext): Effect.Effect<void, DevError, any> {
     return Effect.gen(function* () {
-      const logger = yield* LoggerService;
       const configLoader = yield* ConfigLoaderService;
       const regenerateCompletions = context.options["regenerate-completions"];
 
-      yield* logger.info("Starting dev CLI upgrade...");
+      yield* Effect.logInfo("Starting dev CLI upgrade...");
 
       // Step 1: Download latest binary (placeholder - would need actual implementation)
-      yield* logger.info("⬇️ Downloading latest binary...");
+      yield* Effect.logInfo("⬇️ Downloading latest binary...");
       // TODO: Implement binary download logic
-      yield* logger.info("✅ Binary updated (placeholder)");
+      yield* Effect.logInfo("✅ Binary updated (placeholder)");
 
       // Step 2: Refresh remote configuration
-      yield* logger.info("🔄 Refreshing configuration from remote...");
+      yield* Effect.logInfo("🔄 Refreshing configuration from remote...");
 
       const configResult = yield* configLoader.refresh();
 
-      yield* logger.success("✅ Configuration refreshed successfully");
+      yield* Effect.logInfo("✅ Configuration refreshed successfully");
 
       // Step 3: Update Git plugins in parallel
-      yield* logger.info("🔌 Updating Git plugins...");
+      yield* Effect.logInfo("🔌 Updating Git plugins...");
 
       const gitPlugins = configResult.plugins.git;
 
@@ -68,23 +67,23 @@ This command will:
 
         for (const { pluginUrl, result } of updateResults) {
           if (result._tag === "Left") {
-            yield* logger.warn(`⚠️ Failed to update plugin ${pluginUrl}: ${result.left}`);
+            yield* Effect.log(`WARN: ⚠️ Failed to update plugin ${pluginUrl}: ${result.left}`);
           } else {
-            yield* logger.info(`✅ Updated plugin: ${pluginUrl}`);
+            yield* Effect.logInfo(`✅ Updated plugin: ${pluginUrl}`);
           }
         }
       }
 
       // Step 4: Generate completions if requested
       if (regenerateCompletions) {
-        yield* logger.info("📝 Regenerating shell completions...");
+        yield* Effect.logInfo("📝 Regenerating shell completions...");
         // TODO: Implement completion generation
-        yield* logger.info("✅ Shell completions regenerated (placeholder)");
+        yield* Effect.logInfo("✅ Shell completions regenerated (placeholder)");
       }
 
       // Step 5: Report final version
-      yield* logger.info("🎉 Upgrade completed successfully!");
-      yield* logger.info("Run 'dev status' to verify your installation");
+      yield* Effect.logInfo("🎉 Upgrade completed successfully!");
+      yield* Effect.logInfo("Run 'dev status' to verify your installation");
     });
   },
 };
