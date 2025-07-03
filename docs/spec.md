@@ -217,3 +217,47 @@ export interface AppModule {
 3. For each Git plugin URL → fetch or clone.
 4. Generate completions if `--regenerate-completions`.
 5. Report final version.
+
+In a hexagonal, layered CLI like yours, you actually want **both**:
+
+1. **Co-located unit tests** right next to the code they’re testing, so it’s dead easy to see “implementation ↔ tests” at a glance.
+2. **Higher-level integration or end-to-end suites** in your existing top-level `tests/` folder.
+
+## Testing
+
+### 1. Co-located unit tests (pure Effect modules)
+
+Under `src/…`, wherever you have a small module—say `src/app/commands/clone.ts`—drop a `clone.test.ts` immediately beside it:
+
+```
+src/
+└─ app/
+   └─ commands/
+      ├ clone.ts
+      └ clone.test.ts      ← fast, pure-Effect tests using in-memory fakes
+```
+
+These tests should spin up just the layers they need (e.g. swapping out `FileSystemLive` for a fake) and verify your `Effect`-returning functions in isolation.
+
+### 2. Top-level integration & e2e
+
+Reserve your existing:
+
+```
+tests/
+├─ unit/         ← optional, for any legacy bulk unit tests
+├─ integration/  ← tests that wire up several layers together (e.g. AppLive + InfraLive fakes)
+└─ e2e/          ← driving the real binary via `bin/dev`
+```
+
+for anything that:
+
+* **Integration** tests multiple ports/adapters together (e.g. talking to a real SQLite on disk),
+* or **E2E** spins up the CLI binary, invokes commands in a temp dir, and inspects the file system, exit codes, migrations, etc.
+
+### Why this split?
+
+* **Co-located tests** keep you honest on small units, make refactoring safe, and give you instant feedback on the precise module you’re working on.
+* **`tests/integration` & `tests/e2e`** give you confidence that all of your layers wire up correctly in broader scenarios, without cluttering your `src/` tree with heavyweight test harness code.
+
+That way you get **both** your fast, co-located unit tests and your slower integration/E2E suites under one runner.

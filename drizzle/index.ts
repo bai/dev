@@ -1,8 +1,9 @@
 import { Database } from "bun:sqlite";
 import { drizzle } from "drizzle-orm/bun-sqlite";
 
-import { devDbPath } from "~/lib/constants";
+import { PathServiceImpl } from "../src/domain/services/PathService";
 
-const client = new Database(devDbPath);
+const pathService = new PathServiceImpl();
+const client = new Database(pathService.dbPath);
 
 export const db = drizzle({ client: client });

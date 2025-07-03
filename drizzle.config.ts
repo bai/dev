@@ -1,6 +1,8 @@
 import type { Config } from "drizzle-kit";
 
-import { devDbPath } from "~/lib/constants";
+import { PathServiceImpl } from "./src/domain/services/PathService";
+
+const pathService = new PathServiceImpl();
 
 export default {
   out: "./drizzle/migrations",
@@ -11,6 +13,6 @@ export default {
     casing: "preserve",
   },
   dbCredentials: {
-    url: `file:${devDbPath}`,
+    url: `file:${pathService.dbPath}`,
   },
 } satisfies Config;

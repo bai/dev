@@ -189,7 +189,7 @@ export class DevCli {
     }
 
     // Create the command execution program with tracking
-    const commandProgram: Effect.Effect<void, DevError, any> = Effect.gen(function* () {
+    const commandProgram: Effect.Effect<void, DevError, never> = Effect.gen(function* () {
       // Start command tracking
       const tracking = yield* CommandTrackingServiceTag;
       const logger = yield* LoggerService;
@@ -216,7 +216,7 @@ export class DevCli {
         yield* tracking.completeCommandRun(runId, 0);
         return result.right;
       }
-    }).pipe(Effect.provide(AppLiveLayer));
+    }).pipe(Effect.provide(AppLiveLayer)) as Effect.Effect<void, DevError, never>;
 
     // Execute the program and return the promise
     return Runtime.runPromiseExit(this.runtime)(commandProgram).then((exit) => {

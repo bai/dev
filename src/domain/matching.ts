@@ -228,9 +228,14 @@ export function positions(needle: string, haystack: string): number[] | null {
   }
 
   for (let i = 0; i < needleLen; i++) {
-    const lastD: number[] | null = i > 0 ? D[i - 1]! : null;
-    const lastM: number[] | null = i > 0 ? M[i - 1]! : null;
-    matchRow(match, i, D[i]!, M[i]!, lastD, lastM);
+    const lastD: number[] | null = i > 0 ? (D[i - 1] ?? null) : null;
+    const lastM: number[] | null = i > 0 ? (M[i - 1] ?? null) : null;
+    const currentD = D[i];
+    const currentM = M[i];
+
+    if (currentD && currentM) {
+      matchRow(match, i, currentD, currentM, lastD, lastM);
+    }
   }
 
   // Backtrack to find positions

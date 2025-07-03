@@ -74,11 +74,9 @@ export class ShellIntegrationServiceImpl implements ShellIntegrationService {
       // Special format for the shell wrapper to interpret: "CD:<path>"
       console.log(`CD:${absolutePath}`);
 
-      // Note: In the new error handling system, commands that need to exit should
-      // throw appropriate errors. However, this function specifically needs to exit
-      // with code 0 to signal success to the shell wrapper.
-      // This is a special case where process.exit(0) is intentional for shell integration.
-      process.exit(0);
+      // Return successfully - the shell wrapper should handle this output
+      // and the Effect runtime will handle proper process exit codes
+      return yield* Effect.succeed(undefined);
     });
   }
 }
