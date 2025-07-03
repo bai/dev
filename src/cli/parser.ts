@@ -232,12 +232,13 @@ export class DevCli {
             const error = failureOrCause.left;
             if (error && typeof error === "object" && "_tag" in error) {
               const devError = error as DevError;
-              console.error(`❌ ${devError._tag}`);
+              // Use Effect.runSync for synchronous logging in exit handler
+              Effect.runSync(Effect.logError(`❌ ${devError._tag}`));
 
               // Handle different error types and their properties
               switch (devError._tag) {
                 case "ExternalToolError":
-                  console.error(devError.message);
+                  Effect.runSync(Effect.logError(devError.message));
                   break;
                 case "ConfigError":
                 case "GitError":
@@ -246,20 +247,20 @@ export class DevCli {
                 case "FileSystemError":
                 case "UserInputError":
                 case "CLIError":
-                  console.error(devError.reason);
+                  Effect.runSync(Effect.logError(devError.reason));
                   break;
                 case "UnknownError":
-                  console.error(String(devError.reason));
+                  Effect.runSync(Effect.logError(String(devError.reason)));
                   break;
               }
 
               process.exitCode = exitCode(devError);
             } else {
-              console.error(`❌ Error:`, error);
+              Effect.runSync(Effect.logError(`❌ Error: ${error}`));
               process.exitCode = 1;
             }
           } else {
-            console.error(`💥 Unexpected error:`, failureOrCause.right);
+            Effect.runSync(Effect.logError(`💥 Unexpected error: ${failureOrCause.right}`));
             process.exitCode = 1;
           }
         },

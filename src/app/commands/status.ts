@@ -150,7 +150,8 @@ This command checks:
 
       // Output results
       if (jsonOutput) {
-        console.log(JSON.stringify(statusItems, null, 2));
+        // Use Effect.sync to wrap console output in Effect context
+        yield* Effect.sync(() => console.log(JSON.stringify(statusItems, null, 2)));
       } else {
         yield* logger.info("System Status:");
         yield* logger.info("");

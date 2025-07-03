@@ -31,6 +31,15 @@ export class RunStoreLive implements RunStore {
     this.runMigrations();
   }
 
+  // Resource-safe database operation pattern
+  private withTransaction<A, E>(operation: (db: typeof this.db) => Effect.Effect<A, E>): Effect.Effect<A, E> {
+    return Effect.acquireUseRelease(
+      Effect.sync(() => this.db),
+      operation,
+      () => Effect.void, // Database connections are managed by SQLite, no explicit cleanup needed
+    );
+  }
+
   private runMigrations(): void {
     try {
       // Use migrations from the drizzle folder
@@ -43,71 +52,79 @@ export class RunStoreLive implements RunStore {
   }
 
   record(run: Omit<CommandRun, "id" | "duration_ms">): Effect.Effect<string, ConfigError | UnknownError> {
-    return Effect.tryPromise({
-      try: async () => {
-        const id = crypto.randomUUID();
-        await this.db.insert(runs).values({
-          id,
-          cli_version: run.cli_version,
-          command_name: run.command_name,
-          arguments: run.arguments,
-          cwd: run.cwd,
-          started_at: run.started_at,
-          finished_at: run.finished_at,
-          exit_code: run.exit_code,
-        });
-        return id;
-      },
-      catch: (error) => configError(`Failed to record command run: ${error}`),
-    });
+    return this.withTransaction((db) =>
+      Effect.tryPromise({
+        try: async () => {
+          const id = crypto.randomUUID();
+          await db.insert(runs).values({
+            id,
+            cli_version: run.cli_version,
+            command_name: run.command_name,
+            arguments: run.arguments,
+            cwd: run.cwd,
+            started_at: run.started_at,
+            finished_at: run.finished_at,
+            exit_code: run.exit_code,
+          });
+          return id;
+        },
+        catch: (error) => configError(`Failed to record command run: ${error}`),
+      }),
+    );
   }
 
   complete(id: string, exitCode: number, finishedAt: Date): Effect.Effect<void, ConfigError | UnknownError> {
-    return Effect.tryPromise({
-      try: async () => {
-        await this.db
-          .update(runs)
-          .set({
-            exit_code: exitCode,
-            finished_at: finishedAt,
-          })
-          .where(eq(runs.id, id));
-      },
-      catch: (error) => configError(`Failed to complete command run: ${error}`),
-    });
+    return this.withTransaction((db) =>
+      Effect.tryPromise({
+        try: async () => {
+          await db
+            .update(runs)
+            .set({
+              exit_code: exitCode,
+              finished_at: finishedAt,
+            })
+            .where(eq(runs.id, id));
+        },
+        catch: (error) => configError(`Failed to complete command run: ${error}`),
+      }),
+    );
   }
 
   prune(keepDays: number): Effect.Effect<void, ConfigError | UnknownError> {
-    return Effect.tryPromise({
-      try: async () => {
-        const cutoffDate = new Date();
-        cutoffDate.setDate(cutoffDate.getDate() - keepDays);
+    return this.withTransaction((db) =>
+      Effect.tryPromise({
+        try: async () => {
+          const cutoffDate = new Date();
+          cutoffDate.setDate(cutoffDate.getDate() - keepDays);
 
-        await this.db.delete(runs).where(lt(runs.started_at, cutoffDate));
-      },
-      catch: (error) => configError(`Failed to prune old runs: ${error}`),
-    });
+          await db.delete(runs).where(lt(runs.started_at, cutoffDate));
+        },
+        catch: (error) => configError(`Failed to prune old runs: ${error}`),
+      }),
+    );
   }
 
   getRecentRuns(limit: number): Effect.Effect<CommandRun[], ConfigError | UnknownError> {
-    return Effect.tryPromise({
-      try: async () => {
-        const result = await this.db.select().from(runs).orderBy(desc(runs.started_at)).limit(limit);
+    return this.withTransaction((db) =>
+      Effect.tryPromise({
+        try: async () => {
+          const result = await db.select().from(runs).orderBy(desc(runs.started_at)).limit(limit);
 
-        return result.map((row) => ({
-          id: row.id,
-          cli_version: row.cli_version,
-          command_name: row.command_name,
-          arguments: row.arguments || undefined,
-          exit_code: row.exit_code || undefined,
-          cwd: row.cwd,
-          started_at: new Date(row.started_at),
-          finished_at: row.finished_at ? new Date(row.finished_at) : undefined,
-          duration_ms: row.duration_ms || undefined,
-        }));
-      },
-      catch: (error) => configError(`Failed to get recent runs: ${error}`),
-    });
+          return result.map((row) => ({
+            id: row.id,
+            cli_version: row.cli_version,
+            command_name: row.command_name,
+            arguments: row.arguments || undefined,
+            exit_code: row.exit_code || undefined,
+            cwd: row.cwd,
+            started_at: new Date(row.started_at),
+            finished_at: row.finished_at ? new Date(row.finished_at) : undefined,
+            duration_ms: row.duration_ms || undefined,
+          }));
+        },
+        catch: (error) => configError(`Failed to get recent runs: ${error}`),
+      }),
+    );
   }
 }
 

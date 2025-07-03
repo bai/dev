@@ -37,32 +37,45 @@ import { ShellLiveLayer } from "./infra/shell/ShellLive";
  * and composed with the application layer.
  */
 
-// Infrastructure Layer - building step by step to avoid duplication
-const BaseInfraLayer = Layer.mergeAll(
-  FileSystemLiveLayer,
-  LoggerLiveLayer,
-  ClockLiveLayer,
-  PathServiceLive,
-  DirectoryServiceLive,
-  ShellLiveLayer,
+// Base services with no dependencies
+const BaseServicesLayer = Layer.mergeAll(LoggerLiveLayer, ClockLiveLayer, PathServiceLive);
+
+// Infrastructure services that depend on base services
+const InfraServicesLayer = Layer.mergeAll(
+  Layer.provide(FileSystemLiveLayer, BaseServicesLayer),
+  Layer.provide(DirectoryServiceLive, BaseServicesLayer),
+  Layer.provide(ShellLiveLayer, BaseServicesLayer),
 );
 
+// Combined base layer
+const BaseInfraLayer = Layer.mergeAll(BaseServicesLayer, InfraServicesLayer);
+
+// Network services that depend on filesystem and shell
 const NetworkLayer = Layer.provide(NetworkLiveLayer, BaseInfraLayer);
 
+// Git services that depend on shell and logging
 const GitLayer = Layer.provide(GitLiveLayer, BaseInfraLayer);
 
+// Configuration loading that depends on filesystem and network
 const ConfigLayer = Layer.provide(
   ConfigLoaderLiveLayer(path.join(os.homedir(), ".config", "dev", "config.json")),
   Layer.mergeAll(BaseInfraLayer, NetworkLayer),
 );
 
-// Complete Infrastructure Layer
-export const InfraLiveLayer = Layer.mergeAll(
-  BaseInfraLayer,
-  GitLayer,
-  RunStoreLiveLayer,
+// Tool services that depend on shell, filesystem, and logging
+const ToolServicesLayer = Layer.mergeAll(
   Layer.provide(MiseLiveLayer, BaseInfraLayer),
   Layer.provide(KeychainLiveLayer, BaseInfraLayer),
+);
+
+// Complete Infrastructure Layer with explicit dependency management
+export const InfraLiveLayer = Layer.mergeAll(
+  BaseInfraLayer,
+  NetworkLayer,
+  GitLayer,
+  ConfigLayer,
+  ToolServicesLayer,
+  RunStoreLiveLayer,
   // GitHubProviderLayer("acme"), // Depends on NetworkService
 );
 

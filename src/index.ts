@@ -51,15 +51,15 @@ async function main() {
         const error = failureOrCause.left;
         if (error && typeof error === "object" && "_tag" in error) {
           const devError = error as DevError;
-          console.error(`❌ ${devError._tag}: ${JSON.stringify(devError)}`);
+          Effect.runSync(Effect.logError(`❌ ${devError._tag}: ${JSON.stringify(devError)}`));
           process.exitCode = exitCode(devError);
         } else {
-          console.error(`❌ Error:`, error);
+          Effect.runSync(Effect.logError(`❌ Error: ${error}`));
           process.exitCode = 1;
         }
       } else {
         // It's a defect (unexpected error)
-        console.error(`💥 Unexpected error:`, failureOrCause.right);
+        Effect.runSync(Effect.logError(`💥 Unexpected error: ${failureOrCause.right}`));
         process.exitCode = 1;
       }
     },

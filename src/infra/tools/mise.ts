@@ -130,28 +130,36 @@ export class MiseToolsLive implements MiseToolsService {
         const configDirExists = yield* this.filesystem.exists(miseConfigDir);
         if (!configDirExists) {
           yield* this.logger.info("   📂 Creating mise config directory...");
-          yield* this.filesystem
-            .mkdir(miseConfigDir, true)
-            .pipe(
-              Effect.mapError((error) =>
-                unknownError(
-                  `Failed to create mise config directory: ${error._tag === "FileSystemError" ? error.reason : error}`,
-                ),
-              ),
-            );
+          yield* this.filesystem.mkdir(miseConfigDir, true).pipe(
+            Effect.mapError((error) => {
+              switch (error._tag) {
+                case "FileSystemError":
+                  return unknownError(`Failed to create mise config directory: ${error.reason}`);
+                case "UnknownError":
+                  return unknownError(`Failed to create mise config directory: ${String(error.reason)}`);
+                default:
+                  return unknownError(`Failed to create mise config directory: ${error}`);
+              }
+            }),
+          );
         }
 
         // Write mise global config
         const config = devConfig.miseGlobalConfig;
         const tomlContent = stringify(config);
 
-        yield* this.filesystem
-          .writeFile(miseConfigFile, tomlContent)
-          .pipe(
-            Effect.mapError((error) =>
-              unknownError(`Failed to write mise config: ${error._tag === "FileSystemError" ? error.reason : error}`),
-            ),
-          );
+        yield* this.filesystem.writeFile(miseConfigFile, tomlContent).pipe(
+          Effect.mapError((error) => {
+            switch (error._tag) {
+              case "FileSystemError":
+                return unknownError(`Failed to write mise config: ${error.reason}`);
+              case "UnknownError":
+                return unknownError(`Failed to write mise config: ${String(error.reason)}`);
+              default:
+                return unknownError(`Failed to write mise config: ${error}`);
+            }
+          }),
+        );
         yield* this.logger.info("   ✅ Mise global config ready");
       }.bind(this),
     );

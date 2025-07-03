@@ -72,7 +72,8 @@ export class ShellIntegrationServiceImpl implements ShellIntegrationService {
       }
 
       // Special format for the shell wrapper to interpret: "CD:<path>"
-      console.log(`CD:${absolutePath}`);
+      // Use Effect.sync to wrap console output in Effect context
+      yield* Effect.sync(() => console.log(`CD:${absolutePath}`));
 
       // Return successfully - the shell wrapper should handle this output
       // and the Effect runtime will handle proper process exit codes

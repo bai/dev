@@ -53,15 +53,18 @@ export class NetworkLive implements Network {
         catch: (error) => networkError(`Failed to read response body: ${error}`),
       });
 
-      yield* fileSystem
-        .writeFile(destinationPath, content)
-        .pipe(
-          Effect.mapError((error) =>
-            error._tag === "FileSystemError"
-              ? networkError(`Failed to write file: ${error.reason}`)
-              : networkError(`Failed to write file: ${error}`),
-          ),
-        );
+      yield* fileSystem.writeFile(destinationPath, content).pipe(
+        Effect.mapError((error) => {
+          switch (error._tag) {
+            case "FileSystemError":
+              return networkError(`Failed to write file: ${error.reason}`);
+            case "UnknownError":
+              return networkError(`Failed to write file: ${String(error.reason)}`);
+            default:
+              return networkError(`Failed to write file: ${error}`);
+          }
+        }),
+      );
     });
   }
 

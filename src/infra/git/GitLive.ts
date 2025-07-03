@@ -8,22 +8,35 @@ import { ShellService, type Shell } from "../../domain/ports/Shell";
 export class GitLive implements Git {
   constructor(private shell: Shell) {}
 
-  clone(repository: Repository, destinationPath: string): Effect.Effect<void, GitError | UnknownError> {
-    return this.shell.exec("git", ["clone", repository.cloneUrl, destinationPath]).pipe(
-      Effect.flatMap((result) => {
-        if (result.exitCode !== 0) {
-          return Effect.fail(gitError(`Failed to clone repository: ${result.stderr}`));
-        }
-        return Effect.void;
-      }),
+  cloneRepositoryToPath(repository: Repository, destinationPath: string): Effect.Effect<void, GitError | UnknownError> {
+    return Effect.scoped(
+      Effect.gen(
+        function* (this: GitLive) {
+          // Add cleanup finalizer for failed clone operations
+          yield* Effect.addFinalizer(() =>
+            Effect.sync(() => {
+              // Log cleanup attempt - actual cleanup would depend on filesystem service
+              console.debug(`Git clone operation finalizer called for ${destinationPath}`);
+            }),
+          );
+
+          const result = yield* this.shell.exec("git", ["clone", repository.cloneUrl, destinationPath]);
+
+          if (result.exitCode !== 0) {
+            return yield* Effect.fail(gitError(`Failed to clone repository: ${result.stderr}`));
+          }
+
+          return yield* Effect.void;
+        }.bind(this),
+      ),
     );
   }
 
-  fetch(repositoryPath: string): Effect.Effect<void, GitError | UnknownError> {
+  fetchLatestUpdates(repositoryPath: string): Effect.Effect<void, GitError | UnknownError> {
     return this.shell.exec("git", ["fetch"], { cwd: repositoryPath }).pipe(
       Effect.flatMap((result) => {
         if (result.exitCode !== 0) {
-          return Effect.fail(gitError(`Failed to fetch repository: ${result.stderr}`));
+          return Effect.fail(gitError(`Failed to fetch: ${result.stderr}`));
         }
         return Effect.void;
       }),
@@ -43,18 +56,18 @@ export class GitLive implements Git {
         if (result.exitCode !== 0) {
           return Effect.fail(gitError(`Failed to get current commit SHA: ${result.stderr}`));
         }
-        return Effect.succeed(result.stdout.trim());
+        return Effect.succeed(result.stdout);
       }),
     );
   }
 
-  getRemoteUrl(repositoryPath: string): Effect.Effect<string, GitError | UnknownError> {
+  getRemoteOriginUrl(repositoryPath: string): Effect.Effect<string, GitError | UnknownError> {
     return this.shell.exec("git", ["config", "--get", "remote.origin.url"], { cwd: repositoryPath }).pipe(
       Effect.flatMap((result) => {
         if (result.exitCode !== 0) {
           return Effect.fail(gitError(`Failed to get remote URL: ${result.stderr}`));
         }
-        return Effect.succeed(result.stdout.trim());
+        return Effect.succeed(result.stdout);
       }),
     );
   }

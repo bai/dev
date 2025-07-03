@@ -1,6 +1,6 @@
 import { spawn } from "bun";
 
-import { Effect, Layer } from "effect";
+import { Duration, Effect, Layer } from "effect";
 
 import { unknownError, type UnknownError } from "../../domain/errors";
 import { ShellService, type Shell, type SpawnResult } from "../../domain/ports/Shell";
@@ -57,6 +57,35 @@ export class ShellLive implements Shell {
     return Effect.sync(() => {
       process.chdir(path);
     });
+  }
+
+  // Timeout wrapper methods for better resource management
+  execWithTimeout(
+    command: string,
+    args: string[] = [],
+    timeout: Duration.Duration,
+    options: { cwd?: string } = {},
+  ): Effect.Effect<SpawnResult, UnknownError> {
+    return this.exec(command, args, options).pipe(
+      Effect.timeout(timeout),
+      Effect.catchTag("TimeoutException", () =>
+        Effect.fail(unknownError(`Command ${command} timed out after ${Duration.toMillis(timeout)}ms`)),
+      ),
+    );
+  }
+
+  execInteractiveWithTimeout(
+    command: string,
+    args: string[] = [],
+    timeout: Duration.Duration,
+    options: { cwd?: string } = {},
+  ): Effect.Effect<number, UnknownError> {
+    return this.execInteractive(command, args, options).pipe(
+      Effect.timeout(timeout),
+      Effect.catchTag("TimeoutException", () =>
+        Effect.fail(unknownError(`Interactive command ${command} timed out after ${Duration.toMillis(timeout)}ms`)),
+      ),
+    );
   }
 }
 

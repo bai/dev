@@ -106,7 +106,7 @@ function updateGitPluginEffect(pluginUrl: string): Effect.Effect<void, DevError,
 
     if (exists) {
       // Fetch updates
-      yield* git.fetch(pluginDir);
+      yield* git.fetchLatestUpdates(pluginDir);
     } else {
       // Clone plugin
       // This is simplified - would need to create proper Repository object

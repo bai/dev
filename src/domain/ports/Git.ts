@@ -7,12 +7,12 @@ export interface Git {
   /**
    * Clone a repository to a destination path
    */
-  clone(repository: Repository, destinationPath: string): Effect.Effect<void, GitError | UnknownError>;
+  cloneRepositoryToPath(repository: Repository, destinationPath: string): Effect.Effect<void, GitError | UnknownError>;
 
   /**
-   * Fetch updates for a repository
+   * Fetch latest updates for a repository
    */
-  fetch(repositoryPath: string): Effect.Effect<void, GitError | UnknownError>;
+  fetchLatestUpdates(repositoryPath: string): Effect.Effect<void, GitError | UnknownError>;
 
   /**
    * Check if a directory is a git repository
@@ -25,9 +25,9 @@ export interface Git {
   getCurrentCommitSha(repositoryPath?: string): Effect.Effect<string, GitError | UnknownError>;
 
   /**
-   * Get the remote URL of a repository
+   * Get the remote origin URL of a repository
    */
-  getRemoteUrl(repositoryPath: string): Effect.Effect<string, GitError | UnknownError>;
+  getRemoteOriginUrl(repositoryPath: string): Effect.Effect<string, GitError | UnknownError>;
 }
 
 // Service tag for Effect Context system

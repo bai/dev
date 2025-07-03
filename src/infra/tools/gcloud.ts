@@ -116,13 +116,18 @@ export class GcloudToolsLive implements GcloudToolsService {
         const exists = yield* this.filesystem.exists(gcloudConfigDir);
         if (!exists) {
           yield* this.logger.info("   📂 Creating gcloud config directory...");
-          yield* this.filesystem
-            .mkdir(gcloudConfigDir, true)
-            .pipe(
-              Effect.mapError((error) =>
-                unknownError(`Failed to create directory: ${error._tag === "FileSystemError" ? error.reason : error}`),
-              ),
-            );
+          yield* this.filesystem.mkdir(gcloudConfigDir, true).pipe(
+            Effect.mapError((error) => {
+              switch (error._tag) {
+                case "FileSystemError":
+                  return unknownError(`Failed to create directory: ${error.reason}`);
+                case "UnknownError":
+                  return unknownError(`Failed to create directory: ${String(error.reason)}`);
+                default:
+                  return unknownError(`Failed to create directory: ${error}`);
+              }
+            }),
+          );
         }
 
         yield* this.logger.info("   ✅ Google Cloud config ready");

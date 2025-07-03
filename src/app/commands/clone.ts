@@ -66,7 +66,7 @@ Examples:
       yield* Effect.log(`Cloning ${repository.organization}/${repository.name}...`);
 
       // Clone the repository
-      yield* git.clone(repository, destinationPath);
+      yield* git.cloneRepositoryToPath(repository, destinationPath);
 
       yield* Effect.log(`Successfully cloned ${repository.organization}/${repository.name} to ${repository.name}`);
     });
