@@ -11,7 +11,6 @@ import { upCommand } from "./app/commands/up";
 import { upgradeCommand } from "./app/commands/upgrade";
 import { extractDynamicValues, loadConfiguration } from "./config/bootstrap";
 import { buildAppLiveLayer } from "./config/dynamic-layers";
-import { defaultConfig } from "./config/schema";
 
 /**
  * Composition Root - Two-Stage Dynamic Wiring
@@ -66,15 +65,3 @@ export const setupApplicationWithConfig = () =>
       appLayer,
     };
   });
-
-/**
- * Fallback function for backward compatibility
- *
- * This provides a default static app layer using the default configuration.
- * This is used when the dynamic system can't be used (e.g., during CLI parsing).
- */
-export function getDefaultAppLayer() {
-  // Use default configuration values for the static layer
-  const defaultConfigValues = extractDynamicValues(defaultConfig);
-  return buildAppLiveLayer(defaultConfigValues);
-}
