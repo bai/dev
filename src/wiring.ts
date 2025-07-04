@@ -1,3 +1,4 @@
+import { Command } from "@effect/cli";
 import { Effect } from "effect";
 
 import { authCommand } from "./app/commands/auth";
@@ -8,11 +9,9 @@ import { runCommand } from "./app/commands/run";
 import { statusCommand } from "./app/commands/status";
 import { upCommand } from "./app/commands/up";
 import { upgradeCommand } from "./app/commands/upgrade";
-import { createCliParser, type CliParser } from "./cli/parser";
 import { extractDynamicValues, loadConfiguration } from "./config/bootstrap";
 import { buildAppLiveLayer } from "./config/dynamic-layers";
 import { defaultConfig } from "./config/schema";
-import type { CliCommandSpec } from "./domain/models";
 
 /**
  * Composition Root - Two-Stage Dynamic Wiring
@@ -22,26 +21,22 @@ import type { CliCommandSpec } from "./domain/models";
  * 2. Stage 2: Build layers with runtime configuration values
  */
 
-// Available commands - exported for CLI layer
-export const availableCommands: CliCommandSpec[] = [
-  cdCommand,
-  cloneCommand,
-  upCommand,
-  runCommand,
-  authCommand,
-  statusCommand,
-  upgradeCommand,
-  helpCommand,
-];
-
-// Create CLI instance with available commands
-export function createDevCli(): CliParser {
-  return createCliParser(availableCommands, {
-    name: "dev",
-    description: "A hexagonal, plugin-extensible CLI for development workflow",
-    version: "1.0.0", // TODO: Get from package.json
-  });
-}
+// Create main command using @effect/cli
+export const getMainCommand = () => {
+  // Create main command with all subcommands
+  return Command.make("dev", {}, () => Effect.logInfo("Use --help to see available commands")).pipe(
+    Command.withSubcommands([
+      cdCommand,
+      cloneCommand,
+      upCommand,
+      runCommand,
+      authCommand,
+      statusCommand,
+      upgradeCommand,
+      helpCommand,
+    ]),
+  );
+};
 
 /**
  * Two-stage application setup with dynamic configuration

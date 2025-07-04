@@ -11,12 +11,11 @@
 7. Ports & Adapters (Domain Interfaces)
 8. Local Run Analytics
 9. Configuration Handling
-10. Plugins & Extensibility
-11. Command Catalogue
-12. Shell Completions
-13. Upgrade Sequence
-14. Testing Strategy
-15. Extending the System
+10. Command Catalogue
+11. Shell Completions
+12. Upgrade Sequence
+13. Testing Strategy
+14. Extending the System
 
 ---
 
@@ -41,6 +40,7 @@
 | Runtime / Compiler | **Bun**                          | 1.2.17        |
 | Language           | **TypeScript**                   | 5.8.3         |
 | FP Runtime         | **Effect**                       | 3.16.11       |
+| CLI Framework      | **@effect/cli**                  | latest        |
 | Test Runner        | **Vitest**                       | 3.2.4         |
 | Relational Store   | **SQLite 3** via **drizzle-orm** | latest        |
 | Git CLI            | `git` ≥ 2.40                     | —             |
@@ -51,60 +51,39 @@
 
 ### 3.1 Hexagonal / Ports & Adapters
 
-Business rules live at the centre, surrounded by *ports* (interfaces) and *adapters* (concrete implementations).
+The application follows the hexagonal architecture pattern, with clear separation between:
+- **Domain layer** - pure business logic, domain models, and service interfaces (ports)
+- **Infrastructure layer** - concrete implementations of domain services (adapters)
+- **Application layer** - command handlers and service orchestration
+- **CLI layer** - @effect/cli command definitions and argument parsing
 
-```mermaid
-graph TB
-    subgraph "External World"
-        CLI[CLI Interface]
-        DB[Database]
-        FS[File System]
-        API[External APIs]
-        Tests[Tests]
-    end
+### 3.2 Effect-TS CLI Architecture
 
-    subgraph "Adapters Layer"
-        CLIAdapter[CLI Adapter]
-        DBAdapter[DB Adapter]
-        FSAdapter[FS Adapter]
-        APIAdapter[API Adapter]
-        TestAdapter[Test Adapter]
-    end
+Commands are defined using @effect/cli for idiomatic Effect-TS patterns:
 
-    subgraph "Ports Layer"
-        InputPort[Input Ports]
-        OutputPort[Output Ports]
-    end
+```ts
+import { Args, Command } from "@effect/cli";
 
-    subgraph "Core Domain"
-        Business[Business Logic<br/>Pure Functions]
-    end
-
-    CLI --> CLIAdapter
-    DB --> DBAdapter
-    FS --> FSAdapter
-    API --> APIAdapter
-    Tests --> TestAdapter
-
-    CLIAdapter --> InputPort
-    DBAdapter --> OutputPort
-    FSAdapter --> OutputPort
-    APIAdapter --> OutputPort
-    TestAdapter --> InputPort
-
-    InputPort --> Business
-    Business --> OutputPort
-
-    style Business fill:#4CAF50
-    style InputPort fill:#2196F3
-    style OutputPort fill:#2196F3
-    style CLIAdapter fill:#FF9800
-    style DBAdapter fill:#9C27B0
-    style FSAdapter fill:#9C27B0
-    style APIAdapter fill:#9C27B0
+const cloneCommand = Command.make(
+  "clone",
+  { repo: Args.text({ name: "repo" }) },
+  ({ repo }) =>
+    Effect.gen(function* () {
+      // Command implementation using Effect generators
+      const repoService = yield* RepositoryServiceTag;
+      const repository = yield* repoService.resolveRepository(repo);
+      // ... rest of implementation
+    }),
+);
 ```
 
-### 3.2 Dependency Rule
+This approach provides:
+- **Composable commands** with declarative argument parsing
+- **Type-safe arguments** with automatic validation
+- **Resource management** with proper cleanup and interruption
+- **Error handling** through Effect's error channel
+
+### 3.3 Dependency Rule
 
 *All* arrows point **inwards** – inner layers never import from outer ones.
 
@@ -215,18 +194,18 @@ No `class`, just a *factory* that returns a plain object implementing `Git`.
 ### 5.3 Composing Effects
 
 ```ts
-// Example command (functional style)
-export const cloneCommand: CliCommandSpec = {
-  name: "clone",
-  description: "Clone a repository",
-  handler: ({ args }) =>
+// Example command (using @effect/cli)
+export const cloneCommand = Command.make(
+  "clone",
+  { repo: Args.text({ name: "repo" }) },
+  ({ repo }) =>
     Effect.gen(function* () {
       const git = yield* GitTag;
-      const repo = parseRepository(args.repo);
-      const dest = `${process.env.HOME}/src/${repo.fullName}`;
-      yield* git.clone(repo, dest);
+      const repository = parseRepository(repo);
+      const dest = `${process.env.HOME}/src/${repository.fullName}`;
+      yield* git.clone(repository, dest);
     }),
-};
+);
 ```
 
 ---
@@ -326,10 +305,7 @@ export const ConfigTag = Context.Tag<Config>("Config");
   "paths": { "base": "~/src" },
   "telemetry": { "enabled": true },
   "plugins": {
-    "git": [
-      "https://github.com/acme/dev-plugin-docker.git",
-      "ssh://git@example.com/custom/dev-plugin-foo.git"
-    ]
+    "git": []
   }
 }
 ```
@@ -338,28 +314,7 @@ export const ConfigTag = Context.Tag<Config>("Config");
 
 ---
 
-## 10 · Plugins & Extensibility
-
-Plugins implement an `AppModule` contract.
-
-```ts
-export interface AppModule {
-  readonly commands: readonly CliCommandSpec[];
-  readonly layers?: Layer.Layer<any>;
-  readonly hooks?:  { readonly onStart?: Effect.Effect<void> };
-}
-```
-
-Discovery order:
-
-1. `~/.dev/plugins/**` (local plugins from installation directory)
-2. `~/.cache/dev/plugins/**` (cached git plugins - XDG compliant)
-3. `node_modules/@*/dev-plugin-*`
-4. Git URLs declared in `config.plugins.git`
-
----
-
-## 11 · Command Catalogue
+## 10 · Command Catalogue
 
 | Command             | Synopsis                                 |
 | ------------------- | ---------------------------------------- |
@@ -374,25 +329,27 @@ Discovery order:
 
 ---
 
-## 12 · Shell Completions
+## 11 · Shell Completions
 
 `scripts/generate-completions.ts` emits Zsh/Bash/Fish completion scripts to `/completions`.  They can be installed globally or sourced on-the-fly via `eval "$(dev completion zsh)"`.
 
 ---
 
-## 13 · Upgrade Sequence
+## 12 · Upgrade Sequence
 
-1. Download latest binary.
-2. Fetch remote `configUrl`, migrate & overwrite local.
-3. Fetch / clone Git plugins declared in config.
-4. Regenerate completions if `--regenerate-completions`.
-5. Print final version.
+1. Self-update CLI repository if in git repo.
+2. Ensure necessary directories exist.
+3. Update shell integration.
+4. Fetch remote `configUrl`, migrate & overwrite local.
+5. Check and upgrade essential tools (bun, git, mise, fzf, gcloud).
+6. Regenerate completions if `--regenerate-completions`.
+7. Print success message and usage examples.
 
 ---
 
-## 14 · Testing Strategy
+## 13 · Testing Strategy
 
-### 14.1 Co-located Unit Tests
+### 13.1 Co-located Unit Tests
 
 Place pure unit tests beside the code they test:
 
@@ -404,7 +361,7 @@ src/app/commands/
 
 Use in-memory fakes to avoid I/O.
 
-### 14.2 Integration & E2E Suites
+### 13.2 Integration & E2E Suites
 
 ```
 tests/
@@ -416,14 +373,14 @@ Integration tests wire multiple layers together with real SQLite; E2E drives the
 
 ---
 
-## 15 · Extending the System
+## 14 · Extending the System
 
 ### Adding a New Command
 
 1. **Define / reuse domain models & ports**.
 2. **Implement functional adapter(s)** if new infrastructure is needed.
-3. **Write the command** as a pure Effect value.
-4. **Wire** everything in `wiring.ts`.
+3. **Write the command** using @effect/cli Command.make with Effect generators.
+4. **Wire** everything in `wiring.ts` by adding to the subcommands array.
 
 ### Adding a New Infrastructure Adapter (Example: Redis Cache)
 

@@ -62,4 +62,7 @@ export class ShellIntegrationServiceTag extends Context.Tag("ShellIntegrationSer
 >() {}
 
 // Layer that provides ShellIntegrationService (no `new` keyword)
-export const ShellIntegrationServiceLive = Layer.succeed(ShellIntegrationServiceTag, ShellIntegrationServiceImpl);
+export const ShellIntegrationServiceLive = Layer.effect(
+  ShellIntegrationServiceTag,
+  Effect.succeed(ShellIntegrationServiceImpl),
+);

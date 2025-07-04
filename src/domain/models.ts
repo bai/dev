@@ -66,51 +66,11 @@ export interface Repository {
   cloneUrl: string;
 }
 
-export interface CliCommandSpec {
-  name: string;
-  description: string;
-  help?: string;
-  aliases?: string[];
-  arguments?: CommandArgument[];
-  options?: CommandOption[];
-  exec: (context: CommandContext) => Effect.Effect<void, DevError, any>;
-}
-
-export interface CommandArgument {
-  name: string;
-  description: string;
-  required?: boolean;
-  variadic?: boolean;
-  defaultValue?: any;
-}
-
-export interface CommandOption {
-  flags: string;
-  description: string;
-  defaultValue?: any;
-  choices?: string[];
-  required?: boolean;
-  parser?: (value: string) => any;
-}
-
-export interface CommandContext {
-  args: Record<string, any>;
-  options: Record<string, any>;
-}
-
 export interface ConfigManager {
   get<T = any>(key: string, defaultValue?: T): T;
   set(key: string, value: any): Effect.Effect<void>;
   has(key: string): boolean;
   getAll(): Record<string, any>;
-}
-
-export interface AppModule {
-  commands: CliCommandSpec[];
-  layers?: Layer.Layer<any, never, any>;
-  hooks?: {
-    onStart?: Effect.Effect<void, never, any>;
-  };
 }
 
 // Service tags for Effect Context system

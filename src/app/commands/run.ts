@@ -1,67 +1,44 @@
+import { Args, Command } from "@effect/cli";
 import { Effect } from "effect";
 
 import { unknownError, type DevError } from "../../domain/errors";
-import { type CliCommandSpec, type CommandContext } from "../../domain/models";
 import { FileSystemService } from "../../domain/ports/FileSystem";
 import { MiseService } from "../../domain/ports/Mise";
 
-// Interface removed - services now accessed via Effect Context
+// Define the task argument as optional
+const task = Args.text({ name: "task" }).pipe(Args.optional);
 
-export const runCommand: CliCommandSpec = {
-  name: "run",
-  description: "Run a task using mise",
-  help: `
-Run development tasks:
+// Create the run command using @effect/cli
+export const runCommand = Command.make("run", { task }, ({ task }) =>
+  Effect.gen(function* () {
+    yield* Effect.logInfo("Running command...");
+    const mise = yield* MiseService;
+    const fileSystem = yield* FileSystemService;
+    const taskName = task._tag === "Some" ? task.value : undefined;
 
-Usage:
-  dev run <task>          # Run a specific task
-  dev run                 # List available tasks
+    const cwd = yield* fileSystem.getCwd();
 
-Examples:
-  dev run test            # Run tests
-  dev run build           # Run build task
-  dev run dev             # Start development server
-  `,
+    if (!taskName) {
+      // List available tasks
+      yield* Effect.logInfo("Available tasks:");
 
-  arguments: [
-    {
-      name: "task",
-      description: "Task name to run",
-      required: false,
-    },
-  ],
+      const tasks = yield* mise.getTasks(cwd);
 
-  exec(context: CommandContext): Effect.Effect<void, DevError, any> {
-    return Effect.gen(function* () {
-      yield* Effect.logInfo("Running command...");
-      const mise = yield* MiseService;
-      const fileSystem = yield* FileSystemService;
-      const taskName = context.args.task;
-
-      const cwd = yield* fileSystem.getCwd();
-
-      if (!taskName) {
-        // List available tasks
-        yield* Effect.logInfo("Available tasks:");
-
-        const tasks = yield* mise.getTasks(cwd);
-
-        if (tasks.length === 0) {
-          yield* Effect.logInfo("No tasks found in current directory");
-          return;
-        }
-
-        for (const task of tasks) {
-          yield* Effect.logInfo(`  ${task}`);
-        }
+      if (tasks.length === 0) {
+        yield* Effect.logInfo("No tasks found in current directory");
         return;
       }
 
-      yield* Effect.logInfo(`Running task: ${taskName}`);
+      for (const task of tasks) {
+        yield* Effect.logInfo(`  ${task}`);
+      }
+      return;
+    }
 
-      yield* mise.runTask(taskName, cwd);
+    yield* Effect.logInfo(`Running task: ${taskName}`);
 
-      yield* Effect.logInfo("✅ Task '${taskName}' completed successfully");
-    });
-  },
-};
+    yield* mise.runTask(taskName, cwd);
+
+    yield* Effect.logInfo(`✅ Task '${taskName}' completed successfully`);
+  }),
+);

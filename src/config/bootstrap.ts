@@ -25,8 +25,11 @@ import { type Config } from "./schema";
 const BootstrapLayer = Layer.mergeAll(
   PathServiceLive,
   FileSystemLiveLayer,
-  NetworkLiveLayer,
-  ConfigLoaderLiveLayer(path.join(os.homedir(), ".config", "dev", "config.json")),
+  Layer.provide(NetworkLiveLayer, FileSystemLiveLayer),
+  Layer.provide(
+    ConfigLoaderLiveLayer(path.join(os.homedir(), ".config", "dev", "config.json")),
+    Layer.mergeAll(PathServiceLive, FileSystemLiveLayer, Layer.provide(NetworkLiveLayer, FileSystemLiveLayer)),
+  ),
 );
 
 /**

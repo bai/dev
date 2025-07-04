@@ -1,54 +1,37 @@
+import { Command } from "@effect/cli";
 import { Effect } from "effect";
 
 import { unknownError, type DevError } from "../../domain/errors";
-import { type CliCommandSpec, type CommandContext } from "../../domain/models";
 import { FileSystemService } from "../../domain/ports/FileSystem";
 import { MiseService } from "../../domain/ports/Mise";
 
-// Interface removed - services now accessed via Effect Context
+// Create the up command using @effect/cli (no arguments needed)
+export const upCommand = Command.make("up", {}, () =>
+  Effect.gen(function* () {
+    const mise = yield* MiseService;
+    const fileSystem = yield* FileSystemService;
 
-export const upCommand: CliCommandSpec = {
-  name: "up",
-  description: "Set up the development environment using mise",
-  help: `
-Set up your development environment:
+    yield* Effect.logInfo("Setting up development environment...");
 
-Usage:
-  dev up                  # Install tools for current directory
+    // Check mise installation - attempt to get installation info
+    const miseInfo = yield* Effect.either(mise.checkInstallation());
 
-This command will:
-1. Check if mise is installed
-2. Install tools specified in .mise.toml or .tool-versions
-3. Set up the development environment
-  `,
+    if (miseInfo._tag === "Left") {
+      yield* Effect.logWarning("⚠️ Mise is not installed. Installing...");
+      yield* mise.install();
+      yield* Effect.logInfo("✅ Mise installed successfully");
+    } else {
+      yield* Effect.logInfo(`Mise version: ${miseInfo.right.version}`);
+    }
 
-  exec(context: CommandContext): Effect.Effect<void, DevError, any> {
-    return Effect.gen(function* () {
-      const mise = yield* MiseService;
-      const fileSystem = yield* FileSystemService;
+    // Get current working directory
+    const cwd = yield* fileSystem.getCwd();
 
-      yield* Effect.logInfo("Setting up development environment...");
+    // Install tools for the current directory
+    yield* Effect.logInfo("Installing development tools...");
 
-      // Check mise installation - attempt to get installation info
-      const miseInfo = yield* Effect.either(mise.checkInstallation());
+    yield* mise.installTools(cwd);
 
-      if (miseInfo._tag === "Left") {
-        yield* Effect.logWarning("⚠️ Mise is not installed. Installing...");
-        yield* mise.install();
-        yield* Effect.logInfo("✅ Mise installed successfully");
-      } else {
-        yield* Effect.logInfo(`Mise version: ${miseInfo.right.version}`);
-      }
-
-      // Get current working directory
-      const cwd = yield* fileSystem.getCwd();
-
-      // Install tools for the current directory
-      yield* Effect.logInfo("Installing development tools...");
-
-      yield* mise.installTools(cwd);
-
-      yield* Effect.logInfo("✅ Development environment setup complete!");
-    });
-  },
-};
+    yield* Effect.logInfo("✅ Development environment setup complete!");
+  }),
+);

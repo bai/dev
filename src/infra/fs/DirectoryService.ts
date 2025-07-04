@@ -70,4 +70,4 @@ export const DirectoryServiceImpl: Directory = {
 };
 
 // Layer that provides DirectoryService with proper dependency injection
-export const DirectoryServiceLive = Layer.succeed(DirectoryService, DirectoryServiceImpl);
+export const DirectoryServiceLive = Layer.effect(DirectoryService, Effect.succeed(DirectoryServiceImpl));

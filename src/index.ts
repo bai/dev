@@ -1,9 +1,59 @@
 #!/usr/bin/env bun
+import { Command } from "@effect/cli";
 import { BunRuntime } from "@effect/platform-bun";
 import { Effect } from "effect";
 
 import { exitCode, unknownError, type DevError } from "./domain/errors";
-import { createDevCli, setupApplicationWithConfig } from "./wiring";
+import { getMainCommand, setupApplicationWithConfig } from "./wiring";
+
+// CLI application runner (moved from cli/effect-cli.ts)
+const runCli = (
+  mainCommand: Command.Command<string, any, any, any>,
+  metadata: {
+    name: string;
+    version: string;
+    description?: string;
+  },
+): Effect.Effect<void, never, any> => {
+  const cli = Command.run(mainCommand, {
+    name: metadata.description || metadata.name,
+    version: metadata.version,
+  });
+
+  return Effect.scoped(
+    Effect.gen(function* () {
+      // Add shutdown finalizer for graceful cleanup
+      yield* Effect.addFinalizer(() =>
+        Effect.gen(function* () {
+          yield* Effect.logDebug("🔧 Cleaning up CLI resources...");
+          if (process.exitCode === 130) {
+            yield* Effect.logDebug("💡 Shutdown initiated by user interrupt (Ctrl+C)");
+          }
+          yield* Effect.logDebug("✅ CLI cleanup complete");
+        }),
+      );
+
+      yield* Effect.logDebug("🚀 Starting Effect CLI...");
+
+      // Get args (trim node and script name from argv)
+      const args = process.argv.slice(2);
+
+      // Execute CLI effect directly - cli() returns an Effect
+      yield* cli(["node", "script", ...args]);
+
+      yield* Effect.logDebug("✅ CLI execution completed successfully");
+    }).pipe(
+      Effect.catchAll((error) =>
+        Effect.gen(function* () {
+          yield* Effect.logError(`❌ CLI error: ${String(error)}`);
+          yield* Effect.sync(() => {
+            process.exitCode = 1;
+          });
+        }),
+      ),
+    ),
+  );
+};
 
 const program = Effect.scoped(
   Effect.gen(function* () {
@@ -20,55 +70,51 @@ const program = Effect.scoped(
     );
 
     // Log application start
-    yield* Effect.logDebug("🚀 Starting dev CLI with dynamic configuration...");
+    yield* Effect.logDebug("🚀 Starting dev CLI with Effect CLI...");
 
-    // Create CLI instance
-    const cli = createDevCli();
+    // Setup application layers
+    const { appLayer } = yield* setupApplicationWithConfig();
 
-    // Parse and execute command (trim node and script name from argv)
-    let args = process.argv.slice(2);
+    // Get the main command
+    const mainCommand = getMainCommand();
 
-    // Show help when no command is provided
-    if (args.length === 0) {
-      args = ["help"];
-    }
+    // Run the CLI with metadata and provide the app layer
+    yield* runCli(mainCommand as any, {
+      name: "dev",
+      version: "1.0.0", // TODO: Get from package.json
+      description: "A hexagonal, plugin-extensible CLI for development workflow",
+    }).pipe(Effect.provide(appLayer));
 
-    // Execute with the dynamically built app layer
-    // Note: The CLI now handles its own dynamic layer setup internally
-    yield* Effect.tryPromise({
-      try: () => cli.parseAndExecute(args),
-      catch: (error) => {
-        // Convert unknown errors to DevError
-        if (error && typeof error === "object" && "_tag" in error) {
-          return error as DevError;
-        }
-        return unknownError(error);
-      },
-    });
-
-    yield* Effect.logDebug("✅ Command execution completed successfully");
+    yield* Effect.logDebug("✅ CLI execution completed successfully");
   }),
 ).pipe(
-  Effect.catchAll((error: DevError) => {
-    // Handle errors and set appropriate exit codes
-    return Effect.gen(function* () {
-      yield* Effect.logError(`❌ ${error._tag}: ${JSON.stringify(error)}`);
-      yield* Effect.sync(() => {
-        process.exitCode = exitCode(error);
-      });
-    });
-  }),
-  // Add interruption handling
-  Effect.onInterrupt(() =>
+  Effect.catchAll((error) =>
     Effect.gen(function* () {
-      yield* Effect.logDebug("⚠️  Received interrupt signal, cleaning up...");
+      // Try to handle as DevError first
+      if (error && typeof error === "object" && "_tag" in error) {
+        const devError = error as DevError;
+        yield* Effect.logError(`❌ ${devError._tag}: ${String(devError)}`);
+        yield* Effect.sync(() => {
+          process.exitCode = exitCode(devError);
+        });
+      } else {
+        // Handle unknown errors
+        yield* Effect.logError(`❌ Unknown error: ${String(error)}`);
+        yield* Effect.sync(() => {
+          process.exitCode = 1;
+        });
+      }
+    }),
+  ),
+  Effect.catchAllCause((cause) =>
+    Effect.gen(function* () {
+      yield* Effect.logError(`❌ Unexpected error: ${String(cause)}`);
       yield* Effect.sync(() => {
-        process.exitCode = 130; // Standard exit code for SIGINT
+        process.exitCode = 1;
       });
     }),
   ),
-);
+) as Effect.Effect<void, never, never>;
 
-// Use BunRuntime.runMain for proper resource cleanup and graceful shutdown
-// BunRuntime.runMain automatically handles SIGINT and SIGTERM for graceful interruption
+// Run the program with BunRuntime
 BunRuntime.runMain(program);

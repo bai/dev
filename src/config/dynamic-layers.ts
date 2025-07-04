@@ -16,7 +16,11 @@ import { NetworkLiveLayer } from "../infra/network/NetworkLive";
 import { GitHubProviderLayer } from "../infra/providers/GitHubProvider";
 import { FzfSelectorLiveLayer } from "../infra/selector/FzfSelectorLive";
 import { ShellLiveLayer } from "../infra/shell/ShellLive";
+import { BunToolsServiceLive } from "../infra/tools/bun";
 import { FzfToolsLiveLayer } from "../infra/tools/fzf";
+import { GcloudToolsServiceLive } from "../infra/tools/gcloud";
+import { GitToolsLiveLayer } from "../infra/tools/git";
+import { MiseToolsServiceLive } from "../infra/tools/mise";
 import { type DynamicConfigValues } from "./bootstrap";
 import { ConfigLoaderLiveLayer } from "./loader";
 
@@ -35,16 +39,20 @@ export const buildInfraLiveLayer = (configValues: DynamicConfigValues) => {
   // Base services with no dependencies
   const BaseServicesLayer = PathServiceLive;
 
-  // Infrastructure services that depend on base services
-  const InfraServicesLayer = Layer.mergeAll(
-    Layer.provide(FileSystemLiveLayer, BaseServicesLayer),
-    Layer.provide(DirectoryServiceLive, BaseServicesLayer),
-    Layer.provide(ShellLiveLayer, BaseServicesLayer),
-    Layer.provide(RepositoryServiceLive, BaseServicesLayer),
+  // Self-contained services that truly don't need dependencies
+  const SelfContainedServicesLayer = Layer.mergeAll(
+    FileSystemLiveLayer, // No dependencies needed - it's Layer.succeed()
+    ShellLiveLayer, // No dependencies needed - it's Layer.succeed()
   );
 
-  // Combined base layer
-  const BaseInfraLayer = Layer.mergeAll(BaseServicesLayer, InfraServicesLayer);
+  // Services that depend on base services
+  const DependentServicesLayer = Layer.mergeAll(
+    Layer.provide(RepositoryServiceLive, BaseServicesLayer),
+    Layer.provide(DirectoryServiceLive, Layer.mergeAll(BaseServicesLayer, SelfContainedServicesLayer)),
+  );
+
+  // Combined base layer with all infrastructure services
+  const BaseInfraLayer = Layer.mergeAll(BaseServicesLayer, SelfContainedServicesLayer, DependentServicesLayer);
 
   // Network services that depend on filesystem and shell
   const NetworkLayer = Layer.provide(NetworkLiveLayer, BaseInfraLayer);
@@ -64,6 +72,10 @@ export const buildInfraLiveLayer = (configValues: DynamicConfigValues) => {
     Layer.provide(MiseLiveLayer, BaseInfraLayer),
     Layer.provide(KeychainLiveLayer, BaseInfraLayer),
     Layer.provide(FzfToolsLiveLayer, BaseInfraLayer),
+    Layer.provide(BunToolsServiceLive, BaseInfraLayer),
+    Layer.provide(GitToolsLiveLayer, BaseInfraLayer),
+    Layer.provide(MiseToolsServiceLive, BaseInfraLayer),
+    Layer.provide(GcloudToolsServiceLive, BaseInfraLayer),
     FzfSelectorLiveLayer, // No dependencies needed
   );
 
@@ -93,16 +105,16 @@ export const buildAppLiveLayer = (configValues: DynamicConfigValues) => {
   const infraLayer = buildInfraLiveLayer(configValues);
 
   // Application Layer (orchestration services only - no infrastructure imports)
-  // Ensure all app services get the PathService they need
-  return Layer.mergeAll(
-    infraLayer,
-
-    // App services - these coordinate domain logic and need PathService
+  // These services all depend on infrastructure services
+  const AppServicesLayer = Layer.mergeAll(
     Layer.provide(ShellIntegrationServiceLive, infraLayer),
-    Layer.provide(CommandTrackingServiceLive, infraLayer),
     Layer.provide(VersionServiceLive, infraLayer),
     Layer.provide(UpdateCheckServiceLive, infraLayer),
+    Layer.provide(CommandTrackingServiceLive, infraLayer),
   );
+
+  // Complete application layer with all dependencies
+  return Layer.mergeAll(infraLayer, AppServicesLayer);
 };
 
 /**

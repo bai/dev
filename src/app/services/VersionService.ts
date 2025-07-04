@@ -34,4 +34,4 @@ export const VersionServiceImpl: VersionService = {
 export class VersionServiceTag extends Context.Tag("VersionService")<VersionServiceTag, VersionService>() {}
 
 // Layer that provides VersionService (no `new` keyword)
-export const VersionServiceLive = Layer.succeed(VersionServiceTag, VersionServiceImpl);
+export const VersionServiceLive = Layer.effect(VersionServiceTag, Effect.succeed(VersionServiceImpl));

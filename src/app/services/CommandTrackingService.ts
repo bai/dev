@@ -79,4 +79,7 @@ export class CommandTrackingServiceTag extends Context.Tag("CommandTrackingServi
 >() {}
 
 // Layer that provides CommandTrackingService (no `new` keyword)
-export const CommandTrackingServiceLive = Layer.succeed(CommandTrackingServiceTag, CommandTrackingServiceImpl);
+export const CommandTrackingServiceLive = Layer.effect(
+  CommandTrackingServiceTag,
+  Effect.succeed(CommandTrackingServiceImpl),
+);

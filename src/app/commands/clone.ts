@@ -1,7 +1,7 @@
+import { Args, Command } from "@effect/cli";
 import { Effect } from "effect";
 
 import { unknownError, type DevError } from "../../domain/errors";
-import type { CliCommandSpec, CommandContext } from "../../domain/models";
 import { FileSystemService } from "../../domain/ports/FileSystem";
 import { GitService } from "../../domain/ports/Git";
 import { RepoProviderService } from "../../domain/ports/RepoProvider";
@@ -9,86 +9,68 @@ import { PathServiceTag } from "../../domain/services/PathService";
 import { RepositoryServiceTag } from "../../domain/services/RepositoryService";
 import { ShellIntegrationServiceTag } from "../services/ShellIntegrationService";
 
-export const cloneCommand: CliCommandSpec = {
-  name: "clone",
-  description: "Clone a repository to the base directory",
-  help: `
-Clone a repository to your base directory:
+// Define the repository argument as required
+const repo = Args.text({ name: "repo" });
 
-Usage:
-  dev clone <repo>        # Clone a repository by name
-  dev clone <org>/<repo>  # Clone from specific organization
+// Create the clone command using @effect/cli
+export const cloneCommand = Command.make("clone", { repo }, ({ repo }) =>
+  Effect.scoped(
+    Effect.gen(function* () {
+      // Add cleanup finalizer for failed clone operations
+      yield* Effect.addFinalizer(() => Effect.logDebug("Clone command finalizer called - cleanup complete"));
 
-Examples:
-  dev clone myproject     # Clone using default org
-  dev clone acme/myproject # Clone from acme organization
-  `,
+      // Get services from Effect Context
+      const git = yield* GitService;
+      const repoProvider = yield* RepoProviderService;
+      const fileSystem = yield* FileSystemService;
+      const pathService = yield* PathServiceTag;
+      const repositoryService = yield* RepositoryServiceTag;
+      const shellIntegration = yield* ShellIntegrationServiceTag;
 
-  arguments: [
-    {
-      name: "repo",
-      description: "Repository name or org/repo",
-      required: true,
-    },
-  ],
+      if (!repo) {
+        return yield* Effect.fail(unknownError("Repository name is required"));
+      }
 
-  exec(context: CommandContext): Effect.Effect<void, DevError, any> {
-    return Effect.scoped(
-      Effect.gen(function* () {
-        // Add cleanup finalizer for failed clone operations
-        yield* Effect.addFinalizer(() => Effect.logDebug("Clone command finalizer called - cleanup complete"));
+      // Parse org/repo or just repo
+      const [orgOrRepo, repoName] = repo.includes("/") ? repo.split("/", 2) : [undefined, repo];
 
-        // Get services from Effect Context
-        const git = yield* GitService;
-        const repoProvider = yield* RepoProviderService;
-        const fileSystem = yield* FileSystemService;
-        const pathService = yield* PathServiceTag;
-        const repositoryService = yield* RepositoryServiceTag;
-        const shellIntegration = yield* ShellIntegrationServiceTag;
+      const org = orgOrRepo;
+      const repoNameFinal = repoName || orgOrRepo;
 
-        const repoArg = context.args.repo;
+      if (!repoNameFinal) {
+        return yield* Effect.fail(unknownError("Invalid repository name format"));
+      }
 
-        if (!repoArg) {
-          return yield* Effect.fail(unknownError("Repository name is required"));
-        }
+      yield* Effect.logInfo(`Resolving repository: ${org ? `${org}/${repoNameFinal}` : repoNameFinal}`);
 
-        // Parse org/repo or just repo
-        const [orgOrRepo, repoName] = repoArg.includes("/") ? repoArg.split("/", 2) : [undefined, repoArg];
+      // Resolve repository details
+      const repository = yield* repoProvider.resolveRepository(repoNameFinal, org);
 
-        const org = orgOrRepo;
-        const repo = repoName || orgOrRepo;
+      // Use RepositoryService to determine the proper nested destination path
+      const destinationPath = yield* repositoryService.parseRepoUrlToPath(repository.cloneUrl);
 
-        yield* Effect.logInfo(`Resolving repository: ${org ? `${org}/${repo}` : repo}`);
+      // Calculate relative path from base directory for cd command
+      const relativePath = destinationPath.replace(pathService.baseSearchDir + "/", "");
 
-        // Resolve repository details
-        const repository = yield* repoProvider.resolveRepository(repo, org);
-
-        // Use RepositoryService to determine the proper nested destination path
-        const destinationPath = yield* repositoryService.parseRepoUrlToPath(repository.cloneUrl);
-
-        // Calculate relative path from base directory for cd command
-        const relativePath = destinationPath.replace(pathService.baseSearchDir + "/", "");
-
-        // Check if destination already exists
-        const exists = yield* fileSystem.exists(destinationPath);
-        if (exists) {
-          yield* Effect.logInfo(`Directory ${relativePath} already exists, changing to it...`);
-          yield* shellIntegration.changeDirectory(relativePath);
-          yield* Effect.logInfo(`Successfully changed to existing directory ${relativePath}`);
-          return;
-        }
-
-        yield* Effect.logInfo(`Cloning ${repository.organization}/${repository.name} to ${relativePath}...`);
-
-        // Clone the repository
-        yield* git.cloneRepositoryToPath(repository, destinationPath);
-
-        yield* Effect.logInfo(`Successfully cloned ${repository.organization}/${repository.name} to ${relativePath}`);
-
-        // Change directory to the cloned repository
+      // Check if destination already exists
+      const exists = yield* fileSystem.exists(destinationPath);
+      if (exists) {
+        yield* Effect.logInfo(`Directory ${relativePath} already exists, changing to it...`);
         yield* shellIntegration.changeDirectory(relativePath);
-        yield* Effect.logInfo(`Changed to directory ${relativePath}`);
-      }),
-    );
-  },
-};
+        yield* Effect.logInfo(`Successfully changed to existing directory ${relativePath}`);
+        return;
+      }
+
+      yield* Effect.logInfo(`Cloning ${repository.organization}/${repository.name} to ${relativePath}...`);
+
+      // Clone the repository
+      yield* git.cloneRepositoryToPath(repository, destinationPath);
+
+      yield* Effect.logInfo(`Successfully cloned ${repository.organization}/${repository.name} to ${relativePath}`);
+
+      // Change directory to the cloned repository
+      yield* shellIntegration.changeDirectory(relativePath);
+      yield* Effect.logInfo(`Changed to directory ${relativePath}`);
+    }),
+  ),
+);

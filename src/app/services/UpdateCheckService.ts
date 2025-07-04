@@ -59,4 +59,4 @@ export class UpdateCheckServiceTag extends Context.Tag("UpdateCheckService")<
 >() {}
 
 // Layer that provides UpdateCheckService (no `new` keyword)
-export const UpdateCheckServiceLive = Layer.succeed(UpdateCheckServiceTag, UpdateCheckServiceImpl);
+export const UpdateCheckServiceLive = Layer.effect(UpdateCheckServiceTag, Effect.succeed(UpdateCheckServiceImpl));

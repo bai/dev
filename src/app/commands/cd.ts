@@ -1,52 +1,27 @@
+import { Args, Command } from "@effect/cli";
 import { Effect } from "effect";
 
 import { unknownError, type DevError } from "../../domain/errors";
 import { filter } from "../../domain/matching";
-import type { CliCommandSpec, CommandContext } from "../../domain/models";
 import { DirectoryService } from "../../domain/ports/DirectoryService";
 import { FileSystemService } from "../../domain/ports/FileSystem";
 import { InteractiveSelectorService } from "../../domain/ports/InteractiveSelector";
 import { ShellService } from "../../domain/ports/Shell";
 import { ShellIntegrationServiceTag } from "../services/ShellIntegrationService";
 
-export const cdCommand: CliCommandSpec = {
-  name: "cd",
-  description: "Navigate to a directory in the base directory",
-  help: `
-The cd command helps you quickly navigate to directories:
+// Define the folder name argument as optional
+const folderName = Args.text({ name: "folder_name" }).pipe(Args.optional);
 
-Interactive Mode:
-  dev cd                  # Shows interactive directory picker using fzf
-
-Direct Mode:
-  dev cd <folder_name>    # Jump directly to matching directory
-
-Examples:
-  dev cd                  # Interactive mode with fuzzy finder
-  dev cd myproject        # Direct navigation to myproject directory
-  dev cd proj             # Fuzzy match to any directory containing 'proj'
-  `,
-
-  arguments: [
-    {
-      name: "folder_name",
-      description: "Name of the folder to navigate to",
-      required: false,
-    },
-  ],
-
-  exec(context: CommandContext): Effect.Effect<void, DevError, any> {
-    return Effect.gen(function* () {
-      const folderName = context.args.folder_name;
-
-      if (folderName) {
-        yield* handleDirectCd(folderName);
-      } else {
-        yield* handleInteractiveCd();
-      }
-    });
-  },
-};
+// Create the cd command using @effect/cli
+export const cdCommand = Command.make("cd", { folderName }, ({ folderName }) =>
+  Effect.gen(function* () {
+    if (folderName._tag === "Some") {
+      yield* handleDirectCd(folderName.value);
+    } else {
+      yield* handleInteractiveCd();
+    }
+  }),
+);
 
 function handleDirectCd(folderName: string): Effect.Effect<void, DevError, any> {
   return Effect.gen(function* () {

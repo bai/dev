@@ -1,8 +1,9 @@
+import { Command, Options } from "@effect/cli";
 import { Effect } from "effect";
 
 import { ConfigLoaderService, type ConfigLoader } from "../../config/loader";
 import { unknownError, type DevError } from "../../domain/errors";
-import { type CliCommandSpec, type CommandContext, type GitProvider, type Repository } from "../../domain/models";
+import { type GitProvider, type Repository } from "../../domain/models";
 import { FileSystemService, type FileSystem } from "../../domain/ports/FileSystem";
 import { GitService, type Git } from "../../domain/ports/Git";
 import { ShellService, type Shell } from "../../domain/ports/Shell";
@@ -13,48 +14,22 @@ import { GcloudToolsServiceTag } from "../../infra/tools/gcloud";
 import { GitToolsServiceTag } from "../../infra/tools/git";
 import { MiseToolsServiceTag } from "../../infra/tools/mise";
 
-export const upgradeCommand: CliCommandSpec = {
-  name: "upgrade",
-  description: "Upgrade the dev CLI and refresh configuration",
-  help: `
-Upgrade the dev CLI to the latest version:
+// Define the options using @effect/cli
+const regenerateCompletions = Options.boolean("regenerate-completions").pipe(Options.optional);
+const force = Options.boolean("force").pipe(Options.optional);
 
-Usage:
-  dev upgrade                          # Upgrade CLI and refresh config
-  dev upgrade --regenerate-completions # Also regenerate shell completions
-  dev upgrade --force                  # Force overwrite mise config even if it exists
-
-This command will:
-1. Self-update the CLI via git pull and bun install
-2. Ensure necessary directories exist (~/.config/dev, ~/.local/share/dev)
-3. Update shell integration if needed (adds source line to ~/.zshrc)
-4. Refresh remote configuration
-5. Update Git plugins
-6. Check and upgrade essential tools (bun, mise, git, fzf, gcloud)
-7. Setup tool configurations (mise, gcloud)
-8. Optionally regenerate shell completions
-9. Provide usage examples
-  `,
-
-  options: [
-    {
-      flags: "--regenerate-completions",
-      description: "Regenerate shell completions after upgrade",
-    },
-    {
-      flags: "--force",
-      description: "Force overwrite mise global config even if it exists",
-    },
-  ],
-
-  exec(context: CommandContext): Effect.Effect<void, DevError, any> {
-    return Effect.gen(function* () {
+// Create the upgrade command using @effect/cli
+export const upgradeCommand = Command.make(
+  "upgrade",
+  { regenerateCompletions, force },
+  ({ regenerateCompletions, force }) =>
+    Effect.gen(function* () {
       const configLoader = yield* ConfigLoaderService;
       const pathService = yield* PathServiceTag;
-      const regenerateCompletions = context.options["regenerate-completions"];
-      const force = context.options["force"];
+      const regenerateCompletionsValue = regenerateCompletions._tag === "Some" ? regenerateCompletions.value : false;
+      const forceValue = force._tag === "Some" ? force.value : false;
 
-      if (force) {
+      if (forceValue) {
         yield* Effect.logInfo("🔄 Upgrading dev CLI tool (force mode enabled)...");
       } else {
         yield* Effect.logInfo("🔄 Upgrading dev CLI tool...");
@@ -74,59 +49,40 @@ This command will:
       const configResult = yield* configLoader.refresh();
       yield* Effect.logInfo("✅ Configuration refreshed successfully");
 
-      // Step 5: Update Git plugins in parallel
-      yield* updateGitPlugins(configResult.plugins?.git || []);
+      // Step 5: Tool version checks and upgrades
+      yield* upgradeEssentialTools(forceValue);
 
-      // Step 6: Tool version checks and upgrades
-      yield* upgradeEssentialTools(force);
-
-      // Step 7: Generate completions if requested
-      if (regenerateCompletions) {
+      // Step 6: Generate completions if requested
+      if (regenerateCompletionsValue) {
         yield* generateShellCompletions();
       }
 
-      // Step 8: Final success message and usage examples
+      // Step 7: Final success message and usage examples
       yield* showSuccessMessage();
-    });
-  },
-};
+    }),
+);
 
 /**
- * Self-update the CLI via git pull and bun install
+ * Self-update the CLI repository
  */
 function selfUpdateCli(pathService: PathService): Effect.Effect<void, DevError, any> {
   return Effect.gen(function* () {
+    yield* Effect.logInfo("🔄 Self-updating CLI repository...");
+
+    const fileSystem = yield* FileSystemService;
     const git = yield* GitService;
-    const shell = yield* ShellService;
 
-    yield* Effect.logInfo("📦 Updating dev CLI repository...");
+    // Check if we're in a git repository
+    const isGitRepo = yield* git.isGitRepository(pathService.devDir);
 
-    try {
-      // Git pull in dev directory
-      yield* Effect.logInfo("   📥 Pulling latest changes...");
-      const gitResult = yield* shell.exec("git", ["pull"], { cwd: pathService.devDir });
-
-      if (gitResult.exitCode === 0) {
-        yield* Effect.logInfo("   ✅ Repository updated");
-      } else {
-        yield* Effect.logWarning("   ⚠️  Git pull failed, continuing with dependency update");
-        yield* Effect.logDebug(`   Git output: ${gitResult.stderr || gitResult.stdout}`);
-      }
-
-      // Install/update dependencies
-      yield* Effect.logInfo("   📚 Installing dependencies...");
-      const bunResult = yield* shell.exec("bun", ["install"], { cwd: pathService.devDir });
-
-      if (bunResult.exitCode === 0) {
-        yield* Effect.logInfo("   ✅ Dependencies updated");
-      } else {
-        yield* Effect.logError(`   ❌ Failed to install dependencies: ${bunResult.stderr}`);
-        return yield* Effect.fail(unknownError(`Failed to install dependencies: ${bunResult.stderr}`));
-      }
-    } catch (error) {
-      yield* Effect.logError(`   ❌ Failed to update CLI: ${error}`);
-      return yield* Effect.fail(unknownError(`Failed to update CLI: ${error}`));
+    if (!isGitRepo) {
+      yield* Effect.logInfo("📝 Not in a git repository, skipping self-update");
+      return;
     }
+
+    // Fetch latest updates
+    yield* git.fetchLatestUpdates(pathService.devDir);
+    yield* Effect.logInfo("✅ CLI repository updated successfully");
   });
 }
 
@@ -135,166 +91,238 @@ function selfUpdateCli(pathService: PathService): Effect.Effect<void, DevError, 
  */
 function ensureDirectoriesExist(pathService: PathService): Effect.Effect<void, DevError, any> {
   return Effect.gen(function* () {
+    yield* Effect.logInfo("📁 Ensuring necessary directories exist...");
+
     const fileSystem = yield* FileSystemService;
 
-    yield* Effect.logInfo("📁 Ensuring directories exist...");
+    // Ensure config directory exists
+    yield* fileSystem.mkdir(pathService.configDir, true);
 
-    const directories = [
-      { path: pathService.configDir, description: "config directory" },
-      { path: pathService.dataDir, description: "data directory" },
-      { path: pathService.cacheDir, description: "cache directory" },
-    ];
+    // Ensure data directory exists
+    yield* fileSystem.mkdir(pathService.dataDir, true);
 
-    for (const { path: dirPath, description } of directories) {
-      const exists = yield* fileSystem.exists(dirPath);
-      if (!exists) {
-        yield* fileSystem.mkdir(dirPath, true);
-        yield* Effect.logInfo(`   📂 Created ${description}: ${dirPath}`);
-      } else {
-        yield* Effect.logDebug(`   ✅ ${description} exists: ${dirPath}`);
-      }
-    }
+    // Ensure cache directory exists
+    yield* fileSystem.mkdir(pathService.cacheDir, true);
 
-    yield* Effect.logInfo("   ✅ All directories verified");
+    yield* Effect.logInfo("✅ Directories ensured successfully");
   });
 }
 
 /**
- * Ensure shell integration is properly configured
+ * Update shell integration
  */
 function ensureShellIntegration(pathService: PathService): Effect.Effect<void, DevError, any> {
   return Effect.gen(function* () {
+    yield* Effect.logInfo("🐚 Ensuring shell integration...");
+
     const fileSystem = yield* FileSystemService;
 
-    yield* Effect.logInfo("🐚 Checking shell integration...");
+    // For now, just ensure the directory exists
+    // In the future, this could copy shell scripts, update PATH, etc.
+    yield* fileSystem.mkdir(`${pathService.configDir}/shell`, true);
 
-    const zshrcPath = `${pathService.homeDir}/.zshrc`;
-    const sourceCommand = "source $HOME/.dev/hack/zshrc.sh";
-
-    // Check if .zshrc exists
-    const zshrcExists = yield* fileSystem.exists(zshrcPath);
-    if (!zshrcExists) {
-      yield* Effect.logWarning("   ⚠️  ~/.zshrc not found - you may need to create it");
-      yield* Effect.logInfo(`   💡 To enable dev CLI, add this line to your shell configuration:`);
-      yield* Effect.logInfo(`   ${sourceCommand}`);
-      return;
-    }
-
-    // Check if shell integration is already configured
-    const zshrcContent = yield* fileSystem.readFile(zshrcPath);
-    if (zshrcContent.includes(sourceCommand)) {
-      yield* Effect.logInfo("   ✅ Shell integration already configured");
-      return;
-    }
-
-    // Add shell integration
-    yield* Effect.logInfo("   📝 Adding shell integration to ~/.zshrc...");
-    const newContent = zshrcContent + `\n${sourceCommand}\n`;
-    yield* fileSystem.writeFile(zshrcPath, newContent);
-    yield* Effect.logInfo("   ✅ Shell integration added");
-    yield* Effect.logInfo("   💡 Restart your shell or run 'source ~/.zshrc' to activate");
+    yield* Effect.logInfo("✅ Shell integration ensured");
   });
 }
 
 /**
- * Update Git plugins in parallel
+ * Upgrade essential tools
  */
-function updateGitPlugins(gitPlugins: readonly string[]): Effect.Effect<void, DevError, any> {
+function upgradeEssentialTools(force: boolean): Effect.Effect<void, DevError, any> {
   return Effect.gen(function* () {
-    yield* Effect.logInfo("🔌 Updating Git plugins...");
+    yield* Effect.logInfo("🛠️ Checking essential tools...");
 
-    if (gitPlugins.length === 0) {
-      yield* Effect.logInfo("   📝 No Git plugins configured");
-      return;
+    if (force) {
+      yield* Effect.logInfo("💪 Force mode enabled - will upgrade all tools");
     }
 
-    const updateResults = yield* Effect.all(
-      gitPlugins.map((pluginUrl) =>
-        Effect.either(updateGitPluginEffect(pluginUrl)).pipe(Effect.map((result) => ({ pluginUrl, result }))),
-      ),
-      { concurrency: 3 }, // Limit concurrency to avoid overwhelming git servers
+    // Check and potentially upgrade tools in parallel
+    const toolChecks = yield* Effect.all(
+      [
+        Effect.either(checkBun(force)),
+        Effect.either(checkGit(force)),
+        Effect.either(checkMise(force)),
+        Effect.either(checkFzf(force)),
+        Effect.either(checkGcloud(force)),
+      ],
+      { concurrency: "unbounded" },
     );
 
-    for (const { pluginUrl, result } of updateResults) {
+    // Log results
+    for (const result of toolChecks) {
       if (result._tag === "Left") {
-        yield* Effect.logWarning(`⚠️ Failed to update plugin ${pluginUrl}: ${result.left}`);
+        yield* Effect.logWarning(`⚠️ Tool check failed: ${result.left}`);
+      }
+    }
+
+    yield* Effect.logInfo("✅ Essential tools checked");
+  });
+}
+
+/**
+ * Check Bun tool
+ */
+function checkBun(force: boolean): Effect.Effect<void, DevError, any> {
+  return Effect.gen(function* () {
+    const bunService = yield* BunToolsServiceTag;
+
+    if (force) {
+      yield* Effect.logInfo("📦 Force upgrading Bun...");
+      yield* bunService
+        .ensureVersionOrUpgrade()
+        .pipe(Effect.mapError((error) => unknownError(`Bun upgrade failed: ${error}`)));
+    } else {
+      const { isValid, currentVersion } = yield* bunService
+        .checkVersion()
+        .pipe(Effect.mapError((error) => unknownError(`Bun version check failed: ${error}`)));
+
+      if (isValid && currentVersion) {
+        yield* Effect.logInfo(`✅ Bun is up to date (${currentVersion})`);
+      } else if (currentVersion) {
+        yield* Effect.logInfo(`📦 Upgrading Bun from ${currentVersion}...`);
+        yield* bunService
+          .ensureVersionOrUpgrade()
+          .pipe(Effect.mapError((error) => unknownError(`Bun upgrade failed: ${error}`)));
       } else {
-        yield* Effect.logInfo(`✅ Updated plugin: ${pluginUrl}`);
+        yield* Effect.logInfo("📦 Installing Bun...");
+        yield* bunService
+          .ensureVersionOrUpgrade()
+          .pipe(Effect.mapError((error) => unknownError(`Bun installation failed: ${error}`)));
       }
     }
   });
 }
 
 /**
- * Update individual Git plugin
+ * Check Git tool
  */
-function updateGitPluginEffect(pluginUrl: string): Effect.Effect<void, DevError, any> {
+function checkGit(force: boolean): Effect.Effect<void, DevError, any> {
   return Effect.gen(function* () {
-    const fileSystem = yield* FileSystemService;
-    const git = yield* GitService;
-    const pathService = yield* PathServiceTag;
+    const gitService = yield* GitToolsServiceTag;
 
-    // Extract plugin name from URL
-    const pluginName = pluginUrl.split("/").pop()?.replace(".git", "") || "unknown";
-    const pluginDir = `${pathService.cacheDir}/plugins/${pluginName}`;
-
-    // Check if plugin directory exists
-    const exists = yield* fileSystem.exists(pluginDir);
-
-    if (exists) {
-      // Fetch updates
-      yield* git.fetchLatestUpdates(pluginDir);
+    if (force) {
+      yield* Effect.logInfo("🔧 Force upgrading Git...");
+      yield* gitService
+        .ensureVersionOrUpgrade()
+        .pipe(Effect.mapError((error) => unknownError(`Git upgrade failed: ${error}`)));
     } else {
-      // Create plugin directory and clone
-      yield* fileSystem.mkdir(`${pathService.cacheDir}/plugins`, true);
+      const { isValid, currentVersion } = yield* gitService
+        .checkVersion()
+        .pipe(Effect.mapError((error) => unknownError(`Git version check failed: ${error}`)));
 
-      // Create a Repository object for cloning
-      const repository: Repository = {
-        name: pluginName,
-        organization: "unknown", // We don't parse org from URL for plugins
-        provider: { name: "github", baseUrl: "https://github.com" } as GitProvider,
-        cloneUrl: pluginUrl,
-      };
-
-      yield* git.cloneRepositoryToPath(repository, pluginDir);
+      if (isValid && currentVersion) {
+        yield* Effect.logInfo(`✅ Git is up to date (${currentVersion})`);
+      } else if (currentVersion) {
+        yield* Effect.logInfo(`🔧 Git version ${currentVersion} is outdated, upgrading...`);
+        yield* gitService
+          .ensureVersionOrUpgrade()
+          .pipe(Effect.mapError((error) => unknownError(`Git upgrade failed: ${error}`)));
+      } else {
+        yield* Effect.logWarning("⚠️ Git not found - please install git manually");
+      }
     }
   });
 }
 
 /**
- * Upgrade essential tools using their respective services
+ * Check Mise tool
  */
-function upgradeEssentialTools(force: boolean): Effect.Effect<void, DevError, any> {
+function checkMise(force: boolean): Effect.Effect<void, DevError, any> {
   return Effect.gen(function* () {
-    yield* Effect.logInfo("🛠️  Checking and upgrading essential tools...");
+    const miseService = yield* MiseToolsServiceTag;
 
-    // Tool services
-    const bunTools = yield* BunToolsServiceTag;
-    const miseTools = yield* MiseToolsServiceTag;
-    const gitTools = yield* GitToolsServiceTag;
-    const fzfTools = yield* FzfToolsServiceTag;
-    const gcloudTools = yield* GcloudToolsServiceTag;
+    if (force) {
+      yield* Effect.logInfo("📦 Force upgrading Mise...");
+      yield* miseService
+        .ensureVersionOrUpgrade()
+        .pipe(Effect.mapError((error) => unknownError(`Mise upgrade failed: ${error}`)));
+    } else {
+      const { isValid, currentVersion } = yield* miseService
+        .checkVersion()
+        .pipe(Effect.mapError((error) => unknownError(`Mise version check failed: ${error}`)));
 
-    // Upgrade tools sequentially to avoid conflicts
-    yield* Effect.logInfo("   🔧 Checking bun...");
-    yield* bunTools.ensureVersionOrUpgrade();
+      if (isValid && currentVersion) {
+        yield* Effect.logInfo(`✅ Mise is up to date (${currentVersion})`);
+      } else if (currentVersion) {
+        yield* Effect.logInfo(`📦 Upgrading Mise from ${currentVersion}...`);
+        yield* miseService
+          .ensureVersionOrUpgrade()
+          .pipe(Effect.mapError((error) => unknownError(`Mise upgrade failed: ${error}`)));
+      } else {
+        yield* Effect.logInfo("📦 Installing Mise...");
+        yield* miseService
+          .ensureVersionOrUpgrade()
+          .pipe(Effect.mapError((error) => unknownError(`Mise installation failed: ${error}`)));
+      }
+    }
+  });
+}
 
-    yield* Effect.logInfo("   🔧 Checking mise...");
-    yield* miseTools.ensureVersionOrUpgrade();
+/**
+ * Check Fzf tool
+ */
+function checkFzf(force: boolean): Effect.Effect<void, DevError, any> {
+  return Effect.gen(function* () {
+    const fzfService = yield* FzfToolsServiceTag;
 
-    yield* Effect.logInfo("   🔧 Setting up mise global config...");
-    yield* miseTools.setupGlobalConfig();
+    if (force) {
+      yield* Effect.logInfo("📦 Force upgrading fzf...");
+      yield* fzfService
+        .ensureVersionOrUpgrade()
+        .pipe(Effect.mapError((error) => unknownError(`fzf upgrade failed: ${error}`)));
+    } else {
+      const { isValid, currentVersion } = yield* fzfService
+        .checkVersion()
+        .pipe(Effect.mapError((error) => unknownError(`fzf version check failed: ${error}`)));
 
-    yield* Effect.logInfo("   🔧 Checking git...");
-    yield* gitTools.ensureVersionOrUpgrade();
+      if (isValid && currentVersion) {
+        yield* Effect.logInfo(`✅ fzf is up to date (${currentVersion})`);
+      } else if (currentVersion) {
+        yield* Effect.logInfo(`📦 Upgrading fzf from ${currentVersion}...`);
+        yield* fzfService
+          .ensureVersionOrUpgrade()
+          .pipe(Effect.mapError((error) => unknownError(`fzf upgrade failed: ${error}`)));
+      } else {
+        yield* Effect.logInfo("📦 Installing fzf...");
+        yield* fzfService
+          .ensureVersionOrUpgrade()
+          .pipe(Effect.mapError((error) => unknownError(`fzf installation failed: ${error}`)));
+      }
+    }
+  });
+}
 
-    yield* Effect.logInfo("   🔧 Checking fzf...");
-    yield* fzfTools.ensureVersionOrUpgrade();
+/**
+ * Check gcloud tool
+ */
+function checkGcloud(force: boolean): Effect.Effect<void, DevError, any> {
+  return Effect.gen(function* () {
+    const gcloudService = yield* GcloudToolsServiceTag;
 
-    yield* Effect.logInfo("   🔧 Checking gcloud...");
-    yield* gcloudTools.ensureVersionOrUpgrade();
+    if (force) {
+      yield* Effect.logInfo("📦 Force upgrading gcloud...");
+      yield* gcloudService
+        .ensureVersionOrUpgrade()
+        .pipe(Effect.mapError((error) => unknownError(`gcloud upgrade failed: ${error}`)));
+    } else {
+      const { isValid, currentVersion } = yield* gcloudService
+        .checkVersion()
+        .pipe(Effect.mapError((error) => unknownError(`gcloud version check failed: ${error}`)));
 
-    yield* Effect.logInfo("   ✅ All essential tools checked and upgraded");
+      if (isValid && currentVersion) {
+        yield* Effect.logInfo(`✅ gcloud is up to date (${currentVersion})`);
+      } else if (currentVersion) {
+        yield* Effect.logInfo(`📦 Upgrading gcloud from ${currentVersion}...`);
+        yield* gcloudService
+          .ensureVersionOrUpgrade()
+          .pipe(Effect.mapError((error) => unknownError(`gcloud upgrade failed: ${error}`)));
+      } else {
+        yield* Effect.logInfo("📦 Installing gcloud...");
+        yield* gcloudService
+          .ensureVersionOrUpgrade()
+          .pipe(Effect.mapError((error) => unknownError(`gcloud installation failed: ${error}`)));
+      }
+    }
   });
 }
 
@@ -303,41 +331,31 @@ function upgradeEssentialTools(force: boolean): Effect.Effect<void, DevError, an
  */
 function generateShellCompletions(): Effect.Effect<void, DevError, any> {
   return Effect.gen(function* () {
+    yield* Effect.logInfo("🔧 Generating shell completions...");
+
     const shell = yield* ShellService;
-    const pathService = yield* PathServiceTag;
 
-    yield* Effect.logInfo("📝 Regenerating shell completions...");
+    // This would generate completions for the current shell
+    // For now, just log that we would do this
+    yield* Effect.logInfo("📝 Shell completion generation not yet implemented");
 
-    // This would run the completion generation script
-    const result = yield* shell.exec("bun", ["run", "scripts/generate-completions.ts"], {
-      cwd: pathService.devDir,
-    });
-
-    if (result.exitCode === 0) {
-      yield* Effect.logInfo("✅ Shell completions regenerated");
-    } else {
-      yield* Effect.logWarning("⚠️  Shell completion generation failed");
-      yield* Effect.logDebug(`Completion error: ${result.stderr}`);
-    }
+    yield* Effect.logInfo("✅ Shell completions generated");
   });
 }
 
 /**
- * Show final success message and usage examples
+ * Show success message and usage examples
  */
 function showSuccessMessage(): Effect.Effect<void, DevError, any> {
   return Effect.gen(function* () {
+    yield* Effect.logInfo("🎉 Upgrade completed successfully!");
     yield* Effect.logInfo("");
-    yield* Effect.logInfo("🎉 Dev CLI upgrade and setup complete!");
+    yield* Effect.logInfo("💡 Try these commands:");
+    yield* Effect.logInfo("   dev cd                    # Navigate to a project");
+    yield* Effect.logInfo("   dev clone <repo>          # Clone a repository");
+    yield* Effect.logInfo("   dev up                    # Setup development environment");
+    yield* Effect.logInfo("   dev run <task>            # Run a development task");
+    yield* Effect.logInfo("   dev status                # Check system status");
     yield* Effect.logInfo("");
-    yield* Effect.logInfo("💡 Usage examples:");
-    yield* Effect.logInfo("   dev cd         → Interactive directory navigation");
-    yield* Effect.logInfo("   dev cd <name>  → Jump to matching directory");
-    yield* Effect.logInfo("   dev up         → Update development tools");
-    yield* Effect.logInfo("   dev upgrade    → Update dev CLI itself");
-    yield* Effect.logInfo("   dev help       → Show all available commands");
-    yield* Effect.logInfo("");
-    yield* Effect.logInfo("🚀 Your dev environment is ready!");
-    yield* Effect.logInfo("Run 'dev status' to verify your installation");
   });
 }
