@@ -1,17 +1,8 @@
-min_version = "2025.5.2"
-
 [tools]
 bun = "latest"
 
 [env]
 DEV_PROJECT_ROOT = "{{ config_root }}"
-BUN_BE_BUN = "1"
-_.file = [
-    ".env",
-    ".env.development",
-    ".env.secret.json",
-    ".env.development.local",
-]
 
 [tasks.test-args]
 description = "Test task that echoes all arguments"
@@ -24,3 +15,7 @@ run = "bun run lint"
 [tasks.test]
 description = "Run tests"
 run = "bun run test"
+
+[tasks.typecheck]
+description = "Run typechecking"
+run = "bun run typecheck"
