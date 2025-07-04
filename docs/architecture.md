@@ -219,15 +219,19 @@ export type DevError =
   | { _tag: "NetworkError";  reason: string }
   | { _tag: "AuthError";     reason: string }
   | { _tag: "ExternalToolError"; message: string; tool?: string; stderr?: string }
+  | { _tag: "FileSystemError"; reason: string; path?: string }
+  | { _tag: "StatusCheckError"; reason: string; failedComponents: string[] }
   | { _tag: "UnknownError";  reason: unknown };
 
 export const exitCode = (e: DevError): number => ({
-  ConfigError:   2,
-  GitError:      3,
-  NetworkError:  4,
-  AuthError:     5,
+  ConfigError:      2,
+  GitError:         3,
+  NetworkError:     4,
+  AuthError:        5,
   ExternalToolError: 6,
-  UnknownError:  1,
+  FileSystemError:  7,
+  StatusCheckError: 3,
+  UnknownError:     1,
 }[e._tag]);
 ```
 

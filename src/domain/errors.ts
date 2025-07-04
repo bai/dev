@@ -33,14 +33,6 @@ export class FileSystemError extends Data.TaggedError("FileSystemError")<{
   readonly path?: string;
 }> {}
 
-export class UserInputError extends Data.TaggedError("UserInputError")<{
-  readonly reason: string;
-}> {}
-
-export class CLIError extends Data.TaggedError("CLIError")<{
-  readonly reason: string;
-}> {}
-
 export class StatusCheckError extends Data.TaggedError("StatusCheckError")<{
   readonly reason: string;
   readonly failedComponents: string[];
@@ -55,8 +47,6 @@ export type DevError =
   | UnknownError
   | ExternalToolError
   | FileSystemError
-  | UserInputError
-  | CLIError
   | StatusCheckError;
 
 // Exit code mapping
@@ -74,10 +64,6 @@ export const exitCode = (error: DevError): number => {
       return 6;
     case "FileSystemError":
       return 7;
-    case "UserInputError":
-      return 8;
-    case "CLIError":
-      return 9;
     case "StatusCheckError":
       return 3;
     case "UnknownError":
@@ -97,8 +83,6 @@ export const unknownError = (reason: unknown) => new UnknownError({ reason });
 export const externalToolError = (message: string, options?: { tool?: string; exitCode?: number; stderr?: string }) =>
   new ExternalToolError({ message, ...options });
 export const fileSystemError = (reason: string, path?: string) => new FileSystemError({ reason, path });
-export const userInputError = (reason: string) => new UserInputError({ reason });
-export const cliError = (reason: string) => new CLIError({ reason });
 export const statusCheckError = (reason: string, failedComponents: string[]) =>
   new StatusCheckError({ reason, failedComponents });
 
@@ -110,6 +94,4 @@ export const isAuthError = (e: DevError): e is AuthError => e._tag === "AuthErro
 export const isUnknownError = (e: DevError): e is UnknownError => e._tag === "UnknownError";
 export const isExternalToolError = (e: DevError): e is ExternalToolError => e._tag === "ExternalToolError";
 export const isFileSystemError = (e: DevError): e is FileSystemError => e._tag === "FileSystemError";
-export const isUserInputError = (e: DevError): e is UserInputError => e._tag === "UserInputError";
-export const isCLIError = (e: DevError): e is CLIError => e._tag === "CLIError";
 export const isStatusCheckError = (e: DevError): e is StatusCheckError => e._tag === "StatusCheckError";
