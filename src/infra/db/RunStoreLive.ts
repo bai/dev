@@ -131,6 +131,7 @@ export const makeRunStoreLive = (db: ReturnType<typeof drizzle>, sqlite: Databas
 const createDatabase = (dbPath: string) =>
   Effect.gen(function* () {
     const fileSystem = yield* FileSystemService;
+    const pathService = yield* PathServiceTag;
 
     // Ensure directory exists
     yield* fileSystem.mkdir(dbPath.split("/").slice(0, -1).join("/"), true);
@@ -144,12 +145,13 @@ const createDatabase = (dbPath: string) =>
 
     const drizzleDb = yield* Effect.sync(() => drizzle(sqlite));
 
-    // Run migrations
+    // Run migrations with absolute path to avoid issues when CLI is run from different directories
+    const migrationsPath = `${pathService.devDir}/drizzle/migrations`;
     yield* Effect.sync(() => {
-      migrate(drizzleDb, { migrationsFolder: "./drizzle/migrations" });
+      migrate(drizzleDb, { migrationsFolder: migrationsPath });
     });
 
-    yield* Effect.logDebug(`Database initialized at ${dbPath}`);
+    yield* Effect.logDebug(`Database initialized at ${dbPath} with migrations from ${migrationsPath}`);
 
     return makeRunStoreLive(drizzleDb, sqlite);
   });
