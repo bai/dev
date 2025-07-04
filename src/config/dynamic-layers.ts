@@ -21,6 +21,7 @@ import { FzfToolsLiveLayer } from "../infra/tools/fzf";
 import { GcloudToolsServiceLive } from "../infra/tools/gcloud";
 import { GitToolsLiveLayer } from "../infra/tools/git";
 import { MiseToolsServiceLive } from "../infra/tools/mise";
+import { ToolManagementServiceLive } from "../infra/tools/ToolManagementServiceLive";
 import { type DynamicConfigValues } from "./bootstrap";
 import { ConfigLoaderLiveLayer } from "./loader";
 
@@ -79,6 +80,9 @@ export const buildInfraLiveLayer = (configValues: DynamicConfigValues) => {
     FzfSelectorLiveLayer, // No dependencies needed
   );
 
+  // Tool management service that aggregates all tool services
+  const ToolManagementLayer = Layer.provide(ToolManagementServiceLive, ToolServicesLayer);
+
   // Repository provider with dynamic organization
   // This is where we use the runtime configuration value!
   const RepoProviderLayer = Layer.provide(GitHubProviderLayer(configValues.defaultOrg), NetworkLayer);
@@ -93,6 +97,7 @@ export const buildInfraLiveLayer = (configValues: DynamicConfigValues) => {
     GitLayer,
     ConfigLayer,
     ToolServicesLayer,
+    ToolManagementLayer, // Aggregated tool management service
     RepoProviderLayer, // Now using dynamic defaultOrg instead of hardcoded "acme"
     DatabaseLayer, // Ensure database layer gets PathService dependencies
   );

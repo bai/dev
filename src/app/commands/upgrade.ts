@@ -3,16 +3,11 @@ import { Effect } from "effect";
 
 import { ConfigLoaderService, type ConfigLoader } from "../../config/loader";
 import { unknownError, type DevError } from "../../domain/errors";
-import { type GitProvider, type Repository } from "../../domain/models";
 import { FileSystemService, type FileSystem } from "../../domain/ports/FileSystem";
 import { GitService, type Git } from "../../domain/ports/Git";
 import { ShellService, type Shell } from "../../domain/ports/Shell";
+import { ToolManagementServiceTag, type ToolManagementService } from "../../domain/ports/ToolManager";
 import { PathServiceTag, type PathService } from "../../domain/services/PathService";
-import { BunToolsServiceTag } from "../../infra/tools/bun";
-import { FzfToolsServiceTag } from "../../infra/tools/fzf";
-import { GcloudToolsServiceTag } from "../../infra/tools/gcloud";
-import { GitToolsServiceTag } from "../../infra/tools/git";
-import { MiseToolsServiceTag } from "../../infra/tools/mise";
 
 // Define the options using @effect/cli
 const regenerateCompletions = Options.boolean("regenerate-completions").pipe(Options.optional);
@@ -136,14 +131,16 @@ function upgradeEssentialTools(force: boolean): Effect.Effect<void, DevError, an
       yield* Effect.logInfo("💪 Force mode enabled - will upgrade all tools");
     }
 
+    const toolManagement = yield* ToolManagementServiceTag;
+
     // Check and potentially upgrade tools in parallel
     const toolChecks = yield* Effect.all(
       [
-        Effect.either(checkBun(force)),
-        Effect.either(checkGit(force)),
-        Effect.either(checkMise(force)),
-        Effect.either(checkFzf(force)),
-        Effect.either(checkGcloud(force)),
+        Effect.either(checkTool("Bun", toolManagement.bun, force)),
+        Effect.either(checkTool("Git", toolManagement.git, force)),
+        Effect.either(checkTool("Mise", toolManagement.mise, force)),
+        Effect.either(checkTool("Fzf", toolManagement.fzf, force)),
+        Effect.either(checkTool("Gcloud", toolManagement.gcloud, force)),
       ],
       { concurrency: "unbounded" },
     );
@@ -160,167 +157,36 @@ function upgradeEssentialTools(force: boolean): Effect.Effect<void, DevError, an
 }
 
 /**
- * Check Bun tool
+ * Generic function to check and upgrade a tool
  */
-function checkBun(force: boolean): Effect.Effect<void, DevError, any> {
+function checkTool(
+  toolName: string,
+  toolManager: ToolManagementService[keyof ToolManagementService],
+  force: boolean,
+): Effect.Effect<void, DevError, any> {
   return Effect.gen(function* () {
-    const bunService = yield* BunToolsServiceTag;
-
     if (force) {
-      yield* Effect.logInfo("📦 Force upgrading Bun...");
-      yield* bunService
+      yield* Effect.logInfo(`📦 Force upgrading ${toolName}...`);
+      yield* toolManager
         .ensureVersionOrUpgrade()
-        .pipe(Effect.mapError((error) => unknownError(`Bun upgrade failed: ${error}`)));
+        .pipe(Effect.mapError((error) => unknownError(`${toolName} upgrade failed: ${error}`)));
     } else {
-      const { isValid, currentVersion } = yield* bunService
+      const { isValid, currentVersion } = yield* toolManager
         .checkVersion()
-        .pipe(Effect.mapError((error) => unknownError(`Bun version check failed: ${error}`)));
+        .pipe(Effect.mapError((error) => unknownError(`${toolName} version check failed: ${error}`)));
 
       if (isValid && currentVersion) {
-        yield* Effect.logInfo(`✅ Bun is up to date (${currentVersion})`);
+        yield* Effect.logInfo(`✅ ${toolName} is up to date (${currentVersion})`);
       } else if (currentVersion) {
-        yield* Effect.logInfo(`📦 Upgrading Bun from ${currentVersion}...`);
-        yield* bunService
+        yield* Effect.logInfo(`📦 Upgrading ${toolName} from ${currentVersion}...`);
+        yield* toolManager
           .ensureVersionOrUpgrade()
-          .pipe(Effect.mapError((error) => unknownError(`Bun upgrade failed: ${error}`)));
+          .pipe(Effect.mapError((error) => unknownError(`${toolName} upgrade failed: ${error}`)));
       } else {
-        yield* Effect.logInfo("📦 Installing Bun...");
-        yield* bunService
+        yield* Effect.logInfo(`📦 Installing ${toolName}...`);
+        yield* toolManager
           .ensureVersionOrUpgrade()
-          .pipe(Effect.mapError((error) => unknownError(`Bun installation failed: ${error}`)));
-      }
-    }
-  });
-}
-
-/**
- * Check Git tool
- */
-function checkGit(force: boolean): Effect.Effect<void, DevError, any> {
-  return Effect.gen(function* () {
-    const gitService = yield* GitToolsServiceTag;
-
-    if (force) {
-      yield* Effect.logInfo("🔧 Force upgrading Git...");
-      yield* gitService
-        .ensureVersionOrUpgrade()
-        .pipe(Effect.mapError((error) => unknownError(`Git upgrade failed: ${error}`)));
-    } else {
-      const { isValid, currentVersion } = yield* gitService
-        .checkVersion()
-        .pipe(Effect.mapError((error) => unknownError(`Git version check failed: ${error}`)));
-
-      if (isValid && currentVersion) {
-        yield* Effect.logInfo(`✅ Git is up to date (${currentVersion})`);
-      } else if (currentVersion) {
-        yield* Effect.logInfo(`🔧 Git version ${currentVersion} is outdated, upgrading...`);
-        yield* gitService
-          .ensureVersionOrUpgrade()
-          .pipe(Effect.mapError((error) => unknownError(`Git upgrade failed: ${error}`)));
-      } else {
-        yield* Effect.logWarning("⚠️ Git not found - please install git manually");
-      }
-    }
-  });
-}
-
-/**
- * Check Mise tool
- */
-function checkMise(force: boolean): Effect.Effect<void, DevError, any> {
-  return Effect.gen(function* () {
-    const miseService = yield* MiseToolsServiceTag;
-
-    if (force) {
-      yield* Effect.logInfo("📦 Force upgrading Mise...");
-      yield* miseService
-        .ensureVersionOrUpgrade()
-        .pipe(Effect.mapError((error) => unknownError(`Mise upgrade failed: ${error}`)));
-    } else {
-      const { isValid, currentVersion } = yield* miseService
-        .checkVersion()
-        .pipe(Effect.mapError((error) => unknownError(`Mise version check failed: ${error}`)));
-
-      if (isValid && currentVersion) {
-        yield* Effect.logInfo(`✅ Mise is up to date (${currentVersion})`);
-      } else if (currentVersion) {
-        yield* Effect.logInfo(`📦 Upgrading Mise from ${currentVersion}...`);
-        yield* miseService
-          .ensureVersionOrUpgrade()
-          .pipe(Effect.mapError((error) => unknownError(`Mise upgrade failed: ${error}`)));
-      } else {
-        yield* Effect.logInfo("📦 Installing Mise...");
-        yield* miseService
-          .ensureVersionOrUpgrade()
-          .pipe(Effect.mapError((error) => unknownError(`Mise installation failed: ${error}`)));
-      }
-    }
-  });
-}
-
-/**
- * Check Fzf tool
- */
-function checkFzf(force: boolean): Effect.Effect<void, DevError, any> {
-  return Effect.gen(function* () {
-    const fzfService = yield* FzfToolsServiceTag;
-
-    if (force) {
-      yield* Effect.logInfo("📦 Force upgrading fzf...");
-      yield* fzfService
-        .ensureVersionOrUpgrade()
-        .pipe(Effect.mapError((error) => unknownError(`fzf upgrade failed: ${error}`)));
-    } else {
-      const { isValid, currentVersion } = yield* fzfService
-        .checkVersion()
-        .pipe(Effect.mapError((error) => unknownError(`fzf version check failed: ${error}`)));
-
-      if (isValid && currentVersion) {
-        yield* Effect.logInfo(`✅ fzf is up to date (${currentVersion})`);
-      } else if (currentVersion) {
-        yield* Effect.logInfo(`📦 Upgrading fzf from ${currentVersion}...`);
-        yield* fzfService
-          .ensureVersionOrUpgrade()
-          .pipe(Effect.mapError((error) => unknownError(`fzf upgrade failed: ${error}`)));
-      } else {
-        yield* Effect.logInfo("📦 Installing fzf...");
-        yield* fzfService
-          .ensureVersionOrUpgrade()
-          .pipe(Effect.mapError((error) => unknownError(`fzf installation failed: ${error}`)));
-      }
-    }
-  });
-}
-
-/**
- * Check gcloud tool
- */
-function checkGcloud(force: boolean): Effect.Effect<void, DevError, any> {
-  return Effect.gen(function* () {
-    const gcloudService = yield* GcloudToolsServiceTag;
-
-    if (force) {
-      yield* Effect.logInfo("📦 Force upgrading gcloud...");
-      yield* gcloudService
-        .ensureVersionOrUpgrade()
-        .pipe(Effect.mapError((error) => unknownError(`gcloud upgrade failed: ${error}`)));
-    } else {
-      const { isValid, currentVersion } = yield* gcloudService
-        .checkVersion()
-        .pipe(Effect.mapError((error) => unknownError(`gcloud version check failed: ${error}`)));
-
-      if (isValid && currentVersion) {
-        yield* Effect.logInfo(`✅ gcloud is up to date (${currentVersion})`);
-      } else if (currentVersion) {
-        yield* Effect.logInfo(`📦 Upgrading gcloud from ${currentVersion}...`);
-        yield* gcloudService
-          .ensureVersionOrUpgrade()
-          .pipe(Effect.mapError((error) => unknownError(`gcloud upgrade failed: ${error}`)));
-      } else {
-        yield* Effect.logInfo("📦 Installing gcloud...");
-        yield* gcloudService
-          .ensureVersionOrUpgrade()
-          .pipe(Effect.mapError((error) => unknownError(`gcloud installation failed: ${error}`)));
+          .pipe(Effect.mapError((error) => unknownError(`${toolName} installation failed: ${error}`)));
       }
     }
   });
