@@ -3,7 +3,7 @@ import { Effect } from "effect";
 import { unknownError, type DevError } from "../../domain/errors";
 import { filter } from "../../domain/matching";
 import type { CliCommandSpec, CommandContext } from "../../domain/models";
-import { DirectoryServiceTag } from "../../domain/ports/DirectoryService";
+import { DirectoryService } from "../../domain/ports/DirectoryService";
 import { FileSystemService } from "../../domain/ports/FileSystem";
 import { InteractiveSelectorService } from "../../domain/ports/InteractiveSelector";
 import { ShellService } from "../../domain/ports/Shell";
@@ -55,7 +55,7 @@ function handleDirectCd(folderName: string): Effect.Effect<void, DevError, any> 
     }
 
     // Use DirectoryService to get directories
-    const directoryService = yield* DirectoryServiceTag;
+    const directoryService = yield* DirectoryService;
     const directories = yield* directoryService.findDirs();
 
     if (directories.length > 0) {
@@ -80,7 +80,7 @@ function handleDirectCd(folderName: string): Effect.Effect<void, DevError, any> 
 function handleInteractiveCd(): Effect.Effect<void, DevError, any> {
   return Effect.gen(function* () {
     // Use DirectoryService to get directories
-    const directoryService = yield* DirectoryServiceTag;
+    const directoryService = yield* DirectoryService;
     const directories = yield* directoryService.findDirs();
 
     if (directories.length === 0) {

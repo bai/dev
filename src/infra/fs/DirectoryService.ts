@@ -3,7 +3,7 @@ import path from "path";
 import { Effect, Layer } from "effect";
 
 import { configError, type ConfigError, type FileSystemError, type UnknownError } from "../../domain/errors";
-import { DirectoryServiceTag, type DirectoryService } from "../../domain/ports/DirectoryService";
+import { DirectoryService, type Directory } from "../../domain/ports/DirectoryService";
 import { FileSystemService, type FileSystem } from "../../domain/ports/FileSystem";
 import { PathServiceTag, type PathService } from "../../domain/services/PathService";
 
@@ -64,10 +64,10 @@ const findDirs = (): Effect.Effect<string[], ConfigError | FileSystemError | Unk
   });
 
 // Plain object implementation
-export const DirectoryServiceImpl: DirectoryService = {
+export const DirectoryServiceImpl: Directory = {
   ensureBaseDirectoryExists,
   findDirs,
 };
 
 // Layer that provides DirectoryService with proper dependency injection
-export const DirectoryServiceLive = Layer.succeed(DirectoryServiceTag, DirectoryServiceImpl);
+export const DirectoryServiceLive = Layer.succeed(DirectoryService, DirectoryServiceImpl);
