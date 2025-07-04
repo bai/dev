@@ -277,7 +277,7 @@ Adapters live in `src/infra/**` and are wired in the composition root via **Effe
 
 ## 8 · Local Run Analytics
 
-Drizzle stores command runs in `~/.dev/state/dev.db`.
+Drizzle stores command runs in `~/.local/share/dev/dev.db` (following XDG Base Directory Specification).
 
 ```ts
 import { sqliteTable, text, integer, sql } from "drizzle-orm/sqlite-core";
@@ -301,7 +301,7 @@ A tiny adapter (`RunStoreLive`) inserts a row *before* command execution and fin
 
 ## 9 · Configuration Handling
 
-`ConfigLoader` reads `~/.dev/config.json`, applies migrations and validation, then provides the resulting object via a Context Tag so that any Effect can simply `yield* ConfigTag`.
+`ConfigLoader` reads `~/.config/dev/config.json` (following XDG Base Directory Specification), applies migrations and validation, then provides the resulting object via a Context Tag so that any Effect can simply `yield* ConfigTag`.
 
 ```ts
 export interface Config {
@@ -352,9 +352,10 @@ export interface AppModule {
 
 Discovery order:
 
-1. `~/.dev/plugins/**`
-2. `node_modules/@*/dev-plugin-*`
-3. Git URLs declared in `config.plugins.git`
+1. `~/.dev/plugins/**` (local plugins from installation directory)
+2. `~/.cache/dev/plugins/**` (cached git plugins - XDG compliant)
+3. `node_modules/@*/dev-plugin-*`
+4. Git URLs declared in `config.plugins.git`
 
 ---
 

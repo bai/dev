@@ -4,17 +4,18 @@ import { unknownError, type DevError } from "../domain/errors";
 import type { AppModule } from "../domain/models";
 import { FileSystemService, type FileSystem } from "../domain/ports/FileSystem";
 import { GitService, type Git } from "../domain/ports/Git";
+import { PathServiceTag, type PathService } from "../domain/services/PathService";
 
 // Factory function that creates PluginLoader with dependencies
-export const makePluginLoader = (fileSystem: FileSystem, git: Git) => {
+export const makePluginLoader = (fileSystem: FileSystem, git: Git, pathService: PathService) => {
   const loadAllPlugins = (): Effect.Effect<AppModule[], DevError> =>
     Effect.gen(function* () {
       // Load all plugin sources in parallel for better performance
       const [localModules, nodeModules, gitModules] = yield* Effect.all(
         [
-          loadLocalPlugins(fileSystem),
+          loadLocalPlugins(fileSystem, pathService),
           loadNodeModulesPlugins(),
-          loadGitPlugins(fileSystem),
+          loadGitPlugins(fileSystem, pathService),
         ],
         { concurrency: "unbounded" },
       );
@@ -29,9 +30,9 @@ export const makePluginLoader = (fileSystem: FileSystem, git: Git) => {
 };
 
 // Standalone functions to avoid "this" context issues
-function loadLocalPlugins(fileSystem: FileSystem): Effect.Effect<AppModule[], DevError> {
+function loadLocalPlugins(fileSystem: FileSystem, pathService: PathService): Effect.Effect<AppModule[], DevError> {
   return Effect.gen(function* () {
-    const pluginsDir = fileSystem.resolvePath("~/.dev/plugins");
+    const pluginsDir = `${pathService.devDir}/plugins`;
 
     const exists = yield* fileSystem.exists(pluginsDir);
     if (!exists) {
@@ -48,11 +49,10 @@ function loadNodeModulesPlugins(): Effect.Effect<AppModule[], DevError> {
   return Effect.succeed([]);
 }
 
-function loadGitPlugins(fileSystem: FileSystem): Effect.Effect<AppModule[], DevError> {
+function loadGitPlugins(fileSystem: FileSystem, pathService: PathService): Effect.Effect<AppModule[], DevError> {
   return Effect.gen(function* () {
-    // Load plugins from XDG_CACHE_HOME/dev/plugins/
-    const cacheDir = process.env.XDG_CACHE_HOME || fileSystem.resolvePath("~/.cache");
-    const gitPluginsDir = `${cacheDir}/dev/plugins`;
+    // Load plugins from XDG cache directory
+    const gitPluginsDir = `${pathService.cacheDir}/plugins`;
 
     const exists = yield* fileSystem.exists(gitPluginsDir);
     if (!exists) {
@@ -121,5 +121,6 @@ function isValidAppModule(module: any): boolean {
 export const PluginLoaderLive = Effect.gen(function* () {
   const fileSystem = yield* FileSystemService;
   const git = yield* GitService;
-  return makePluginLoader(fileSystem, git);
+  const pathService = yield* PathServiceTag;
+  return makePluginLoader(fileSystem, git, pathService);
 });
