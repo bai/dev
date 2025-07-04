@@ -1,11 +1,13 @@
 import { Command, Options } from "@effect/cli";
 import { Effect } from "effect";
 
+import { ConfigLoaderService } from "../../config/loader";
 import { exitCode, statusCheckError, unknownError, type DevError } from "../../domain/errors";
 import { FileSystemService } from "../../domain/ports/FileSystem";
 import { GitService } from "../../domain/ports/Git";
 import { MiseService } from "../../domain/ports/Mise";
 import { NetworkService } from "../../domain/ports/Network";
+import { PathServiceTag } from "../../domain/services/PathService";
 
 interface StatusItem {
   component: string;
@@ -24,6 +26,8 @@ export const statusCommand = Command.make("status", { json }, ({ json }) =>
     const git = yield* GitService;
     const network = yield* NetworkService;
     const fileSystem = yield* FileSystemService;
+    const configLoader = yield* ConfigLoaderService;
+    const pathService = yield* PathServiceTag;
     const jsonOutput = json._tag === "Some" ? json.value : false;
 
     const statusItems: StatusItem[] = [];
@@ -36,7 +40,8 @@ export const statusCommand = Command.make("status", { json }, ({ json }) =>
         Effect.either(network.checkConnectivity("https://github.com")),
         Effect.either(
           Effect.gen(function* () {
-            const baseDir = "~/src"; // TODO: Get from config when config service is available
+            const config = yield* configLoader.load();
+            const baseDir = pathService.getBasePath(config);
             const resolvedPath = fileSystem.resolvePath(baseDir);
             const exists = yield* fileSystem.exists(resolvedPath);
             return { baseDir, exists };
