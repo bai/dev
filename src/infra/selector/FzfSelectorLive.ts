@@ -12,9 +12,9 @@ export const makeFzfSelector = (): InteractiveSelector => ({
       const proc = yield* Effect.sync(() =>
         Bun.spawn(["fzf"], {
           stdin: "pipe",
-          stdout: "pipe", 
+          stdout: "pipe",
           stderr: "pipe",
-        })
+        }),
       );
 
       // Write input to stdin
@@ -49,14 +49,11 @@ export const makeFzfSelector = (): InteractiveSelector => ({
       // fzf returns 130 on ESC/Ctrl-C, which is cancellation, not an error
       return null;
     }).pipe(
-      Effect.mapError((error) => 
-        error instanceof UnknownError ? error : unknownError(`Fzf selection failed: ${error}`)
-      )
+      Effect.mapError((error) =>
+        error instanceof UnknownError ? error : unknownError(`Fzf selection failed: ${error}`),
+      ),
     ),
 });
 
 // Effect Layer for dependency injection
-export const FzfSelectorLiveLayer = Layer.succeed(
-  InteractiveSelectorService,
-  makeFzfSelector()
-);
+export const FzfSelectorLiveLayer = Layer.succeed(InteractiveSelectorService, makeFzfSelector());

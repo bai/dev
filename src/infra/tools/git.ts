@@ -94,9 +94,9 @@ export const makeGitToolsLive = (shell: Shell): GitToolsService => ({
       }
 
       if (currentVersion) {
-        yield* Effect.logInfo(`⚠️  Git version ${currentVersion} is older than required ${GIT_MIN_VERSION}`);
+        yield* Effect.logWarning(`⚠️  Git version ${currentVersion} is older than required ${GIT_MIN_VERSION}`);
       } else {
-        yield* Effect.logInfo(`⚠️  Unable to determine git version`);
+        yield* Effect.logWarning(`⚠️  Unable to determine git version`);
       }
 
       yield* Effect.logInfo(`🚀 Starting git upgrade via mise...`);

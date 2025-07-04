@@ -33,7 +33,7 @@ This command will:
       const miseInfo = yield* Effect.either(mise.checkInstallation());
 
       if (miseInfo._tag === "Left") {
-        yield* Effect.logInfo("WARN: Mise is not installed. Installing...");
+        yield* Effect.logWarning("⚠️ Mise is not installed. Installing...");
         yield* mise.install();
         yield* Effect.logInfo("✅ Mise installed successfully");
       } else {

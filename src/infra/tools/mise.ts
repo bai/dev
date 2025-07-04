@@ -93,7 +93,7 @@ export const makeMiseToolsLive = (shell: Shell, filesystem: FileSystem): MiseToo
 
   const setupGlobalConfig = (): Effect.Effect<void, UnknownError> =>
     Effect.gen(function* () {
-      yield* Effect.logInfo("🔧 Setting up mise global configuration...");
+      yield* Effect.logDebug("🔧 Setting up mise global configuration...");
 
       const miseConfigDir = path.join(homeDir, ".config", "mise");
       const miseConfigFile = path.join(miseConfigDir, "config.toml");
@@ -101,7 +101,7 @@ export const makeMiseToolsLive = (shell: Shell, filesystem: FileSystem): MiseToo
       // Create config directory if it doesn't exist
       const configDirExists = yield* filesystem.exists(miseConfigDir);
       if (!configDirExists) {
-        yield* Effect.logInfo("   📂 Creating mise config directory...");
+        yield* Effect.logDebug("   📂 Creating mise config directory...");
         yield* filesystem.mkdir(miseConfigDir, true).pipe(
           Effect.mapError((error) => {
             return unknownError(`Failed to create mise config directory: ${error}`);
@@ -118,7 +118,7 @@ export const makeMiseToolsLive = (shell: Shell, filesystem: FileSystem): MiseToo
           return unknownError(`Failed to write mise config: ${error}`);
         }),
       );
-      yield* Effect.logInfo("   ✅ Mise global config ready");
+      yield* Effect.logDebug("   ✅ Mise global config ready");
     });
 
   const ensureVersionOrUpgrade = (): Effect.Effect<void, ExternalToolError | UnknownError> =>

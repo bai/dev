@@ -21,7 +21,7 @@ export const makeRunStoreLive = (db: ReturnType<typeof drizzle>, sqlite: Databas
   // Individual functions implementing the service methods
   const close = (): Effect.Effect<void> =>
     Effect.gen(function* () {
-      yield* Effect.logInfo("Closing database connection...");
+      yield* Effect.logDebug("Closing database connection...");
       yield* Effect.sync(() => {
         sqlite.close();
       });
@@ -175,7 +175,7 @@ export const RunStoreLiveLayer = Layer.scoped(
     // Create the RunStore with proper resource management
     const runStore = yield* Effect.acquireRelease(createDatabase(dbPath), (runStore) =>
       Effect.gen(function* () {
-        yield* Effect.logInfo("Gracefully shutting down database...");
+        yield* Effect.logDebug("Gracefully shutting down database...");
 
         // Complete incomplete runs, but don't fail shutdown if this fails
         yield* runStore

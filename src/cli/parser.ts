@@ -109,7 +109,11 @@ const buildCommandOptions = (yargs: Argv, commandSpec: CliCommandSpec): Argv => 
   return builder;
 };
 
-const executeCommand = (commandSpec: CliCommandSpec, argv: any, appLayer: Layer.Layer<any, any, any>): Promise<void> => {
+const executeCommand = (
+  commandSpec: CliCommandSpec,
+  argv: any,
+  appLayer: Layer.Layer<any, any, any>,
+): Promise<void> => {
   // Extract command arguments
   const args: Record<string, any> = {};
   if (commandSpec.arguments) {
@@ -148,7 +152,7 @@ const executeCommand = (commandSpec: CliCommandSpec, argv: any, appLayer: Layer.
       // Command failed
       const error = result.left;
       yield* tracking.completeCommandRun(runId, exitCode(error));
-      yield* Effect.logInfo(`❌ ${error._tag}`);
+      yield* Effect.logError(`❌ ${error._tag}`);
       return yield* Effect.fail(error);
     } else {
       // Command succeeded
@@ -160,12 +164,12 @@ const executeCommand = (commandSpec: CliCommandSpec, argv: any, appLayer: Layer.
     Effect.catchAll((error: DevError) => {
       // Handle errors and set appropriate exit codes
       return Effect.gen(function* () {
-        yield* Effect.logInfo(`❌ ${error._tag}`);
+        yield* Effect.logError(`❌ ${error._tag}`);
 
         // Handle different error types and their properties
         switch (error._tag) {
           case "ExternalToolError":
-            yield* Effect.logInfo(error.message);
+            yield* Effect.logError(error.message);
             break;
           case "ConfigError":
           case "GitError":
@@ -174,13 +178,13 @@ const executeCommand = (commandSpec: CliCommandSpec, argv: any, appLayer: Layer.
           case "FileSystemError":
           case "UserInputError":
           case "CLIError":
-            yield* Effect.logInfo(error.reason);
+            yield* Effect.logError(error.reason);
             break;
           case "StatusCheckError":
-            yield* Effect.logInfo(error.reason);
+            yield* Effect.logError(error.reason);
             break;
           case "UnknownError":
-            yield* Effect.logInfo(String(error.reason));
+            yield* Effect.logError(String(error.reason));
             break;
         }
 
@@ -200,7 +204,11 @@ const executeCommand = (commandSpec: CliCommandSpec, argv: any, appLayer: Layer.
   });
 };
 
-const registerCommand = (yargsInstance: Argv, commandSpec: CliCommandSpec, appLayer: Layer.Layer<any, any, any>): void => {
+const registerCommand = (
+  yargsInstance: Argv,
+  commandSpec: CliCommandSpec,
+  appLayer: Layer.Layer<any, any, any>,
+): void => {
   yargsInstance.command(
     buildCommandString(commandSpec),
     commandSpec.description,

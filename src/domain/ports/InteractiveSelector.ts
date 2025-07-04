@@ -15,4 +15,7 @@ export interface InteractiveSelector {
 }
 
 // Service tag for Effect Context system
-export class InteractiveSelectorService extends Context.Tag("InteractiveSelectorService")<InteractiveSelectorService, InteractiveSelector>() {}
+export class InteractiveSelectorService extends Context.Tag("InteractiveSelectorService")<
+  InteractiveSelectorService,
+  InteractiveSelector
+>() {}

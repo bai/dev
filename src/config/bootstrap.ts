@@ -35,12 +35,12 @@ const BootstrapLayer = Layer.mergeAll(
  */
 export const loadConfiguration = () =>
   Effect.gen(function* () {
-    yield* Effect.logInfo("🔧 Stage 1: Loading configuration...");
+    yield* Effect.logDebug("🔧 Stage 1: Loading configuration...");
 
     const configLoader = yield* ConfigLoaderService;
     const config = yield* configLoader.load();
 
-    yield* Effect.logInfo(`✅ Configuration loaded successfully (org: ${config.defaultOrg})`);
+    yield* Effect.logDebug(`✅ Configuration loaded successfully (org: ${config.defaultOrg})`);
     return config;
   }).pipe(Effect.provide(BootstrapLayer));
 

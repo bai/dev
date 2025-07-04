@@ -59,7 +59,7 @@ const completeCommandRun = (id: string, exitCode: number) =>
   });
 
 const gracefulShutdown = Effect.gen(function* () {
-  yield* Effect.logInfo("🛑 Gracefully shutting down command tracking...");
+  yield* Effect.logDebug("🛑 Gracefully shutting down command tracking...");
   const runStore = yield* RunStoreService;
   yield* runStore.completeIncompleteRuns();
   yield* Effect.logDebug("✅ Command tracking shutdown complete");

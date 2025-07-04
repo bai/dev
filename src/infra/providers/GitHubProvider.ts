@@ -68,7 +68,7 @@ export const makeGitHubProvider = (network: Network, defaultOrg = "octocat"): Re
             return repositories;
           },
           catch: (error) => unknownError(`Failed to parse GitHub API response: ${error}`),
-        })
+        });
       }),
     );
   };

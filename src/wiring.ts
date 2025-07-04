@@ -55,15 +55,15 @@ export function createDevCli(): CliParser {
 export const setupApplicationWithConfig = () =>
   Effect.gen(function* () {
     // Stage 1: Load configuration (self-contained with bootstrap dependencies)
-    yield* Effect.logInfo("🔧 Starting two-stage application setup...");
+    yield* Effect.logDebug("🔧 Starting two-stage application setup...");
     const config = yield* loadConfiguration(); // This provides its own bootstrap layer
 
     // Stage 2: Extract values and build dynamic layers
-    yield* Effect.logInfo("🔨 Stage 2: Building dynamic layers with configuration...");
+    yield* Effect.logDebug("🔨 Stage 2: Building dynamic layers with configuration...");
     const configValues = extractDynamicValues(config);
     const appLayer = buildAppLiveLayer(configValues);
 
-    yield* Effect.logInfo(`✅ Dynamic layers built successfully with org: ${configValues.defaultOrg}`);
+    yield* Effect.logDebug(`✅ Dynamic layers built successfully with org: ${configValues.defaultOrg}`);
 
     return {
       config,
@@ -83,4 +83,3 @@ export function getDefaultAppLayer() {
   const defaultConfigValues = extractDynamicValues(defaultConfig);
   return buildAppLiveLayer(defaultConfigValues);
 }
-

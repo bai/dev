@@ -10,17 +10,17 @@ const program = Effect.scoped(
     // Add shutdown finalizer for graceful cleanup
     yield* Effect.addFinalizer(() =>
       Effect.gen(function* () {
-        yield* Effect.logInfo("🛑 Initiating graceful shutdown...");
+        yield* Effect.logDebug("🔧 Cleaning up resources...");
         // Log interruption if it was caused by signal
         if (process.exitCode === 130) {
-          yield* Effect.logInfo("💡 Shutdown initiated by user interrupt (Ctrl+C)");
+          yield* Effect.logDebug("💡 Shutdown initiated by user interrupt (Ctrl+C)");
         }
-        yield* Effect.logInfo("✅ Shutdown complete");
+        yield* Effect.logDebug("✅ Cleanup complete");
       }),
     );
 
     // Log application start
-    yield* Effect.logInfo("🚀 Starting dev CLI with dynamic configuration...");
+    yield* Effect.logDebug("🚀 Starting dev CLI with dynamic configuration...");
 
     // Create CLI instance
     const cli = createDevCli();
@@ -61,7 +61,7 @@ const program = Effect.scoped(
   // Add interruption handling
   Effect.onInterrupt(() =>
     Effect.gen(function* () {
-      yield* Effect.logInfo("⚠️  Received interrupt signal, initiating graceful shutdown...");
+      yield* Effect.logDebug("⚠️  Received interrupt signal, cleaning up...");
       yield* Effect.sync(() => {
         process.exitCode = 130; // Standard exit code for SIGINT
       });
