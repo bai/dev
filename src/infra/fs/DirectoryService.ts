@@ -63,26 +63,10 @@ const findDirs = (): Effect.Effect<string[], ConfigError | FileSystemError | Unk
     return result;
   });
 
-const findDirsLegacy = (): Effect.Effect<string[], ConfigError | UnknownError, any> =>
-  Effect.gen(function* () {
-    const pathService = yield* PathServiceTag;
-
-    return yield* Effect.tryPromise({
-      try: () => {
-        // Legacy implementation using Bun.Glob directly
-        const scanner = new Bun.Glob("*/*/*/");
-        const matches = Array.from(scanner.scanSync({ cwd: pathService.baseSearchDir, onlyFiles: false }));
-        return Promise.resolve(matches);
-      },
-      catch: (error: any) => configError(`Failed to scan directories: ${error.message}`),
-    });
-  });
-
 // Plain object implementation
 export const DirectoryServiceImpl: DirectoryService = {
   ensureBaseDirectoryExists,
   findDirs,
-  findDirsLegacy,
 };
 
 // Layer that provides DirectoryService with proper dependency injection

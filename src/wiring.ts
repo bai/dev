@@ -8,7 +8,7 @@ import { runCommand } from "./app/commands/run";
 import { statusCommand } from "./app/commands/status";
 import { upCommand } from "./app/commands/up";
 import { upgradeCommand } from "./app/commands/upgrade";
-import { DevCli } from "./cli/parser";
+import { createCliParser, type CliParser } from "./cli/parser";
 import { extractDynamicValues, loadConfiguration } from "./config/bootstrap";
 import { buildAppLiveLayer } from "./config/dynamic-layers";
 import { defaultConfig } from "./config/schema";
@@ -35,8 +35,12 @@ export const availableCommands: CliCommandSpec[] = [
 ];
 
 // Create CLI instance with available commands
-export function createDevCli(): DevCli {
-  return new DevCli(availableCommands);
+export function createDevCli(): CliParser {
+  return createCliParser(availableCommands, {
+    name: "dev",
+    description: "A hexagonal, plugin-extensible CLI for development workflow",
+    version: "1.0.0", // TODO: Get from package.json
+  });
 }
 
 /**
@@ -80,15 +84,3 @@ export function getDefaultAppLayer() {
   return buildAppLiveLayer(defaultConfigValues);
 }
 
-/**
- * Legacy exports for backward compatibility
- * These are now dynamically created, so they can't be exported as constants
- */
-
-// Note: InfraLiveLayer and AppLiveLayer are no longer static exports
-// They must be created dynamically using the configuration values
-// Use setupApplicationWithConfig() instead
-
-// Legacy static layer exports (deprecated - use dynamic setup instead)
-// export const InfraLiveLayer = ...  // Now created dynamically
-// export const AppLiveLayer = ...    // Now created dynamically

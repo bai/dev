@@ -9,7 +9,6 @@ import type { ConfigError, FileSystemError, UnknownError } from "../errors";
 export interface DirectoryService {
   ensureBaseDirectoryExists(): Effect.Effect<void, ConfigError | FileSystemError | UnknownError, any>;
   findDirs(): Effect.Effect<string[], ConfigError | FileSystemError | UnknownError, any>;
-  findDirsLegacy(): Effect.Effect<string[], ConfigError | UnknownError, any>;
 }
 
 // Service tag for Effect Context system

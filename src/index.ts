@@ -25,13 +25,6 @@ const program = Effect.scoped(
     // Create CLI instance
     const cli = createDevCli();
 
-    // Set program metadata
-    cli.setMetadata({
-      name: "dev",
-      description: "A CLI tool for quick directory navigation and environment management",
-      version: "2.0.0",
-    });
-
     // Parse and execute command (trim node and script name from argv)
     let args = process.argv.slice(2);
 

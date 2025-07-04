@@ -5,8 +5,8 @@ import { filter } from "../../domain/matching";
 import type { CliCommandSpec, CommandContext } from "../../domain/models";
 import { DirectoryServiceTag } from "../../domain/ports/DirectoryService";
 import { FileSystemService } from "../../domain/ports/FileSystem";
+import { InteractiveSelectorService } from "../../domain/ports/InteractiveSelector";
 import { ShellService } from "../../domain/ports/Shell";
-import { FzfToolsServiceTag } from "../../infra/tools/fzf";
 import { ShellIntegrationServiceTag } from "../services/ShellIntegrationService";
 
 export const cdCommand: CliCommandSpec = {
@@ -88,9 +88,9 @@ function handleInteractiveCd(): Effect.Effect<void, DevError, any> {
       return;
     }
 
-    // Use FzfToolsService for interactive selection
-    const fzfService = yield* FzfToolsServiceTag;
-    const selectedPath = yield* fzfService.interactiveSelect(directories);
+    // Use InteractiveSelector for interactive selection
+    const selector = yield* InteractiveSelectorService;
+    const selectedPath = yield* selector.selectFromList(directories);
 
     if (selectedPath) {
       // Use ShellIntegrationService

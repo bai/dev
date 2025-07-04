@@ -14,12 +14,6 @@ export interface FzfToolsService {
   checkVersion(): Effect.Effect<{ isValid: boolean; currentVersion: string | null }, UnknownError>;
   performUpgrade(): Effect.Effect<boolean, UnknownError>;
   ensureVersionOrUpgrade(): Effect.Effect<void, ExternalToolError | UnknownError>;
-
-  /**
-   * Present a list of choices to the user for interactive selection
-   * Returns the selected choice, or null if the user cancels
-   */
-  interactiveSelect(choices: string[]): Effect.Effect<string | null, UnknownError>;
 }
 
 // Helper function for version comparison
@@ -138,35 +132,6 @@ export const makeFzfToolsLive = (shell: Shell): FzfToolsService => ({
       if (versionAfterUpgrade) {
         yield* Effect.logInfo(`✨ Fzf successfully upgraded to version ${versionAfterUpgrade}`);
       }
-    }),
-
-  interactiveSelect: (choices: string[]): Effect.Effect<string | null, UnknownError> =>
-    Effect.tryPromise({
-      try: async () => {
-        const directoryList = choices.join("\n") + "\n";
-
-        const proc = Bun.spawn(["fzf"], {
-          stdin: "pipe",
-          stdout: "pipe",
-          stderr: "pipe",
-        });
-
-        if (proc.stdin) {
-          await proc.stdin.write(directoryList);
-          await proc.stdin.end();
-        }
-
-        const exitCode = await proc.exited;
-
-        if (exitCode === 0 && proc.stdout) {
-          const output = await new Response(proc.stdout).text();
-          return output.trim();
-        }
-
-        // fzf returns 130 on ESC/Ctrl-C, which is cancellation, not an error
-        return null;
-      },
-      catch: (error) => unknownError(`Failed to run fzf: ${error}`),
     }),
 });
 

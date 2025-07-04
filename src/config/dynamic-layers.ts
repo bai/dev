@@ -13,6 +13,7 @@ import { KeychainLiveLayer } from "../infra/keychain/KeychainLive";
 import { MiseLiveLayer } from "../infra/mise/MiseLive";
 import { NetworkLiveLayer } from "../infra/network/NetworkLive";
 import { GitHubProviderLayer } from "../infra/providers/GitHubProvider";
+import { FzfSelectorLiveLayer } from "../infra/selector/FzfSelectorLive";
 import { ShellLiveLayer } from "../infra/shell/ShellLive";
 import { FzfToolsLiveLayer } from "../infra/tools/fzf";
 import { type DynamicConfigValues } from "./bootstrap";
@@ -61,6 +62,7 @@ export const buildInfraLiveLayer = (configValues: DynamicConfigValues) => {
     Layer.provide(MiseLiveLayer, BaseInfraLayer),
     Layer.provide(KeychainLiveLayer, BaseInfraLayer),
     Layer.provide(FzfToolsLiveLayer, BaseInfraLayer),
+    FzfSelectorLiveLayer, // No dependencies needed
   );
 
   // Repository provider with dynamic organization

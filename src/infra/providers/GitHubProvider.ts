@@ -56,19 +56,19 @@ export const makeGitHubProvider = (network: Network, defaultOrg = "octocat"): Re
           return Effect.fail(networkError(`GitHub search API error: ${response.status} ${response.statusText}`));
         }
 
-        try {
-          const data = JSON.parse(response.body);
-          const repositories: Repository[] = data.items.map((item: any) => ({
-            name: item.name,
-            organization: item.owner.login,
-            provider,
-            cloneUrl: item.clone_url,
-          }));
-
-          return Effect.succeed(repositories);
-        } catch (error) {
-          return Effect.fail(unknownError(`Failed to parse GitHub API response: ${error}`));
-        }
+        return Effect.try({
+          try: () => {
+            const data = JSON.parse(response.body);
+            const repositories: Repository[] = data.items.map((item: any) => ({
+              name: item.name,
+              organization: item.owner.login,
+              provider,
+              cloneUrl: item.clone_url,
+            }));
+            return repositories;
+          },
+          catch: (error) => unknownError(`Failed to parse GitHub API response: ${error}`),
+        })
       }),
     );
   };
