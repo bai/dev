@@ -3,7 +3,7 @@ import path from "path";
 import { Context, Effect, Layer } from "effect";
 
 import { configError, type ConfigError } from "../errors";
-import type { Config } from "../models";
+import type { GitProviderType } from "../models";
 import { PathServiceTag } from "./PathService";
 
 /**
@@ -14,7 +14,8 @@ export interface RepositoryService {
   parseRepoUrlToPath(repoUrl: string): Effect.Effect<string, ConfigError, PathServiceTag>;
   expandToFullGitUrl(
     repoInput: string,
-    config: Config,
+    defaultOrg: string,
+    orgToProvider?: Record<string, GitProviderType>,
     forceProvider?: "github" | "gitlab",
   ): Effect.Effect<string, never>;
 }
@@ -58,7 +59,8 @@ const parseRepoUrlToPath = (repoUrl: string): Effect.Effect<string, ConfigError,
 
 const expandToFullGitUrl = (
   repoInput: string,
-  config: Config,
+  defaultOrg: string,
+  orgToProvider?: Record<string, GitProviderType>,
   forceProvider?: "github" | "gitlab",
 ): Effect.Effect<string, never> =>
   Effect.sync(() => {
@@ -67,7 +69,7 @@ const expandToFullGitUrl = (
       return repoInput;
     }
 
-    let orgName = config.defaultOrg;
+    let orgName = defaultOrg;
     let repoName = repoInput;
     let provider = "github"; // default provider
     let isExplicitOrg = false;
@@ -83,14 +85,14 @@ const expandToFullGitUrl = (
     }
 
     // Determine provider based on forced option, org mapping, or default
-    const orgToProvider = config.orgToProvider || {};
+    const orgToProviderMap = orgToProvider || {};
     if (forceProvider) {
       provider = forceProvider;
-    } else if (orgName in orgToProvider) {
-      provider = orgToProvider[orgName] === "gitlab" ? "gitlab" : "github";
-    } else if (!isExplicitOrg && config.defaultOrg in orgToProvider) {
+    } else if (orgName in orgToProviderMap) {
+      provider = orgToProviderMap[orgName] === "gitlab" ? "gitlab" : "github";
+    } else if (!isExplicitOrg && defaultOrg in orgToProviderMap) {
       // Only use default org's provider if no explicit org was specified
-      provider = orgToProvider[config.defaultOrg] === "gitlab" ? "gitlab" : "github";
+      provider = orgToProviderMap[defaultOrg] === "gitlab" ? "gitlab" : "github";
     }
 
     // Construct the full URL
