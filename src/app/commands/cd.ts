@@ -64,9 +64,9 @@ function handleDirectCd(folderName: string): Effect.Effect<void, DevError, any> 
 
       if (fuzzyMatches.length > 0 && fuzzyMatches[0]) {
         const targetPath = fuzzyMatches[0].str; // This is a relative path
-        // Use ShellIntegrationService instead of direct handleCdToPath
+        // Use ShellIntegrationService
         const shellIntegration = yield* ShellIntegrationServiceTag;
-        yield* shellIntegration.handleCdToPathLegacy(targetPath);
+        yield* shellIntegration.changeDirectory(targetPath);
         return; // Successfully changed directory
       }
     }
@@ -93,9 +93,9 @@ function handleInteractiveCd(): Effect.Effect<void, DevError, any> {
     const selectedPath = yield* fzfService.interactiveSelect(directories);
 
     if (selectedPath) {
-      // Use ShellIntegrationService instead of direct handleCdToPath
+      // Use ShellIntegrationService
       const shellIntegration = yield* ShellIntegrationServiceTag;
-      yield* shellIntegration.handleCdToPathLegacy(selectedPath);
+      yield* shellIntegration.changeDirectory(selectedPath);
     }
   });
 }

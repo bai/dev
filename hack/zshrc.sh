@@ -16,29 +16,25 @@ export HOMEBREW_NO_ANALYTICS=1
 export HOMEBREW_NO_ENV_HINTS=1
 
 function dev() {
-  local result
-  result=$(bun "$HOME"/.dev/src/index.ts "$@")
+  local cd_target_file="$HOME/.local/share/dev/cd_target"
+
+  # Ensure the file doesn't exist before running
+  rm -f "$cd_target_file"
+
+  # Run the command, allowing its output to go directly to the terminal
+  bun "$HOME"/.dev/src/index.ts "$@"
   local exit_code=$?
 
-  if [[ $exit_code -ne 0 ]]; then
-    return $exit_code
+  # After the command finishes, check if the target file was created
+  if [[ -f "$cd_target_file" ]]; then
+    local dir_to_cd
+    dir_to_cd=$(<"$cd_target_file")
+    rm -f "$cd_target_file"
+
+    if [[ -n "$dir_to_cd" ]]; then
+      cd "$dir_to_cd"
+    fi
   fi
 
-  # Look for a CD: directive anywhere in the output
-  local cd_line
-  cd_line=$(echo "$result" | grep "^CD:" || true)
-
-  if [[ -n "$cd_line" ]]; then
-    # Extract the directory path from the CD: line
-    local dir="${cd_line#CD:}"
-
-    # Print all output except the CD: line
-    echo "$result" | grep -v "^CD:"
-
-    # Change to the directory
-    cd "$dir" || return
-  else
-    # No CD directive, just print the output
-    echo "$result"
-  fi
+  return $exit_code
 }
