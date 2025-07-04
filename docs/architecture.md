@@ -52,10 +52,11 @@
 ### 3.1 Hexagonal / Ports & Adapters
 
 The application follows the hexagonal architecture pattern, with clear separation between:
-- **Domain layer** - pure business logic, domain models, and service interfaces (ports)
-- **Infrastructure layer** - concrete implementations of domain services (adapters)
-- **Application layer** - command handlers and service orchestration
-- **CLI layer** - @effect/cli command definitions and argument parsing
+
+* **Domain layer** - pure business logic, domain models, and service interfaces (ports)
+* **Infrastructure layer** - concrete implementations of domain services (adapters)
+* **Application layer** - command handlers and service orchestration
+* **CLI layer** - @effect/cli command definitions and argument parsing
 
 ### 3.2 Effect-TS CLI Architecture
 
@@ -78,10 +79,11 @@ const cloneCommand = Command.make(
 ```
 
 This approach provides:
-- **Composable commands** with declarative argument parsing
-- **Type-safe arguments** with automatic validation
-- **Resource management** with proper cleanup and interruption
-- **Error handling** through Effect's error channel
+
+* **Composable commands** with declarative argument parsing
+* **Type-safe arguments** with automatic validation
+* **Resource management** with proper cleanup and interruption
+* **Error handling** through Effect's error channel
 
 ### 3.3 Dependency Rule
 
@@ -116,10 +118,8 @@ src/
 │   ├── shell/
 │   └── db/
 │
-├── cli/           # 🖥️ CLI parser & wiring
 ├── config/        # ⚙️ Config schema, loader & migrations
 ├── effect/        # 🔧 Effect-TS specific helpers (optional)
-├── plugins/       # 🧩 Dynamically discovered modules
 ├── wiring.ts      # 🏗️ Composition root
 └── index.ts       # 🚀 Entry point
 ```
