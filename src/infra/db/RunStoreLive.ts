@@ -29,22 +29,31 @@ export const makeRunStoreLive = (db: ReturnType<typeof drizzle>, sqlite: Databas
     });
 
   const record = (run: Omit<CommandRun, "id" | "duration_ms">): Effect.Effect<string, ConfigError | UnknownError> =>
-    Effect.tryPromise({
-      try: async () => {
-        const id = crypto.randomUUID();
-        await db.insert(runs).values({
-          id,
-          cli_version: run.cli_version,
-          command_name: run.command_name,
-          arguments: run.arguments,
-          cwd: run.cwd,
-          started_at: run.started_at,
-          finished_at: run.finished_at,
-          exit_code: run.exit_code,
-        });
-        return id;
-      },
-      catch: (error) => configError(`Failed to record command run: ${error}`),
+    Effect.gen(function* () {
+      const result = yield* Effect.tryPromise({
+        try: async () => {
+          return await db
+            .insert(runs)
+            .values({
+              id: Bun.randomUUIDv7(),
+              cli_version: run.cli_version,
+              command_name: run.command_name,
+              arguments: run.arguments,
+              cwd: run.cwd,
+              started_at: run.started_at,
+              finished_at: run.finished_at,
+              exit_code: run.exit_code,
+            })
+            .returning({ id: runs.id });
+        },
+        catch: (error) => configError(`Failed to record command run: ${error}`),
+      });
+
+      const insertedRun = yield* Effect.fromNullable(result[0]).pipe(
+        Effect.orElseFail(() => configError("Insert operation did not return a record")),
+      );
+
+      return insertedRun.id;
     });
 
   const complete = (id: string, exitCode: number, finishedAt: Date): Effect.Effect<void, ConfigError | UnknownError> =>
