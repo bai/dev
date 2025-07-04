@@ -2,7 +2,7 @@ import path from "path";
 
 import { Context, Effect, Layer } from "effect";
 
-import { ConfigError, type FileSystemError, type UnknownError } from "../../domain/errors";
+import { configError, type ConfigError, type FileSystemError, type UnknownError } from "../../domain/errors";
 import { FileSystemService } from "../../domain/ports/FileSystem";
 import { PathServiceTag } from "../../domain/services/PathService";
 
@@ -37,7 +37,7 @@ const changeDirectory = (targetPath: string) =>
     // Validate path exists before attempting to cd
     const exists = yield* fileSystem.exists(absolutePath);
     if (!exists) {
-      return yield* Effect.fail(new ConfigError({ reason: `Directory does not exist: ${absolutePath}` }));
+      return yield* Effect.fail(configError(`Directory does not exist: ${absolutePath}`));
     }
 
     // Ensure the data directory exists
