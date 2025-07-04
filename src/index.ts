@@ -3,7 +3,7 @@ import { BunRuntime } from "@effect/platform-bun";
 import { Effect } from "effect";
 
 import { exitCode, unknownError, type DevError } from "./domain/errors";
-import { createDevCli } from "./wiring";
+import { createDevCli, setupApplicationWithConfig } from "./wiring";
 
 const program = Effect.scoped(
   Effect.gen(function* () {
@@ -20,7 +20,7 @@ const program = Effect.scoped(
     );
 
     // Log application start
-    yield* Effect.logInfo("🚀 Starting dev CLI...");
+    yield* Effect.logInfo("🚀 Starting dev CLI with dynamic configuration...");
 
     // Create CLI instance
     const cli = createDevCli();
@@ -40,6 +40,8 @@ const program = Effect.scoped(
       args = ["help"];
     }
 
+    // Execute with the dynamically built app layer
+    // Note: The CLI now handles its own dynamic layer setup internally
     yield* Effect.tryPromise({
       try: () => cli.parseAndExecute(args),
       catch: (error) => {

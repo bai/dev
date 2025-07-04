@@ -1,7 +1,4 @@
-import os from "os";
-import path from "path";
-
-import { Layer } from "effect";
+import { Effect } from "effect";
 
 import { authCommand } from "./app/commands/auth";
 import { cdCommand } from "./app/commands/cd";
@@ -11,84 +8,19 @@ import { runCommand } from "./app/commands/run";
 import { statusCommand } from "./app/commands/status";
 import { upCommand } from "./app/commands/up";
 import { upgradeCommand } from "./app/commands/upgrade";
-import { CommandTrackingServiceLive } from "./app/services/CommandTrackingService";
-import { ShellIntegrationServiceLive } from "./app/services/ShellIntegrationService";
-import { UpdateCheckServiceLive } from "./app/services/UpdateCheckService";
-import { VersionServiceLive } from "./app/services/VersionService";
 import { DevCli } from "./cli/parser";
-import { ConfigLoaderLiveLayer } from "./config/loader";
+import { extractDynamicValues, loadConfiguration } from "./config/bootstrap";
+import { buildAppLiveLayer } from "./config/dynamic-layers";
+import { defaultConfig } from "./config/schema";
 import type { CliCommandSpec } from "./domain/models";
-import { PathServiceLive } from "./domain/services/PathService";
-import { RunStoreLiveLayer } from "./infra/db/RunStoreLive";
-import { DirectoryServiceLive } from "./infra/fs/DirectoryService";
-import { FileSystemLiveLayer } from "./infra/fs/FileSystemLive";
-import { GitLiveLayer } from "./infra/git/GitLive";
-import { KeychainLiveLayer } from "./infra/keychain/KeychainLive";
-import { MiseLiveLayer } from "./infra/mise/MiseLive";
-import { NetworkLiveLayer } from "./infra/network/NetworkLive";
-import { GitHubProviderLayer } from "./infra/providers/GitHubProvider";
-import { ShellLiveLayer } from "./infra/shell/ShellLive";
-import { FzfToolsLiveLayer } from "./infra/tools/fzf";
 
 /**
- * Composition Root - Wires all layers together
- * This is the only place where infrastructure implementations are imported
- * and composed with the application layer.
+ * Composition Root - Two-Stage Dynamic Wiring
+ *
+ * This implements a two-stage process to eliminate hardcoded values:
+ * 1. Stage 1: Load configuration (bootstrap)
+ * 2. Stage 2: Build layers with runtime configuration values
  */
-
-// Base services with no dependencies
-const BaseServicesLayer = PathServiceLive;
-
-// Infrastructure services that depend on base services
-const InfraServicesLayer = Layer.mergeAll(
-  Layer.provide(FileSystemLiveLayer, BaseServicesLayer),
-  Layer.provide(DirectoryServiceLive, BaseServicesLayer),
-  Layer.provide(ShellLiveLayer, BaseServicesLayer),
-);
-
-// Combined base layer
-const BaseInfraLayer = Layer.mergeAll(BaseServicesLayer, InfraServicesLayer);
-
-// Network services that depend on filesystem and shell
-const NetworkLayer = Layer.provide(NetworkLiveLayer, BaseInfraLayer);
-
-// Git services that depend on shell and logging
-const GitLayer = Layer.provide(GitLiveLayer, BaseInfraLayer);
-
-// Configuration loading that depends on filesystem and network
-const ConfigLayer = Layer.provide(
-  ConfigLoaderLiveLayer(path.join(os.homedir(), ".config", "dev", "config.json")),
-  Layer.mergeAll(BaseInfraLayer, NetworkLayer),
-);
-
-// Tool services that depend on shell, filesystem, and logging
-const ToolServicesLayer = Layer.mergeAll(
-  Layer.provide(MiseLiveLayer, BaseInfraLayer),
-  Layer.provide(KeychainLiveLayer, BaseInfraLayer),
-  Layer.provide(FzfToolsLiveLayer, BaseInfraLayer),
-);
-
-// Complete Infrastructure Layer with explicit dependency management
-export const InfraLiveLayer = Layer.mergeAll(
-  BaseInfraLayer,
-  NetworkLayer,
-  GitLayer,
-  ConfigLayer,
-  ToolServicesLayer,
-  RunStoreLiveLayer,
-  // GitHubProviderLayer("acme"), // Depends on NetworkService
-);
-
-// Application Layer (orchestration services only - no infrastructure imports)
-export const AppLiveLayer = Layer.mergeAll(
-  InfraLiveLayer,
-
-  // App services - these coordinate domain logic
-  ShellIntegrationServiceLive,
-  CommandTrackingServiceLive,
-  VersionServiceLive,
-  UpdateCheckServiceLive,
-);
 
 // Available commands - exported for CLI layer
 export const availableCommands: CliCommandSpec[] = [
@@ -106,3 +38,57 @@ export const availableCommands: CliCommandSpec[] = [
 export function createDevCli(): DevCli {
   return new DevCli(availableCommands);
 }
+
+/**
+ * Two-stage application setup with dynamic configuration
+ *
+ * This replaces the static layer composition with a dynamic system:
+ * 1. First, load configuration values (self-contained)
+ * 2. Then, build layers using those runtime values
+ *
+ * This function is completely self-contained and provides all its own dependencies.
+ */
+export const setupApplicationWithConfig = () =>
+  Effect.gen(function* () {
+    // Stage 1: Load configuration (self-contained with bootstrap dependencies)
+    yield* Effect.logInfo("🔧 Starting two-stage application setup...");
+    const config = yield* loadConfiguration(); // This provides its own bootstrap layer
+
+    // Stage 2: Extract values and build dynamic layers
+    yield* Effect.logInfo("🔨 Stage 2: Building dynamic layers with configuration...");
+    const configValues = extractDynamicValues(config);
+    const appLayer = buildAppLiveLayer(configValues);
+
+    yield* Effect.logInfo(`✅ Dynamic layers built successfully with org: ${configValues.defaultOrg}`);
+
+    return {
+      config,
+      configValues,
+      appLayer,
+    };
+  });
+
+/**
+ * Fallback function for backward compatibility
+ *
+ * This provides a default static app layer using the default configuration.
+ * This is used when the dynamic system can't be used (e.g., during CLI parsing).
+ */
+export function getDefaultAppLayer() {
+  // Use default configuration values for the static layer
+  const defaultConfigValues = extractDynamicValues(defaultConfig);
+  return buildAppLiveLayer(defaultConfigValues);
+}
+
+/**
+ * Legacy exports for backward compatibility
+ * These are now dynamically created, so they can't be exported as constants
+ */
+
+// Note: InfraLiveLayer and AppLiveLayer are no longer static exports
+// They must be created dynamically using the configuration values
+// Use setupApplicationWithConfig() instead
+
+// Legacy static layer exports (deprecated - use dynamic setup instead)
+// export const InfraLiveLayer = ...  // Now created dynamically
+// export const AppLiveLayer = ...    // Now created dynamically

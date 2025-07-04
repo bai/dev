@@ -1,12 +1,11 @@
 import { BunRuntime } from "@effect/platform-bun";
-import { Effect } from "effect";
+import { Effect, type Layer } from "effect";
 import yargs, { type Argv } from "yargs";
 import { hideBin } from "yargs/helpers";
 
 import { CommandTrackingServiceTag } from "../app/services/CommandTrackingService";
 import { exitCode, type DevError } from "../domain/errors";
 import { type CliCommandSpec, type CommandContext } from "../domain/models";
-import { AppLiveLayer } from "../wiring";
 
 export interface CliMetadata {
   name: string;
@@ -18,6 +17,7 @@ export class DevCli {
   private yargs: Argv;
   private commands: CliCommandSpec[];
   private metadata?: CliMetadata;
+  private appLayer?: Layer.Layer<any, any, any>;
 
   constructor(commands: CliCommandSpec[]) {
     this.yargs = yargs();
@@ -42,13 +42,28 @@ export class DevCli {
       .version(metadata.version);
   }
 
+  setAppLayer(appLayer: Layer.Layer<any, any, any>): void {
+    this.appLayer = appLayer;
+  }
+
   initialize(): void {
     for (const commandSpec of this.commands) {
       this.registerCommand(commandSpec);
     }
   }
 
-  async parseAndExecute(args: string[]): Promise<void> {
+  async parseAndExecute(args: string[], appLayer?: Layer.Layer<any, any, any>): Promise<void> {
+    // Set the app layer if provided
+    if (appLayer) {
+      this.setAppLayer(appLayer);
+    }
+
+    // If no app layer set, use the default fallback layer
+    if (!this.appLayer) {
+      const { getDefaultAppLayer } = await import("../wiring");
+      this.appLayer = getDefaultAppLayer();
+    }
+
     // Initialize with available commands
     this.initialize();
 
@@ -215,7 +230,7 @@ export class DevCli {
         return result.right;
       }
     }).pipe(
-      Effect.provide(AppLiveLayer),
+      Effect.provide(this.appLayer!),
       Effect.catchAll((error: DevError) => {
         // Handle errors and set appropriate exit codes
         return Effect.gen(function* () {
