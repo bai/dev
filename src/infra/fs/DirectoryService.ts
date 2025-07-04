@@ -1,14 +1,16 @@
-import path from "path";
-
 import { Effect, Layer } from "effect";
 
-import { configError, type ConfigError, type FileSystemError, type UnknownError } from "../../domain/errors";
+import { type FileSystemError, type UnknownError } from "../../domain/errors";
 import { DirectoryService, type Directory } from "../../domain/ports/DirectoryService";
 import { FileSystemService, type FileSystem } from "../../domain/ports/FileSystem";
 import { PathServiceTag, type PathService } from "../../domain/services/PathService";
 
 // Individual effect functions
-const ensureBaseDirectoryExists = (): Effect.Effect<void, ConfigError | FileSystemError | UnknownError, any> =>
+const ensureBaseDirectoryExists = (): Effect.Effect<
+  void,
+  FileSystemError | UnknownError,
+  FileSystemService | PathServiceTag
+> =>
   Effect.gen(function* () {
     const pathService = yield* PathServiceTag;
     const fileSystem = yield* FileSystemService;
@@ -21,7 +23,7 @@ const ensureBaseDirectoryExists = (): Effect.Effect<void, ConfigError | FileSyst
     }
   });
 
-const findDirs = (): Effect.Effect<string[], ConfigError | FileSystemError | UnknownError, any> =>
+const findDirs = (): Effect.Effect<string[], FileSystemError | UnknownError, FileSystemService | PathServiceTag> =>
   Effect.gen(function* () {
     const pathService = yield* PathServiceTag;
     const fileSystem = yield* FileSystemService;
@@ -35,32 +37,9 @@ const findDirs = (): Effect.Effect<string[], ConfigError | FileSystemError | Unk
       return []; // Return empty array for new base directory
     }
 
-    // Use FileSystem port to get directory listing
-    // Note: This is a simplified implementation - in a real scenario,
-    // we might need to add a listDirectoriesRecursive method to the FileSystem port
-    const topLevelDirs = yield* fileSystem.listDirectories(baseDir);
-
-    const result: string[] = [];
-
-    for (const topDir of topLevelDirs) {
-      const topPath = `${baseDir}/${topDir}`;
-      const secondLevelDirs = yield* fileSystem
-        .listDirectories(topPath)
-        .pipe(Effect.catchAll(() => Effect.succeed([])));
-
-      for (const secondDir of secondLevelDirs) {
-        const secondPath = `${baseDir}/${topDir}/${secondDir}`;
-        const thirdLevelDirs = yield* fileSystem
-          .listDirectories(secondPath)
-          .pipe(Effect.catchAll(() => Effect.succeed([])));
-
-        for (const thirdDir of thirdLevelDirs) {
-          result.push(`${topDir}/${secondDir}/${thirdDir}`);
-        }
-      }
-    }
-
-    return result;
+    // Use FileSystem port to efficiently scan for directories at exactly 3 levels deep
+    const directories = yield* fileSystem.findDirectoriesGlob(baseDir, "*/*/*/");
+    return directories;
   });
 
 // Plain object implementation

@@ -24,9 +24,9 @@ export interface FileSystem {
   mkdir(path: string, recursive?: boolean): Effect.Effect<void, FileSystemError | UnknownError>;
 
   /**
-   * List directories in a path
+   * Find directories using glob pattern
    */
-  listDirectories(path: string): Effect.Effect<string[], FileSystemError | UnknownError>;
+  findDirectoriesGlob(basePath: string, pattern: string): Effect.Effect<string[], FileSystemError | UnknownError>;
 
   /**
    * Get the current working directory

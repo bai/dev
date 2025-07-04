@@ -4,7 +4,7 @@ import path from "path";
 
 import { Effect, Layer } from "effect";
 
-import { fileSystemError, unknownError, type FileSystemError, type UnknownError } from "../../domain/errors";
+import { fileSystemError, type FileSystemError, type UnknownError } from "../../domain/errors";
 import { FileSystemService, type FileSystem } from "../../domain/ports/FileSystem";
 
 // Individual functions for each method
@@ -38,14 +38,18 @@ const mkdir = (dirPath: string, recursive = true): Effect.Effect<void, FileSyste
     catch: (error) => fileSystemError(`Failed to create directory ${dirPath}: ${error}`, dirPath),
   });
 
-const listDirectories = (dirPath: string): Effect.Effect<string[], FileSystemError | UnknownError> =>
+const findDirectoriesGlob = (
+  basePath: string,
+  pattern: string,
+): Effect.Effect<string[], FileSystemError | UnknownError> =>
   Effect.tryPromise({
     try: async () => {
-      const scanner = new Bun.Glob("*/");
-      const matches = Array.from(scanner.scanSync({ cwd: dirPath, onlyFiles: false }));
-      return matches.map((match) => match.replace(/\/$/, "")); // Remove trailing slash
+      const scanner = new Bun.Glob(pattern);
+      const matches = Array.from(scanner.scanSync({ cwd: basePath, onlyFiles: false }));
+      return matches;
     },
-    catch: (error) => fileSystemError(`Failed to list directories in ${dirPath}: ${error}`, dirPath),
+    catch: (error) =>
+      fileSystemError(`Failed to find directories with pattern ${pattern} in ${basePath}: ${error}`, basePath),
   });
 
 const getCwd = (): Effect.Effect<string> => Effect.sync(() => process.cwd());
@@ -63,7 +67,7 @@ export const FileSystemLiveImpl: FileSystem = {
   writeFile,
   exists,
   mkdir,
-  listDirectories,
+  findDirectoriesGlob,
   getCwd,
   resolvePath,
 };
