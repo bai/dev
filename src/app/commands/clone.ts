@@ -48,7 +48,7 @@ Examples:
       const org = orgOrRepo;
       const repo = repoName || orgOrRepo;
 
-      yield* Effect.log(`Resolving repository: ${org ? `${org}/${repo}` : repo}`);
+      yield* Effect.logInfo(`Resolving repository: ${org ? `${org}/${repo}` : repo}`);
 
       // Resolve repository details
       const repository = yield* repoProvider.resolveRepository(repo, org);
@@ -63,12 +63,12 @@ Examples:
         return yield* Effect.fail(unknownError(`Directory ${repository.name} already exists`));
       }
 
-      yield* Effect.log(`Cloning ${repository.organization}/${repository.name}...`);
+      yield* Effect.logInfo(`Cloning ${repository.organization}/${repository.name}...`);
 
       // Clone the repository
       yield* git.cloneRepositoryToPath(repository, destinationPath);
 
-      yield* Effect.log(`Successfully cloned ${repository.organization}/${repository.name} to ${repository.name}`);
+      yield* Effect.logInfo(`Successfully cloned ${repository.organization}/${repository.name} to ${repository.name}`);
     });
   },
 };

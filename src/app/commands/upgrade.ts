@@ -67,7 +67,7 @@ This command will:
 
         for (const { pluginUrl, result } of updateResults) {
           if (result._tag === "Left") {
-            yield* Effect.log(`WARN: ⚠️ Failed to update plugin ${pluginUrl}: ${result.left}`);
+            yield* Effect.logInfo(`WARN: ⚠️ Failed to update plugin ${pluginUrl}: ${result.left}`);
           } else {
             yield* Effect.logInfo(`✅ Updated plugin: ${pluginUrl}`);
           }

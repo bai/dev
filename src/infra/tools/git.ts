@@ -71,15 +71,15 @@ export const makeGitToolsLive = (shell: Shell): GitToolsService => ({
 
   performUpgrade: (): Effect.Effect<boolean, UnknownError> =>
     Effect.gen(function* () {
-      yield* Effect.log("⏳ Updating git via mise...");
+      yield* Effect.logInfo("⏳ Updating git via mise...");
 
       const result = yield* shell.exec("mise", ["install", "git@latest"]);
 
       if (result.exitCode === 0) {
-        yield* Effect.log("✅ Git updated successfully via mise");
+        yield* Effect.logInfo("✅ Git updated successfully via mise");
         return true;
       } else {
-        yield* Effect.log(`❌ Git update failed with exit code: ${result.exitCode}`);
+        yield* Effect.logInfo(`❌ Git update failed with exit code: ${result.exitCode}`);
         return false;
       }
     }),
@@ -94,17 +94,17 @@ export const makeGitToolsLive = (shell: Shell): GitToolsService => ({
       }
 
       if (currentVersion) {
-        yield* Effect.log(`⚠️  Git version ${currentVersion} is older than required ${GIT_MIN_VERSION}`);
+        yield* Effect.logInfo(`⚠️  Git version ${currentVersion} is older than required ${GIT_MIN_VERSION}`);
       } else {
-        yield* Effect.log(`⚠️  Unable to determine git version`);
+        yield* Effect.logInfo(`⚠️  Unable to determine git version`);
       }
 
-      yield* Effect.log(`🚀 Starting git upgrade via mise...`);
+      yield* Effect.logInfo(`🚀 Starting git upgrade via mise...`);
 
       const updateSuccess = yield* gitTools.performUpgrade();
       if (!updateSuccess) {
-        yield* Effect.log(`❌ Failed to update git to required version`);
-        yield* Effect.log(`💡 Try manually installing git via mise: mise install git@latest`);
+        yield* Effect.logInfo(`❌ Failed to update git to required version`);
+        yield* Effect.logInfo(`💡 Try manually installing git via mise: mise install git@latest`);
         return yield* Effect.fail(
           externalToolError("Failed to update git", {
             tool: "git",
@@ -117,9 +117,9 @@ export const makeGitToolsLive = (shell: Shell): GitToolsService => ({
       // Verify upgrade
       const { isValid: isValidAfterUpgrade, currentVersion: versionAfterUpgrade } = yield* gitTools.checkVersion();
       if (!isValidAfterUpgrade) {
-        yield* Effect.log(`❌ Git upgrade completed but version still doesn't meet requirement`);
+        yield* Effect.logInfo(`❌ Git upgrade completed but version still doesn't meet requirement`);
         if (versionAfterUpgrade) {
-          yield* Effect.log(`   Current: ${versionAfterUpgrade}, Required: ${GIT_MIN_VERSION}`);
+          yield* Effect.logInfo(`   Current: ${versionAfterUpgrade}, Required: ${GIT_MIN_VERSION}`);
         }
         return yield* Effect.fail(
           externalToolError("Git upgrade failed", {
@@ -131,7 +131,7 @@ export const makeGitToolsLive = (shell: Shell): GitToolsService => ({
       }
 
       if (versionAfterUpgrade) {
-        yield* Effect.log(`✨ Git successfully upgraded to version ${versionAfterUpgrade}`);
+        yield* Effect.logInfo(`✨ Git successfully upgraded to version ${versionAfterUpgrade}`);
       }
     }),
 });

@@ -222,7 +222,7 @@ export class DevCli {
         // Command failed
         const error = result.left;
         yield* tracking.completeCommandRun(runId, exitCode(error));
-        yield* Effect.log(`❌ ${error._tag}`);
+        yield* Effect.logInfo(`❌ ${error._tag}`);
         return yield* Effect.fail(error);
       } else {
         // Command succeeded
@@ -234,12 +234,12 @@ export class DevCli {
       Effect.catchAll((error: DevError) => {
         // Handle errors and set appropriate exit codes
         return Effect.gen(function* () {
-          yield* Effect.log(`❌ ${error._tag}`);
+          yield* Effect.logInfo(`❌ ${error._tag}`);
 
           // Handle different error types and their properties
           switch (error._tag) {
             case "ExternalToolError":
-              yield* Effect.log(error.message);
+              yield* Effect.logInfo(error.message);
               break;
             case "ConfigError":
             case "GitError":
@@ -248,13 +248,13 @@ export class DevCli {
             case "FileSystemError":
             case "UserInputError":
             case "CLIError":
-              yield* Effect.log(error.reason);
+              yield* Effect.logInfo(error.reason);
               break;
             case "StatusCheckError":
-              yield* Effect.log(error.reason);
+              yield* Effect.logInfo(error.reason);
               break;
             case "UnknownError":
-              yield* Effect.log(String(error.reason));
+              yield* Effect.logInfo(String(error.reason));
               break;
           }
 
