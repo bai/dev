@@ -3,7 +3,7 @@ import path from "path";
 import { stringify } from "@iarna/toml";
 import { Context, Effect, Layer } from "effect";
 
-import devConfig from "../../config/mise-dev-config.toml" with { type: "json" };
+import devConfig from "../../config/mise-dev-config.json" with { type: "json" };
 import { externalToolError, unknownError, type ExternalToolError, type UnknownError } from "../../domain/errors";
 import { FileSystemService, type FileSystem } from "../../domain/ports/FileSystem";
 import { ShellService, type Shell } from "../../domain/ports/Shell";
