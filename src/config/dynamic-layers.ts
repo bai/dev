@@ -5,6 +5,7 @@ import { ShellIntegrationServiceLive } from "../app/services/ShellIntegrationSer
 import { UpdateCheckServiceLive } from "../app/services/UpdateCheckService";
 import { VersionServiceLive } from "../app/services/VersionService";
 import { PathServiceLive } from "../domain/services/PathService";
+import { RepositoryServiceLive } from "../domain/services/RepositoryService";
 import { RunStoreLiveLayer } from "../infra/db/RunStoreLive";
 import { DirectoryServiceLive } from "../infra/fs/DirectoryService";
 import { FileSystemLiveLayer } from "../infra/fs/FileSystemLive";
@@ -39,6 +40,7 @@ export const buildInfraLiveLayer = (configValues: DynamicConfigValues) => {
     Layer.provide(FileSystemLiveLayer, BaseServicesLayer),
     Layer.provide(DirectoryServiceLive, BaseServicesLayer),
     Layer.provide(ShellLiveLayer, BaseServicesLayer),
+    Layer.provide(RepositoryServiceLive, BaseServicesLayer),
   );
 
   // Combined base layer

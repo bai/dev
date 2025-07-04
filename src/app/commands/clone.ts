@@ -6,6 +6,8 @@ import { FileSystemService } from "../../domain/ports/FileSystem";
 import { GitService } from "../../domain/ports/Git";
 import { RepoProviderService } from "../../domain/ports/RepoProvider";
 import { PathServiceTag } from "../../domain/services/PathService";
+import { RepositoryServiceTag } from "../../domain/services/RepositoryService";
+import { ShellIntegrationServiceTag } from "../services/ShellIntegrationService";
 
 export const cloneCommand: CliCommandSpec = {
   name: "clone",
@@ -34,15 +36,15 @@ Examples:
     return Effect.scoped(
       Effect.gen(function* () {
         // Add cleanup finalizer for failed clone operations
-        yield* Effect.addFinalizer(() =>
-          Effect.logDebug("Clone command finalizer called - cleanup complete"),
-        );
+        yield* Effect.addFinalizer(() => Effect.logDebug("Clone command finalizer called - cleanup complete"));
 
         // Get services from Effect Context
         const git = yield* GitService;
         const repoProvider = yield* RepoProviderService;
         const fileSystem = yield* FileSystemService;
         const pathService = yield* PathServiceTag;
+        const repositoryService = yield* RepositoryServiceTag;
+        const shellIntegration = yield* ShellIntegrationServiceTag;
 
         const repoArg = context.args.repo;
 
@@ -61,23 +63,32 @@ Examples:
         // Resolve repository details
         const repository = yield* repoProvider.resolveRepository(repo, org);
 
-        // Determine destination path using PathService
-        const baseDir = pathService.baseSearchDir;
-        const destinationPath = `${baseDir}/${repository.name}`;
+        // Use RepositoryService to determine the proper nested destination path
+        const destinationPath = yield* repositoryService.parseRepoUrlToPath(repository.cloneUrl);
+
+        // Calculate relative path from base directory for cd command
+        const relativePath = destinationPath.replace(pathService.baseSearchDir + "/", "");
 
         // Check if destination already exists
         const exists = yield* fileSystem.exists(destinationPath);
         if (exists) {
-          return yield* Effect.fail(unknownError(`Directory ${repository.name} already exists`));
+          yield* Effect.logInfo(`Directory ${relativePath} already exists, changing to it...`);
+          yield* shellIntegration.changeDirectory(relativePath);
+          yield* Effect.logInfo(`Successfully changed to existing directory ${relativePath}`);
+          return;
         }
 
-        yield* Effect.logInfo(`Cloning ${repository.organization}/${repository.name}...`);
+        yield* Effect.logInfo(`Cloning ${repository.organization}/${repository.name} to ${relativePath}...`);
 
         // Clone the repository
         yield* git.cloneRepositoryToPath(repository, destinationPath);
 
-        yield* Effect.logInfo(`Successfully cloned ${repository.organization}/${repository.name} to ${repository.name}`);
-      })
+        yield* Effect.logInfo(`Successfully cloned ${repository.organization}/${repository.name} to ${relativePath}`);
+
+        // Change directory to the cloned repository
+        yield* shellIntegration.changeDirectory(relativePath);
+        yield* Effect.logInfo(`Changed to directory ${relativePath}`);
+      }),
     );
   },
 };
