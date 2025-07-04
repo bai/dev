@@ -3,6 +3,7 @@ import { Command } from "@effect/cli";
 import { BunRuntime } from "@effect/platform-bun";
 import { Effect } from "effect";
 
+import { VersionServiceTag } from "./app/services/VersionService";
 import { exitCode, unknownError, type DevError } from "./domain/errors";
 import { getMainCommand, setupApplicationWithConfig } from "./wiring";
 
@@ -78,11 +79,18 @@ const program = Effect.scoped(
     // Get the main command
     const mainCommand = getMainCommand();
 
-    // Run the CLI with metadata and provide the app layer
-    yield* runCli(mainCommand as any, {
-      name: "dev",
-      version: "1.0.0", // TODO: Get from package.json
-      description: "A hexagonal, plugin-extensible CLI for development workflow",
+    // Run the CLI with version from VersionService - provide appLayer first
+    yield* Effect.gen(function* () {
+      // Get version from VersionService (now within appLayer context)
+      const versionService = yield* VersionServiceTag;
+      const version = yield* versionService.getVersion;
+
+      // Run the CLI with metadata
+      yield* runCli(mainCommand as any, {
+        name: "dev",
+        version: version,
+        description: "A CLI tool for quick navigation and environment management",
+      });
     }).pipe(Effect.provide(appLayer));
 
     yield* Effect.logDebug("✅ CLI execution completed successfully");
