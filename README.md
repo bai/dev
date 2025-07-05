@@ -18,14 +18,12 @@
 ### 🔧 **Environment Management**
 
 - `dev up` - Install and update development tools using mise
-- `dev auth` - Authenticate with GitHub, GitLab, and Google Cloud
 - `dev status` - Comprehensive environment status and health validation
 - `dev run <task>` - Execute project tasks using mise
 
 ### 🛠️ **Maintenance**
 
 - `dev upgrade` - Update the dev CLI tool itself
-- `dev help` - Usage information
 
 ## 🚀 Installation
 
@@ -96,9 +94,6 @@ dev up
 dev run <task>              # Run specific task
 dev run build --watch       # Run with arguments
 
-# Authenticate services
-dev auth                   # All services
-dev auth gcloud            # Google Cloud only
 ```
 
 ### Maintenance
@@ -106,9 +101,6 @@ dev auth gcloud            # Google Cloud only
 ```bash
 # Update the CLI tool
 dev upgrade
-
-# Get help
-dev help
 ```
 
 ## 💡 Tips

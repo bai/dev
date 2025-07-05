@@ -325,29 +325,20 @@ export const ConfigTag = Context.Tag<Config>("Config");
 | **cd**              | `dev cd [name]`                          |
 | **clone**           | `dev clone <repo>`                       |
 | **up**              | `dev up`                                 |
-| **auth**            | `dev auth [svc]`                         |
 | **status**          | `dev status [--json]`                    |
 | **run**             | `dev run <task>`                         |
-| **upgrade**         | `dev upgrade [--regenerate-completions]` |
-| **help**            | `dev help`                               |
+| **upgrade**         | `dev upgrade`                            |
 
 ---
 
-## 11 · Shell Completions
-
-`scripts/generate-completions.ts` emits Zsh/Bash/Fish completion scripts to `/completions`.  They can be installed globally or sourced on-the-fly via `eval "$(dev completion zsh)"`.
-
----
-
-## 12 · Upgrade Sequence
+## 11 · Upgrade Sequence
 
 1. Self-update CLI repository if in git repo.
 2. Ensure necessary directories exist.
 3. Update shell integration.
 4. Fetch remote `configUrl`, migrate & overwrite local.
 5. Check and upgrade essential tools (bun, git, mise, fzf, gcloud).
-6. Regenerate completions if `--regenerate-completions`.
-7. Print success message and usage examples.
+6. Print success message and usage examples.
 
 ---
 

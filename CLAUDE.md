@@ -82,7 +82,6 @@ This eliminates hardcoded values and allows for dynamic configuration at runtime
 - `dev cd` - Directory navigation with fuzzy search
 - `dev clone` - Repository cloning with provider detection
 - `dev up` - Development tool installation via mise
-- `dev auth` - Service authentication
 - `dev status` - Environment health checking
 - `dev run` - Task execution
 

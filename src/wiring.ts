@@ -1,10 +1,8 @@
 import { Command } from "@effect/cli";
 import { Effect } from "effect";
 
-import { authCommand } from "./app/commands/auth";
 import { cdCommand } from "./app/commands/cd";
 import { cloneCommand } from "./app/commands/clone";
-import { helpCommand } from "./app/commands/help";
 import { runCommand } from "./app/commands/run";
 import { statusCommand } from "./app/commands/status";
 import { upCommand } from "./app/commands/up";
@@ -29,10 +27,8 @@ export const getMainCommand = () => {
       cloneCommand,
       upCommand,
       runCommand,
-      authCommand,
       statusCommand,
       upgradeCommand,
-      helpCommand,
     ]),
   );
 };

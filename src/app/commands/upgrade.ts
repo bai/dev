@@ -10,18 +10,16 @@ import { ToolManagementServiceTag, type ToolManagementService } from "../../doma
 import { PathServiceTag, type PathService } from "../../domain/services/PathService";
 
 // Define the options using @effect/cli
-const regenerateCompletions = Options.boolean("regenerate-completions").pipe(Options.optional);
 const force = Options.boolean("force").pipe(Options.optional);
 
 // Create the upgrade command using @effect/cli
 export const upgradeCommand = Command.make(
   "upgrade",
-  { regenerateCompletions, force },
-  ({ regenerateCompletions, force }) =>
+  { force },
+  ({ force }) =>
     Effect.gen(function* () {
       const configLoader = yield* ConfigLoaderService;
       const pathService = yield* PathServiceTag;
-      const regenerateCompletionsValue = regenerateCompletions._tag === "Some" ? regenerateCompletions.value : false;
       const forceValue = force._tag === "Some" ? force.value : false;
 
       if (forceValue) {
@@ -47,12 +45,7 @@ export const upgradeCommand = Command.make(
       // Step 5: Tool version checks and upgrades
       yield* upgradeEssentialTools(forceValue);
 
-      // Step 6: Generate completions if requested
-      if (regenerateCompletionsValue) {
-        yield* generateShellCompletions();
-      }
-
-      // Step 7: Final success message and usage examples
+      // Step 6: Final success message and usage examples
       yield* showSuccessMessage();
     }),
 );
@@ -189,23 +182,6 @@ function checkTool(
           .pipe(Effect.mapError((error) => unknownError(`${toolName} installation failed: ${error}`)));
       }
     }
-  });
-}
-
-/**
- * Generate shell completions
- */
-function generateShellCompletions(): Effect.Effect<void, DevError, any> {
-  return Effect.gen(function* () {
-    yield* Effect.logInfo("🔧 Generating shell completions...");
-
-    const shell = yield* ShellService;
-
-    // This would generate completions for the current shell
-    // For now, just log that we would do this
-    yield* Effect.logInfo("📝 Shell completion generation not yet implemented");
-
-    yield* Effect.logInfo("✅ Shell completions generated");
   });
 }
 
