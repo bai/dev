@@ -1,0 +1,217 @@
+---
+alwaysApply: true
+---
+
+Adhere to the following naming conventions for an idiomatic Effect.ts codebase.
+
+### 1. Domain Interfaces
+
+* **Name** as a plain noun reflecting the core capability or role (e.g. `Email`, `Auth`, `Database`).
+* **Do not** add a trailing "Service" unless "Service" is literally part of your ubiquitous language (e.g. a wrapped third-party `PaymentService`).
+
+```ts
+export interface Email {
+  send(to: string, body: string): Effect<never, EmailError, void>
+}
+```
+
+---
+
+### 2. Tags
+
+* **Always** suffix with `Tag` (e.g. `EmailTag`, `DatabaseTag`).
+* Use as your DI key: `Tag<YourInterface>("YourInterface")`.
+* The string identifier should **exactly** match the interface name.
+
+```ts
+export const DatabaseTag = Tag<Database>("Database")
+```
+
+---
+
+### 3. Live Implementations
+
+* **Suffix** with `Live` (never `Impl`), e.g. `EmailLive`, `DatabaseLive`.
+* Expose via a layer named `<Interface>LiveLayer`.
+
+```ts
+export const EmailLiveLayer = Layer.succeed(EmailTag, new SmtpEmail())
+```
+
+---
+
+### 4. Layers
+
+* **Suffix** with `Layer`, e.g. `ConfigLayer`, `EmailLiveLayer`.
+* Bundle related services and configs into a single injectable module.
+* Show dependencies explicitly when composing layers.
+
+```ts
+export const AppLayer = ConfigLayer.pipe(
+  Layer.merge(DatabaseLiveLayer),
+  Layer.merge(EmailLiveLayer)
+)
+
+// Or with dependencies:
+export const EmailLiveLayer = Layer.effect(
+  EmailTag,
+  Effect.gen(function* (_) {
+    const config = yield* _(SmtpConfigTag)
+    return new SmtpEmail(config)
+  })
+).pipe(Layer.provide(ConfigLayer))
+```
+
+---
+
+### 5. Config Objects
+
+* **Define** an interface named `…Config` (e.g. `SmtpConfig`, `DbConfig`).
+* **Create** a matching tag: `…ConfigTag`.
+* **Optionally** group multiple config tags into a shared `ConfigLayer`.
+
+```ts
+export interface DbConfig { url: string }
+export const DbConfigTag = Tag<DbConfig>("DbConfig")
+
+export const ConfigLayer = Layer.succeed(DbConfigTag, { url: ENV.DB_URL })
+```
+
+---
+
+### 6. Error Types
+
+* **Model** domain errors as union types or custom classes.
+* **Suffix** with `Error` (e.g. `EmailError`, `DbError`).
+* **Group** related variants in a namespace if needed.
+
+```ts
+export class EmailError extends Error { /* ... */ }
+export type DbError = ConnectionError | QueryError
+```
+
+---
+
+### 7. Qualifiers
+
+* For multiple implementations of the same interface, use distinct tags named for their role.
+
+```ts
+export const PrimaryDbTag = Tag<Database>("PrimaryDatabase")
+export const ReplicaDbTag = Tag<Database>("ReplicaDatabase")
+```
+
+---
+
+### 8. Factory Functions
+
+* **Prefix** with `make…` or `create…` for helpers that build scoped or complex resources.
+
+```ts
+export function makePool(config: DbConfig): Effect<Scope, never, Pool> { … }
+```
+
+---
+
+### 9. Test/Mock Layers
+
+* **Suffix** with `MockLayer` or `TestLayer` (to mirror `LiveLayer` naming).
+* Provide in-memory or mock implementations for testing.
+
+```ts
+export const UserRepoMockLayer = Layer.succeed(UserRepoTag, new InMemoryUserRepo())
+```
+
+---
+
+### 10. Streams, Queues, Hubs
+
+* **Suffix** with the resource type (`…Stream`, `…Queue`, `…Hub`).
+* **Combine** with tags: `…StreamTag`, etc.
+
+```ts
+export const LogEventStreamTag = Tag<Stream<LogEvent>>("LogEventStream")
+```
+
+---
+
+### 11. Schemas and Validation
+
+* **Name** schemas after the type they validate, suffixed with `Schema`.
+* **Derive** types from schemas using `Schema.Type`.
+
+```ts
+export const UserSchema = Schema.Struct({
+  id: Schema.String,
+  email: Schema.String,
+  createdAt: Schema.Date
+})
+
+export type User = Schema.Schema.Type<typeof UserSchema>
+```
+
+---
+
+### 12. Request/Response Types
+
+* **Suffix** with `Request` or `Response` for complex method parameters.
+* **Group** related types near their service interface.
+
+```ts
+export interface SendEmailRequest {
+  to: string
+  subject: string
+  body: string
+  attachments?: Array<Attachment>
+}
+
+export interface Email {
+  send(request: SendEmailRequest): Effect<never, EmailError, void>
+}
+```
+
+---
+
+### 13. Branded Types
+
+* **Use** branded types for domain modeling to ensure type safety.
+* **Export** both the type and its constructor/validator.
+
+```ts
+export type UserId = string & Brand.Brand<"UserId">
+export const UserId = Brand.nominal<UserId>()
+
+export type Email = string & Brand.Brand<"Email">
+export const Email = Brand.refined<Email>(
+  (s) => s.includes("@"),
+  (s) => Brand.error(`Invalid email: ${s}`)
+)
+```
+
+---
+
+#### Additional Tips
+
+* **Method Names**: Use lower-camelCase (`sendEmail`, `fetchUser`, etc.).
+
+* **Avoid** `I`-prefix on interfaces; plain nouns are preferred.
+
+* **Helper** for repetitive layer wiring:
+
+  ```ts
+  export const makeLayer = <T>(tag: Tag.Tag<T>, impl: T) =>
+    Layer.succeed(tag, impl)
+  ```
+
+* **Composed App Layer**: Re-export a "stack" when many small layers always wire together:
+
+  ```ts
+  export const AppLayer = Layer.mergeAll(
+    ConfigLayer,
+    DatabaseLiveLayer,
+    EmailLiveLayer,
+    LoggerLiveLayer
+  )
+  ```
+
+With these conventions—using **Live** across the board—your Effect.ts codebase will stay clear, consistent, and idiomatic.

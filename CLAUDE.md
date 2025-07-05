@@ -20,6 +20,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 @.cursor/rules/150-jsdoc-comments.mdc
 @.cursor/rules/490-installing-libraries.mdc
 @.cursor/rules/500-testing.mdc
+@.cursor/rules/600-effect-ts-naming-conventions.mdc
 
 ## Project Notes
 
