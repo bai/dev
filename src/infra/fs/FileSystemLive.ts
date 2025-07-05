@@ -25,12 +25,10 @@ const writeFile = (filePath: string, content: string): Effect.Effect<void, FileS
   });
 
 const exists = (filePath: string): Effect.Effect<boolean> =>
-  Effect.promise(() =>
-    fs
-      .access(filePath)
-      .then(() => true)
-      .catch(() => false),
-  );
+  Effect.tryPromise({
+    try: () => fs.access(filePath).then(() => true),
+    catch: () => false,
+  }).pipe(Effect.orElseSucceed(() => false));
 
 const mkdir = (dirPath: string, recursive = true): Effect.Effect<void, FileSystemError | UnknownError> =>
   Effect.tryPromise({

@@ -13,6 +13,7 @@
         "zod": "3.25.74",
       },
       "devDependencies": {
+        "@effect/vitest": "0.23.12",
         "@eslint/js": "9.30.1",
         "@ianvs/prettier-plugin-sort-imports": "4.4.2",
         "@types/bun": "1.2.18",
@@ -79,6 +80,8 @@
     "@effect/sql": ["@effect/sql@0.40.6", "", { "dependencies": { "@opentelemetry/semantic-conventions": "^1.33.0", "uuid": "^11.0.3" }, "peerDependencies": { "@effect/experimental": "^0.51.6", "@effect/platform": "^0.87.5", "effect": "^3.16.11" } }, "sha512-OQ+5WyFBaGMw9ZMYeArOPgk4RI5RTzfhT2MQMlyJ3NbWkeDDEi8KmyajCEvOOiPOuBdNqszYhBJF8d/t9Vswjg=="],
 
     "@effect/typeclass": ["@effect/typeclass@0.35.12", "", { "peerDependencies": { "effect": "^3.16.12" } }, "sha512-a0s0MisQnt+dvWXg5W/IFrc6zUScAd6wWrektcGXuIrIo+W2sDn0qLshlEbgI6UhBWMD/kbUA/PhIszXhVddtQ=="],
+
+    "@effect/vitest": ["@effect/vitest@0.23.12", "", { "peerDependencies": { "effect": "^3.16.12", "vitest": "^3.0.0" } }, "sha512-kUR6Npn9gXsO+PlxnZQ9kmd7RzjT1Bl0foyypvCKctvRtG/CmqNgDNNZU9s/GZXvVAtbChjULXe1APyE2smrAw=="],
 
     "@effect/workflow": ["@effect/workflow@0.4.6", "", { "peerDependencies": { "@effect/platform": "^0.87.5", "@effect/rpc": "^0.64.6", "effect": "^3.16.11" } }, "sha512-3I/cce1AEdC9VZJvRaohIqp5Q+qNh60wDSngoYm/EMswiyYBox3HR8GHkRmOAx0wsVKjRfbQKfVQ6TvvLBe5zg=="],
 
