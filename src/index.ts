@@ -5,7 +5,8 @@ import { Effect } from "effect";
 
 import { HealthCheckSchedulerServiceTag } from "./app/services/HealthCheckSchedulerService";
 import { VersionServiceTag } from "./app/services/VersionService";
-import { exitCode, unknownError, type DevError } from "./domain/errors";
+import { TracingLive } from "./config/tracing";
+import { exitCode, type DevError } from "./domain/errors";
 import { getMainCommand, setupApplicationWithConfig } from "./wiring";
 
 // CLI application runner (moved from cli/effect-cli.ts)
@@ -66,16 +67,17 @@ const program = Effect.scoped(
         // Log interruption if it was caused by signal
         if (process.exitCode === 130) {
           yield* Effect.logDebug("💡 Shutdown initiated by user interrupt (Ctrl+C)");
+          yield* Effect.annotateCurrentSpan("shutdown_reason", "user_interrupt");
         }
         yield* Effect.logDebug("✅ Cleanup complete");
-      }),
+      }).pipe(Effect.withSpan("cleanup")),
     );
 
     // Log application start
     yield* Effect.logDebug("🚀 Starting dev CLI with Effect CLI...");
 
     // Setup application layers
-    const { appLayer } = yield* setupApplicationWithConfig();
+    const { appLayer } = yield* setupApplicationWithConfig().pipe(Effect.withSpan("setup-application"));
 
     // Get the main command
     const mainCommand = getMainCommand();
@@ -85,23 +87,30 @@ const program = Effect.scoped(
       // Get version from VersionService (now within appLayer context)
       const versionService = yield* VersionServiceTag;
       const version = yield* versionService.getVersion;
+      
+      // Annotate span with CLI information
+      yield* Effect.annotateCurrentSpan("cli_name", "dev");
+      yield* Effect.annotateCurrentSpan("cli_version", version);
 
       // Run the CLI with metadata
       yield* runCli(mainCommand as any, {
         name: "dev",
         version: version,
         description: "A CLI tool for quick navigation and environment management",
-      });
+      }).pipe(Effect.withSpan("run-cli"));
 
       // After CLI execution completes, schedule background health checks
       const healthScheduler = yield* HealthCheckSchedulerServiceTag;
       yield* healthScheduler
         .scheduleHealthChecks()
-        .pipe(Effect.catchAll((error) => Effect.logWarning(`Health check scheduling failed: ${error.message}`)));
-    }).pipe(Effect.provide(appLayer));
+        .pipe(
+          Effect.catchAll((error) => Effect.logWarning(`Health check scheduling failed: ${error.message}`)),
+          Effect.withSpan("health-check-scheduling")
+        );
+    }).pipe(Effect.provide(appLayer), Effect.withSpan("cli-execution"));
 
     yield* Effect.logDebug("✅ CLI execution completed successfully");
-  }),
+  }).pipe(Effect.withSpan("dev-cli-main")),
 ).pipe(
   Effect.catchAll((error) =>
     Effect.gen(function* () {
@@ -131,5 +140,5 @@ const program = Effect.scoped(
   ),
 ) as Effect.Effect<void, never, never>;
 
-// Run the program with BunRuntime
-BunRuntime.runMain(program);
+// Run the program with BunRuntime and tracing
+BunRuntime.runMain(program.pipe(Effect.provide(TracingLive)));

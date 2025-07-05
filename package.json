@@ -17,8 +17,13 @@
   },
   "dependencies": {
     "@effect/cli": "0.66.7",
+    "@effect/opentelemetry": "0.53.8",
     "@effect/platform-bun": "0.72.11",
     "@iarna/toml": "2.2.5",
+    "@opentelemetry/sdk-metrics": "2.0.1",
+    "@opentelemetry/sdk-trace-base": "2.0.1",
+    "@opentelemetry/sdk-trace-node": "2.0.1",
+    "@opentelemetry/sdk-trace-web": "2.0.1",
     "drizzle-orm": "0.44.2",
     "effect": "3.16.12",
     "yaml": "2.8.0",
