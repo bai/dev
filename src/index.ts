@@ -3,6 +3,7 @@ import { Command } from "@effect/cli";
 import { BunRuntime } from "@effect/platform-bun";
 import { Effect } from "effect";
 
+import { HealthCheckSchedulerServiceTag } from "./app/services/HealthCheckSchedulerService";
 import { VersionServiceTag } from "./app/services/VersionService";
 import { exitCode, unknownError, type DevError } from "./domain/errors";
 import { getMainCommand, setupApplicationWithConfig } from "./wiring";
@@ -91,6 +92,12 @@ const program = Effect.scoped(
         version: version,
         description: "A CLI tool for quick navigation and environment management",
       });
+
+      // After CLI execution completes, schedule background health checks
+      const healthScheduler = yield* HealthCheckSchedulerServiceTag;
+      yield* healthScheduler
+        .scheduleHealthChecks()
+        .pipe(Effect.catchAll((error) => Effect.logWarning(`Health check scheduling failed: ${error.message}`)));
     }).pipe(Effect.provide(appLayer));
 
     yield* Effect.logDebug("✅ CLI execution completed successfully");

@@ -1,6 +1,7 @@
 import { Layer } from "effect";
 
 import { CommandTrackingServiceLive } from "../app/services/CommandTrackingService";
+import { HealthCheckSchedulerServiceLiveLayer } from "../app/services/HealthCheckSchedulerService";
 import { ShellIntegrationServiceLive } from "../app/services/ShellIntegrationService";
 import { UpdateCheckServiceLive } from "../app/services/UpdateCheckService";
 import { VersionServiceLive } from "../app/services/VersionService";
@@ -10,6 +11,7 @@ import { RunStoreLiveLayer } from "../infra/db/RunStoreLive";
 import { DirectoryServiceLive } from "../infra/fs/DirectoryService";
 import { FileSystemLiveLayer } from "../infra/fs/FileSystemLive";
 import { GitLiveLayer } from "../infra/git/GitLive";
+import { HealthCheckServiceLiveLayer } from "../infra/health/HealthCheckServiceLive";
 import { KeychainLiveLayer } from "../infra/keychain/KeychainLive";
 import { MiseLiveLayer } from "../infra/mise/MiseLive";
 import { NetworkLiveLayer } from "../infra/network/NetworkLive";
@@ -90,6 +92,9 @@ export const buildInfraLiveLayer = (configValues: DynamicConfigValues) => {
   // Database layer that depends on PathService
   const DatabaseLayer = Layer.provide(RunStoreLiveLayer, BaseInfraLayer);
 
+  // Health check service that depends on Config and Path services
+  const HealthCheckLayer = Layer.provide(HealthCheckServiceLiveLayer, Layer.mergeAll(BaseInfraLayer, ConfigLayer));
+
   // Complete Infrastructure Layer with dynamic values
   return Layer.mergeAll(
     BaseInfraLayer,
@@ -100,6 +105,7 @@ export const buildInfraLiveLayer = (configValues: DynamicConfigValues) => {
     ToolManagementLayer, // Aggregated tool management service
     RepoProviderLayer, // Now using dynamic defaultOrg instead of hardcoded "acme"
     DatabaseLayer, // Ensure database layer gets PathService dependencies
+    HealthCheckLayer, // Health check service with config and path dependencies
   );
 };
 
@@ -116,6 +122,7 @@ export const buildAppLiveLayer = (configValues: DynamicConfigValues) => {
     Layer.provide(VersionServiceLive, infraLayer),
     Layer.provide(UpdateCheckServiceLive, infraLayer),
     Layer.provide(CommandTrackingServiceLive, infraLayer),
+    Layer.provide(HealthCheckSchedulerServiceLiveLayer, infraLayer),
   );
 
   // Complete application layer with all dependencies
@@ -131,3 +138,41 @@ export const buildDynamicLayers = (configValues: DynamicConfigValues) => ({
   infraLayer: buildInfraLiveLayer(configValues),
   appLayer: buildAppLiveLayer(configValues),
 });
+
+export const dynamicLayers = [
+  // Git
+  GitHubProviderLayer,
+  GitLiveLayer,
+
+  // File System
+  FileSystemLiveLayer,
+  DirectoryServiceLive,
+
+  // Tools
+  ToolManagementServiceLive,
+
+  // Selector
+  FzfSelectorLiveLayer,
+
+  // Network
+  NetworkLiveLayer,
+
+  // Keychain
+  KeychainLiveLayer,
+
+  // Mise
+  MiseLiveLayer,
+
+  // Shell
+  ShellLiveLayer,
+
+  // Run Store
+  RunStoreLiveLayer,
+
+  // Repository Service
+  RepositoryServiceLive,
+
+  // Health Services
+  HealthCheckServiceLiveLayer,
+  HealthCheckSchedulerServiceLiveLayer,
+] as const;

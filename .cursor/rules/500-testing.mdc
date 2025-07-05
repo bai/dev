@@ -1,6 +1,5 @@
 ---
-globs: *.test.ts,*.spec.ts
-alwaysApply: false
+alwaysApply: true
 ---
 # Writing Tests
 

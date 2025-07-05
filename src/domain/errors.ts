@@ -38,16 +38,22 @@ export class StatusCheckError extends Data.TaggedError("StatusCheckError")<{
   readonly failedComponents: string[];
 }> {}
 
+export class HealthCheckError extends Data.TaggedError("HealthCheckError")<{
+  readonly reason: string;
+  readonly tool?: string;
+}> {}
+
 // Union type for all domain errors
 export type DevError =
   | ConfigError
   | GitError
   | NetworkError
   | AuthError
-  | UnknownError
   | ExternalToolError
   | FileSystemError
-  | StatusCheckError;
+  | StatusCheckError
+  | HealthCheckError
+  | UnknownError;
 
 // Exit code mapping
 export const exitCode = (error: DevError): number => {
@@ -68,6 +74,8 @@ export const exitCode = (error: DevError): number => {
       return 3;
     case "UnknownError":
       return 1;
+    case "HealthCheckError":
+      return 8;
     default:
       // This should never happen due to exhaustive typing, but satisfies linter
       return 1;
@@ -85,6 +93,7 @@ export const externalToolError = (message: string, options?: { tool?: string; ex
 export const fileSystemError = (reason: string, path?: string) => new FileSystemError({ reason, path });
 export const statusCheckError = (reason: string, failedComponents: string[]) =>
   new StatusCheckError({ reason, failedComponents });
+export const healthCheckError = (reason: string, tool?: string) => new HealthCheckError({ reason, tool });
 
 // Type guards (using Effect's built-in error matching)
 export const isConfigError = (e: DevError): e is ConfigError => e._tag === "ConfigError";
@@ -95,3 +104,4 @@ export const isUnknownError = (e: DevError): e is UnknownError => e._tag === "Un
 export const isExternalToolError = (e: DevError): e is ExternalToolError => e._tag === "ExternalToolError";
 export const isFileSystemError = (e: DevError): e is FileSystemError => e._tag === "FileSystemError";
 export const isStatusCheckError = (e: DevError): e is StatusCheckError => e._tag === "StatusCheckError";
+export const isHealthCheckError = (e: DevError): e is HealthCheckError => e._tag === "HealthCheckError";

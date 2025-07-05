@@ -3,169 +3,133 @@ import { Effect } from "effect";
 
 import { ConfigLoaderService } from "../../config/loader";
 import { exitCode, statusCheckError, unknownError, type DevError } from "../../domain/errors";
-import { FileSystemService } from "../../domain/ports/FileSystem";
-import { GitService } from "../../domain/ports/Git";
-import { MiseService } from "../../domain/ports/Mise";
-import { NetworkService } from "../../domain/ports/Network";
+import { HealthCheckServiceTag } from "../../domain/ports/HealthCheckService";
 import { PathServiceTag } from "../../domain/services/PathService";
 
 interface StatusItem {
-  component: string;
-  status: "ok" | "warning" | "error";
+  tool: string;
+  version?: string;
+  status: "ok" | "warn" | "fail";
   message: string;
-  details?: any;
+  checkedAt?: Date;
 }
 
 // Define options for the status command
 const json = Options.boolean("json").pipe(Options.optional);
+const refresh = Options.boolean("refresh").pipe(Options.optional);
 
 // Create the status command using @effect/cli
-export const statusCommand = Command.make("status", { json }, ({ json }) =>
+export const statusCommand = Command.make("status", { json, refresh }, ({ json, refresh }) =>
   Effect.gen(function* () {
-    const mise = yield* MiseService;
-    const git = yield* GitService;
-    const network = yield* NetworkService;
-    const fileSystem = yield* FileSystemService;
+    const healthCheckService = yield* HealthCheckServiceTag;
     const configLoader = yield* ConfigLoaderService;
     const pathService = yield* PathServiceTag;
+
     const jsonOutput = json._tag === "Some" ? json.value : false;
+    const forceRefresh = refresh._tag === "Some" ? refresh.value : false;
 
-    const statusItems: StatusItem[] = [];
+    let statusItems: StatusItem[] = [];
 
-    // Run all checks in parallel for better performance
-    const [miseResult, gitResult, networkResult, filesystemResult] = yield* Effect.all(
-      [
-        Effect.either(mise.checkInstallation()),
-        Effect.either(git.getCurrentCommitSha()),
-        Effect.either(network.checkConnectivity("https://github.com")),
-        Effect.either(
-          Effect.gen(function* () {
-            const config = yield* configLoader.load();
-            const baseDir = pathService.getBasePath(config);
-            const resolvedPath = fileSystem.resolvePath(baseDir);
-            const exists = yield* fileSystem.exists(resolvedPath);
-            return { baseDir, exists };
-          }),
-        ),
-      ],
-      { concurrency: "unbounded" },
-    );
+    try {
+      if (forceRefresh) {
+        yield* Effect.logDebug("Forcing fresh health check...");
+        // Run health checks immediately and get results
+        const results = yield* healthCheckService.runHealthChecks();
 
-    // Process Mise result
-    if (miseResult._tag === "Left") {
-      statusItems.push({
-        component: "mise",
-        status: "error",
-        message: "Mise is not installed or not working",
-        details: miseResult.left,
-      });
-    } else {
-      statusItems.push({
-        component: "mise",
-        status: "ok",
-        message: `Mise ${miseResult.right.version} is installed`,
-        details: miseResult.right,
-      });
-    }
-
-    // Process Git result
-    if (gitResult._tag === "Left") {
-      statusItems.push({
-        component: "git",
-        status: "error",
-        message: "Git is not available or not in a git repository",
-        details: gitResult.left,
-      });
-    } else {
-      statusItems.push({
-        component: "git",
-        status: "ok",
-        message: "Git is available",
-        details: { currentSha: gitResult.right },
-      });
-    }
-
-    // Process Network result
-    if (networkResult._tag === "Left") {
-      statusItems.push({
-        component: "network",
-        status: "error",
-        message: "Failed to check network connectivity",
-        details: networkResult.left,
-      });
-    } else {
-      const isConnected = networkResult.right;
-      statusItems.push({
-        component: "network",
-        status: isConnected ? "ok" : "warning",
-        message: isConnected ? "Network connectivity is good" : "Network connectivity issues detected",
-      });
-    }
-
-    // Process filesystem result
-
-    if (filesystemResult._tag === "Left") {
-      statusItems.push({
-        component: "filesystem",
-        status: "error",
-        message: "Failed to check file system status",
-        details: filesystemResult.left,
-      });
-    } else {
-      const { baseDir, exists } = filesystemResult.right;
-      if (exists) {
-        statusItems.push({
-          component: "filesystem",
-          status: "ok",
-          message: `Base directory ${baseDir} exists and is accessible`,
-        });
+        statusItems = results.map((result) => ({
+          tool: result.toolName,
+          version: result.version,
+          status: result.status,
+          message: formatHealthMessage(result.toolName, result.version, result.status, result.notes),
+          checkedAt: result.checkedAt,
+        }));
       } else {
-        statusItems.push({
-          component: "filesystem",
-          status: "warning",
-          message: `Base directory ${baseDir} does not exist`,
-        });
+        yield* Effect.logDebug("Getting cached health check results...");
+        // Get cached results
+        const results = yield* healthCheckService.getLatestResults();
+
+        if (results.length === 0) {
+          yield* Effect.logInfo("No cached health check data found. Running fresh checks...");
+          // No cached data, run fresh checks
+          const freshResults = yield* healthCheckService.runHealthChecks();
+          statusItems = freshResults.map((result) => ({
+            tool: result.toolName,
+            version: result.version,
+            status: result.status,
+            message: formatHealthMessage(result.toolName, result.version, result.status, result.notes),
+            checkedAt: result.checkedAt,
+          }));
+        } else {
+          statusItems = results.map((result) => ({
+            tool: result.toolName,
+            version: result.version,
+            status: result.status,
+            message: formatHealthMessage(result.toolName, result.version, result.status, result.notes),
+            checkedAt: result.checkedAt,
+          }));
+        }
       }
-    }
 
-    // Output results
-    if (jsonOutput) {
-      // Use Effect's logging system for consistent output handling
-      yield* Effect.logInfo(JSON.stringify(statusItems, null, 2));
-    } else {
-      yield* Effect.logInfo("System Status:");
-      yield* Effect.logInfo("");
+      // Sort by tool name for consistent output
+      statusItems.sort((a, b) => a.tool.localeCompare(b.tool));
 
-      for (const item of statusItems) {
-        const icon = item.status === "ok" ? "✅" : item.status === "warning" ? "⚠️" : "❌";
-        yield* Effect.logInfo(`${icon} ${item.component}: ${item.message}`);
-      }
-
-      yield* Effect.logInfo("");
-
-      const errorCount = statusItems.filter((item) => item.status === "error").length;
-      const warningCount = statusItems.filter((item) => item.status === "warning").length;
-
-      if (errorCount > 0) {
-        yield* Effect.logError(`❌ ERROR: Found ${errorCount} error(s) and ${warningCount} warning(s)`);
-      } else if (warningCount > 0) {
-        yield* Effect.logWarning(`WARN: ⚠️ Found ${warningCount} warning(s)`);
+      // Output results
+      if (jsonOutput) {
+        // Output ND-JSON (one object per tool)
+        for (const item of statusItems) {
+          yield* Effect.logInfo(JSON.stringify(item));
+        }
       } else {
-        yield* Effect.logInfo("✅ All systems are operational");
+        // Human-readable output matching the specification format
+        for (const item of statusItems) {
+          const icon = item.status === "ok" ? "✔" : item.status === "warn" ? "⚠" : "✗";
+          const versionText = item.version ? ` ${item.version}` : "";
+          yield* Effect.logInfo(
+            `${icon} ${item.tool}${versionText}${item.status === "warn" || item.status === "fail" ? ` (${item.status})` : ""}`,
+          );
+        }
+
+        yield* Effect.logInfo("");
+
+        const okCount = statusItems.filter((item) => item.status === "ok").length;
+        const warnCount = statusItems.filter((item) => item.status === "warn").length;
+        const failCount = statusItems.filter((item) => item.status === "fail").length;
+
+        if (failCount > 0) {
+          yield* Effect.logError(`❌ ${failCount} failing, ${warnCount} warnings, ${okCount} OK`);
+        } else if (warnCount > 0) {
+          yield* Effect.logWarning(`⚠️ ${warnCount} warnings, ${okCount} OK`);
+        } else {
+          yield* Effect.logInfo("All green. Have a great day! 🎉");
+        }
       }
-    }
 
-    // Exit with error code if there are errors (as specified in the spec)
-    const hasErrors = statusItems.some((item) => item.status === "error");
-    if (hasErrors) {
-      const failedComponents = statusItems.filter((item) => item.status === "error").map((item) => item.component);
+      // Exit with error code if there are failures
+      const hasFailures = statusItems.some((item) => item.status === "fail");
+      if (hasFailures) {
+        const failedComponents = statusItems.filter((item) => item.status === "fail").map((item) => item.tool);
+        const failCount = statusItems.filter((item) => item.status === "fail").length;
+        const warnCount = statusItems.filter((item) => item.status === "warn").length;
 
-      const errorCount = statusItems.filter((item) => item.status === "error").length;
-      const warningCount = statusItems.filter((item) => item.status === "warning").length;
-
-      return yield* Effect.fail(
-        statusCheckError(`Found ${errorCount} error(s) and ${warningCount} warning(s)`, failedComponents),
-      );
+        return yield* Effect.fail(
+          statusCheckError(`Found ${failCount} failing tool(s) and ${warnCount} warning(s)`, failedComponents),
+        );
+      }
+    } catch (error) {
+      // Fallback to error state
+      yield* Effect.logError(`Failed to get health check status: ${error}`);
+      return yield* Effect.fail(unknownError(`Health check failed: ${error}`));
     }
   }),
 );
+
+/**
+ * Format health check message for display
+ */
+function formatHealthMessage(toolName: string, version?: string, status?: string, notes?: string): string {
+  const versionText = version ? ` ${version}` : "";
+  const statusText = status && status !== "ok" ? ` (${status})` : "";
+  const notesText = notes ? ` - ${notes}` : "";
+
+  return `${toolName}${versionText}${statusText}${notesText}`;
+}
