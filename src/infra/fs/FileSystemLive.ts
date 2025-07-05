@@ -27,7 +27,7 @@ const writeFile = (filePath: string, content: string): Effect.Effect<void, FileS
 const exists = (filePath: string): Effect.Effect<boolean> =>
   Effect.tryPromise({
     try: () => fs.access(filePath).then(() => true),
-    catch: () => false,
+    catch: (_error) => false,
   }).pipe(Effect.orElseSucceed(() => false));
 
 const mkdir = (dirPath: string, recursive = true): Effect.Effect<void, FileSystemError | UnknownError> =>

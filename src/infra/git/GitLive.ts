@@ -41,7 +41,7 @@ export const makeGitLive = (shell: Shell): Git => ({
   isGitRepository: (path: string): Effect.Effect<boolean> =>
     shell.exec("git", ["rev-parse", "--git-dir"], { cwd: path }).pipe(
       Effect.map((result) => result.exitCode === 0),
-      Effect.catchAll(() => Effect.succeed(false)),
+      Effect.catchAll((_error) => Effect.succeed(false)),
     ),
 
   getCurrentCommitSha: (repositoryPath?: string): Effect.Effect<string, GitError | UnknownError> =>

@@ -1,9 +1,10 @@
 import { Clock, Context, Effect, Layer } from "effect";
 
 import { type ConfigError, type UnknownError } from "../../domain/errors";
-import { type GitService } from "../../domain/ports/Git";
+import type { Git } from "../../domain/ports/Git";
+import type { GitService } from "../../domain/ports/Git";
 import { RunStoreService } from "../../domain/ports/RunStore";
-import { type PathServiceTag } from "../../domain/services/PathService";
+import type { PathServiceTag } from "../../domain/services/PathService";
 import { VersionServiceTag } from "./VersionService";
 
 /**

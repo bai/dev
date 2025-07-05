@@ -4,7 +4,7 @@ import { Clock, Effect, Layer } from "effect";
 import { runs } from "../../../drizzle/schema";
 import { configError, unknownError, type ConfigError, type UnknownError } from "../../domain/errors";
 import type { CommandRun } from "../../domain/models";
-import { DatabaseTag, type Database } from "../../domain/ports/Database";
+import { DatabaseService, type Database } from "../../domain/ports/Database";
 import { RunStoreService, type RunStore } from "../../domain/ports/RunStore";
 
 // Factory function that creates RunStore
@@ -131,7 +131,7 @@ export const makeRunStoreLive = (database: Database): RunStore => {
 export const RunStoreLiveLayer = Layer.scoped(
   RunStoreService,
   Effect.gen(function* () {
-    const database = yield* DatabaseTag;
+    const database = yield* DatabaseService;
     
     // Create the service
     const runStore = makeRunStoreLive(database);
