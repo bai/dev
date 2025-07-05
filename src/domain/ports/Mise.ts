@@ -35,4 +35,4 @@ export interface Mise {
 }
 
 // Service tag for Effect Context system
-export class MiseService extends Context.Tag("MiseService")<MiseService, Mise>() {}
+export class MiseTag extends Context.Tag("Mise")<MiseTag, Mise>() {}

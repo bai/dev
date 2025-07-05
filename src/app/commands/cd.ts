@@ -3,8 +3,8 @@ import { Effect } from "effect";
 
 import { unknownError, type DevError } from "../../domain/errors";
 import { filter } from "../../domain/matching";
-import { DirectoryService } from "../../domain/ports/DirectoryService";
-import { InteractiveSelectorService } from "../../domain/ports/InteractiveSelector";
+import { DirectoryTag } from "../../domain/ports/DirectoryService";
+import { InteractiveSelectorTag } from "../../domain/ports/InteractiveSelector";
 import { ShellIntegrationServiceTag } from "../services/ShellIntegrationService";
 
 // Define the folder name argument as optional
@@ -31,7 +31,7 @@ function handleDirectCd(folderName: string): Effect.Effect<void, DevError, any> 
     }
 
     // Use DirectoryService to get directories
-    const directoryService = yield* DirectoryService;
+    const directoryService = yield* DirectoryTag;
     const directories = yield* directoryService.findDirs().pipe(
       Effect.tap(() => Effect.annotateCurrentSpan("operation", "find_directories")),
       Effect.withSpan("find-directories")
@@ -68,7 +68,7 @@ function handleDirectCd(folderName: string): Effect.Effect<void, DevError, any> 
 function handleInteractiveCd(): Effect.Effect<void, DevError, any> {
   return Effect.gen(function* () {
     // Use DirectoryService to get directories
-    const directoryService = yield* DirectoryService;
+    const directoryService = yield* DirectoryTag;
     const directories = yield* directoryService.findDirs().pipe(
       Effect.tap(() => Effect.annotateCurrentSpan("operation", "find_directories")),
       Effect.withSpan("find-directories")
@@ -81,7 +81,7 @@ function handleInteractiveCd(): Effect.Effect<void, DevError, any> {
     }
 
     // Use InteractiveSelector for interactive selection
-    const selector = yield* InteractiveSelectorService;
+    const selector = yield* InteractiveSelectorTag;
     const selectedPath = yield* selector.selectFromList(directories).pipe(
       Effect.tap(() => Effect.annotateCurrentSpan("operation", "interactive_selection")),
       Effect.withSpan("interactive-selection")

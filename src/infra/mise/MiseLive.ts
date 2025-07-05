@@ -1,8 +1,8 @@
 import { Effect, Layer } from "effect";
 
 import { unknownError, type UnknownError } from "../../domain/errors";
-import { MiseService, type Mise, type MiseInfo } from "../../domain/ports/Mise";
-import { ShellService, type Shell } from "../../domain/ports/Shell";
+import { MiseTag, type Mise, type MiseInfo } from "../../domain/ports/Mise";
+import { ShellTag, type Shell } from "../../domain/ports/Shell";
 
 // Factory function to create Mise implementation
 export const makeMiseLive = (shell: Shell): Mise => ({
@@ -103,9 +103,9 @@ export const makeMiseLive = (shell: Shell): Mise => ({
 
 // Effect Layer for dependency injection
 export const MiseLiveLayer = Layer.effect(
-  MiseService,
+  MiseTag,
   Effect.gen(function* () {
-    const shell = yield* ShellService;
+    const shell = yield* ShellTag;
     return makeMiseLive(shell);
   }),
 );

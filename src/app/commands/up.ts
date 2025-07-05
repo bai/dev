@@ -2,14 +2,14 @@ import { Command } from "@effect/cli";
 import { Effect } from "effect";
 
 import { unknownError, type DevError } from "../../domain/errors";
-import { FileSystemService } from "../../domain/ports/FileSystem";
-import { MiseService } from "../../domain/ports/Mise";
+import { FileSystemTag } from "../../domain/ports/FileSystem";
+import { MiseTag } from "../../domain/ports/Mise";
 
 // Create the up command using @effect/cli (no arguments needed)
 export const upCommand = Command.make("up", {}, () =>
   Effect.gen(function* () {
-    const mise = yield* MiseService;
-    const fileSystem = yield* FileSystemService;
+    const mise = yield* MiseTag;
+    const fileSystem = yield* FileSystemTag;
 
     yield* Effect.logInfo("Setting up development environment...");
 

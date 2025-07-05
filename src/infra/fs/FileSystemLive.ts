@@ -5,7 +5,7 @@ import path from "path";
 import { Effect, Layer } from "effect";
 
 import { fileSystemError, type FileSystemError, type UnknownError } from "../../domain/errors";
-import { FileSystemService, type FileSystem } from "../../domain/ports/FileSystem";
+import { FileSystemTag, type FileSystem } from "../../domain/ports/FileSystem";
 
 // Individual functions for each method
 const readFile = (filePath: string): Effect.Effect<string, FileSystemError | UnknownError> =>
@@ -71,4 +71,4 @@ export const FileSystemLiveImpl: FileSystem = {
 };
 
 // Effect Layer for dependency injection
-export const FileSystemLiveLayer = Layer.succeed(FileSystemService, FileSystemLiveImpl);
+export const FileSystemLiveLayer = Layer.succeed(FileSystemTag, FileSystemLiveImpl);

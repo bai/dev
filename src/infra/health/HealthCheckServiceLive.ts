@@ -6,7 +6,7 @@ import { Clock, Effect, Layer } from "effect";
 
 import { toolHealthChecks } from "../../../drizzle/schema";
 import { healthCheckError, type HealthCheckError } from "../../domain/errors";
-import { DatabaseService, type Database } from "../../domain/ports/Database";
+import { DatabaseTag, type Database } from "../../domain/ports/Database";
 import {
   HealthCheckServiceTag,
   type HealthCheckResult,
@@ -133,7 +133,7 @@ export const makeHealthCheckServiceLive = (database: Database, pathService: Path
 export const HealthCheckServiceLiveLayer = Layer.effect(
   HealthCheckServiceTag,
   Effect.gen(function* () {
-    const database = yield* DatabaseService;
+    const database = yield* DatabaseTag;
     const pathService = yield* PathServiceTag;
     return makeHealthCheckServiceLive(database, pathService);
   }),

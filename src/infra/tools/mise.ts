@@ -5,8 +5,8 @@ import { Context, Effect, Layer } from "effect";
 
 import devConfig from "../../config/mise-dev-config.json" with { type: "json" };
 import { externalToolError, unknownError, type ExternalToolError, type UnknownError } from "../../domain/errors";
-import { FileSystemService, type FileSystem } from "../../domain/ports/FileSystem";
-import { ShellService, type Shell } from "../../domain/ports/Shell";
+import { FileSystemTag, type FileSystem } from "../../domain/ports/FileSystem";
+import { ShellTag, type Shell } from "../../domain/ports/Shell";
 
 export const MISE_MIN_VERSION = "2024.11.0";
 
@@ -188,8 +188,8 @@ export class MiseToolsServiceTag extends Context.Tag("MiseToolsService")<MiseToo
 export const MiseToolsServiceLive = Layer.effect(
   MiseToolsServiceTag,
   Effect.gen(function* () {
-    const shell = yield* ShellService;
-    const filesystem = yield* FileSystemService;
+    const shell = yield* ShellTag;
+    const filesystem = yield* FileSystemTag;
     return makeMiseToolsLive(shell, filesystem);
   }),
 );

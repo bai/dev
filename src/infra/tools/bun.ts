@@ -1,7 +1,7 @@
 import { Context, Effect, Layer } from "effect";
 
 import { externalToolError, type ExternalToolError, type UnknownError } from "../../domain/errors";
-import { ShellService, type Shell } from "../../domain/ports/Shell";
+import { ShellTag, type Shell } from "../../domain/ports/Shell";
 
 export const BUN_MIN_VERSION = "1.2.0";
 
@@ -140,7 +140,7 @@ export class BunToolsServiceTag extends Context.Tag("BunToolsService")<BunToolsS
 export const BunToolsServiceLive = Layer.effect(
   BunToolsServiceTag,
   Effect.gen(function* () {
-    const shell = yield* ShellService;
+    const shell = yield* ShellTag;
     return makeBunToolsLive(shell);
   }),
 );

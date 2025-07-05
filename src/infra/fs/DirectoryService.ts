@@ -1,19 +1,19 @@
 import { Effect, Layer } from "effect";
 
 import { type FileSystemError, type UnknownError } from "../../domain/errors";
-import { DirectoryService, type Directory } from "../../domain/ports/DirectoryService";
-import { FileSystemService, type FileSystem } from "../../domain/ports/FileSystem";
+import { DirectoryTag, type Directory } from "../../domain/ports/DirectoryService";
+import { FileSystemTag, type FileSystem } from "../../domain/ports/FileSystem";
 import { PathServiceTag, type PathService } from "../../domain/services/PathService";
 
 // Individual effect functions
 const ensureBaseDirectoryExists = (): Effect.Effect<
   void,
   FileSystemError | UnknownError,
-  FileSystemService | PathServiceTag
+  FileSystemTag | PathServiceTag
 > =>
   Effect.gen(function* () {
     const pathService = yield* PathServiceTag;
-    const fileSystem = yield* FileSystemService;
+    const fileSystem = yield* FileSystemTag;
 
     const baseDir = pathService.baseSearchDir;
     const exists = yield* fileSystem.exists(baseDir);
@@ -23,10 +23,10 @@ const ensureBaseDirectoryExists = (): Effect.Effect<
     }
   });
 
-const findDirs = (): Effect.Effect<string[], FileSystemError | UnknownError, FileSystemService | PathServiceTag> =>
+const findDirs = (): Effect.Effect<string[], FileSystemError | UnknownError, FileSystemTag | PathServiceTag> =>
   Effect.gen(function* () {
     const pathService = yield* PathServiceTag;
-    const fileSystem = yield* FileSystemService;
+    const fileSystem = yield* FileSystemTag;
 
     const baseDir = pathService.baseSearchDir;
 
@@ -49,4 +49,4 @@ export const DirectoryServiceImpl: Directory = {
 };
 
 // Layer that provides DirectoryService with proper dependency injection
-export const DirectoryServiceLive = Layer.effect(DirectoryService, Effect.succeed(DirectoryServiceImpl));
+export const DirectoryServiceLive = Layer.effect(DirectoryTag, Effect.succeed(DirectoryServiceImpl));

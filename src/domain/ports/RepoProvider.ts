@@ -26,4 +26,4 @@ export interface RepoProvider {
 }
 
 // Service tag for Effect Context system
-export class RepoProviderService extends Context.Tag("RepoProviderService")<RepoProviderService, RepoProvider>() {}
+export class RepoProviderTag extends Context.Tag("RepoProvider")<RepoProviderTag, RepoProvider>() {}

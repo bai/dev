@@ -40,4 +40,4 @@ export interface FileSystem {
 }
 
 // Service tag for Effect Context system
-export class FileSystemService extends Context.Tag("FileSystemService")<FileSystemService, FileSystem>() {}
+export class FileSystemTag extends Context.Tag("FileSystem")<FileSystemTag, FileSystem>() {}

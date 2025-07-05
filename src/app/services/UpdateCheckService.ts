@@ -1,7 +1,7 @@
 import { Clock, Context, Duration, Effect, Layer } from "effect";
 
 import { type ConfigError, type UnknownError } from "../../domain/errors";
-import { RunStoreService } from "../../domain/ports/RunStore";
+import { RunStoreTag } from "../../domain/ports/RunStore";
 
 const upgradeFrequency = Duration.decode("7 days");
 
@@ -10,12 +10,12 @@ const upgradeFrequency = Duration.decode("7 days");
  * This is app-level logic for upgrade checking
  */
 export interface UpdateCheckService {
-  runPeriodicUpgradeCheck(): Effect.Effect<void, ConfigError | UnknownError, RunStoreService>;
+  runPeriodicUpgradeCheck(): Effect.Effect<void, ConfigError | UnknownError, RunStoreTag>;
 }
 
 // Individual functions implementing the service methods
 const runPeriodicUpgradeCheck = Effect.gen(function* () {
-  const runStore = yield* RunStoreService;
+  const runStore = yield* RunStoreTag;
   const commandName = process.argv[2] || "help";
 
   // Check if we should prompt for an update (only if not running upgrade command)

@@ -3,9 +3,9 @@ import { Effect } from "effect";
 
 import { ConfigLoaderService, type ConfigLoader } from "../../config/loader";
 import { unknownError, type DevError } from "../../domain/errors";
-import { FileSystemService, type FileSystem } from "../../domain/ports/FileSystem";
-import { GitService, type Git } from "../../domain/ports/Git";
-import { ShellService, type Shell } from "../../domain/ports/Shell";
+import { FileSystemTag, type FileSystem } from "../../domain/ports/FileSystem";
+import { GitTag, type Git } from "../../domain/ports/Git";
+import { ShellTag, type Shell } from "../../domain/ports/Shell";
 import { ToolManagementServiceTag, type ToolManagementService } from "../../domain/ports/ToolManager";
 import { PathServiceTag, type PathService } from "../../domain/services/PathService";
 
@@ -57,8 +57,8 @@ function selfUpdateCli(pathService: PathService): Effect.Effect<void, DevError, 
   return Effect.gen(function* () {
     yield* Effect.logInfo("🔄 Self-updating CLI repository...");
 
-    const fileSystem = yield* FileSystemService;
-    const git = yield* GitService;
+    const fileSystem = yield* FileSystemTag;
+    const git = yield* GitTag;
 
     // Check if we're in a git repository
     const isGitRepo = yield* git.isGitRepository(pathService.devDir);
@@ -81,7 +81,7 @@ function ensureDirectoriesExist(pathService: PathService): Effect.Effect<void, D
   return Effect.gen(function* () {
     yield* Effect.logInfo("📁 Ensuring necessary directories exist...");
 
-    const fileSystem = yield* FileSystemService;
+    const fileSystem = yield* FileSystemTag;
 
     // Ensure config directory exists
     yield* fileSystem.mkdir(pathService.configDir, true);
@@ -103,7 +103,7 @@ function ensureShellIntegration(pathService: PathService): Effect.Effect<void, D
   return Effect.gen(function* () {
     yield* Effect.logInfo("🐚 Ensuring shell integration...");
 
-    const fileSystem = yield* FileSystemService;
+    const fileSystem = yield* FileSystemTag;
 
     // For now, just ensure the directory exists
     // In the future, this could copy shell scripts, update PATH, etc.

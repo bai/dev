@@ -1,8 +1,8 @@
 import { Effect, Layer } from "effect";
 
 import { authError, unknownError, type AuthError, type UnknownError } from "../../domain/errors";
-import { KeychainService, type Keychain } from "../../domain/ports/Keychain";
-import { ShellService, type Shell } from "../../domain/ports/Shell";
+import { KeychainTag, type Keychain } from "../../domain/ports/Keychain";
+import { ShellTag, type Shell } from "../../domain/ports/Shell";
 
 // Factory function to create Keychain implementation
 export const makeKeychainLive = (shell: Shell): Keychain => ({
@@ -81,9 +81,9 @@ export const makeKeychainLive = (shell: Shell): Keychain => ({
 
 // Effect Layer for dependency injection
 export const KeychainLiveLayer = Layer.effect(
-  KeychainService,
+  KeychainTag,
   Effect.gen(function* () {
-    const shell = yield* ShellService;
+    const shell = yield* ShellTag;
     return makeKeychainLive(shell);
   }),
 );

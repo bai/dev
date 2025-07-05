@@ -1,7 +1,7 @@
 import { Effect, Layer } from "effect";
 
 import { unknownError, UnknownError } from "../../domain/errors";
-import { InteractiveSelectorService, type InteractiveSelector } from "../../domain/ports/InteractiveSelector";
+import { InteractiveSelectorTag, type InteractiveSelector } from "../../domain/ports/InteractiveSelector";
 
 // Factory function to create FzfSelector implementation
 export const makeFzfSelector = (): InteractiveSelector => ({
@@ -56,4 +56,4 @@ export const makeFzfSelector = (): InteractiveSelector => ({
 });
 
 // Effect Layer for dependency injection
-export const FzfSelectorLiveLayer = Layer.succeed(InteractiveSelectorService, makeFzfSelector());
+export const FzfSelectorLiveLayer = Layer.succeed(InteractiveSelectorTag, makeFzfSelector());

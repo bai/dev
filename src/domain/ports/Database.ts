@@ -34,4 +34,4 @@ export interface Database {
   readonly migrate: () => Effect.Effect<void, ConfigError | UnknownError>;
 }
 
-export class DatabaseService extends Context.Tag("DatabaseService")<DatabaseService, Database>() {}
+export class DatabaseTag extends Context.Tag("Database")<DatabaseTag, Database>() {}

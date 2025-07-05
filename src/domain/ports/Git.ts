@@ -31,4 +31,4 @@ export interface Git {
 }
 
 // Service tag for Effect Context system
-export class GitService extends Context.Tag("GitService")<GitService, Git>() {}
+export class GitTag extends Context.Tag("Git")<GitTag, Git>() {}

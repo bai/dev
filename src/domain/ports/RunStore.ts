@@ -31,4 +31,4 @@ export interface RunStore {
 }
 
 // Service tag for Effect Context system
-export class RunStoreService extends Context.Tag("RunStoreService")<RunStoreService, RunStore>() {}
+export class RunStoreTag extends Context.Tag("RunStore")<RunStoreTag, RunStore>() {}

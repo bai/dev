@@ -1,7 +1,7 @@
 import { Context, Effect, Layer } from "effect";
 
 import { externalToolError, unknownError, type ExternalToolError, type UnknownError } from "../../domain/errors";
-import { ShellService, type Shell } from "../../domain/ports/Shell";
+import { ShellTag, type Shell } from "../../domain/ports/Shell";
 
 export const FZF_MIN_VERSION = "0.35.0";
 
@@ -142,7 +142,7 @@ export class FzfToolsServiceTag extends Context.Tag("FzfToolsService")<FzfToolsS
 export const FzfToolsLiveLayer = Layer.effect(
   FzfToolsServiceTag,
   Effect.gen(function* () {
-    const shell = yield* ShellService;
+    const shell = yield* ShellTag;
     return makeFzfToolsLive(shell);
   }),
 );

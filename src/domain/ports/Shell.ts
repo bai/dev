@@ -26,4 +26,4 @@ export interface Shell {
 }
 
 // Service tag for Effect Context system
-export class ShellService extends Context.Tag("ShellService")<ShellService, Shell>() {}
+export class ShellTag extends Context.Tag("Shell")<ShellTag, Shell>() {}

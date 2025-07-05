@@ -1,8 +1,8 @@
 import { Effect, Layer } from "effect";
 
 import { networkError, unknownError, type NetworkError, type UnknownError } from "../../domain/errors";
-import { FileSystemService, type FileSystem } from "../../domain/ports/FileSystem";
-import { NetworkService, type HttpResponse, type Network } from "../../domain/ports/Network";
+import { FileSystemTag, type FileSystem } from "../../domain/ports/FileSystem";
+import { NetworkTag, type HttpResponse, type Network } from "../../domain/ports/Network";
 
 // Factory function to create Network implementation
 export const makeNetworkLive = (fileSystem: FileSystem): Network => ({
@@ -76,9 +76,9 @@ export const makeNetworkLive = (fileSystem: FileSystem): Network => ({
 
 // Effect Layer for dependency injection
 export const NetworkLiveLayer = Layer.effect(
-  NetworkService,
+  NetworkTag,
   Effect.gen(function* () {
-    const fileSystem = yield* FileSystemService;
+    const fileSystem = yield* FileSystemTag;
     return makeNetworkLive(fileSystem);
   }),
 );

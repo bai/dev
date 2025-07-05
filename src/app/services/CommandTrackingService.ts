@@ -2,8 +2,8 @@ import { Clock, Context, Effect, Layer } from "effect";
 
 import { type ConfigError, type UnknownError } from "../../domain/errors";
 import type { Git } from "../../domain/ports/Git";
-import type { GitService } from "../../domain/ports/Git";
-import { RunStoreService } from "../../domain/ports/RunStore";
+import type { GitTag } from "../../domain/ports/Git";
+import { RunStoreTag } from "../../domain/ports/RunStore";
 import type { PathServiceTag } from "../../domain/services/PathService";
 import { VersionServiceTag } from "./VersionService";
 
@@ -15,19 +15,19 @@ export interface CommandTrackingService {
   recordCommandRun(): Effect.Effect<
     string,
     ConfigError | UnknownError,
-    RunStoreService | VersionServiceTag | GitService | PathServiceTag
+    RunStoreTag | VersionServiceTag | GitTag | PathServiceTag
   >;
-  completeCommandRun(id: string, exitCode: number): Effect.Effect<void, ConfigError | UnknownError, RunStoreService>;
+  completeCommandRun(id: string, exitCode: number): Effect.Effect<void, ConfigError | UnknownError, RunStoreTag>;
 
   /**
    * Gracefully shutdown command tracking by completing any incomplete runs
    */
-  gracefulShutdown(): Effect.Effect<void, ConfigError | UnknownError, RunStoreService>;
+  gracefulShutdown(): Effect.Effect<void, ConfigError | UnknownError, RunStoreTag>;
 }
 
 // Individual functions implementing the service methods
 const recordCommandRun = Effect.gen(function* () {
-  const runStore = yield* RunStoreService;
+  const runStore = yield* RunStoreTag;
   const versionService = yield* VersionServiceTag;
 
   // Gather run information
@@ -52,7 +52,7 @@ const recordCommandRun = Effect.gen(function* () {
 
 const completeCommandRun = (id: string, exitCode: number) =>
   Effect.gen(function* () {
-    const runStore = yield* RunStoreService;
+    const runStore = yield* RunStoreTag;
     const finishedAtMs = yield* Clock.currentTimeMillis;
     const finishedAt = new Date(finishedAtMs);
 
@@ -61,7 +61,7 @@ const completeCommandRun = (id: string, exitCode: number) =>
 
 const gracefulShutdown = Effect.gen(function* () {
   yield* Effect.logDebug("🛑 Gracefully shutting down command tracking...");
-  const runStore = yield* RunStoreService;
+  const runStore = yield* RunStoreTag;
   yield* runStore.completeIncompleteRuns();
   yield* Effect.logDebug("✅ Command tracking shutdown complete");
 });

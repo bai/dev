@@ -25,4 +25,4 @@ export interface Keychain {
 }
 
 // Service tag for Effect Context system
-export class KeychainService extends Context.Tag("KeychainService")<KeychainService, Keychain>() {}
+export class KeychainTag extends Context.Tag("Keychain")<KeychainTag, Keychain>() {}

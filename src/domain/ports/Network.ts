@@ -30,4 +30,4 @@ export interface Network {
 }
 
 // Service tag for Effect Context system
-export class NetworkService extends Context.Tag("NetworkService")<NetworkService, Network>() {}
+export class NetworkTag extends Context.Tag("Network")<NetworkTag, Network>() {}

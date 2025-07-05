@@ -3,7 +3,7 @@ import { spawn } from "bun";
 import { Duration, Effect, Layer } from "effect";
 
 import { unknownError, type UnknownError } from "../../domain/errors";
-import { ShellService, type Shell, type SpawnResult } from "../../domain/ports/Shell";
+import { ShellTag, type Shell, type SpawnResult } from "../../domain/ports/Shell";
 
 // Individual functions for each method
 const exec = (
@@ -100,4 +100,4 @@ export const ShellLiveImpl: Shell & {
 };
 
 // Effect Layer for dependency injection
-export const ShellLiveLayer = Layer.succeed(ShellService, ShellLiveImpl);
+export const ShellLiveLayer = Layer.succeed(ShellTag, ShellLiveImpl);

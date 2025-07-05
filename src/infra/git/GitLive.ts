@@ -2,8 +2,8 @@ import { Effect, Layer } from "effect";
 
 import { gitError, unknownError, type GitError, type UnknownError } from "../../domain/errors";
 import type { Repository } from "../../domain/models";
-import { GitService, type Git } from "../../domain/ports/Git";
-import { ShellService, type Shell } from "../../domain/ports/Shell";
+import { GitTag, type Git } from "../../domain/ports/Git";
+import { ShellTag, type Shell } from "../../domain/ports/Shell";
 
 // Factory function to create Git implementation
 export const makeGitLive = (shell: Shell): Git => ({
@@ -67,9 +67,9 @@ export const makeGitLive = (shell: Shell): Git => ({
 
 // Effect Layer for dependency injection
 export const GitLiveLayer = Layer.effect(
-  GitService,
+  GitTag,
   Effect.gen(function* () {
-    const shell = yield* ShellService;
+    const shell = yield* ShellTag;
     return makeGitLive(shell);
   }),
 );

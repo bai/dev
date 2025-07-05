@@ -1,0 +1,55 @@
+---
+alwaysApply: true
+---
+
+Here’s list of naming-convention rules for an idiomatic Effect.ts codebase:
+
+1. **Domain Interfaces**
+
+   * Name after the core capability or role (e.g. `Email`, `Auth`, `Database`)
+   * **No** trailing “Service” unless “Service” is literally part of your domain model.
+
+2. **Tags**
+
+   * Always suffix with `Tag` (e.g. `EmailTag`, `DatabaseTag`)
+   * Used as your dependency-injection key: `Tag<YourInterface>(“YourInterface”)`.
+
+3. **Live Implementations**
+
+   * Suffix with `Live` (or `Impl`) (e.g. `EmailLive`, `DatabaseLive`)
+   * Exposed via a layer: `EmailLiveLayer`.
+
+4. **Layers**
+
+   * Suffix with `Layer` (e.g. `ConfigLayer`, `EmailLiveLayer`)
+   * Bundle one or more implementations and configs into an injectable module.
+
+5. **Config Objects**
+
+   * Define a `…Config` interface (e.g. `SmtpConfig`, `DbConfig`)
+   * And a corresponding `…ConfigTag`.
+
+6. **Error Types**
+
+   * Model domain errors with a custom class or union
+   * Suffix with `Error` (e.g. `EmailError`, `DbError`).
+
+7. **Qualifiers**
+
+   * When you need multiple versions of the same interface
+   * Create distinct `Tag`s named for their role (e.g. `PrimaryDbTag`, `ReplicaDbTag`).
+
+8. **Factory Functions**
+
+   * Prefix with `make…` or `create…` for helpers that build scoped or complex resources
+   * (e.g. `makePool`, `createRetryPolicy`).
+
+9. **Test/MOCK Layers**
+
+   * Suffix with `Test` (or `Mock`) (e.g. `UserRepoTestLayer`, `InMemoryCacheTest`)
+   * For in-memory or mock implementations used in tests.
+
+10. **Streams, Queues, Hubs**
+
+    * Clearly suffix resource types: `…Stream`, `…Queue`, `…Hub`
+    * And combine with tags: e.g. `LogEventStreamTag`.

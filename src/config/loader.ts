@@ -7,8 +7,8 @@ import {
   type NetworkError,
   type UnknownError,
 } from "../domain/errors";
-import { FileSystemService, type FileSystem } from "../domain/ports/FileSystem";
-import { NetworkService, type Network } from "../domain/ports/Network";
+import { FileSystemTag, type FileSystem } from "../domain/ports/FileSystem";
+import { NetworkTag, type Network } from "../domain/ports/Network";
 import { migrateConfig } from "./migrations";
 import { configSchema, defaultConfig, type Config } from "./schema";
 
@@ -94,8 +94,8 @@ export const ConfigLoaderLiveLayer = (configPath: string) =>
   Layer.effect(
     ConfigLoaderService,
     Effect.gen(function* () {
-      const fileSystem = yield* FileSystemService;
-      const network = yield* NetworkService;
+      const fileSystem = yield* FileSystemTag;
+      const network = yield* NetworkTag;
       return makeConfigLoaderLive(fileSystem, network, configPath);
     }),
   );

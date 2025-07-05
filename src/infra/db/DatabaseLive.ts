@@ -4,8 +4,8 @@ import { migrate } from "drizzle-orm/bun-sqlite/migrator";
 import { Effect, Layer } from "effect";
 
 import { configError, unknownError, type ConfigError, type UnknownError } from "../../domain/errors";
-import { DatabaseService, type Database } from "../../domain/ports/Database";
-import { FileSystemService } from "../../domain/ports/FileSystem";
+import { DatabaseTag, type Database } from "../../domain/ports/Database";
+import { FileSystemTag } from "../../domain/ports/FileSystem";
 import { PathServiceTag } from "../../domain/services/PathService";
 import type { DrizzleDatabase } from "../../domain/types/drizzle";
 
@@ -89,7 +89,7 @@ export const makeDatabaseLive = (
 
 // Create and initialize database with migrations
 const createDatabase = Effect.gen(function* () {
-  const fileSystem = yield* FileSystemService;
+  const fileSystem = yield* FileSystemTag;
   const pathService = yield* PathServiceTag;
   const dbPath = pathService.dbPath;
 
@@ -122,7 +122,7 @@ const createDatabase = Effect.gen(function* () {
 
 // Effect Layer for dependency injection with proper resource management
 export const DatabaseLiveLayer = Layer.scoped(
-  DatabaseService,
+  DatabaseTag,
   Effect.gen(function* () {
     // Create the Database with proper resource management
     const database = yield* Effect.acquireRelease(

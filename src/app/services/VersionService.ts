@@ -1,6 +1,6 @@
 import { Context, Effect, Layer } from "effect";
 
-import { GitService } from "../../domain/ports/Git";
+import { GitTag } from "../../domain/ports/Git";
 import { PathServiceTag } from "../../domain/services/PathService";
 
 /**
@@ -8,14 +8,14 @@ import { PathServiceTag } from "../../domain/services/PathService";
  * This is app-level logic for version handling
  */
 export interface VersionService {
-  readonly getCurrentGitCommitSha: Effect.Effect<string, never, GitService | PathServiceTag>;
-  readonly getVersion: Effect.Effect<string, never, GitService | PathServiceTag>;
+  readonly getCurrentGitCommitSha: Effect.Effect<string, never, GitTag | PathServiceTag>;
+  readonly getVersion: Effect.Effect<string, never, GitTag | PathServiceTag>;
 }
 
 // Individual functions implementing the service methods
 const getCurrentGitCommitSha = Effect.gen(function* () {
   const pathService = yield* PathServiceTag;
-  const gitService = yield* GitService;
+  const gitService = yield* GitTag;
 
   const result = yield* gitService
     .getCurrentCommitSha(pathService.devDir)

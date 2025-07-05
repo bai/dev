@@ -9,8 +9,8 @@ import {
   type ExternalToolError,
   type UnknownError,
 } from "../../domain/errors";
-import { FileSystemService, type FileSystem } from "../../domain/ports/FileSystem";
-import { ShellService, type Shell } from "../../domain/ports/Shell";
+import { FileSystemTag, type FileSystem } from "../../domain/ports/FileSystem";
+import { ShellTag, type Shell } from "../../domain/ports/Shell";
 
 export const GCLOUD_MIN_VERSION = "450.0.0";
 
@@ -189,8 +189,8 @@ export class GcloudToolsServiceTag extends Context.Tag("GcloudToolsService")<
 export const GcloudToolsServiceLive = Layer.effect(
   GcloudToolsServiceTag,
   Effect.gen(function* () {
-    const shell = yield* ShellService;
-    const filesystem = yield* FileSystemService;
+    const shell = yield* ShellTag;
+    const filesystem = yield* FileSystemTag;
     return makeGcloudToolsLive(shell, filesystem);
   }),
 );

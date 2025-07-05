@@ -2,8 +2,8 @@ import { Args, Command } from "@effect/cli";
 import { Effect } from "effect";
 
 import { unknownError, type DevError } from "../../domain/errors";
-import { FileSystemService } from "../../domain/ports/FileSystem";
-import { MiseService } from "../../domain/ports/Mise";
+import { FileSystemTag } from "../../domain/ports/FileSystem";
+import { MiseTag } from "../../domain/ports/Mise";
 
 // Define the task argument as optional
 const task = Args.text({ name: "task" }).pipe(Args.optional);
@@ -12,8 +12,8 @@ const task = Args.text({ name: "task" }).pipe(Args.optional);
 export const runCommand = Command.make("run", { task }, ({ task }) =>
   Effect.gen(function* () {
     yield* Effect.logInfo("Running command...");
-    const mise = yield* MiseService;
-    const fileSystem = yield* FileSystemService;
+    const mise = yield* MiseTag;
+    const fileSystem = yield* FileSystemTag;
     const taskName = task._tag === "Some" ? task.value : undefined;
 
     const cwd = yield* fileSystem.getCwd();
