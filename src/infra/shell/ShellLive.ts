@@ -55,7 +55,7 @@ const execInteractive = (
     catch: (error) => unknownError(`Failed to execute interactive command ${command}: ${error}`),
   });
 
-const changeDirectory = (path: string): Effect.Effect<void> =>
+const setProcessCwd = (path: string): Effect.Effect<void> =>
   Effect.sync(() => {
     process.chdir(path);
   });
@@ -94,7 +94,7 @@ export const ShellLiveImpl: Shell & {
 } = {
   exec,
   execInteractive,
-  changeDirectory,
+  setProcessCwd,
   execWithTimeout,
   execInteractiveWithTimeout,
 };

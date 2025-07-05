@@ -20,9 +20,9 @@ export interface Shell {
   execInteractive(command: string, args?: string[], options?: { cwd?: string }): Effect.Effect<number, UnknownError>;
 
   /**
-   * Change the shell's working directory (used for shell integration)
+   * Set the current working directory of the running process
    */
-  changeDirectory(path: string): Effect.Effect<void>;
+  setProcessCwd(path: string): Effect.Effect<void>;
 }
 
 // Service tag for Effect Context system

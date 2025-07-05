@@ -66,13 +66,4 @@ export interface Repository {
   cloneUrl: string;
 }
 
-export interface ConfigManager {
-  get<T = any>(key: string, defaultValue?: T): T;
-  set(key: string, value: any): Effect.Effect<void>;
-  has(key: string): boolean;
-  getAll(): Record<string, any>;
-}
-
 // Service tags for Effect Context system
-
-export class ConfigService extends Context.Tag("ConfigService")<ConfigService, ConfigManager>() {}
