@@ -15,8 +15,6 @@ export interface Email {
 }
 ```
 
----
-
 ### 2. Tags
 
 * **Always** suffix with `Tag` (e.g. `EmailTag`, `DatabaseTag`).
@@ -27,8 +25,6 @@ export interface Email {
 export const DatabaseTag = Tag<Database>("Database")
 ```
 
----
-
 ### 3. Live Implementations
 
 * **Suffix** with `Live` (never `Impl`), e.g. `EmailLive`, `DatabaseLive`.
@@ -37,8 +33,6 @@ export const DatabaseTag = Tag<Database>("Database")
 ```ts
 export const EmailLiveLayer = Layer.succeed(EmailTag, new SmtpEmail())
 ```
-
----
 
 ### 4. Layers
 
@@ -62,8 +56,6 @@ export const EmailLiveLayer = Layer.effect(
 ).pipe(Layer.provide(ConfigLayer))
 ```
 
----
-
 ### 5. Config Objects
 
 * **Define** an interface named `…Config` (e.g. `SmtpConfig`, `DbConfig`).
@@ -77,8 +69,6 @@ export const DbConfigTag = Tag<DbConfig>("DbConfig")
 export const ConfigLayer = Layer.succeed(DbConfigTag, { url: ENV.DB_URL })
 ```
 
----
-
 ### 6. Error Types
 
 * **Model** domain errors as union types or custom classes.
@@ -90,8 +80,6 @@ export class EmailError extends Error { /* ... */ }
 export type DbError = ConnectionError | QueryError
 ```
 
----
-
 ### 7. Qualifiers
 
 * For multiple implementations of the same interface, use distinct tags named for their role.
@@ -101,8 +89,6 @@ export const PrimaryDbTag = Tag<Database>("PrimaryDatabase")
 export const ReplicaDbTag = Tag<Database>("ReplicaDatabase")
 ```
 
----
-
 ### 8. Factory Functions
 
 * **Prefix** with `make…` or `create…` for helpers that build scoped or complex resources.
@@ -110,8 +96,6 @@ export const ReplicaDbTag = Tag<Database>("ReplicaDatabase")
 ```ts
 export function makePool(config: DbConfig): Effect<Scope, never, Pool> { … }
 ```
-
----
 
 ### 9. Test/Mock Layers
 
@@ -122,8 +106,6 @@ export function makePool(config: DbConfig): Effect<Scope, never, Pool> { … }
 export const UserRepoMockLayer = Layer.succeed(UserRepoTag, new InMemoryUserRepo())
 ```
 
----
-
 ### 10. Streams, Queues, Hubs
 
 * **Suffix** with the resource type (`…Stream`, `…Queue`, `…Hub`).
@@ -132,8 +114,6 @@ export const UserRepoMockLayer = Layer.succeed(UserRepoTag, new InMemoryUserRepo
 ```ts
 export const LogEventStreamTag = Tag<Stream<LogEvent>>("LogEventStream")
 ```
-
----
 
 ### 11. Schemas and Validation
 
@@ -149,8 +129,6 @@ export const UserSchema = Schema.Struct({
 
 export type User = Schema.Schema.Type<typeof UserSchema>
 ```
-
----
 
 ### 12. Request/Response Types
 
@@ -170,8 +148,6 @@ export interface Email {
 }
 ```
 
----
-
 ### 13. Branded Types
 
 * **Use** branded types for domain modeling to ensure type safety.
@@ -188,7 +164,59 @@ export const Email = Brand.refined<Email>(
 )
 ```
 
----
+### 14. Ports (Hexagonal Architecture)
+
+* **Suffix** port interfaces with `Port` to distinguish from domain interfaces.
+* **Place** in `ports/` directory to separate from core domain.
+* **Use** the same Tag naming convention with the full interface name.
+
+```ts
+// ports/user-repository-port.ts
+export interface UserRepositoryPort {
+  findById(id: UserId): Effect<never, NotFoundError, User>
+  save(user: User): Effect<never, DatabaseError, void>
+}
+
+export const UserRepositoryPortTag = Tag<UserRepositoryPort>("UserRepositoryPort")
+
+// ports/email-port.ts
+export interface EmailPort {
+  send(request: SendEmailRequest): Effect<never, EmailError, void>
+}
+
+export const EmailPortTag = Tag<EmailPort>("EmailPort")
+```
+
+### 15. Adapters (Hexagonal Architecture)
+
+* **Place** adapter implementations in `adapters/` directory, organized by infrastructure type.
+* **Name** adapters descriptively based on the technology they use.
+* **Follow** the `Live` suffix pattern for layer exports.
+
+```ts
+// adapters/postgres/user-repository-adapter.ts
+export class PostgresUserRepository implements UserRepositoryPort {
+  // implementation
+}
+
+export const UserRepositoryPortLiveLayer = Layer.effect(
+  UserRepositoryPortTag,
+  Effect.gen(function* (_) {
+    const db = yield* _(DatabaseTag)
+    return new PostgresUserRepository(db)
+  })
+)
+
+// adapters/smtp/email-adapter.ts
+export class SmtpEmailAdapter implements EmailPort {
+  // implementation
+}
+
+export const EmailPortLiveLayer = Layer.succeed(
+  EmailPortTag,
+  new SmtpEmailAdapter()
+)
+```
 
 #### Additional Tips
 
@@ -214,4 +242,6 @@ export const Email = Brand.refined<Email>(
   )
   ```
 
-With these conventions—using **Live** across the board—your Effect.ts codebase will stay clear, consistent, and idiomatic.
+* **Port vs Domain Interface**: Use ports for infrastructure boundaries (database, external APIs, file system). Keep domain interfaces for core business logic that might be implemented within the domain itself.
+
+With these conventions—using **Live** across the board and **Port** for hexagonal boundaries—your Effect.ts codebase will stay clear, consistent, and idiomatic.
