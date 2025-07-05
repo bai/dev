@@ -123,7 +123,7 @@ This eliminates hardcoded values and allows for dynamic configuration at runtime
 
 #### Development Workflow
 
-1. All changes should maintain the clean architecture boundaries
+1. All changes should maintain the hexagonal architecture boundaries
 2. New features should follow the Effect-TS patterns established
 3. Database changes require running `bun run db:generate` for migrations
 4. Health checks should be implemented for any new tools or dependencies
