@@ -1,7 +1,7 @@
 import { Database } from "bun:sqlite";
 import { sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/bun-sqlite";
-import { Context, Effect, Layer } from "effect";
+import { Clock, Context, Effect, Layer } from "effect";
 
 import { toolHealthChecks } from "../../../drizzle/schema";
 import { healthCheckError, type HealthCheckError } from "../../domain/errors";
@@ -67,7 +67,8 @@ export const makeHealthCheckSchedulerServiceLive = (
   const shouldRunHealthCheck = (): Effect.Effect<boolean, HealthCheckError> =>
     Effect.gen(function* () {
       const lastCheckTime = yield* getLastCheckTime();
-      const now = Math.floor(Date.now() / 1000);
+      const nowMs = yield* Clock.currentTimeMillis;
+      const now = Math.floor(nowMs / 1000);
       const intervalSeconds = HEALTH_CHECK_INTERVAL_HOURS * 60 * 60;
 
       const shouldRun = now - lastCheckTime >= intervalSeconds;

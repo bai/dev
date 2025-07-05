@@ -7,6 +7,7 @@ import { UpdateCheckServiceLive } from "../app/services/UpdateCheckService";
 import { VersionServiceLive } from "../app/services/VersionService";
 import { PathServiceLive } from "../domain/services/PathService";
 import { RepositoryServiceLive } from "../domain/services/RepositoryService";
+import { DatabaseLiveLayer } from "../infra/db/DatabaseLive";
 import { RunStoreLiveLayer } from "../infra/db/RunStoreLive";
 import { DirectoryServiceLive } from "../infra/fs/DirectoryService";
 import { FileSystemLiveLayer } from "../infra/fs/FileSystemLive";
@@ -89,11 +90,17 @@ export const buildInfraLiveLayer = (configValues: DynamicConfigValues) => {
   // This is where we use the runtime configuration value!
   const RepoProviderLayer = Layer.provide(GitHubProviderLayer(configValues.defaultOrg), NetworkLayer);
 
-  // Database layer that depends on PathService
-  const DatabaseLayer = Layer.provide(RunStoreLiveLayer, BaseInfraLayer);
+  // Database layer that depends on PathService and FileSystem
+  const DatabaseLayer = Layer.provide(DatabaseLiveLayer, BaseInfraLayer);
+  
+  // RunStore layer that depends on Database layer
+  const RunStoreLayer = Layer.provide(RunStoreLiveLayer, Layer.mergeAll(BaseInfraLayer, DatabaseLayer));
 
-  // Health check service that depends on Config and Path services
-  const HealthCheckLayer = Layer.provide(HealthCheckServiceLiveLayer, Layer.mergeAll(BaseInfraLayer, ConfigLayer));
+  // Health check service that depends on Database, Config and Path services
+  const HealthCheckLayer = Layer.provide(
+    HealthCheckServiceLiveLayer, 
+    Layer.mergeAll(BaseInfraLayer, ConfigLayer, DatabaseLayer)
+  );
 
   // Complete Infrastructure Layer with dynamic values
   return Layer.mergeAll(
@@ -104,8 +111,9 @@ export const buildInfraLiveLayer = (configValues: DynamicConfigValues) => {
     ToolServicesLayer,
     ToolManagementLayer, // Aggregated tool management service
     RepoProviderLayer, // Now using dynamic defaultOrg instead of hardcoded "acme"
-    DatabaseLayer, // Ensure database layer gets PathService dependencies
-    HealthCheckLayer, // Health check service with config and path dependencies
+    DatabaseLayer, // Core database service
+    RunStoreLayer, // Run storage service that uses Database
+    HealthCheckLayer, // Health check service that uses Database
   );
 };
 

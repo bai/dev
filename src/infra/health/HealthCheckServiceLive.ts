@@ -1,13 +1,12 @@
 import path from "path";
 import { spawn } from "bun";
 
-import { Database } from "bun:sqlite";
-import { desc, eq, sql } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/bun-sqlite";
-import { Effect, Layer } from "effect";
+import { sql } from "drizzle-orm";
+import { Clock, Effect, Layer } from "effect";
 
 import { toolHealthChecks } from "../../../drizzle/schema";
 import { healthCheckError, type HealthCheckError } from "../../domain/errors";
+import { DatabaseTag, type Database } from "../../domain/ports/Database";
 import {
   HealthCheckServiceTag,
   type HealthCheckResult,
@@ -20,19 +19,7 @@ import { PathServiceTag, type PathService } from "../../domain/services/PathServ
 const HEALTH_CHECK_RETENTION_DAYS = 30;
 
 // Factory function that creates HealthCheckService with dependencies
-export const makeHealthCheckServiceLive = (pathService: PathService): HealthCheckService => {
-  // Helper to get database connection
-  const getDatabase = () =>
-    Effect.tryPromise({
-      try: async () => {
-        const dbPath = pathService.dbPath;
-        const sqlite = new Database(dbPath);
-        sqlite.exec("PRAGMA journal_mode = WAL;");
-        const db = drizzle(sqlite);
-        return { db, sqlite };
-      },
-      catch: (error) => healthCheckError(`Failed to connect to database: ${error}`),
-    });
+export const makeHealthCheckServiceLive = (database: Database, pathService: PathService): HealthCheckService => {
 
   // Individual functions implementing the service methods
   const runHealthChecks = (): Effect.Effect<HealthCheckResult[], HealthCheckError> =>
@@ -40,10 +27,12 @@ export const makeHealthCheckServiceLive = (pathService: PathService): HealthChec
       yield* Effect.logDebug("Running health checks synchronously...");
 
       // Import and run the health checks directly
-      const { runHealthChecks: runChecks } = yield* Effect.tryPromise({
+      const module = yield* Effect.tryPromise({
         try: () => import("../../health/runChecks"),
         catch: (error) => healthCheckError(`Failed to import health check worker: ${error}`),
       });
+      
+      const runChecks = module.runHealthChecks;
 
       yield* runChecks();
 
@@ -58,8 +47,8 @@ export const makeHealthCheckServiceLive = (pathService: PathService): HealthChec
       // Get the path to the health check worker script
       const workerPath = path.join(pathService.devDir, "src", "health", "runChecks.ts");
 
-      yield* Effect.tryPromise({
-        try: async () => {
+      yield* Effect.try({
+        try: () => {
           // Spawn worker process in background
           const proc = spawn(["bun", "run", workerPath], {
             stdio: ["ignore", "ignore", "ignore"],
@@ -75,12 +64,8 @@ export const makeHealthCheckServiceLive = (pathService: PathService): HealthChec
     });
 
   const getLatestResults = (): Effect.Effect<HealthCheckSummary[], HealthCheckError> =>
-    Effect.gen(function* () {
-      const { db, sqlite } = yield* getDatabase();
-
-      try {
-        // Get the latest health check for each tool
-        const results = yield* Effect.tryPromise({
+    database.query((db) =>
+        Effect.tryPromise({
           try: async () => {
             // Use a subquery to get the latest check for each tool
             const latestChecks = await db
@@ -104,34 +89,36 @@ export const makeHealthCheckServiceLive = (pathService: PathService): HealthChec
             }));
           },
           catch: (error) => healthCheckError(`Failed to get latest health check results: ${error}`),
-        });
-
-        return results;
-      } finally {
-        sqlite.close();
-      }
-    });
+      }),
+    ).pipe(
+      Effect.mapError((error) => {
+        if (error._tag === "HealthCheckError") return error;
+        return healthCheckError(`Database query failed: ${String(error)}`);
+      }),
+    );
 
   const pruneOldRecords = (
     retentionDays: number = HEALTH_CHECK_RETENTION_DAYS,
   ): Effect.Effect<void, HealthCheckError> =>
     Effect.gen(function* () {
-      const { db, sqlite } = yield* getDatabase();
+      const cutoffDateMs = yield* Clock.currentTimeMillis;
+      const cutoffDate = new Date(cutoffDateMs - retentionDays * 24 * 60 * 60 * 1000);
 
-      try {
-        const cutoffDate = Math.floor(Date.now() / 1000) - retentionDays * 24 * 60 * 60;
-
-        yield* Effect.tryPromise({
+      yield* database.query((db) =>
+        Effect.tryPromise({
           try: async () => {
             await db.delete(toolHealthChecks).where(sql`checked_at < ${cutoffDate}`);
           },
           catch: (error) => healthCheckError(`Failed to prune old health check records: ${error}`),
-        });
+        }),
+      ).pipe(
+        Effect.mapError((error) => {
+          if (error._tag === "HealthCheckError") return error;
+          return healthCheckError(`Database operation failed: ${String(error)}`);
+        }),
+      );
 
-        yield* Effect.logInfo(`Pruned health check records older than ${retentionDays} days`);
-      } finally {
-        sqlite.close();
-      }
+      yield* Effect.logDebug(`Pruned health check records older than ${retentionDays} days`);
     });
 
   return {
@@ -146,7 +133,8 @@ export const makeHealthCheckServiceLive = (pathService: PathService): HealthChec
 export const HealthCheckServiceLiveLayer = Layer.effect(
   HealthCheckServiceTag,
   Effect.gen(function* () {
+    const database = yield* DatabaseTag;
     const pathService = yield* PathServiceTag;
-    return makeHealthCheckServiceLive(pathService);
+    return makeHealthCheckServiceLive(database, pathService);
   }),
 );
