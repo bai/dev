@@ -326,7 +326,7 @@ export const ConfigTag = Context.Tag<Config>("Config");
 | **clone**           | `dev clone <repo>`                       |
 | **up**              | `dev up`                                 |
 | **auth**            | `dev auth [svc]`                         |
-| **status / doctor** | `dev doctor [--json]`                    |
+| **status**          | `dev status [--json]`                    |
 | **run**             | `dev run <task>`                         |
 | **upgrade**         | `dev upgrade [--regenerate-completions]` |
 | **help**            | `dev help`                               |
