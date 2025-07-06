@@ -9,24 +9,18 @@ import { ShellPortTag, type ShellPort } from "../../domain/ports/shell-port";
 import { ToolManagementPortTag, type ToolManagementPort } from "../../domain/ports/tool-management-port";
 import { PathServiceTag, type PathService } from "../../domain/services/path-service";
 
-// Define the options using @effect/cli
-const force = Options.boolean("force").pipe(Options.optional);
+// No options needed for upgrade command
 
 // Create the upgrade command using @effect/cli
 export const upgradeCommand = Command.make(
   "upgrade",
-  { force },
-  ({ force }) =>
+  {},
+  () =>
     Effect.gen(function* () {
       const configLoader = yield* ConfigLoaderTag;
       const pathService = yield* PathServiceTag;
-      const forceValue = force._tag === "Some" ? force.value : false;
 
-      if (forceValue) {
-        yield* Effect.logInfo("🔄 Upgrading dev CLI tool (force mode enabled)...");
-      } else {
-        yield* Effect.logInfo("🔄 Upgrading dev CLI tool...");
-      }
+      yield* Effect.logInfo("🔄 Upgrading dev CLI tool...");
 
       // Step 1: Self-update the CLI repository
       yield* selfUpdateCli(pathService);
@@ -43,7 +37,7 @@ export const upgradeCommand = Command.make(
       yield* Effect.logInfo("✅ Configuration refreshed successfully");
 
       // Step 5: Tool version checks and upgrades
-      yield* upgradeEssentialTools(forceValue);
+      yield* upgradeEssentialTools();
 
       // Step 6: Final success message and usage examples
       yield* showSuccessMessage();
@@ -116,24 +110,20 @@ function ensureShellIntegration(pathService: PathService): Effect.Effect<void, D
 /**
  * Upgrade essential tools
  */
-function upgradeEssentialTools(force: boolean): Effect.Effect<void, DevError, any> {
+function upgradeEssentialTools(): Effect.Effect<void, DevError, any> {
   return Effect.gen(function* () {
     yield* Effect.logInfo("🛠️ Checking essential tools...");
-
-    if (force) {
-      yield* Effect.logInfo("💪 Force mode enabled - will upgrade all tools");
-    }
 
     const toolManagement = yield* ToolManagementPortTag;
 
     // Check and potentially upgrade tools in parallel
     const toolChecks = yield* Effect.all(
       [
-        Effect.either(checkTool("Bun", toolManagement.bun, force)),
-        Effect.either(checkTool("Git", toolManagement.git, force)),
-        Effect.either(checkTool("Mise", toolManagement.mise, force)),
-        Effect.either(checkTool("Fzf", toolManagement.fzf, force)),
-        Effect.either(checkTool("Gcloud", toolManagement.gcloud, force)),
+        Effect.either(checkTool("Bun", toolManagement.bun)),
+        Effect.either(checkTool("Git", toolManagement.git)),
+        Effect.either(checkTool("Mise", toolManagement.mise)),
+        Effect.either(checkTool("Fzf", toolManagement.fzf)),
+        Effect.either(checkTool("Gcloud", toolManagement.gcloud)),
       ],
       { concurrency: "unbounded" },
     );
@@ -155,32 +145,24 @@ function upgradeEssentialTools(force: boolean): Effect.Effect<void, DevError, an
 function checkTool(
   toolName: string,
   toolManager: ToolManagementPort[keyof ToolManagementPort],
-  force: boolean,
 ): Effect.Effect<void, DevError, any> {
   return Effect.gen(function* () {
-    if (force) {
-      yield* Effect.logInfo(`📦 Force upgrading ${toolName}...`);
+    const { isValid, currentVersion } = yield* toolManager
+      .checkVersion()
+      .pipe(Effect.mapError((error) => unknownError(`${toolName} version check failed: ${error}`)));
+
+    if (isValid && currentVersion) {
+      yield* Effect.logInfo(`✅ ${toolName} is up to date (${currentVersion})`);
+    } else if (currentVersion) {
+      yield* Effect.logInfo(`📦 Upgrading ${toolName} from ${currentVersion}...`);
       yield* toolManager
         .ensureVersionOrUpgrade()
         .pipe(Effect.mapError((error) => unknownError(`${toolName} upgrade failed: ${error}`)));
     } else {
-      const { isValid, currentVersion } = yield* toolManager
-        .checkVersion()
-        .pipe(Effect.mapError((error) => unknownError(`${toolName} version check failed: ${error}`)));
-
-      if (isValid && currentVersion) {
-        yield* Effect.logInfo(`✅ ${toolName} is up to date (${currentVersion})`);
-      } else if (currentVersion) {
-        yield* Effect.logInfo(`📦 Upgrading ${toolName} from ${currentVersion}...`);
-        yield* toolManager
-          .ensureVersionOrUpgrade()
-          .pipe(Effect.mapError((error) => unknownError(`${toolName} upgrade failed: ${error}`)));
-      } else {
-        yield* Effect.logInfo(`📦 Installing ${toolName}...`);
-        yield* toolManager
-          .ensureVersionOrUpgrade()
-          .pipe(Effect.mapError((error) => unknownError(`${toolName} installation failed: ${error}`)));
-      }
+      yield* Effect.logInfo(`📦 Installing ${toolName}...`);
+      yield* toolManager
+        .ensureVersionOrUpgrade()
+        .pipe(Effect.mapError((error) => unknownError(`${toolName} installation failed: ${error}`)));
     }
   });
 }
