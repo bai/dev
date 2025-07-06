@@ -1,6 +1,6 @@
 import { Effect, Layer } from "effect";
 
-import { gitError, type GitError, type UnknownError } from "../../domain/errors";
+import { gitError, type GitError, type ShellExecutionError } from "../../domain/errors";
 import type { Repository } from "../../domain/models";
 import { GitPortTag, type GitPort } from "../../domain/ports/git-port";
 import { ShellPortTag, type ShellPort } from "../../domain/ports/shell-port";
@@ -10,7 +10,7 @@ export const makeGitLive = (shell: ShellPort): GitPort => ({
   cloneRepositoryToPath: (
     repository: Repository,
     destinationPath: string,
-  ): Effect.Effect<void, GitError | UnknownError> =>
+  ): Effect.Effect<void, GitError | ShellExecutionError> =>
     Effect.scoped(
       Effect.gen(function* () {
         // Add cleanup finalizer for failed clone operations
@@ -28,7 +28,7 @@ export const makeGitLive = (shell: ShellPort): GitPort => ({
       }),
     ),
 
-  fetchLatestUpdates: (repositoryPath: string): Effect.Effect<void, GitError | UnknownError> =>
+  fetchLatestUpdates: (repositoryPath: string): Effect.Effect<void, GitError | ShellExecutionError> =>
     shell.exec("git", ["fetch"], { cwd: repositoryPath }).pipe(
       Effect.flatMap((result) => {
         if (result.exitCode !== 0) {
@@ -44,7 +44,7 @@ export const makeGitLive = (shell: ShellPort): GitPort => ({
       Effect.catchAll((_error) => Effect.succeed(false)),
     ),
 
-  getCurrentCommitSha: (repositoryPath?: string): Effect.Effect<string, GitError | UnknownError> =>
+  getCurrentCommitSha: (repositoryPath?: string): Effect.Effect<string, GitError | ShellExecutionError> =>
     shell.exec("git", ["rev-parse", "HEAD"], { cwd: repositoryPath }).pipe(
       Effect.flatMap((result) => {
         if (result.exitCode !== 0) {
@@ -54,7 +54,7 @@ export const makeGitLive = (shell: ShellPort): GitPort => ({
       }),
     ),
 
-  getRemoteOriginUrl: (repositoryPath: string): Effect.Effect<string, GitError | UnknownError> =>
+  getRemoteOriginUrl: (repositoryPath: string): Effect.Effect<string, GitError | ShellExecutionError> =>
     shell.exec("git", ["config", "--get", "remote.origin.url"], { cwd: repositoryPath }).pipe(
       Effect.flatMap((result) => {
         if (result.exitCode !== 0) {

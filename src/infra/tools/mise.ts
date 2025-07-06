@@ -4,7 +4,7 @@ import { stringify } from "@iarna/toml";
 import { Context, Effect, Layer } from "effect";
 
 import { ConfigLoaderTag, type ConfigLoader } from "../../config/loader";
-import { externalToolError, unknownError, type ExternalToolError, type UnknownError } from "../../domain/errors";
+import { externalToolError, unknownError, type ExternalToolError, type ShellExecutionError, type UnknownError } from "../../domain/errors";
 import { FileSystemPortTag, type FileSystemPort } from "../../domain/ports/file-system-port";
 import { ShellPortTag, type ShellPort } from "../../domain/ports/shell-port";
 
@@ -17,10 +17,10 @@ const homeDir = process.env.HOME || process.env.USERPROFILE || "";
  * This is infrastructure-level tooling for mise version management
  */
 export interface MiseTools {
-  getCurrentVersion(): Effect.Effect<string | null, UnknownError>;
-  checkVersion(): Effect.Effect<{ isValid: boolean; currentVersion: string | null }, UnknownError>;
-  performUpgrade(): Effect.Effect<boolean, UnknownError>;
-  ensureVersionOrUpgrade(): Effect.Effect<void, ExternalToolError | UnknownError>;
+  getCurrentVersion(): Effect.Effect<string | null, ShellExecutionError>;
+  checkVersion(): Effect.Effect<{ isValid: boolean; currentVersion: string | null }, ShellExecutionError>;
+  performUpgrade(): Effect.Effect<boolean, ShellExecutionError>;
+  ensureVersionOrUpgrade(): Effect.Effect<void, ExternalToolError | ShellExecutionError | UnknownError>;
   setupGlobalConfig(): Effect.Effect<void, UnknownError>;
 }
 
@@ -51,7 +51,7 @@ export const makeMiseToolsLive = (
   };
 
   // Individual functions implementing the service methods
-  const getCurrentVersion = (): Effect.Effect<string | null, UnknownError> =>
+  const getCurrentVersion = (): Effect.Effect<string | null, ShellExecutionError> =>
     shell.exec("mise", ["--version"]).pipe(
       Effect.map((result) => {
         if (result.exitCode === 0 && result.stdout) {
@@ -66,7 +66,7 @@ export const makeMiseToolsLive = (
       Effect.catchAll(() => Effect.succeed(null)),
     );
 
-  const checkVersion = (): Effect.Effect<{ isValid: boolean; currentVersion: string | null }, UnknownError> =>
+  const checkVersion = (): Effect.Effect<{ isValid: boolean; currentVersion: string | null }, ShellExecutionError> =>
     getCurrentVersion().pipe(
       Effect.map((currentVersion) => {
         if (!currentVersion) {
@@ -81,7 +81,7 @@ export const makeMiseToolsLive = (
       }),
     );
 
-  const performUpgrade = (): Effect.Effect<boolean, UnknownError> =>
+  const performUpgrade = (): Effect.Effect<boolean, ShellExecutionError> =>
     Effect.gen(function* () {
       yield* Effect.logInfo("⏳ Updating mise to latest version...");
 
@@ -136,7 +136,7 @@ export const makeMiseToolsLive = (
       }
     });
 
-  const ensureVersionOrUpgrade = (): Effect.Effect<void, ExternalToolError | UnknownError> =>
+  const ensureVersionOrUpgrade = (): Effect.Effect<void, ExternalToolError | ShellExecutionError | UnknownError> =>
     Effect.gen(function* () {
       const { isValid, currentVersion } = yield* checkVersion();
 

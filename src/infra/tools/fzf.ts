@@ -1,6 +1,6 @@
 import { Context, Effect, Layer } from "effect";
 
-import { externalToolError, type ExternalToolError, type UnknownError } from "../../domain/errors";
+import { externalToolError, type ExternalToolError, type ShellExecutionError } from "../../domain/errors";
 import { ShellPortTag, type ShellPort } from "../../domain/ports/shell-port";
 
 export const FZF_MIN_VERSION = "0.35.0";
@@ -10,10 +10,10 @@ export const FZF_MIN_VERSION = "0.35.0";
  * This is infrastructure-level tooling for fzf version management
  */
 export interface FzfTools {
-  getCurrentVersion(): Effect.Effect<string | null, UnknownError>;
-  checkVersion(): Effect.Effect<{ isValid: boolean; currentVersion: string | null }, UnknownError>;
-  performUpgrade(): Effect.Effect<boolean, UnknownError>;
-  ensureVersionOrUpgrade(): Effect.Effect<void, ExternalToolError | UnknownError>;
+  getCurrentVersion(): Effect.Effect<string | null, ShellExecutionError>;
+  checkVersion(): Effect.Effect<{ isValid: boolean; currentVersion: string | null }, ShellExecutionError>;
+  performUpgrade(): Effect.Effect<boolean, ShellExecutionError>;
+  ensureVersionOrUpgrade(): Effect.Effect<void, ExternalToolError | ShellExecutionError>;
 }
 
 // Helper function for version comparison
@@ -38,7 +38,7 @@ const compareVersions = (version1: string, version2: string): number => {
 
 // Factory function to create FzfTools implementation
 export const makeFzfToolsLive = (shell: ShellPort): FzfTools => ({
-  getCurrentVersion: (): Effect.Effect<string | null, UnknownError> =>
+  getCurrentVersion: (): Effect.Effect<string | null, ShellExecutionError> =>
     shell.exec("fzf", ["--version"]).pipe(
       Effect.map((result) => {
         if (result.exitCode === 0 && result.stdout) {
@@ -52,7 +52,7 @@ export const makeFzfToolsLive = (shell: ShellPort): FzfTools => ({
       Effect.catchAll(() => Effect.succeed(null)),
     ),
 
-  checkVersion: (): Effect.Effect<{ isValid: boolean; currentVersion: string | null }, UnknownError> =>
+  checkVersion: (): Effect.Effect<{ isValid: boolean; currentVersion: string | null }, ShellExecutionError> =>
     Effect.gen(function* () {
       const fzfTools = makeFzfToolsLive(shell);
       const currentVersion = yield* fzfTools.getCurrentVersion();
@@ -68,7 +68,7 @@ export const makeFzfToolsLive = (shell: ShellPort): FzfTools => ({
       };
     }),
 
-  performUpgrade: (): Effect.Effect<boolean, UnknownError> =>
+  performUpgrade: (): Effect.Effect<boolean, ShellExecutionError> =>
     Effect.gen(function* () {
       yield* Effect.logInfo("⏳ Updating fzf via mise...");
 
@@ -83,7 +83,7 @@ export const makeFzfToolsLive = (shell: ShellPort): FzfTools => ({
       }
     }),
 
-  ensureVersionOrUpgrade: (): Effect.Effect<void, ExternalToolError | UnknownError> =>
+  ensureVersionOrUpgrade: (): Effect.Effect<void, ExternalToolError | ShellExecutionError> =>
     Effect.gen(function* () {
       const fzfTools = makeFzfToolsLive(shell);
       const { isValid, currentVersion } = yield* fzfTools.checkVersion();

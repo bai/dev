@@ -1,6 +1,6 @@
 import { Context, Effect, Layer } from "effect";
 
-import { externalToolError, type ExternalToolError, type UnknownError } from "../../domain/errors";
+import { externalToolError, type ExternalToolError, type ShellExecutionError } from "../../domain/errors";
 import { ShellPortTag, type ShellPort } from "../../domain/ports/shell-port";
 
 export const BUN_MIN_VERSION = "1.2.0";
@@ -10,10 +10,10 @@ export const BUN_MIN_VERSION = "1.2.0";
  * This is infrastructure-level tooling for bun version management
  */
 export interface BunTools {
-  getCurrentVersion(): Effect.Effect<string | null, UnknownError>;
-  checkVersion(): Effect.Effect<{ isValid: boolean; currentVersion: string | null }, UnknownError>;
-  performUpgrade(): Effect.Effect<boolean, UnknownError>;
-  ensureVersionOrUpgrade(): Effect.Effect<void, ExternalToolError | UnknownError>;
+  getCurrentVersion(): Effect.Effect<string | null, ShellExecutionError>;
+  checkVersion(): Effect.Effect<{ isValid: boolean; currentVersion: string | null }, ShellExecutionError>;
+  performUpgrade(): Effect.Effect<boolean, ShellExecutionError>;
+  ensureVersionOrUpgrade(): Effect.Effect<void, ExternalToolError | ShellExecutionError>;
 }
 
 // Helper function for version comparison
@@ -38,7 +38,7 @@ const compareVersions = (version1: string, version2: string): number => {
 
 // Factory function to create BunTools implementation
 export const makeBunToolsLive = (shell: ShellPort): BunTools => ({
-  getCurrentVersion: (): Effect.Effect<string | null, UnknownError> =>
+  getCurrentVersion: (): Effect.Effect<string | null, ShellExecutionError> =>
     shell.exec("bun", ["--version"]).pipe(
       Effect.map((result) => {
         if (result.exitCode === 0 && result.stdout) {
@@ -52,7 +52,7 @@ export const makeBunToolsLive = (shell: ShellPort): BunTools => ({
       Effect.catchAll(() => Effect.succeed(null)),
     ),
 
-  checkVersion: (): Effect.Effect<{ isValid: boolean; currentVersion: string | null }, UnknownError> =>
+  checkVersion: (): Effect.Effect<{ isValid: boolean; currentVersion: string | null }, ShellExecutionError> =>
     Effect.gen(function* () {
       const bunTools = makeBunToolsLive(shell);
       const currentVersion = yield* bunTools.getCurrentVersion();
@@ -68,7 +68,7 @@ export const makeBunToolsLive = (shell: ShellPort): BunTools => ({
       };
     }),
 
-  performUpgrade: (): Effect.Effect<boolean, UnknownError> =>
+  performUpgrade: (): Effect.Effect<boolean, ShellExecutionError> =>
     Effect.gen(function* () {
       yield* Effect.logInfo("⏳ Updating bun...");
 
@@ -79,11 +79,14 @@ export const makeBunToolsLive = (shell: ShellPort): BunTools => ({
         return true;
       } else {
         yield* Effect.logError(`❌ Bun update failed with exit code: ${result.exitCode}`);
+        if (result.stderr) {
+          yield* Effect.logError(`   stderr: ${result.stderr}`);
+        }
         return false;
       }
     }),
 
-  ensureVersionOrUpgrade: (): Effect.Effect<void, ExternalToolError | UnknownError> =>
+  ensureVersionOrUpgrade: (): Effect.Effect<void, ExternalToolError | ShellExecutionError> =>
     Effect.gen(function* () {
       const bunTools = makeBunToolsLive(shell);
       const { isValid, currentVersion } = yield* bunTools.checkVersion();

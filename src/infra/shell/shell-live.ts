@@ -2,7 +2,7 @@ import { spawn } from "bun";
 
 import { Duration, Effect, Layer } from "effect";
 
-import { unknownError, type UnknownError } from "../../domain/errors";
+import { shellExecutionError, shellTimeoutError, type ShellExecutionError, type ShellTimeoutError } from "../../domain/errors";
 import { ShellPortTag, type ShellPort, type SpawnResult } from "../../domain/ports/shell-port";
 
 // Individual functions for each method
@@ -10,7 +10,7 @@ const exec = (
   command: string,
   args: string[] = [],
   options: { cwd?: string } = {},
-): Effect.Effect<SpawnResult, UnknownError> =>
+): Effect.Effect<SpawnResult, ShellExecutionError> =>
   Effect.tryPromise({
     try: async () => {
       const proc = spawn([command, ...args], {
@@ -33,14 +33,19 @@ const exec = (
         stderr: stderr.trim(),
       };
     },
-    catch: (error) => unknownError(`Failed to execute command ${command}: ${error}`),
+    catch: (error) => shellExecutionError(
+      command,
+      args,
+      `Failed to execute command`,
+      { cwd: options.cwd, underlyingError: error }
+    ),
   });
 
 const execInteractive = (
   command: string,
   args: string[] = [],
   options: { cwd?: string } = {},
-): Effect.Effect<number, UnknownError> =>
+): Effect.Effect<number, ShellExecutionError> =>
   Effect.tryPromise({
     try: async () => {
       const proc = spawn([command, ...args], {
@@ -52,7 +57,12 @@ const execInteractive = (
 
       return await proc.exited;
     },
-    catch: (error) => unknownError(`Failed to execute interactive command ${command}: ${error}`),
+    catch: (error) => shellExecutionError(
+      command,
+      args,
+      `Failed to execute interactive command`,
+      { cwd: options.cwd, underlyingError: error }
+    ),
   });
 
 const setProcessCwd = (path: string): Effect.Effect<void> =>
@@ -66,11 +76,11 @@ const execWithTimeout = (
   args: string[] = [],
   timeout: Duration.Duration,
   options: { cwd?: string } = {},
-): Effect.Effect<SpawnResult, UnknownError> =>
+): Effect.Effect<SpawnResult, ShellExecutionError | ShellTimeoutError> =>
   exec(command, args, options).pipe(
     Effect.timeout(timeout),
     Effect.catchTag("TimeoutException", () =>
-      Effect.fail(unknownError(`Command ${command} timed out after ${Duration.toMillis(timeout)}ms`)),
+      Effect.fail(shellTimeoutError(command, args, Duration.toMillis(timeout), options.cwd)),
     ),
   );
 
@@ -79,11 +89,11 @@ const execInteractiveWithTimeout = (
   args: string[] = [],
   timeout: Duration.Duration,
   options: { cwd?: string } = {},
-): Effect.Effect<number, UnknownError> =>
+): Effect.Effect<number, ShellExecutionError | ShellTimeoutError> =>
   execInteractive(command, args, options).pipe(
     Effect.timeout(timeout),
     Effect.catchTag("TimeoutException", () =>
-      Effect.fail(unknownError(`Interactive command ${command} timed out after ${Duration.toMillis(timeout)}ms`)),
+      Effect.fail(shellTimeoutError(command, args, Duration.toMillis(timeout), options.cwd)),
     ),
   );
 

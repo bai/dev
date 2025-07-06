@@ -43,6 +43,21 @@ export class HealthCheckError extends Data.TaggedError("HealthCheckError")<{
   readonly tool?: string;
 }> {}
 
+export class ShellExecutionError extends Data.TaggedError("ShellExecutionError")<{
+  readonly command: string;
+  readonly args: readonly string[];
+  readonly reason: string;
+  readonly cwd?: string;
+  readonly underlyingError?: unknown;
+}> {}
+
+export class ShellTimeoutError extends Data.TaggedError("ShellTimeoutError")<{
+  readonly command: string;
+  readonly args: readonly string[];
+  readonly timeoutMs: number;
+  readonly cwd?: string;
+}> {}
+
 // Union type for all domain errors
 export type DevError =
   | ConfigError
@@ -53,6 +68,8 @@ export type DevError =
   | FileSystemError
   | StatusCheckError
   | HealthCheckError
+  | ShellExecutionError
+  | ShellTimeoutError
   | UnknownError;
 
 // Exit code mapping
@@ -76,6 +93,10 @@ export const exitCode = (error: DevError): number => {
       return 1;
     case "HealthCheckError":
       return 8;
+    case "ShellExecutionError":
+      return 9;
+    case "ShellTimeoutError":
+      return 10;
     default:
       // This should never happen due to exhaustive typing, but satisfies linter
       return 1;
@@ -94,6 +115,18 @@ export const fileSystemError = (reason: string, path?: string) => new FileSystem
 export const statusCheckError = (reason: string, failedComponents: string[]) =>
   new StatusCheckError({ reason, failedComponents });
 export const healthCheckError = (reason: string, tool?: string) => new HealthCheckError({ reason, tool });
+export const shellExecutionError = (
+  command: string,
+  args: readonly string[],
+  reason: string,
+  options?: { cwd?: string; underlyingError?: unknown }
+) => new ShellExecutionError({ command, args, reason, ...options });
+export const shellTimeoutError = (
+  command: string,
+  args: readonly string[],
+  timeoutMs: number,
+  cwd?: string
+) => new ShellTimeoutError({ command, args, timeoutMs, cwd });
 
 // Type guards (using Effect's built-in error matching)
 export const isConfigError = (e: DevError): e is ConfigError => e._tag === "ConfigError";
@@ -105,3 +138,5 @@ export const isExternalToolError = (e: DevError): e is ExternalToolError => e._t
 export const isFileSystemError = (e: DevError): e is FileSystemError => e._tag === "FileSystemError";
 export const isStatusCheckError = (e: DevError): e is StatusCheckError => e._tag === "StatusCheckError";
 export const isHealthCheckError = (e: DevError): e is HealthCheckError => e._tag === "HealthCheckError";
+export const isShellExecutionError = (e: DevError): e is ShellExecutionError => e._tag === "ShellExecutionError";
+export const isShellTimeoutError = (e: DevError): e is ShellTimeoutError => e._tag === "ShellTimeoutError";

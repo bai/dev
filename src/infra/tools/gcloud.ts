@@ -6,6 +6,7 @@ import {
   externalToolError,
   unknownError,
   type ExternalToolError,
+  type ShellExecutionError,
   type UnknownError,
 } from "../../domain/errors";
 import { FileSystemPortTag, type FileSystemPort } from "../../domain/ports/file-system-port";
@@ -18,10 +19,10 @@ export const GCLOUD_MIN_VERSION = "450.0.0";
  * This is infrastructure-level tooling for gcloud version management
  */
 export interface GcloudTools {
-  getCurrentVersion(): Effect.Effect<string | null, UnknownError>;
-  checkVersion(): Effect.Effect<{ isValid: boolean; currentVersion: string | null }, UnknownError>;
-  performUpgrade(): Effect.Effect<boolean, UnknownError>;
-  ensureVersionOrUpgrade(): Effect.Effect<void, ExternalToolError | UnknownError>;
+  getCurrentVersion(): Effect.Effect<string | null, ShellExecutionError>;
+  checkVersion(): Effect.Effect<{ isValid: boolean; currentVersion: string | null }, ShellExecutionError>;
+  performUpgrade(): Effect.Effect<boolean, ShellExecutionError>;
+  ensureVersionOrUpgrade(): Effect.Effect<void, ExternalToolError | ShellExecutionError | UnknownError>;
   setupConfig(): Effect.Effect<void, UnknownError>;
 }
 
@@ -48,7 +49,7 @@ export const makeGcloudToolsLive = (shell: ShellPort, filesystem: FileSystemPort
   };
 
   // Individual functions implementing the service methods
-  const getCurrentVersion = (): Effect.Effect<string | null, UnknownError> =>
+  const getCurrentVersion = (): Effect.Effect<string | null, ShellExecutionError> =>
     shell.exec("gcloud", ["version"]).pipe(
       Effect.map((result) => {
         if (result.exitCode === 0 && result.stdout) {
@@ -67,7 +68,7 @@ export const makeGcloudToolsLive = (shell: ShellPort, filesystem: FileSystemPort
       Effect.catchAll(() => Effect.succeed(null)),
     );
 
-  const checkVersion = (): Effect.Effect<{ isValid: boolean; currentVersion: string | null }, UnknownError> =>
+  const checkVersion = (): Effect.Effect<{ isValid: boolean; currentVersion: string | null }, ShellExecutionError> =>
     getCurrentVersion().pipe(
       Effect.map((currentVersion) => {
         if (!currentVersion) {
@@ -82,7 +83,7 @@ export const makeGcloudToolsLive = (shell: ShellPort, filesystem: FileSystemPort
       }),
     );
 
-  const performUpgrade = (): Effect.Effect<boolean, UnknownError> =>
+  const performUpgrade = (): Effect.Effect<boolean, ShellExecutionError> =>
     Effect.gen(function* () {
       yield* Effect.logInfo("⏳ Updating gcloud via mise...");
 
@@ -93,6 +94,9 @@ export const makeGcloudToolsLive = (shell: ShellPort, filesystem: FileSystemPort
         return true;
       } else {
         yield* Effect.logError(`❌ Gcloud update failed with exit code: ${result.exitCode}`);
+        if (result.stderr) {
+          yield* Effect.logError(`   stderr: ${result.stderr}`);
+        }
         return false;
       }
     });
@@ -118,7 +122,7 @@ export const makeGcloudToolsLive = (shell: ShellPort, filesystem: FileSystemPort
       yield* Effect.logInfo("   ✅ Google Cloud config ready");
     });
 
-  const ensureVersionOrUpgrade = (): Effect.Effect<void, ExternalToolError | UnknownError> =>
+  const ensureVersionOrUpgrade = (): Effect.Effect<void, ExternalToolError | ShellExecutionError | UnknownError> =>
     Effect.gen(function* () {
       const { isValid, currentVersion } = yield* checkVersion();
 

@@ -1,6 +1,6 @@
 import { Context, type Effect } from "effect";
 
-import type { UnknownError } from "../errors";
+import type { ShellExecutionError, UnknownError } from "../errors";
 
 export interface MiseInfo {
   version: string;
@@ -11,27 +11,27 @@ export interface MisePort {
   /**
    * Check if mise is installed and get version info
    */
-  checkInstallation(): Effect.Effect<MiseInfo, UnknownError>;
+  checkInstallation(): Effect.Effect<MiseInfo, ShellExecutionError>;
 
   /**
    * Install mise if not present
    */
-  install(): Effect.Effect<void, UnknownError>;
+  install(): Effect.Effect<void, ShellExecutionError>;
 
   /**
    * Run mise install in the current directory
    */
-  installTools(cwd?: string): Effect.Effect<void, UnknownError>;
+  installTools(cwd?: string): Effect.Effect<void, ShellExecutionError>;
 
   /**
    * Run a task using mise
    */
-  runTask(taskName: string, cwd?: string): Effect.Effect<void, UnknownError>;
+  runTask(taskName: string, cwd?: string): Effect.Effect<void, ShellExecutionError>;
 
   /**
    * Get available tasks
    */
-  getTasks(cwd?: string): Effect.Effect<string[], UnknownError>;
+  getTasks(cwd?: string): Effect.Effect<string[], ShellExecutionError>;
 
   /**
    * Setup mise global configuration from current config

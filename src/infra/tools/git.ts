@@ -1,6 +1,6 @@
 import { Context, Effect, Layer } from "effect";
 
-import { externalToolError, type ExternalToolError, type UnknownError } from "../../domain/errors";
+import { externalToolError, type ExternalToolError, type ShellExecutionError } from "../../domain/errors";
 import { ShellPortTag, type ShellPort } from "../../domain/ports/shell-port";
 
 export const GIT_MIN_VERSION = "2.50.0";
@@ -10,10 +10,10 @@ export const GIT_MIN_VERSION = "2.50.0";
  * This is infrastructure-level tooling for git version management
  */
 export interface GitTools {
-  getCurrentVersion(): Effect.Effect<string | null, UnknownError>;
-  checkVersion(): Effect.Effect<{ isValid: boolean; currentVersion: string | null }, UnknownError>;
-  performUpgrade(): Effect.Effect<boolean, UnknownError>;
-  ensureVersionOrUpgrade(): Effect.Effect<void, ExternalToolError | UnknownError>;
+  getCurrentVersion(): Effect.Effect<string | null, ShellExecutionError>;
+  checkVersion(): Effect.Effect<{ isValid: boolean; currentVersion: string | null }, ShellExecutionError>;
+  performUpgrade(): Effect.Effect<boolean, ShellExecutionError>;
+  ensureVersionOrUpgrade(): Effect.Effect<void, ExternalToolError | ShellExecutionError>;
 }
 
 // Helper function for version comparison
@@ -38,7 +38,7 @@ const compareVersions = (version1: string, version2: string): number => {
 
 // Factory function to create GitTools implementation
 export const makeGitToolsLive = (shell: ShellPort): GitTools => ({
-  getCurrentVersion: (): Effect.Effect<string | null, UnknownError> =>
+  getCurrentVersion: (): Effect.Effect<string | null, ShellExecutionError> =>
     shell.exec("git", ["--version"]).pipe(
       Effect.map((result) => {
         if (result.exitCode === 0 && result.stdout) {
@@ -52,7 +52,7 @@ export const makeGitToolsLive = (shell: ShellPort): GitTools => ({
       Effect.catchAll(() => Effect.succeed(null)),
     ),
 
-  checkVersion: (): Effect.Effect<{ isValid: boolean; currentVersion: string | null }, UnknownError> =>
+  checkVersion: (): Effect.Effect<{ isValid: boolean; currentVersion: string | null }, ShellExecutionError> =>
     Effect.gen(function* () {
       const gitTools = makeGitToolsLive(shell);
       const currentVersion = yield* gitTools.getCurrentVersion();
@@ -69,7 +69,7 @@ export const makeGitToolsLive = (shell: ShellPort): GitTools => ({
       };
     }),
 
-  performUpgrade: (): Effect.Effect<boolean, UnknownError> =>
+  performUpgrade: (): Effect.Effect<boolean, ShellExecutionError> =>
     Effect.gen(function* () {
       yield* Effect.logInfo("⏳ Updating git via mise...");
 
@@ -84,7 +84,7 @@ export const makeGitToolsLive = (shell: ShellPort): GitTools => ({
       }
     }),
 
-  ensureVersionOrUpgrade: (): Effect.Effect<void, ExternalToolError | UnknownError> =>
+  ensureVersionOrUpgrade: (): Effect.Effect<void, ExternalToolError | ShellExecutionError> =>
     Effect.gen(function* () {
       const gitTools = makeGitToolsLive(shell);
       const { isValid, currentVersion } = yield* gitTools.checkVersion();

@@ -1,12 +1,12 @@
 import { Effect, Layer } from "effect";
 
-import { authError, type AuthError, type UnknownError } from "../../domain/errors";
+import { authError, type AuthError, type ShellExecutionError } from "../../domain/errors";
 import { KeychainPortTag, type KeychainPort } from "../../domain/ports/keychain-port";
 import { ShellPortTag, type ShellPort } from "../../domain/ports/shell-port";
 
 // Factory function to create Keychain implementation
 export const makeKeychainLive = (shell: ShellPort): KeychainPort => ({
-  setCredential: (service: string, account: string, password: string): Effect.Effect<void, AuthError | UnknownError> =>
+  setCredential: (service: string, account: string, password: string): Effect.Effect<void, AuthError | ShellExecutionError> =>
     shell
       .exec("security", [
         "add-generic-password",
@@ -27,7 +27,7 @@ export const makeKeychainLive = (shell: ShellPort): KeychainPort => ({
         }),
       ),
 
-  getCredential: (service: string, account: string): Effect.Effect<string, AuthError | UnknownError> =>
+  getCredential: (service: string, account: string): Effect.Effect<string, AuthError | ShellExecutionError> =>
     shell
       .exec("security", [
         "find-generic-password",
@@ -46,7 +46,7 @@ export const makeKeychainLive = (shell: ShellPort): KeychainPort => ({
         }),
       ),
 
-  removeCredential: (service: string, account: string): Effect.Effect<void, AuthError | UnknownError> =>
+  removeCredential: (service: string, account: string): Effect.Effect<void, AuthError | ShellExecutionError> =>
     shell
       .exec("security", [
         "delete-generic-password",
