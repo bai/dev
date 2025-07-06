@@ -89,9 +89,7 @@ const program = Effect.scoped(
       const commandTracker = yield* CommandTrackerTag;
       yield* Effect.addFinalizer(() => 
         commandTracker.gracefulShutdown().pipe(
-          Effect.catchAll((error) => 
-            Effect.logWarning(`Failed to complete graceful command tracking shutdown: ${error._tag}`)
-          )
+          Effect.catchAll(() => Effect.void)
         )
       );
 

@@ -61,9 +61,17 @@ const completeCommandRun = (id: string, exitCode: number) =>
 
 const gracefulShutdown = Effect.gen(function* () {
   yield* Effect.logDebug("🛑 Gracefully shutting down command tracking...");
-  const runStore = yield* RunStorePortTag;
-  yield* runStore.completeIncompleteRuns();
-  yield* Effect.logDebug("✅ Command tracking shutdown complete");
+  
+  // Try to complete incomplete runs, but don't fail if database is unavailable
+  yield* Effect.gen(function* () {
+    const runStore = yield* RunStorePortTag;
+    yield* runStore.completeIncompleteRuns();
+    yield* Effect.logDebug("✅ Command tracking shutdown complete");
+  }).pipe(
+    Effect.catchAll((error) => 
+      Effect.logDebug(`Command tracking shutdown skipped (database unavailable): ${error._tag}`)
+    )
+  );
 });
 
 // Functional service implementation as plain object

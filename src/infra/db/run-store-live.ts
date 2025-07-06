@@ -136,21 +136,8 @@ export const RunStorePortLiveLayer = Layer.scoped(
     // Create the service
     const runStore = makeRunStoreLive(database);
 
-    // Set up a finalizer to complete incomplete runs on shutdown
-    yield* Effect.addFinalizer(() =>
-      Effect.gen(function* () {
-        yield* Effect.logDebug("Completing incomplete runs during shutdown...");
-        
-        // Complete incomplete runs, but don't fail shutdown if this fails
-        yield* runStore
-          .completeIncompleteRuns()
-          .pipe(
-            Effect.catchAll((error) =>
-              Effect.logWarning(`Failed to complete incomplete runs during shutdown: ${error._tag}`),
-            ),
-          );
-      }),
-    );
+    // Note: Graceful shutdown of incomplete runs is handled by the main application
+    // in index.ts to ensure proper ordering with database shutdown
 
     return runStore;
   }),
