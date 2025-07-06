@@ -3,8 +3,8 @@ import { Effect } from "effect";
 
 import { ConfigLoaderService } from "../../config/loader";
 import { exitCode, statusCheckError, unknownError, type DevError } from "../../domain/errors";
-import { HealthCheckServiceTag } from "../../domain/ports/HealthCheckService";
-import { PathServiceTag } from "../../domain/services/PathService";
+import { HealthCheckPortTag } from "../../domain/ports/health-check-port";
+import { PathServiceTag } from "../../domain/services/path-service";
 
 interface StatusItem {
   tool: string;
@@ -21,7 +21,7 @@ const refresh = Options.boolean("refresh").pipe(Options.optional);
 // Create the status command using @effect/cli
 export const statusCommand = Command.make("status", { json, refresh }, ({ json, refresh }) =>
   Effect.gen(function* () {
-    const healthCheckService = yield* HealthCheckServiceTag;
+    const healthCheckService = yield* HealthCheckPortTag;
     const configLoader = yield* ConfigLoaderService;
     const pathService = yield* PathServiceTag;
 

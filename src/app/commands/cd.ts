@@ -3,9 +3,9 @@ import { Effect } from "effect";
 
 import { unknownError, type DevError } from "../../domain/errors";
 import { filter } from "../../domain/matching";
-import { DirectoryTag } from "../../domain/ports/DirectoryService";
-import { InteractiveSelectorTag } from "../../domain/ports/InteractiveSelector";
-import { ShellIntegrationServiceTag } from "../services/ShellIntegrationService";
+import { DirectoryPortTag } from "../../domain/ports/directory-port";
+import { InteractiveSelectorPortTag } from "../../domain/ports/interactive-selector-port";
+import { ShellIntegrationTag } from "../services/shell-integration-service";
 
 // Define the folder name argument as optional
 const folderName = Args.text({ name: "folder_name" }).pipe(Args.optional);
@@ -31,7 +31,7 @@ function handleDirectCd(folderName: string): Effect.Effect<void, DevError, any> 
     }
 
     // Use DirectoryService to get directories
-    const directoryService = yield* DirectoryTag;
+    const directoryService = yield* DirectoryPortTag;
     const directories = yield* directoryService.findDirs().pipe(
       Effect.tap(() => Effect.annotateCurrentSpan("operation", "find_directories")),
       Effect.withSpan("find-directories")
@@ -50,7 +50,7 @@ function handleDirectCd(folderName: string): Effect.Effect<void, DevError, any> 
         const targetPath = fuzzyMatches[0].str; // This is a relative path
         yield* Effect.annotateCurrentSpan("target_path", targetPath);
         // Use ShellIntegrationService
-        const shellIntegration = yield* ShellIntegrationServiceTag;
+        const shellIntegration = yield* ShellIntegrationTag;
         yield* shellIntegration.changeDirectory(targetPath).pipe(
           Effect.tap(() => Effect.annotateCurrentSpan("operation", "change_directory")),
           Effect.withSpan("change-directory")
@@ -68,7 +68,7 @@ function handleDirectCd(folderName: string): Effect.Effect<void, DevError, any> 
 function handleInteractiveCd(): Effect.Effect<void, DevError, any> {
   return Effect.gen(function* () {
     // Use DirectoryService to get directories
-    const directoryService = yield* DirectoryTag;
+    const directoryService = yield* DirectoryPortTag;
     const directories = yield* directoryService.findDirs().pipe(
       Effect.tap(() => Effect.annotateCurrentSpan("operation", "find_directories")),
       Effect.withSpan("find-directories")
@@ -81,7 +81,7 @@ function handleInteractiveCd(): Effect.Effect<void, DevError, any> {
     }
 
     // Use InteractiveSelector for interactive selection
-    const selector = yield* InteractiveSelectorTag;
+    const selector = yield* InteractiveSelectorPortTag;
     const selectedPath = yield* selector.selectFromList(directories).pipe(
       Effect.tap(() => Effect.annotateCurrentSpan("operation", "interactive_selection")),
       Effect.withSpan("interactive-selection")
@@ -90,7 +90,7 @@ function handleInteractiveCd(): Effect.Effect<void, DevError, any> {
     if (selectedPath) {
       yield* Effect.annotateCurrentSpan("selected_path", selectedPath);
       // Use ShellIntegrationService
-      const shellIntegration = yield* ShellIntegrationServiceTag;
+      const shellIntegration = yield* ShellIntegrationTag;
       yield* shellIntegration.changeDirectory(selectedPath).pipe(
         Effect.tap(() => Effect.annotateCurrentSpan("operation", "change_directory")),
         Effect.withSpan("change-directory")

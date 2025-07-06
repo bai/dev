@@ -9,16 +9,16 @@ import {
   type ExternalToolError,
   type UnknownError,
 } from "../../domain/errors";
-import { FileSystemTag, type FileSystem } from "../../domain/ports/FileSystem";
-import { ShellTag, type Shell } from "../../domain/ports/Shell";
+import { FileSystemPortTag, type FileSystemPort } from "../../domain/ports/file-system-port";
+import { ShellPortTag, type ShellPort } from "../../domain/ports/shell-port";
 
 export const GCLOUD_MIN_VERSION = "450.0.0";
 
 /**
- * Google Cloud tools service for version checking and management
+ * Google Cloud tools for version checking and management
  * This is infrastructure-level tooling for gcloud version management
  */
-export interface GcloudToolsService {
+export interface GcloudTools {
   getCurrentVersion(): Effect.Effect<string | null, UnknownError>;
   checkVersion(): Effect.Effect<{ isValid: boolean; currentVersion: string | null }, UnknownError>;
   performUpgrade(): Effect.Effect<boolean, UnknownError>;
@@ -26,8 +26,8 @@ export interface GcloudToolsService {
   setupConfig(): Effect.Effect<void, UnknownError>;
 }
 
-// Factory function that creates GcloudToolsService with dependencies
-export const makeGcloudToolsLive = (shell: Shell, filesystem: FileSystem): GcloudToolsService => {
+// Factory function that creates GcloudTools with dependencies
+export const makeGcloudToolsLive = (shell: ShellPort, filesystem: FileSystemPort): GcloudTools => {
   // Helper function for version comparison
   const compareVersions = (version1: string, version2: string): number => {
     const v1Parts = version1.split(".").map(Number);
@@ -180,17 +180,17 @@ export const makeGcloudToolsLive = (shell: Shell, filesystem: FileSystem): Gclou
 };
 
 // Service tag for Effect Context system
-export class GcloudToolsServiceTag extends Context.Tag("GcloudToolsService")<
-  GcloudToolsServiceTag,
-  GcloudToolsService
+export class GcloudToolsTag extends Context.Tag("GcloudTools")<
+  GcloudToolsTag,
+  GcloudTools
 >() {}
 
 // Effect Layer for dependency injection using factory function
-export const GcloudToolsServiceLive = Layer.effect(
-  GcloudToolsServiceTag,
+export const GcloudToolsLiveLayer = Layer.effect(
+  GcloudToolsTag,
   Effect.gen(function* () {
-    const shell = yield* ShellTag;
-    const filesystem = yield* FileSystemTag;
+    const shell = yield* ShellPortTag;
+    const filesystem = yield* FileSystemPortTag;
     return makeGcloudToolsLive(shell, filesystem);
   }),
 );

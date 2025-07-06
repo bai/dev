@@ -3,11 +3,11 @@ import { Effect } from "effect";
 
 import { ConfigLoaderService, type ConfigLoader } from "../../config/loader";
 import { unknownError, type DevError } from "../../domain/errors";
-import { FileSystemTag, type FileSystem } from "../../domain/ports/FileSystem";
-import { GitTag, type Git } from "../../domain/ports/Git";
-import { ShellTag, type Shell } from "../../domain/ports/Shell";
-import { ToolManagementServiceTag, type ToolManagementService } from "../../domain/ports/ToolManager";
-import { PathServiceTag, type PathService } from "../../domain/services/PathService";
+import { FileSystemPortTag, type FileSystemPort } from "../../domain/ports/file-system-port";
+import { GitPortTag, type GitPort } from "../../domain/ports/git-port";
+import { ShellPortTag, type ShellPort } from "../../domain/ports/shell-port";
+import { ToolManagementPortTag, type ToolManagementPort } from "../../domain/ports/tool-management-port";
+import { PathServiceTag, type PathService } from "../../domain/services/path-service";
 
 // Define the options using @effect/cli
 const force = Options.boolean("force").pipe(Options.optional);
@@ -57,8 +57,8 @@ function selfUpdateCli(pathService: PathService): Effect.Effect<void, DevError, 
   return Effect.gen(function* () {
     yield* Effect.logInfo("🔄 Self-updating CLI repository...");
 
-    const fileSystem = yield* FileSystemTag;
-    const git = yield* GitTag;
+    const fileSystem = yield* FileSystemPortTag;
+    const git = yield* GitPortTag;
 
     // Check if we're in a git repository
     const isGitRepo = yield* git.isGitRepository(pathService.devDir);
@@ -81,7 +81,7 @@ function ensureDirectoriesExist(pathService: PathService): Effect.Effect<void, D
   return Effect.gen(function* () {
     yield* Effect.logInfo("📁 Ensuring necessary directories exist...");
 
-    const fileSystem = yield* FileSystemTag;
+    const fileSystem = yield* FileSystemPortTag;
 
     // Ensure config directory exists
     yield* fileSystem.mkdir(pathService.configDir, true);
@@ -103,7 +103,7 @@ function ensureShellIntegration(pathService: PathService): Effect.Effect<void, D
   return Effect.gen(function* () {
     yield* Effect.logInfo("🐚 Ensuring shell integration...");
 
-    const fileSystem = yield* FileSystemTag;
+    const fileSystem = yield* FileSystemPortTag;
 
     // For now, just ensure the directory exists
     // In the future, this could copy shell scripts, update PATH, etc.
@@ -124,7 +124,7 @@ function upgradeEssentialTools(force: boolean): Effect.Effect<void, DevError, an
       yield* Effect.logInfo("💪 Force mode enabled - will upgrade all tools");
     }
 
-    const toolManagement = yield* ToolManagementServiceTag;
+    const toolManagement = yield* ToolManagementPortTag;
 
     // Check and potentially upgrade tools in parallel
     const toolChecks = yield* Effect.all(
@@ -154,7 +154,7 @@ function upgradeEssentialTools(force: boolean): Effect.Effect<void, DevError, an
  */
 function checkTool(
   toolName: string,
-  toolManager: ToolManagementService[keyof ToolManagementService],
+  toolManager: ToolManagementPort[keyof ToolManagementPort],
   force: boolean,
 ): Effect.Effect<void, DevError, any> {
   return Effect.gen(function* () {

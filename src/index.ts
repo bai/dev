@@ -3,8 +3,8 @@ import { Command } from "@effect/cli";
 import { BunRuntime } from "@effect/platform-bun";
 import { Effect } from "effect";
 
-import { HealthCheckSchedulerServiceTag } from "./app/services/HealthCheckSchedulerService";
-import { VersionServiceTag } from "./app/services/VersionService";
+import { HealthCheckSchedulerTag } from "./app/services/health-check-scheduler-service";
+import { VersionTag } from "./app/services/version-service";
 import { TracingLive } from "./config/tracing";
 import { exitCode, type DevError } from "./domain/errors";
 import { getMainCommand, setupApplicationWithConfig } from "./wiring";
@@ -85,7 +85,7 @@ const program = Effect.scoped(
     // Run the CLI with version from VersionService - provide appLayer first
     yield* Effect.gen(function* () {
       // Get version from VersionService (now within appLayer context)
-      const versionService = yield* VersionServiceTag;
+      const versionService = yield* VersionTag;
       const version = yield* versionService.getVersion;
       
       // Annotate span with CLI information
@@ -100,7 +100,7 @@ const program = Effect.scoped(
       }).pipe(Effect.withSpan("run-cli"));
 
       // After CLI execution completes, schedule background health checks
-      const healthScheduler = yield* HealthCheckSchedulerServiceTag;
+      const healthScheduler = yield* HealthCheckSchedulerTag;
       yield* healthScheduler
         .scheduleHealthChecks()
         .pipe(

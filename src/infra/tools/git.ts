@@ -1,15 +1,15 @@
 import { Context, Effect, Layer } from "effect";
 
 import { externalToolError, type ExternalToolError, type UnknownError } from "../../domain/errors";
-import { ShellTag, type Shell } from "../../domain/ports/Shell";
+import { ShellPortTag, type ShellPort } from "../../domain/ports/shell-port";
 
 export const GIT_MIN_VERSION = "2.50.0";
 
 /**
- * Git tools service for version checking and management
+ * Git tools for version checking and management
  * This is infrastructure-level tooling for git version management
  */
-export interface GitToolsService {
+export interface GitTools {
   getCurrentVersion(): Effect.Effect<string | null, UnknownError>;
   checkVersion(): Effect.Effect<{ isValid: boolean; currentVersion: string | null }, UnknownError>;
   performUpgrade(): Effect.Effect<boolean, UnknownError>;
@@ -36,8 +36,8 @@ const compareVersions = (version1: string, version2: string): number => {
   return 0;
 };
 
-// Factory function to create GitToolsService implementation
-export const makeGitToolsLive = (shell: Shell): GitToolsService => ({
+// Factory function to create GitTools implementation
+export const makeGitToolsLive = (shell: ShellPort): GitTools => ({
   getCurrentVersion: (): Effect.Effect<string | null, UnknownError> =>
     shell.exec("git", ["--version"]).pipe(
       Effect.map((result) => {
@@ -137,13 +137,13 @@ export const makeGitToolsLive = (shell: Shell): GitToolsService => ({
 });
 
 // Service tag for Effect Context system
-export class GitToolsServiceTag extends Context.Tag("GitToolsService")<GitToolsServiceTag, GitToolsService>() {}
+export class GitToolsTag extends Context.Tag("GitTools")<GitToolsTag, GitTools>() {}
 
 // Effect Layer for dependency injection
 export const GitToolsLiveLayer = Layer.effect(
-  GitToolsServiceTag,
+  GitToolsTag,
   Effect.gen(function* () {
-    const shell = yield* ShellTag;
+    const shell = yield* ShellPortTag;
     return makeGitToolsLive(shell);
   }),
 );

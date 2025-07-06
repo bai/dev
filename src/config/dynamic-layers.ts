@@ -1,30 +1,30 @@
 import { Layer } from "effect";
 
-import { CommandTrackingServiceLive } from "../app/services/CommandTrackingService";
-import { HealthCheckSchedulerServiceLiveLayer } from "../app/services/HealthCheckSchedulerService";
-import { ShellIntegrationServiceLive } from "../app/services/ShellIntegrationService";
-import { UpdateCheckServiceLive } from "../app/services/UpdateCheckService";
-import { VersionServiceLive } from "../app/services/VersionService";
-import { PathServiceLive } from "../domain/services/PathService";
-import { RepositoryServiceLive } from "../domain/services/RepositoryService";
-import { DatabaseLiveLayer } from "../infra/db/DatabaseLive";
-import { RunStoreLiveLayer } from "../infra/db/RunStoreLive";
-import { DirectoryServiceLive } from "../infra/fs/DirectoryService";
-import { FileSystemLiveLayer } from "../infra/fs/FileSystemLive";
-import { GitLiveLayer } from "../infra/git/GitLive";
-import { HealthCheckServiceLiveLayer } from "../infra/health/HealthCheckServiceLive";
-import { KeychainLiveLayer } from "../infra/keychain/KeychainLive";
-import { MiseLiveLayer } from "../infra/mise/MiseLive";
-import { NetworkLiveLayer } from "../infra/network/NetworkLive";
-import { GitHubProviderLayer } from "../infra/providers/GitHubProvider";
-import { FzfSelectorLiveLayer } from "../infra/selector/FzfSelectorLive";
-import { ShellLiveLayer } from "../infra/shell/ShellLive";
-import { BunToolsServiceLive } from "../infra/tools/bun";
+import { CommandTrackerLiveLayer } from "../app/services/command-tracking-service";
+import { HealthCheckSchedulerLiveLayer } from "../app/services/health-check-scheduler-service";
+import { ShellIntegrationLiveLayer } from "../app/services/shell-integration-service";
+import { UpdateCheckerLiveLayer } from "../app/services/update-check-service";
+import { VersionLiveLayer } from "../app/services/version-service";
+import { PathServiceLive } from "../domain/services/path-service";
+import { RepositoryServiceLive } from "../domain/services/repository-service";
+import { DatabasePortLiveLayer } from "../infra/db/database-live";
+import { RunStorePortLiveLayer } from "../infra/db/run-store-live";
+import { DirectoryPortLiveLayer } from "../infra/fs/directory-service-live";
+import { FileSystemPortLiveLayer } from "../infra/fs/file-system-live";
+import { GitPortLiveLayer } from "../infra/git/git-live";
+import { HealthCheckPortLiveLayer } from "../infra/health/health-check-service-live";
+import { KeychainPortLiveLayer } from "../infra/keychain/keychain-live";
+import { MisePortLiveLayer } from "../infra/mise/mise-live";
+import { NetworkPortLiveLayer } from "../infra/network/network-live";
+import { GitHubProviderLayer } from "../infra/providers/github-provider";
+import { InteractiveSelectorPortLiveLayer } from "../infra/selector/fzf-selector-live";
+import { ShellPortLiveLayer } from "../infra/shell/shell-live";
+import { BunToolsLiveLayer } from "../infra/tools/bun";
 import { FzfToolsLiveLayer } from "../infra/tools/fzf";
-import { GcloudToolsServiceLive } from "../infra/tools/gcloud";
+import { GcloudToolsLiveLayer } from "../infra/tools/gcloud";
 import { GitToolsLiveLayer } from "../infra/tools/git";
-import { MiseToolsServiceLive } from "../infra/tools/mise";
-import { ToolManagementServiceLive } from "../infra/tools/ToolManagementServiceLive";
+import { MiseToolsLiveLayer } from "../infra/tools/mise";
+import { ToolManagementPortLiveLayer } from "../infra/tools/tool-management-service-live";
 import { type DynamicConfigValues } from "./bootstrap";
 import { ConfigLoaderLiveLayer } from "./loader";
 
@@ -45,24 +45,24 @@ export const buildInfraLiveLayer = (configValues: DynamicConfigValues) => {
 
   // Self-contained services that truly don't need dependencies
   const SelfContainedServicesLayer = Layer.mergeAll(
-    FileSystemLiveLayer, // No dependencies needed - it's Layer.succeed()
-    ShellLiveLayer, // No dependencies needed - it's Layer.succeed()
+    FileSystemPortLiveLayer, // No dependencies needed - it's Layer.succeed()
+    ShellPortLiveLayer, // No dependencies needed - it's Layer.succeed()
   );
 
   // Services that depend on base services
   const DependentServicesLayer = Layer.mergeAll(
     Layer.provide(RepositoryServiceLive, BaseServicesLayer),
-    Layer.provide(DirectoryServiceLive, Layer.mergeAll(BaseServicesLayer, SelfContainedServicesLayer)),
+    Layer.provide(DirectoryPortLiveLayer, Layer.mergeAll(BaseServicesLayer, SelfContainedServicesLayer)),
   );
 
   // Combined base layer with all infrastructure services
   const BaseInfraLayer = Layer.mergeAll(BaseServicesLayer, SelfContainedServicesLayer, DependentServicesLayer);
 
   // Network services that depend on filesystem and shell
-  const NetworkLayer = Layer.provide(NetworkLiveLayer, BaseInfraLayer);
+  const NetworkLayer = Layer.provide(NetworkPortLiveLayer, BaseInfraLayer);
 
   // Git services that depend on shell and logging
-  const GitLayer = Layer.provide(GitLiveLayer, BaseInfraLayer);
+  const GitLayer = Layer.provide(GitPortLiveLayer, BaseInfraLayer);
 
   // Configuration loading that depends on filesystem and network
   // Use the dynamic config path from runtime values
@@ -73,32 +73,32 @@ export const buildInfraLiveLayer = (configValues: DynamicConfigValues) => {
 
   // Tool services that depend on shell, filesystem, and logging
   const ToolServicesLayer = Layer.mergeAll(
-    Layer.provide(MiseLiveLayer, BaseInfraLayer),
-    Layer.provide(KeychainLiveLayer, BaseInfraLayer),
+    Layer.provide(MisePortLiveLayer, BaseInfraLayer),
+    Layer.provide(KeychainPortLiveLayer, BaseInfraLayer),
     Layer.provide(FzfToolsLiveLayer, BaseInfraLayer),
-    Layer.provide(BunToolsServiceLive, BaseInfraLayer),
+    Layer.provide(BunToolsLiveLayer, BaseInfraLayer),
     Layer.provide(GitToolsLiveLayer, BaseInfraLayer),
-    Layer.provide(MiseToolsServiceLive, BaseInfraLayer),
-    Layer.provide(GcloudToolsServiceLive, BaseInfraLayer),
-    FzfSelectorLiveLayer, // No dependencies needed
+    Layer.provide(MiseToolsLiveLayer, BaseInfraLayer),
+    Layer.provide(GcloudToolsLiveLayer, BaseInfraLayer),
+    InteractiveSelectorPortLiveLayer, // No dependencies needed
   );
 
   // Tool management service that aggregates all tool services
-  const ToolManagementLayer = Layer.provide(ToolManagementServiceLive, ToolServicesLayer);
+  const ToolManagementLayer = Layer.provide(ToolManagementPortLiveLayer, ToolServicesLayer);
 
   // Repository provider with dynamic organization
   // This is where we use the runtime configuration value!
   const RepoProviderLayer = Layer.provide(GitHubProviderLayer(configValues.defaultOrg), NetworkLayer);
 
   // Database layer that depends on PathService and FileSystem
-  const DatabaseLayer = Layer.provide(DatabaseLiveLayer, BaseInfraLayer);
+  const DatabaseLayer = Layer.provide(DatabasePortLiveLayer, BaseInfraLayer);
   
   // RunStore layer that depends on Database layer
-  const RunStoreLayer = Layer.provide(RunStoreLiveLayer, Layer.mergeAll(BaseInfraLayer, DatabaseLayer));
+  const RunStoreLayer = Layer.provide(RunStorePortLiveLayer, Layer.mergeAll(BaseInfraLayer, DatabaseLayer));
 
   // Health check service that depends on Database, Config and Path services
   const HealthCheckLayer = Layer.provide(
-    HealthCheckServiceLiveLayer, 
+    HealthCheckPortLiveLayer, 
     Layer.mergeAll(BaseInfraLayer, ConfigLayer, DatabaseLayer)
   );
 
@@ -126,11 +126,11 @@ export const buildAppLiveLayer = (configValues: DynamicConfigValues) => {
   // Application Layer (orchestration services only - no infrastructure imports)
   // These services all depend on infrastructure services
   const AppServicesLayer = Layer.mergeAll(
-    Layer.provide(ShellIntegrationServiceLive, infraLayer),
-    Layer.provide(VersionServiceLive, infraLayer),
-    Layer.provide(UpdateCheckServiceLive, infraLayer),
-    Layer.provide(CommandTrackingServiceLive, infraLayer),
-    Layer.provide(HealthCheckSchedulerServiceLiveLayer, infraLayer),
+    Layer.provide(ShellIntegrationLiveLayer, infraLayer),
+    Layer.provide(VersionLiveLayer, infraLayer),
+    Layer.provide(UpdateCheckerLiveLayer, infraLayer),
+    Layer.provide(CommandTrackerLiveLayer, infraLayer),
+    Layer.provide(HealthCheckSchedulerLiveLayer, infraLayer),
   );
 
   // Complete application layer with all dependencies

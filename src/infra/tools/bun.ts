@@ -1,15 +1,15 @@
 import { Context, Effect, Layer } from "effect";
 
 import { externalToolError, type ExternalToolError, type UnknownError } from "../../domain/errors";
-import { ShellTag, type Shell } from "../../domain/ports/Shell";
+import { ShellPortTag, type ShellPort } from "../../domain/ports/shell-port";
 
 export const BUN_MIN_VERSION = "1.2.0";
 
 /**
- * Bun tools service for version checking and management
+ * Bun tools for version checking and management
  * This is infrastructure-level tooling for bun version management
  */
-export interface BunToolsService {
+export interface BunTools {
   getCurrentVersion(): Effect.Effect<string | null, UnknownError>;
   checkVersion(): Effect.Effect<{ isValid: boolean; currentVersion: string | null }, UnknownError>;
   performUpgrade(): Effect.Effect<boolean, UnknownError>;
@@ -36,8 +36,8 @@ const compareVersions = (version1: string, version2: string): number => {
   return 0;
 };
 
-// Factory function to create BunToolsService implementation
-export const makeBunToolsLive = (shell: Shell): BunToolsService => ({
+// Factory function to create BunTools implementation
+export const makeBunToolsLive = (shell: ShellPort): BunTools => ({
   getCurrentVersion: (): Effect.Effect<string | null, UnknownError> =>
     shell.exec("bun", ["--version"]).pipe(
       Effect.map((result) => {
@@ -134,13 +134,13 @@ export const makeBunToolsLive = (shell: Shell): BunToolsService => ({
 });
 
 // Service tag for Effect Context system
-export class BunToolsServiceTag extends Context.Tag("BunToolsService")<BunToolsServiceTag, BunToolsService>() {}
+export class BunToolsTag extends Context.Tag("BunTools")<BunToolsTag, BunTools>() {}
 
 // Effect Layer for dependency injection
-export const BunToolsServiceLive = Layer.effect(
-  BunToolsServiceTag,
+export const BunToolsLiveLayer = Layer.effect(
+  BunToolsTag,
   Effect.gen(function* () {
-    const shell = yield* ShellTag;
+    const shell = yield* ShellPortTag;
     return makeBunToolsLive(shell);
   }),
 );

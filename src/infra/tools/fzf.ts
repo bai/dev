@@ -1,15 +1,15 @@
 import { Context, Effect, Layer } from "effect";
 
 import { externalToolError, unknownError, type ExternalToolError, type UnknownError } from "../../domain/errors";
-import { ShellTag, type Shell } from "../../domain/ports/Shell";
+import { ShellPortTag, type ShellPort } from "../../domain/ports/shell-port";
 
 export const FZF_MIN_VERSION = "0.35.0";
 
 /**
- * Fzf tools service for version checking and management
+ * Fzf tools for version checking and management
  * This is infrastructure-level tooling for fzf version management
  */
-export interface FzfToolsService {
+export interface FzfTools {
   getCurrentVersion(): Effect.Effect<string | null, UnknownError>;
   checkVersion(): Effect.Effect<{ isValid: boolean; currentVersion: string | null }, UnknownError>;
   performUpgrade(): Effect.Effect<boolean, UnknownError>;
@@ -36,8 +36,8 @@ const compareVersions = (version1: string, version2: string): number => {
   return 0;
 };
 
-// Factory function to create FzfToolsService implementation
-export const makeFzfToolsLive = (shell: Shell): FzfToolsService => ({
+// Factory function to create FzfTools implementation
+export const makeFzfToolsLive = (shell: ShellPort): FzfTools => ({
   getCurrentVersion: (): Effect.Effect<string | null, UnknownError> =>
     shell.exec("fzf", ["--version"]).pipe(
       Effect.map((result) => {
@@ -136,13 +136,13 @@ export const makeFzfToolsLive = (shell: Shell): FzfToolsService => ({
 });
 
 // Service tag for Effect Context system
-export class FzfToolsServiceTag extends Context.Tag("FzfToolsService")<FzfToolsServiceTag, FzfToolsService>() {}
+export class FzfToolsTag extends Context.Tag("FzfTools")<FzfToolsTag, FzfTools>() {}
 
 // Effect Layer for dependency injection
 export const FzfToolsLiveLayer = Layer.effect(
-  FzfToolsServiceTag,
+  FzfToolsTag,
   Effect.gen(function* () {
-    const shell = yield* ShellTag;
+    const shell = yield* ShellPortTag;
     return makeFzfToolsLive(shell);
   }),
 );

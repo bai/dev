@@ -5,18 +5,18 @@ import { Context, Effect, Layer } from "effect";
 
 import devConfig from "../../config/mise-dev-config.json" with { type: "json" };
 import { externalToolError, unknownError, type ExternalToolError, type UnknownError } from "../../domain/errors";
-import { FileSystemTag, type FileSystem } from "../../domain/ports/FileSystem";
-import { ShellTag, type Shell } from "../../domain/ports/Shell";
+import { FileSystemPortTag, type FileSystemPort } from "../../domain/ports/file-system-port";
+import { ShellPortTag, type ShellPort } from "../../domain/ports/shell-port";
 
 export const MISE_MIN_VERSION = "2024.11.0";
 
 const homeDir = process.env.HOME || process.env.USERPROFILE || "";
 
 /**
- * Mise tools service for version checking and management
+ * Mise tools for version checking and management
  * This is infrastructure-level tooling for mise version management
  */
-export interface MiseToolsService {
+export interface MiseTools {
   getCurrentVersion(): Effect.Effect<string | null, UnknownError>;
   checkVersion(): Effect.Effect<{ isValid: boolean; currentVersion: string | null }, UnknownError>;
   performUpgrade(): Effect.Effect<boolean, UnknownError>;
@@ -24,8 +24,8 @@ export interface MiseToolsService {
   setupGlobalConfig(): Effect.Effect<void, UnknownError>;
 }
 
-// Factory function that creates MiseToolsService with dependencies
-export const makeMiseToolsLive = (shell: Shell, filesystem: FileSystem): MiseToolsService => {
+// Factory function that creates MiseTools with dependencies
+export const makeMiseToolsLive = (shell: ShellPort, filesystem: FileSystemPort): MiseTools => {
   // Helper function for version comparison
   const compareVersions = (version1: string, version2: string): number => {
     const v1Parts = version1.split(".").map(Number);
@@ -182,14 +182,14 @@ export const makeMiseToolsLive = (shell: Shell, filesystem: FileSystem): MiseToo
 };
 
 // Service tag for Effect Context system
-export class MiseToolsServiceTag extends Context.Tag("MiseToolsService")<MiseToolsServiceTag, MiseToolsService>() {}
+export class MiseToolsTag extends Context.Tag("MiseTools")<MiseToolsTag, MiseTools>() {}
 
 // Effect Layer for dependency injection using factory function
-export const MiseToolsServiceLive = Layer.effect(
-  MiseToolsServiceTag,
+export const MiseToolsLiveLayer = Layer.effect(
+  MiseToolsTag,
   Effect.gen(function* () {
-    const shell = yield* ShellTag;
-    const filesystem = yield* FileSystemTag;
+    const shell = yield* ShellPortTag;
+    const filesystem = yield* FileSystemPortTag;
     return makeMiseToolsLive(shell, filesystem);
   }),
 );

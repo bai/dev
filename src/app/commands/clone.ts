@@ -2,12 +2,12 @@ import { Args, Command } from "@effect/cli";
 import { Effect } from "effect";
 
 import { unknownError, type DevError } from "../../domain/errors";
-import { FileSystemTag } from "../../domain/ports/FileSystem";
-import { GitTag } from "../../domain/ports/Git";
-import { RepoProviderTag } from "../../domain/ports/RepoProvider";
-import { PathServiceTag } from "../../domain/services/PathService";
-import { RepositoryServiceTag } from "../../domain/services/RepositoryService";
-import { ShellIntegrationServiceTag } from "../services/ShellIntegrationService";
+import { FileSystemPortTag } from "../../domain/ports/file-system-port";
+import { GitPortTag } from "../../domain/ports/git-port";
+import { RepoProviderPortTag } from "../../domain/ports/repo-provider-port";
+import { PathServiceTag } from "../../domain/services/path-service";
+import { RepositoryServiceTag } from "../../domain/services/repository-service";
+import { ShellIntegrationTag } from "../services/shell-integration-service";
 
 // Define the repository argument as required
 const repo = Args.text({ name: "repo" });
@@ -20,12 +20,12 @@ export const cloneCommand = Command.make("clone", { repo }, ({ repo }) =>
       yield* Effect.addFinalizer(() => Effect.logDebug("Clone command finalizer called - cleanup complete"));
 
       // Get services from Effect Context
-      const git = yield* GitTag;
-      const repoProvider = yield* RepoProviderTag;
-      const fileSystem = yield* FileSystemTag;
+      const git = yield* GitPortTag;
+      const repoProvider = yield* RepoProviderPortTag;
+      const fileSystem = yield* FileSystemPortTag;
       const pathService = yield* PathServiceTag;
       const repositoryService = yield* RepositoryServiceTag;
-      const shellIntegration = yield* ShellIntegrationServiceTag;
+      const shellIntegration = yield* ShellIntegrationTag;
 
       if (!repo) {
         return yield* Effect.fail(unknownError("Repository name is required"));
