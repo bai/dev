@@ -51,7 +51,7 @@ const changeDirectory = (targetPath: string) =>
   });
 
 // Functional service implementation as plain object
-export const ShellIntegrationImpl: ShellIntegration = {
+export const ShellIntegrationLive: ShellIntegration = {
   changeDirectory: changeDirectory,
 };
 
@@ -61,5 +61,5 @@ export class ShellIntegrationTag extends Context.Tag("ShellIntegration")<ShellIn
 // Layer that provides ShellIntegrationService (no `new` keyword)
 export const ShellIntegrationLiveLayer = Layer.effect(
   ShellIntegrationTag,
-  Effect.succeed(ShellIntegrationImpl),
+  Effect.succeed(ShellIntegrationLive),
 );

@@ -25,7 +25,7 @@ const getCurrentGitCommitSha = Effect.gen(function* () {
 });
 
 // Functional service implementation as plain object
-export const VersionImpl: Version = {
+export const VersionLive: Version = {
   getCurrentGitCommitSha: getCurrentGitCommitSha,
   getVersion: getCurrentGitCommitSha, // Reuse the same effect
 };
@@ -34,4 +34,4 @@ export const VersionImpl: Version = {
 export class VersionTag extends Context.Tag("Version")<VersionTag, Version>() {}
 
 // Layer that provides VersionService (no `new` keyword)
-export const VersionLiveLayer = Layer.effect(VersionTag, Effect.succeed(VersionImpl));
+export const VersionLiveLayer = Layer.effect(VersionTag, Effect.succeed(VersionLive));

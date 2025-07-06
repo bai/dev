@@ -48,7 +48,7 @@ const runPeriodicUpgradeCheck = Effect.gen(function* () {
 );
 
 // Functional service implementation as plain object
-export const UpdateCheckerImpl: UpdateChecker = {
+export const UpdateCheckerLive: UpdateChecker = {
   runPeriodicUpgradeCheck: () => runPeriodicUpgradeCheck,
 };
 
@@ -56,4 +56,4 @@ export const UpdateCheckerImpl: UpdateChecker = {
 export class UpdateCheckerTag extends Context.Tag("UpdateChecker")<UpdateCheckerTag, UpdateChecker>() {}
 
 // Layer that provides UpdateCheckService (no `new` keyword)
-export const UpdateCheckerLiveLayer = Layer.effect(UpdateCheckerTag, Effect.succeed(UpdateCheckerImpl));
+export const UpdateCheckerLiveLayer = Layer.effect(UpdateCheckerTag, Effect.succeed(UpdateCheckerLive));

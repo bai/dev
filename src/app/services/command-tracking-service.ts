@@ -67,7 +67,7 @@ const gracefulShutdown = Effect.gen(function* () {
 });
 
 // Functional service implementation as plain object
-export const CommandTrackerImpl: CommandTracker = {
+export const CommandTrackerLive: CommandTracker = {
   recordCommandRun: () => recordCommandRun,
   completeCommandRun: completeCommandRun,
   gracefulShutdown: () => gracefulShutdown,
@@ -77,5 +77,5 @@ export class CommandTrackerTag extends Context.Tag("CommandTracker")<CommandTrac
 
 export const CommandTrackerLiveLayer = Layer.effect(
   CommandTrackerTag,
-  Effect.succeed(CommandTrackerImpl),
+  Effect.succeed(CommandTrackerLive),
 );

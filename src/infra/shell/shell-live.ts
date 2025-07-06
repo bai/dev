@@ -88,7 +88,7 @@ const execInteractiveWithTimeout = (
   );
 
 // Plain object implementation
-export const ShellLiveImpl: ShellPort & {
+export const ShellLive: ShellPort & {
   execWithTimeout: typeof execWithTimeout;
   execInteractiveWithTimeout: typeof execInteractiveWithTimeout;
 } = {
@@ -100,4 +100,4 @@ export const ShellLiveImpl: ShellPort & {
 };
 
 // Effect Layer for dependency injection
-export const ShellPortLiveLayer = Layer.succeed(ShellPortTag, ShellLiveImpl);
+export const ShellPortLiveLayer = Layer.succeed(ShellPortTag, ShellLive);

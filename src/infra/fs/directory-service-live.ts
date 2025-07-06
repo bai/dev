@@ -43,10 +43,10 @@ const findDirs = (): Effect.Effect<string[], FileSystemError | UnknownError, Fil
   });
 
 // Plain object implementation
-export const DirectoryServiceImpl: DirectoryPort = {
+export const DirectoryServiceLive: DirectoryPort = {
   ensureBaseDirectoryExists,
   findDirs,
 };
 
 // Layer that provides DirectoryService with proper dependency injection
-export const DirectoryPortLiveLayer = Layer.effect(DirectoryPortTag, Effect.succeed(DirectoryServiceImpl));
+export const DirectoryPortLiveLayer = Layer.effect(DirectoryPortTag, Effect.succeed(DirectoryServiceLive));

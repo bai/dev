@@ -5,8 +5,8 @@ import { HealthCheckSchedulerLiveLayer } from "../app/services/health-check-sche
 import { ShellIntegrationLiveLayer } from "../app/services/shell-integration-service";
 import { UpdateCheckerLiveLayer } from "../app/services/update-check-service";
 import { VersionLiveLayer } from "../app/services/version-service";
-import { PathServiceLive } from "../domain/services/path-service";
-import { RepositoryServiceLive } from "../domain/services/repository-service";
+import { PathServiceLiveLayer } from "../domain/services/path-service";
+import { RepositoryServiceLiveLayer } from "../domain/services/repository-service";
 import { DatabasePortLiveLayer } from "../infra/db/database-live";
 import { RunStorePortLiveLayer } from "../infra/db/run-store-live";
 import { DirectoryPortLiveLayer } from "../infra/fs/directory-service-live";
@@ -41,7 +41,7 @@ import { ConfigLoaderLiveLayer } from "./loader";
  */
 export const buildInfraLiveLayer = (configValues: DynamicConfigValues) => {
   // Base services with no dependencies
-  const BaseServicesLayer = PathServiceLive;
+  const BaseServicesLayer = PathServiceLiveLayer;
 
   // Self-contained services that truly don't need dependencies
   const SelfContainedServicesLayer = Layer.mergeAll(
@@ -51,7 +51,7 @@ export const buildInfraLiveLayer = (configValues: DynamicConfigValues) => {
 
   // Services that depend on base services
   const DependentServicesLayer = Layer.mergeAll(
-    Layer.provide(RepositoryServiceLive, BaseServicesLayer),
+    Layer.provide(RepositoryServiceLiveLayer, BaseServicesLayer),
     Layer.provide(DirectoryPortLiveLayer, Layer.mergeAll(BaseServicesLayer, SelfContainedServicesLayer)),
   );
 

@@ -60,7 +60,7 @@ const resolvePath = (filePath: string): string => {
 };
 
 // Plain object implementation
-export const FileSystemLiveImpl: FileSystemPort = {
+export const FileSystemLive: FileSystemPort = {
   readFile,
   writeFile,
   exists,
@@ -71,4 +71,4 @@ export const FileSystemLiveImpl: FileSystemPort = {
 };
 
 // Effect Layer for dependency injection
-export const FileSystemPortLiveLayer = Layer.succeed(FileSystemPortTag, FileSystemLiveImpl);
+export const FileSystemPortLiveLayer = Layer.succeed(FileSystemPortTag, FileSystemLive);
