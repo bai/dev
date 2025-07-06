@@ -10,10 +10,7 @@ interface StatusItem {
   readonly tool: string;
   readonly version?: string;
   readonly status: "ok" | "warn" | "fail";
-  readonly message: string;
   readonly notes?: string;
-  readonly isProjectSpecific?: boolean;
-  readonly isCustom?: boolean;
 }
 
 // No options needed - always show comprehensive current status
@@ -170,16 +167,11 @@ const getHealthCheckResults: Effect.Effect<readonly StatusItem[], never, HealthC
     }),
   );
   
-  const customTools = Object.keys(config?.customHealthChecks || {});
-  
   const statusItems = results.map((result: any): StatusItem => ({
     tool: result.toolName,
     version: result.version,
     status: result.status,
-    message: formatHealthMessage(result.toolName, result.version, result.status, result.notes),
     notes: result.notes,
-    isProjectSpecific: false, // No project-specific checks anymore
-    isCustom: customTools.includes(result.toolName),
   }));
 
   // Sort by tool name for consistent output
@@ -187,19 +179,12 @@ const getHealthCheckResults: Effect.Effect<readonly StatusItem[], never, HealthC
 });
 
 /**
- * Display health check results grouped by type
+ * Display health check results
  */
 const displayHealthCheckResults = (statusItems: readonly StatusItem[]): Effect.Effect<void, never, ShellPortTag> =>
   Effect.gen(function* () {
-    const builtInItems = statusItems.filter((item) => !item.isCustom);
-    const customItems = statusItems.filter((item) => item.isCustom);
-
-    if (builtInItems.length > 0) {
-      yield* displayToolGroup("🔧 Development Tools:", builtInItems);
-    }
-
-    if (customItems.length > 0) {
-      yield* displayToolGroup("⚙️ Custom Health Checks:", customItems);
+    if (statusItems.length > 0) {
+      yield* displayToolGroup("🔧 Development Tools:", statusItems);
     }
 
     yield* Effect.logInfo("");
@@ -304,13 +289,3 @@ const getToolPath = (toolName: string): Effect.Effect<string | null, never, Shel
   });
 
 
-/**
- * Format health check message for display
- */
-const formatHealthMessage = (toolName: string, version?: string, status?: string, notes?: string): string => {
-  const versionText = version ? ` ${version}` : "";
-  const statusText = status && status !== "ok" ? ` (${status})` : "";
-  const notesText = notes ? ` - ${notes}` : "";
-
-  return `${toolName}${versionText}${statusText}${notesText}`;
-}

@@ -19,17 +19,6 @@ export interface MiseConfig {
 export type GitProviderType = "github" | "gitlab";
 export type LogLevel = "debug" | "info" | "warn" | "error";
 
-export interface CustomHealthCheck {
-  readonly command: string;
-  readonly versionPattern?: string;
-  readonly timeout?: number;
-  readonly parseOutput?: (stdout: string, stderr: string) => {
-    readonly version?: string;
-    readonly status?: "ok" | "warn" | "fail";
-    readonly notes?: string;
-  };
-}
-
 // Built-in health check tools configuration
 export interface BuiltInHealthCheck {
   readonly command: string;
@@ -53,7 +42,6 @@ export interface Config {
   readonly orgToProvider?: Record<string, GitProviderType>;
   readonly miseGlobalConfig?: MiseConfig;
   readonly miseRepoConfig?: MiseConfig;
-  readonly customHealthChecks?: Record<string, CustomHealthCheck>;
   readonly builtInHealthChecks?: Record<string, BuiltInHealthCheck>;
 }
 

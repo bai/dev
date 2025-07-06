@@ -97,7 +97,6 @@ This eliminates hardcoded values and allows for dynamic configuration at runtime
 - On-demand health checks when `dev status` is called
 - Database storage for historical tracking
 - Tool status tracking (git, fzf, mise, gcloud, network)
-- Support for custom health checks via configuration
 
 **Configuration Management**:
 

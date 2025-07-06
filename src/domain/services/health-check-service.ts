@@ -18,7 +18,7 @@ export interface HealthCheckConfig {
 
 export interface HealthCheckService {
   /**
-   * Get all health check configurations (built-in + custom)
+   * Get all health check configurations (built-in only)
    */
   getHealthCheckConfigs(config?: Config): Effect.Effect<readonly HealthCheckConfig[], HealthCheckError>;
 
@@ -82,7 +82,6 @@ export const makeHealthCheckService = (): HealthCheckService => ({
 
       // Override built-in checks with config if provided
       const builtInOverrides = config.builtInHealthChecks || {};
-      const customChecks = config.customHealthChecks || {};
 
       const allConfigs: HealthCheckConfig[] = [];
 
@@ -98,18 +97,6 @@ export const makeHealthCheckService = (): HealthCheckService => ({
           timeout: finalCheck.timeout,
           parseOutput: finalCheck.parseOutput,
           isCustom: false,
-        });
-      }
-
-      // Add custom checks
-      for (const [toolName, customCheck] of Object.entries(customChecks)) {
-        allConfigs.push({
-          toolName,
-          command: customCheck.command,
-          versionPattern: customCheck.versionPattern,
-          timeout: customCheck.timeout,
-          parseOutput: customCheck.parseOutput,
-          isCustom: true,
         });
       }
 
