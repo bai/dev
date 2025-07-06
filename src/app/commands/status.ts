@@ -1,132 +1,313 @@
-import { Command, Options } from "@effect/cli";
+import { Command } from "@effect/cli";
 import { Effect } from "effect";
 
 import { ConfigLoaderTag } from "../../config/loader";
-import { statusCheckError, unknownError } from "../../domain/errors";
+import { statusCheckError } from "../../domain/errors";
 import { HealthCheckPortTag } from "../../domain/ports/health-check-port";
-import { PathServiceTag } from "../../domain/services/path-service";
+import { ShellPortTag } from "../../domain/ports/shell-port";
 
 interface StatusItem {
-  tool: string;
-  version?: string;
-  status: "ok" | "warn" | "fail";
-  message: string;
-  checkedAt?: Date;
+  readonly tool: string;
+  readonly version?: string;
+  readonly status: "ok" | "warn" | "fail";
+  readonly message: string;
+  readonly notes?: string;
+  readonly isProjectSpecific?: boolean;
+  readonly isCustom?: boolean;
 }
 
-// Define options for the status command
-const json = Options.boolean("json").pipe(Options.optional);
-const refresh = Options.boolean("refresh").pipe(Options.optional);
+// No options needed - always show comprehensive current status
 
 // Create the status command using @effect/cli
-export const statusCommand = Command.make("status", { json, refresh }, ({ json, refresh }) =>
+export const statusCommand = Command.make("status", {}, () =>
   Effect.gen(function* () {
-    const healthCheckService = yield* HealthCheckPortTag;
-    const configLoader = yield* ConfigLoaderTag;
-    const pathService = yield* PathServiceTag;
-
-    const jsonOutput = json._tag === "Some" ? json.value : false;
-    const forceRefresh = refresh._tag === "Some" ? refresh.value : false;
-
-    let statusItems: StatusItem[] = [];
-
-    try {
-      if (forceRefresh) {
-        yield* Effect.logDebug("Forcing fresh health check...");
-        // Run health checks immediately and get results
-        const results = yield* healthCheckService.runHealthChecks();
-
-        statusItems = results.map((result) => ({
-          tool: result.toolName,
-          version: result.version,
-          status: result.status,
-          message: formatHealthMessage(result.toolName, result.version, result.status, result.notes),
-          checkedAt: result.checkedAt,
-        }));
-      } else {
-        yield* Effect.logDebug("Getting cached health check results...");
-        // Get cached results
-        const results = yield* healthCheckService.getLatestResults();
-
-        if (results.length === 0) {
-          yield* Effect.logInfo("No cached health check data found. Running fresh checks...");
-          // No cached data, run fresh checks
-          const freshResults = yield* healthCheckService.runHealthChecks();
-          statusItems = freshResults.map((result) => ({
-            tool: result.toolName,
-            version: result.version,
-            status: result.status,
-            message: formatHealthMessage(result.toolName, result.version, result.status, result.notes),
-            checkedAt: result.checkedAt,
-          }));
-        } else {
-          statusItems = results.map((result) => ({
-            tool: result.toolName,
-            version: result.version,
-            status: result.status,
-            message: formatHealthMessage(result.toolName, result.version, result.status, result.notes),
-            checkedAt: result.checkedAt,
-          }));
-        }
-      }
-
-      // Sort by tool name for consistent output
-      statusItems.sort((a, b) => a.tool.localeCompare(b.tool));
-
-      // Output results
-      if (jsonOutput) {
-        // Output ND-JSON (one object per tool)
-        for (const item of statusItems) {
-          yield* Effect.logInfo(JSON.stringify(item));
-        }
-      } else {
-        // Human-readable output matching the specification format
-        for (const item of statusItems) {
-          const icon = item.status === "ok" ? "✔" : item.status === "warn" ? "⚠" : "✗";
-          const versionText = item.version ? ` ${item.version}` : "";
-          yield* Effect.logInfo(
-            `${icon} ${item.tool}${versionText}${item.status === "warn" || item.status === "fail" ? ` (${item.status})` : ""}`,
-          );
-        }
-
-        yield* Effect.logInfo("");
-
-        const okCount = statusItems.filter((item) => item.status === "ok").length;
-        const warnCount = statusItems.filter((item) => item.status === "warn").length;
-        const failCount = statusItems.filter((item) => item.status === "fail").length;
-
-        if (failCount > 0) {
-          yield* Effect.logError(`❌ ${failCount} failing, ${warnCount} warnings, ${okCount} OK`);
-        } else if (warnCount > 0) {
-          yield* Effect.logWarning(`⚠️ ${warnCount} warnings, ${okCount} OK`);
-        } else {
-          yield* Effect.logInfo("All green. Have a great day! 🎉");
-        }
-      }
-
-      // Exit with error code if there are failures
-      const hasFailures = statusItems.some((item) => item.status === "fail");
-      if (hasFailures) {
-        const failedComponents = statusItems.filter((item) => item.status === "fail").map((item) => item.tool);
-        const failCount = statusItems.filter((item) => item.status === "fail").length;
-        const warnCount = statusItems.filter((item) => item.status === "warn").length;
-
-        return yield* Effect.fail(
-          statusCheckError(`Found ${failCount} failing tool(s) and ${warnCount} warning(s)`, failedComponents),
-        );
-      }
-    } catch (error) {
-      // Fallback to error state
-      yield* Effect.logError(`Failed to get health check status: ${error}`);
-      return yield* Effect.fail(unknownError(`Health check failed: ${error}`));
-    }
+    yield* showEnvironmentInfo;
+    
+    const statusItems = yield* getHealthCheckResults;
+    
+    yield* displayHealthCheckResults(statusItems);
+    
+    yield* showSummary(statusItems);
+    
+    yield* checkForFailures(statusItems);
   }),
 );
+
+// Helper functions for better organization and testability
+
+/**
+ * Show environment information
+ */
+const showEnvironmentInfo: Effect.Effect<void, never, ShellPortTag> = Effect.gen(function* () {
+  yield* Effect.logInfo("🌍 Environment Information:");
+  yield* Effect.logInfo("");
+  
+  const currentDir = process.cwd();
+  yield* Effect.logInfo(`📁 Current Directory: ${currentDir}`);
+  
+  const gitInfo = yield* getGitBranch(currentDir);
+  if (gitInfo !== null) {
+    yield* Effect.logInfo(`🌿 Git Branch: ${gitInfo}`);
+  }
+  
+  const remoteInfo = yield* getGitRemote(currentDir);
+  if (remoteInfo !== null) {
+    yield* Effect.logInfo(`🔗 Git Remote: ${remoteInfo}`);
+  }
+  
+  const nodeVersion = yield* getNodeVersion();
+  if (nodeVersion !== null) {
+    yield* Effect.logInfo(`🟢 Node.js: ${nodeVersion}`);
+  }
+  
+  const packageManager = yield* detectPackageManager(currentDir);
+  if (packageManager !== null) {
+    yield* Effect.logInfo(`📦 Package Manager: ${packageManager}`);
+  }
+  
+  yield* Effect.logInfo("");
+  yield* Effect.logInfo("🔍 Health Check Results:");
+  yield* Effect.logInfo("");
+});
+
+/**
+ * Get git branch information
+ */
+const getGitBranch = (cwd: string): Effect.Effect<string | null, never, ShellPortTag> =>
+  executeCommand(["git", "rev-parse", "--abbrev-ref", "HEAD"], { cwd }).pipe(
+    Effect.map((result) => result.exitCode === 0 ? result.stdout.trim() : null),
+    Effect.catchAll(() => Effect.succeed(null)),
+  );
+
+/**
+ * Get git remote information
+ */
+const getGitRemote = (cwd: string): Effect.Effect<string | null, never, ShellPortTag> =>
+  executeCommand(["git", "remote", "get-url", "origin"], { cwd }).pipe(
+    Effect.map((result) => result.exitCode === 0 ? result.stdout.trim() : null),
+    Effect.catchAll(() => Effect.succeed(null)),
+  );
+
+/**
+ * Get Node.js version
+ */
+const getNodeVersion = (): Effect.Effect<string | null, never, ShellPortTag> =>
+  executeCommand(["node", "--version"]).pipe(
+    Effect.map((result) => result.exitCode === 0 ? result.stdout.trim() : null),
+    Effect.catchAll(() => Effect.succeed(null)),
+  );
+
+/**
+ * Detect package manager from lock files
+ */
+const detectPackageManager = (currentDir: string): Effect.Effect<string | null, never> =>
+  Effect.tryPromise({
+    try: async () => {
+      const fs = await import("fs");
+      const path = await import("path");
+      
+      const lockFiles = [
+        { file: "bun.lockb", manager: "bun" },
+        { file: "pnpm-lock.yaml", manager: "pnpm" },
+        { file: "yarn.lock", manager: "yarn" },
+        { file: "package-lock.json", manager: "npm" },
+      ] as const;
+      
+      for (const { file, manager } of lockFiles) {
+        if (fs.existsSync(path.join(currentDir, file))) {
+          return manager;
+        }
+      }
+      return null;
+    },
+    catch: () => null,
+  }).pipe(
+    Effect.catchAll(() => Effect.succeed(null)),
+  );
+
+/**
+ * Execute a command and return structured result
+ */
+const executeCommand = (
+  command: readonly string[], 
+  options: { readonly cwd?: string } = {}
+): Effect.Effect<{ readonly exitCode: number; readonly stdout: string; readonly stderr: string }, never, ShellPortTag> =>
+  Effect.gen(function* () {
+    const shell = yield* ShellPortTag;
+    const [cmd, ...args] = command;
+    
+    if (!cmd) {
+      return { exitCode: -1, stdout: "", stderr: "No command provided" } as const;
+    }
+    
+    const result = yield* shell.exec(cmd, args, options).pipe(
+      Effect.catchAll(() => Effect.succeed({ exitCode: -1, stdout: "", stderr: "" } as const))
+    );
+    
+    return result;
+  });
+
+/**
+ * Get health check results and transform them
+ */
+const getHealthCheckResults: Effect.Effect<readonly StatusItem[], never, HealthCheckPortTag | ConfigLoaderTag> = Effect.gen(function* () {
+  yield* Effect.logDebug("Running fresh health checks...");
+  
+  const healthCheckService = yield* HealthCheckPortTag;
+  const configLoader = yield* ConfigLoaderTag;
+  
+  const config = yield* configLoader.load().pipe(
+    Effect.catchAll(() => Effect.succeed(undefined)),
+  );
+  
+  // Run health checks directly and bypass cached results
+  const results = yield* healthCheckService.runHealthChecks().pipe(
+    Effect.catchAll(() => {
+      return Effect.gen(function* () {
+        yield* Effect.logError("Health check failed, using empty results");
+        return [] as const;
+      });
+    }),
+  );
+  
+  const customTools = Object.keys(config?.customHealthChecks || {});
+  
+  const statusItems = results.map((result: any): StatusItem => ({
+    tool: result.toolName,
+    version: result.version,
+    status: result.status,
+    message: formatHealthMessage(result.toolName, result.version, result.status, result.notes),
+    notes: result.notes,
+    isProjectSpecific: false, // No project-specific checks anymore
+    isCustom: customTools.includes(result.toolName),
+  }));
+
+  // Sort by tool name for consistent output
+  return statusItems.sort((a: StatusItem, b: StatusItem) => a.tool.localeCompare(b.tool));
+});
+
+/**
+ * Display health check results grouped by type
+ */
+const displayHealthCheckResults = (statusItems: readonly StatusItem[]): Effect.Effect<void, never, ShellPortTag> =>
+  Effect.gen(function* () {
+    const builtInItems = statusItems.filter((item) => !item.isCustom);
+    const customItems = statusItems.filter((item) => item.isCustom);
+
+    if (builtInItems.length > 0) {
+      yield* displayToolGroup("🔧 Development Tools:", builtInItems);
+    }
+
+    if (customItems.length > 0) {
+      yield* displayToolGroup("⚙️ Custom Health Checks:", customItems);
+    }
+
+    yield* Effect.logInfo("");
+  });
+
+/**
+ * Display a group of tools
+ */
+const displayToolGroup = (title: string, items: readonly StatusItem[]): Effect.Effect<void, never, ShellPortTag> =>
+  Effect.gen(function* () {
+    yield* Effect.logInfo(title);
+    
+    yield* Effect.forEach(items, displayToolItem, { concurrency: "unbounded" });
+    
+    yield* Effect.logInfo("");
+  });
+
+/**
+ * Display a single tool item
+ */
+const displayToolItem = (item: StatusItem): Effect.Effect<void, never, ShellPortTag> =>
+  Effect.gen(function* () {
+    const icon = item.status === "ok" ? "✔" : item.status === "warn" ? "⚠" : "✗";
+    const versionText = item.version ? ` ${item.version}` : "";
+    const statusText = item.status === "warn" || item.status === "fail" ? ` (${item.status})` : "";
+    
+    const toolPath = yield* getToolPath(item.tool);
+    const pathText = toolPath ? ` - ${toolPath}` : "";
+    
+    yield* Effect.logInfo(
+      `  ${icon} ${item.tool}${versionText}${statusText}${pathText}`,
+    );
+    
+    if (item.notes && (item.status === "warn" || item.status === "fail")) {
+      yield* Effect.logInfo(`     Note: ${item.notes}`);
+    }
+    
+  });
+
+/**
+ * Show summary of health check results
+ */
+const showSummary = (statusItems: readonly StatusItem[]): Effect.Effect<void, never> =>
+  Effect.gen(function* () {
+    const okCount = statusItems.filter((item) => item.status === "ok").length;
+    const warnCount = statusItems.filter((item) => item.status === "warn").length;
+    const failCount = statusItems.filter((item) => item.status === "fail").length;
+
+    if (failCount > 0) {
+      yield* Effect.logError(`❌ ${failCount} failing, ${warnCount} warnings, ${okCount} OK`);
+    } else if (warnCount > 0) {
+      yield* Effect.logWarning(`⚠️ ${warnCount} warnings, ${okCount} OK`);
+    } else {
+      yield* Effect.logInfo("All green. Have a great day! 🎉");
+    }
+  });
+
+/**
+ * Check for failures and exit with error if found
+ */
+const checkForFailures = (statusItems: readonly StatusItem[]): Effect.Effect<void, ReturnType<typeof statusCheckError>, never> =>
+  Effect.gen(function* () {
+    const failedItems = statusItems.filter((item) => item.status === "fail");
+    
+    if (failedItems.length > 0) {
+      const failedComponents = failedItems.map((item) => item.tool);
+      const failCount = failedItems.length;
+      const warnCount = statusItems.filter((item) => item.status === "warn").length;
+
+      yield* Effect.fail(
+        statusCheckError(`Found ${failCount} failing tool(s) and ${warnCount} warning(s)`, failedComponents),
+      );
+    }
+  });
+
+/**
+ * Get tool path using mise which, falling back to system which
+ */
+const getToolPath = (toolName: string): Effect.Effect<string | null, never, ShellPortTag> =>
+  Effect.gen(function* () {
+    // Skip network as it's not a real tool
+    if (toolName === "network") {
+      return null;
+    }
+    
+    // Try mise which first
+    const misePath = yield* executeCommand(["mise", "which", toolName]).pipe(
+      Effect.map((result) => result.exitCode === 0 ? result.stdout.trim() : null),
+    );
+    
+    // Return if mise found the tool
+    if (misePath !== null) {
+      return misePath;
+    }
+    
+    // Fallback to system which
+    const systemPath = yield* executeCommand(["which", toolName]).pipe(
+      Effect.map((result) => result.exitCode === 0 ? result.stdout.trim() : null),
+    );
+    
+    return systemPath;
+  });
+
 
 /**
  * Format health check message for display
  */
-function formatHealthMessage(toolName: string, version?: string, status?: string, notes?: string): string {
+const formatHealthMessage = (toolName: string, version?: string, status?: string, notes?: string): string => {
   const versionText = version ? ` ${version}` : "";
   const statusText = status && status !== "ok" ? ` (${status})` : "";
   const notesText = notes ? ` - ${notes}` : "";

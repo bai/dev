@@ -92,11 +92,12 @@ This eliminates hardcoded values and allows for dynamic configuration at runtime
 - Health check results (`tool_health_checks` table)
 - XDG Base Directory compliant storage
 
-**Health Check System**: Implements background health monitoring with:
+**Health Check System**: Implements synchronous health monitoring with:
 
-- Scheduled health checks via `HealthCheckSchedulerService`
-- Cached results for performance
-- Tool status tracking (git, fzf, mise, gcloud)
+- On-demand health checks when `dev status` is called
+- Database storage for historical tracking
+- Tool status tracking (git, fzf, mise, gcloud, network)
+- Support for custom health checks via configuration
 
 **Configuration Management**:
 

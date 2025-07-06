@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import type { Config, GitProviderType, LogLevel, MiseConfig } from "../domain/models";
+import type { Config, CustomHealthCheck, GitProviderType, LogLevel, MiseConfig } from "../domain/models";
 
 // Log level schema
 const logLevelSchema: z.ZodType<LogLevel> = z.enum(["debug", "info", "warn", "error"]);
@@ -32,7 +32,14 @@ const miseConfigSchema: z.ZodType<MiseConfig> = z.object({
 
 const gitProviderSchema: z.ZodType<GitProviderType> = z.enum(["github", "gitlab"]);
 
-export const configSchema: z.ZodType<Config> = z.object({
+// Custom health check schema
+const customHealthCheckSchema: z.ZodType<Omit<CustomHealthCheck, "parseOutput">> = z.object({
+  command: z.string(),
+  versionPattern: z.string().optional(),
+  timeout: z.number().optional(),
+});
+
+export const configSchema: z.ZodType<Omit<Config, "customHealthChecks"> & { customHealthChecks?: Record<string, Omit<CustomHealthCheck, "parseOutput">> }> = z.object({
   version: z.literal(3),
   configUrl: z.string().url(),
   defaultOrg: z.string(),
@@ -46,6 +53,10 @@ export const configSchema: z.ZodType<Config> = z.object({
     .describe("Map of organizations to their preferred git provider"),
   miseGlobalConfig: miseConfigSchema.optional().describe("Mise global configuration settings"),
   miseRepoConfig: miseConfigSchema.optional().describe("Mise repository configuration settings"),
+  customHealthChecks: z
+    .record(z.string(), customHealthCheckSchema)
+    .optional()
+    .describe("Custom health check tools and their configurations"),
 });
 
 // Export Config type that was moved to domain

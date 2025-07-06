@@ -22,20 +22,14 @@ export interface HealthCheckSummary {
 
 export interface HealthCheckPort {
   /**
-   * Run health checks immediately (synchronously waiting for results)
-   * Used by `dev status --refresh`
+   * Run health checks immediately and return results
+   * Used by `dev status` command
    */
   runHealthChecks(): Effect.Effect<HealthCheckResult[], HealthCheckError>;
 
   /**
-   * Spawn health check worker as detached background process
-   * Used for background scheduling after commands complete
-   */
-  runHealthChecksBackground(): Effect.Effect<void, HealthCheckError>;
-
-  /**
-   * Get the latest health check results for each tool
-   * Used by `dev status` to show cached results
+   * Get the latest health check results for each tool from cache
+   * Used for quick status display if available
    */
   getLatestResults(): Effect.Effect<HealthCheckSummary[], HealthCheckError>;
 

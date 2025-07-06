@@ -19,17 +19,42 @@ export interface MiseConfig {
 export type GitProviderType = "github" | "gitlab";
 export type LogLevel = "debug" | "info" | "warn" | "error";
 
-export interface Config {
-  version: 3;
-  configUrl: string;
-  defaultOrg: string;
-  logLevel?: LogLevel;
-  telemetry: {
-    enabled: boolean;
+export interface CustomHealthCheck {
+  readonly command: string;
+  readonly versionPattern?: string;
+  readonly timeout?: number;
+  readonly parseOutput?: (stdout: string, stderr: string) => {
+    readonly version?: string;
+    readonly status?: "ok" | "warn" | "fail";
+    readonly notes?: string;
   };
-  orgToProvider?: Record<string, GitProviderType>;
-  miseGlobalConfig?: MiseConfig;
-  miseRepoConfig?: MiseConfig;
+}
+
+// Built-in health check tools configuration
+export interface BuiltInHealthCheck {
+  readonly command: string;
+  readonly versionPattern?: string;
+  readonly timeout?: number;
+  readonly parseOutput?: (stdout: string, stderr: string) => {
+    readonly version?: string;
+    readonly status?: "ok" | "warn" | "fail";
+    readonly notes?: string;
+  };
+}
+
+export interface Config {
+  readonly version: 3;
+  readonly configUrl: string;
+  readonly defaultOrg: string;
+  readonly logLevel?: LogLevel;
+  readonly telemetry: {
+    readonly enabled: boolean;
+  };
+  readonly orgToProvider?: Record<string, GitProviderType>;
+  readonly miseGlobalConfig?: MiseConfig;
+  readonly miseRepoConfig?: MiseConfig;
+  readonly customHealthChecks?: Record<string, CustomHealthCheck>;
+  readonly builtInHealthChecks?: Record<string, BuiltInHealthCheck>;
 }
 
 // Core domain models

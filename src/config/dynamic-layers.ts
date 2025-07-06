@@ -1,7 +1,6 @@
 import { Layer } from "effect";
 
 import { CommandTrackerLiveLayer } from "../app/services/command-tracking";
-import { HealthCheckSchedulerLiveLayer } from "../app/services/health-check-scheduler";
 import { ShellIntegrationLiveLayer } from "../app/services/shell-integration";
 import { UpdateCheckerLiveLayer } from "../app/services/update-check";
 import { VersionLiveLayer } from "../app/services/version";
@@ -13,6 +12,7 @@ import { DirectoryPortLiveLayer } from "../infra/fs/directory-live";
 import { FileSystemPortLiveLayer } from "../infra/fs/file-system-live";
 import { GitPortLiveLayer } from "../infra/git/git-live";
 import { HealthCheckPortLiveLayer } from "../infra/health/health-check-live";
+import { HealthCheckServiceTag, makeHealthCheckService } from "../domain/services/health-check-service";
 import { KeychainPortLiveLayer } from "../infra/keychain/keychain-live";
 import { MisePortLiveLayer } from "../infra/mise/mise-live";
 import { NetworkPortLiveLayer } from "../infra/network/network-live";
@@ -96,10 +96,13 @@ export const buildInfraLiveLayer = (configValues: DynamicConfigValues) => {
   // RunStore layer that depends on Database layer
   const RunStoreLayer = Layer.provide(RunStorePortLiveLayer, Layer.mergeAll(BaseInfraLayer, DatabaseLayer));
 
-  // Health check service that depends on Database, Config and Path services
+  // Health check service layer (no dependencies) - simple factory inlined
+  const HealthCheckServiceLayer = Layer.succeed(HealthCheckServiceTag, makeHealthCheckService());
+
+  // Health check port that depends on Database, Config, Path services, and HealthCheckService
   const HealthCheckLayer = Layer.provide(
     HealthCheckPortLiveLayer,
-    Layer.mergeAll(BaseInfraLayer, ConfigLayer, DatabaseLayer),
+    Layer.mergeAll(BaseInfraLayer, ConfigLayer, DatabaseLayer, HealthCheckServiceLayer),
   );
 
   // Complete Infrastructure Layer with dynamic values
@@ -113,7 +116,8 @@ export const buildInfraLiveLayer = (configValues: DynamicConfigValues) => {
     RepoProviderLayer, // Now using dynamic defaultOrg instead of hardcoded "acme"
     DatabaseLayer, // Core database service
     RunStoreLayer, // Run storage service that uses Database
-    HealthCheckLayer, // Health check service that uses Database
+    HealthCheckServiceLayer, // Health check domain service
+    HealthCheckLayer, // Health check port that uses Database and HealthCheckService
   );
 };
 
@@ -130,7 +134,6 @@ export const buildAppLiveLayer = (configValues: DynamicConfigValues) => {
     Layer.provide(VersionLiveLayer, infraLayer),
     Layer.provide(UpdateCheckerLiveLayer, infraLayer),
     Layer.provide(CommandTrackerLiveLayer, infraLayer),
-    Layer.provide(HealthCheckSchedulerLiveLayer, infraLayer),
   );
 
   // Complete application layer with all dependencies
