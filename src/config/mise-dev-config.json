@@ -1,27 +1,27 @@
 {
   "miseGlobalConfig": {
-"min_version": "2024.11.0",
-"env": {
-"_": {
-"path": [
-"~/.local/bin",
-"~/.bun/bin",
-"/opt/homebrew/bin"
+    "min_version": "2024.11.0",
+    "env": {
+      "_": {
+        "path": [
+          "~/.local/bin",
+          "~/.bun/bin",
+          "/opt/homebrew/bin"
         ]
       }
     },
-"tools": {
-"node": "lts",
-"python": "3.11",
-"go": "1.21",
-"rust": "stable"
+    "tools": {
+      "node": "lts",
+      "python": "3.11",
+      "go": "1.21",
+      "rust": "stable"
     },
-"settings": {
-"idiomatic_version_file_enable_tools": ["node", "python", "ruby", "go", "java"],
-"trusted_config_paths": [
-"~/src",
-"~/work",
-"~/projects"
+    "settings": {
+      "idiomatic_version_file_enable_tools": ["node", "python", "ruby", "go", "java"],
+      "trusted_config_paths": [
+        "~/src",
+        "~/work",
+        "~/projects"
       ]
     }
   }

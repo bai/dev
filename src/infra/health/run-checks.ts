@@ -1,11 +1,10 @@
-#!/usr/bin/env bun
 import os from "os";
 import path from "path";
 
+import { BunRuntime } from "@effect/platform-bun";
 import { Database } from "bun:sqlite";
 import { sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/bun-sqlite";
-import { BunRuntime } from "@effect/platform-bun";
 import { Clock, Effect, pipe } from "effect";
 
 import { toolHealthChecks } from "../../../drizzle/schema";
@@ -56,10 +55,10 @@ const executeCommand = (
 
 // Parse tool version from command output
 const parseToolVersion = (
-  toolName: ToolName, 
-  exitCode: number, 
-  stdout: string, 
-  stderr: string
+  toolName: ToolName,
+  exitCode: number,
+  stdout: string,
+  stderr: string,
 ): Effect.Effect<HealthCheckResult, never> =>
   Effect.gen(function* () {
     const checkedAtMs = yield* Clock.currentTimeMillis;

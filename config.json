@@ -1,17 +1,15 @@
 {
-  "configUrl": "https://gist.githubusercontent.com/bai/91f88fb26dcedccb97a07e3d53ee1baa/raw/config.json",
+  "configUrl": "https://gist.githubusercontent.com/bai/d5a4a92350e67af8aba1b9db33d5f077/raw/config.json",
   "defaultOrg": "flywheelsoftware",
   "orgToProvider": {
     "flywheelsoftware": "gitlab"
   },
   "miseGlobalConfig": {
     "tools": {
-      "bun": "latest",
-      "rust": "latest",
-
       "sops": "latest",
       "age": "latest",
-
+      "bun": "latest",
+      "rust": "latest",
       "aws-cli": "latest",
       "fd": "latest",
       "fzf": "latest",
@@ -25,7 +23,6 @@
       "terraform": "latest",
       "terragrunt": "latest",
       "uv": "latest",
-
       "npm:@anthropic-ai/claude-code": "latest",
       "npm:eslint": "latest",
       "npm:npm-check-updates": "latest",
@@ -35,6 +32,7 @@
     },
     "settings": {
       "trusted_config_paths": [
+        "~/.dev",
         "~/src/gitlab.com/flywheelsoftware",
         "~/src/github.com/Flywheel-Technologies"
       ]

@@ -1,4 +1,3 @@
-#!/usr/bin/env bun
 import { Command } from "@effect/cli";
 import { BunRuntime } from "@effect/platform-bun";
 import { Effect } from "effect";
@@ -87,28 +86,24 @@ const program = Effect.scoped(
     yield* Effect.gen(function* () {
       // Get command tracker and add finalizer for graceful shutdown
       const commandTracker = yield* CommandTrackerTag;
-      yield* Effect.addFinalizer(() => 
-        commandTracker.gracefulShutdown().pipe(
-          Effect.catchAll(() => Effect.void)
-        )
-      );
+      yield* Effect.addFinalizer(() => commandTracker.gracefulShutdown().pipe(Effect.catchAll(() => Effect.void)));
 
       // Get version from VersionService (now within appLayer context)
       const versionService = yield* VersionTag;
       const version = yield* versionService.getVersion;
-      
+
       // Annotate span with CLI information
       yield* Effect.annotateCurrentSpan("cli_name", "dev");
       yield* Effect.annotateCurrentSpan("cli_version", version);
 
       // Record command run
       const runId = yield* commandTracker.recordCommandRun().pipe(
-        Effect.catchAll((error) => 
+        Effect.catchAll((error) =>
           Effect.gen(function* () {
             yield* Effect.logWarning(`Failed to record command run: ${error._tag}`);
             return "unknown-run-id"; // Continue execution even if tracking fails
-          })
-        )
+          }),
+        ),
       );
 
       // Run the CLI with metadata and track completion
@@ -119,32 +114,30 @@ const program = Effect.scoped(
       }).pipe(Effect.withSpan("run-cli"));
 
       yield* cliExecution.pipe(
-        Effect.tap(() => 
+        Effect.tap(() =>
           // Record successful completion
-          commandTracker.completeCommandRun(runId, typeof process.exitCode === 'number' ? process.exitCode : 0).pipe(
-            Effect.catchAll((error) => 
-              Effect.logWarning(`Failed to complete command run tracking: ${error._tag}`)
-            )
-          )
+          commandTracker
+            .completeCommandRun(runId, typeof process.exitCode === "number" ? process.exitCode : 0)
+            .pipe(
+              Effect.catchAll((error) => Effect.logWarning(`Failed to complete command run tracking: ${error._tag}`)),
+            ),
         ),
-        Effect.tapError(() => 
+        Effect.tapError(() =>
           // Record error completion
-          commandTracker.completeCommandRun(runId, typeof process.exitCode === 'number' ? process.exitCode : 1).pipe(
-            Effect.catchAll((error) => 
-              Effect.logWarning(`Failed to complete command run tracking: ${error._tag}`)
-            )
-          )
-        )
+          commandTracker
+            .completeCommandRun(runId, typeof process.exitCode === "number" ? process.exitCode : 1)
+            .pipe(
+              Effect.catchAll((error) => Effect.logWarning(`Failed to complete command run tracking: ${error._tag}`)),
+            ),
+        ),
       );
 
       // After CLI execution completes, schedule background health checks
       const healthScheduler = yield* HealthCheckSchedulerTag;
-      yield* healthScheduler
-        .scheduleHealthChecks()
-        .pipe(
-          Effect.catchAll((error) => Effect.logWarning(`Health check scheduling failed: ${error.message}`)),
-          Effect.withSpan("health-check-scheduling")
-        );
+      yield* healthScheduler.scheduleHealthChecks().pipe(
+        Effect.catchAll((error) => Effect.logWarning(`Health check scheduling failed: ${error.message}`)),
+        Effect.withSpan("health-check-scheduling"),
+      );
     }).pipe(Effect.provide(appLayer), Effect.withSpan("cli-execution"));
 
     yield* Effect.logDebug("✅ CLI execution completed successfully");
