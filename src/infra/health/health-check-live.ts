@@ -23,7 +23,7 @@ const HEALTH_CHECK_RETENTION_DAYS = 30;
 interface InternalHealthCheckResult {
   readonly toolName: string;
   readonly version?: string;
-  readonly status: "ok" | "warn" | "fail";
+  readonly status: "ok" | "warning" | "fail";
   readonly notes?: string;
   readonly checkedAt: number;
 }
@@ -57,7 +57,7 @@ const parseToolVersion = (
   stderr: string,
   parseOutput?: (stdout: string, stderr: string) => {
     readonly version?: string;
-    readonly status?: "ok" | "warn" | "fail";
+    readonly status?: "ok" | "warning" | "fail";
     readonly notes?: string;
   },
   versionPattern?: string,
@@ -76,7 +76,7 @@ const parseToolVersion = (
 
     // Parse version from output
     let version: string | undefined;
-    let status: "ok" | "warn" | "fail" = "ok";
+    let status: "ok" | "warning" | "fail" = "ok";
     let notes: string | undefined;
 
     // Use custom parseOutput function if provided
@@ -111,7 +111,7 @@ const probeToolVersion = (
   shell: ShellPort,
   parseOutput?: (stdout: string, stderr: string) => {
     readonly version?: string;
-    readonly status?: "ok" | "warn" | "fail";
+    readonly status?: "ok" | "warning" | "fail";
     readonly notes?: string;
   },
   versionPattern?: string,
@@ -264,7 +264,7 @@ export const makeHealthCheckLive = (database: DatabasePort, pathService: PathSer
             return latestChecks.map((check) => ({
               toolName: check.tool_name,
               version: check.version || undefined,
-              status: check.status as "ok" | "warn" | "fail",
+              status: check.status as "ok" | "warning" | "fail",
               notes: check.notes || undefined,
               checkedAt: new Date(check.checked_at),
             }));

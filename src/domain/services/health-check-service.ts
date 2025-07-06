@@ -10,7 +10,7 @@ export interface HealthCheckConfig {
   readonly timeout?: number;
   readonly parseOutput?: (stdout: string, stderr: string) => {
     readonly version?: string;
-    readonly status?: "ok" | "warn" | "fail";
+    readonly status?: "ok" | "warning" | "fail";
     readonly notes?: string;
   };
   readonly isCustom: boolean;
@@ -58,13 +58,13 @@ const DEFAULT_HEALTH_CHECKS: Record<string, BuiltInHealthCheck> = {
       if (rtt !== null) {
         return {
           version: `${rtt}ms RTT`,
-          status: rtt > 100 ? "warn" : "ok",
+          status: rtt > 100 ? "warning" : "ok",
           notes: rtt > 100 ? "High network latency" : undefined,
         };
       }
       
       return {
-        status: "warn",
+        status: "warning",
         notes: "Unable to parse ping response",
       };
     },

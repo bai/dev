@@ -6,7 +6,7 @@ import { type HealthCheckError } from "../errors";
 export interface HealthCheckResult {
   readonly toolName: string;
   readonly version?: string;
-  readonly status: "ok" | "warn" | "fail";
+  readonly status: "ok" | "warning" | "fail";
   readonly notes?: string;
   readonly checkedAt: Date;
 }
@@ -15,7 +15,7 @@ export interface HealthCheckResult {
 export interface HealthCheckSummary {
   readonly toolName: string;
   readonly version?: string;
-  readonly status: "ok" | "warn" | "fail";
+  readonly status: "ok" | "warning" | "fail";
   readonly notes?: string;
   readonly checkedAt: Date;
 }

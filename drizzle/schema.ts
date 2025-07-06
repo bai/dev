@@ -21,7 +21,7 @@ export const toolHealthChecks = sqliteTable(
     id: text().primaryKey(),
     tool_name: text().notNull(),
     version: text(),
-    status: text({ enum: ["ok", "warn", "fail"] }).notNull(),
+    status: text({ enum: ["ok", "warning", "fail"] }).notNull(),
     notes: text(),
     checked_at: integer({ mode: "timestamp" }).notNull(),
   },

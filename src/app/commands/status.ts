@@ -9,7 +9,7 @@ import { ShellPortTag } from "../../domain/ports/shell-port";
 interface StatusItem {
   readonly tool: string;
   readonly version?: string;
-  readonly status: "ok" | "warn" | "fail";
+  readonly status: "ok" | "warning" | "fail";
   readonly notes?: string;
 }
 
@@ -207,9 +207,9 @@ const displayToolGroup = (title: string, items: readonly StatusItem[]): Effect.E
  */
 const displayToolItem = (item: StatusItem): Effect.Effect<void, never, ShellPortTag> =>
   Effect.gen(function* () {
-    const icon = item.status === "ok" ? "✔" : item.status === "warn" ? "⚠" : "✗";
+    const icon = item.status === "ok" ? "✔" : item.status === "warning" ? "⚠" : "✗";
     const versionText = item.version ? ` ${item.version}` : "";
-    const statusText = item.status === "warn" || item.status === "fail" ? ` (${item.status})` : "";
+    const statusText = item.status === "warning" || item.status === "fail" ? ` (${item.status})` : "";
     
     const toolPath = yield* getToolPath(item.tool);
     const pathText = toolPath ? ` - ${toolPath}` : "";
@@ -218,7 +218,7 @@ const displayToolItem = (item: StatusItem): Effect.Effect<void, never, ShellPort
       `  ${icon} ${item.tool}${versionText}${statusText}${pathText}`,
     );
     
-    if (item.notes && (item.status === "warn" || item.status === "fail")) {
+    if (item.notes && (item.status === "warning" || item.status === "fail")) {
       yield* Effect.logInfo(`     Note: ${item.notes}`);
     }
     
@@ -230,7 +230,7 @@ const displayToolItem = (item: StatusItem): Effect.Effect<void, never, ShellPort
 const showSummary = (statusItems: readonly StatusItem[]): Effect.Effect<void, never> =>
   Effect.gen(function* () {
     const okCount = statusItems.filter((item) => item.status === "ok").length;
-    const warnCount = statusItems.filter((item) => item.status === "warn").length;
+    const warnCount = statusItems.filter((item) => item.status === "warning").length;
     const failCount = statusItems.filter((item) => item.status === "fail").length;
 
     if (failCount > 0) {
@@ -252,7 +252,7 @@ const checkForFailures = (statusItems: readonly StatusItem[]): Effect.Effect<voi
     if (failedItems.length > 0) {
       const failedComponents = failedItems.map((item) => item.tool);
       const failCount = failedItems.length;
-      const warnCount = statusItems.filter((item) => item.status === "warn").length;
+      const warnCount = statusItems.filter((item) => item.status === "warning").length;
 
       yield* Effect.fail(
         statusCheckError(`Found ${failCount} failing tool(s) and ${warnCount} warning(s)`, failedComponents),

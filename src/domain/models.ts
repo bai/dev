@@ -17,7 +17,7 @@ export interface MiseConfig {
 }
 
 export type GitProviderType = "github" | "gitlab";
-export type LogLevel = "debug" | "info" | "warn" | "error";
+export type LogLevel = "debug" | "info" | "warning" | "error" | "fatal";
 
 // Built-in health check tools configuration
 export interface BuiltInHealthCheck {
@@ -26,7 +26,7 @@ export interface BuiltInHealthCheck {
   readonly timeout?: number;
   readonly parseOutput?: (stdout: string, stderr: string) => {
     readonly version?: string;
-    readonly status?: "ok" | "warn" | "fail";
+    readonly status?: "ok" | "warning" | "fail";
     readonly notes?: string;
   };
 }

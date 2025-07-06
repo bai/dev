@@ -3,7 +3,7 @@ import { z } from "zod";
 import type { Config, GitProviderType, LogLevel, MiseConfig } from "../domain/models";
 
 // Log level schema
-const logLevelSchema: z.ZodType<LogLevel> = z.enum(["debug", "info", "warn", "error"]);
+const logLevelSchema: z.ZodType<LogLevel> = z.enum(["debug", "info", "warning", "error", "fatal"]);
 
 // Mise configuration schema (matching domain types)
 const miseConfigSchema: z.ZodType<MiseConfig> = z.object({
