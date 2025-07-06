@@ -2,7 +2,7 @@ import { desc, eq, isNull, lt } from "drizzle-orm";
 import { Clock, Effect, Layer } from "effect";
 
 import { runs } from "../../../drizzle/schema";
-import { configError, unknownError, type ConfigError, type UnknownError } from "../../domain/errors";
+import { configError, type ConfigError, type UnknownError } from "../../domain/errors";
 import type { CommandRun } from "../../domain/models";
 import { DatabasePortTag, type DatabasePort } from "../../domain/ports/database-port";
 import { RunStorePortTag, type RunStorePort } from "../../domain/ports/run-store-port";

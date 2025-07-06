@@ -1,6 +1,6 @@
 import { Effect, Layer } from "effect";
 
-import { authError, unknownError, type AuthError, type UnknownError } from "../../domain/errors";
+import { authError, type AuthError, type UnknownError } from "../../domain/errors";
 import { KeychainPortTag, type KeychainPort } from "../../domain/ports/keychain-port";
 import { ShellPortTag, type ShellPort } from "../../domain/ports/shell-port";
 

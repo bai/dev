@@ -2,7 +2,7 @@ import { Command, Options } from "@effect/cli";
 import { Effect } from "effect";
 
 import { ConfigLoaderTag } from "../../config/loader";
-import { exitCode, statusCheckError, unknownError, type DevError } from "../../domain/errors";
+import { statusCheckError, unknownError } from "../../domain/errors";
 import { HealthCheckPortTag } from "../../domain/ports/health-check-port";
 import { PathServiceTag } from "../../domain/services/path-service";
 

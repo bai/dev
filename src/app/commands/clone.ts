@@ -1,7 +1,7 @@
 import { Args, Command } from "@effect/cli";
 import { Effect } from "effect";
 
-import { unknownError, type DevError } from "../../domain/errors";
+import { unknownError } from "../../domain/errors";
 import { FileSystemPortTag } from "../../domain/ports/file-system-port";
 import { GitPortTag } from "../../domain/ports/git-port";
 import { RepoProviderPortTag } from "../../domain/ports/repo-provider-port";

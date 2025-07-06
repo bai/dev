@@ -1,7 +1,7 @@
 import { Clock, Context, Effect, Layer } from "effect";
 
 import { type ConfigError, type UnknownError } from "../../domain/errors";
-import type { GitPort, GitPortTag } from "../../domain/ports/git-port";
+import type { GitPortTag } from "../../domain/ports/git-port";
 import { RunStorePortTag } from "../../domain/ports/run-store-port";
 import type { PathServiceTag } from "../../domain/services/path-service";
 import { VersionTag } from "./version";

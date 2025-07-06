@@ -5,7 +5,6 @@ import { Context, Effect, Layer } from "effect";
 import {
   externalToolError,
   unknownError,
-  type ConfigError,
   type ExternalToolError,
   type UnknownError,
 } from "../../domain/errors";

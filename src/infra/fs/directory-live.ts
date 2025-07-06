@@ -2,8 +2,8 @@ import { Effect, Layer } from "effect";
 
 import { type FileSystemError, type UnknownError } from "../../domain/errors";
 import { DirectoryPortTag, type DirectoryPort } from "../../domain/ports/directory-port";
-import { FileSystemPortTag, type FileSystemPort } from "../../domain/ports/file-system-port";
-import { PathServiceTag, type PathService } from "../../domain/services/path-service";
+import { FileSystemPortTag } from "../../domain/ports/file-system-port";
+import { PathServiceTag } from "../../domain/services/path-service";
 
 // Individual effect functions
 const ensureBaseDirectoryExists = (): Effect.Effect<

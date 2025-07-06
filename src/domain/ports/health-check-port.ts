@@ -1,6 +1,6 @@
 import { Context, type Effect } from "effect";
 
-import { type ConfigError, type HealthCheckError, type UnknownError } from "../errors";
+import { type HealthCheckError } from "../errors";
 
 // Health check result interface
 export interface HealthCheckResult {

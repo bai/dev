@@ -1,14 +1,12 @@
-import { Command, Options } from "@effect/cli";
+import { Command } from "@effect/cli";
 import { Effect } from "effect";
 
-import { ConfigLoaderTag, type ConfigLoader } from "../../config/loader";
+import { ConfigLoaderTag } from "../../config/loader";
 import { type Config } from "../../config/schema";
 import { unknownError, type DevError } from "../../domain/errors";
-import { FileSystemPortTag, type FileSystemPort } from "../../domain/ports/file-system-port";
-import { GitPortTag, type GitPort } from "../../domain/ports/git-port";
-import { MisePortTag, type MisePort } from "../../domain/ports/mise-port";
-import { NetworkPortTag, type NetworkPort } from "../../domain/ports/network-port";
-import { ShellPortTag, type ShellPort } from "../../domain/ports/shell-port";
+import { FileSystemPortTag } from "../../domain/ports/file-system-port";
+import { GitPortTag } from "../../domain/ports/git-port";
+import { MisePortTag } from "../../domain/ports/mise-port";
 import { ToolManagementPortTag, type ToolManagementPort } from "../../domain/ports/tool-management-port";
 import { PathServiceTag, type PathService } from "../../domain/services/path-service";
 

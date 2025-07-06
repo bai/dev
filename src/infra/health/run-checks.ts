@@ -5,7 +5,7 @@ import { BunRuntime } from "@effect/platform-bun";
 import { Database } from "bun:sqlite";
 import { sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/bun-sqlite";
-import { Clock, Effect, pipe } from "effect";
+import { Clock, Effect } from "effect";
 
 import { toolHealthChecks } from "../../../drizzle/schema";
 import { healthCheckError, type HealthCheckError } from "../../domain/errors";

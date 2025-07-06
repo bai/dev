@@ -1,6 +1,6 @@
 import { Effect, Layer } from "effect";
 
-import { networkError, unknownError, type NetworkError, type UnknownError } from "../../domain/errors";
+import { networkError, type NetworkError, type UnknownError } from "../../domain/errors";
 import { FileSystemPortTag, type FileSystemPort } from "../../domain/ports/file-system-port";
 import { NetworkPortTag, type HttpResponse, type NetworkPort } from "../../domain/ports/network-port";
 

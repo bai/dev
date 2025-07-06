@@ -1,6 +1,6 @@
 import { Context, Effect, Layer } from "effect";
 
-import { externalToolError, unknownError, type ExternalToolError, type UnknownError } from "../../domain/errors";
+import { externalToolError, type ExternalToolError, type UnknownError } from "../../domain/errors";
 import { ShellPortTag, type ShellPort } from "../../domain/ports/shell-port";
 
 export const FZF_MIN_VERSION = "0.35.0";

@@ -1,6 +1,4 @@
-import { Context, type Effect, type Layer } from "effect";
 
-import type { DevError } from "./errors";
 
 // Core configuration types (moved from config schema to maintain proper layering)
 export interface MiseConfig {

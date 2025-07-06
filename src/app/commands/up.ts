@@ -1,7 +1,6 @@
 import { Command } from "@effect/cli";
 import { Effect } from "effect";
 
-import { unknownError, type DevError } from "../../domain/errors";
 import { FileSystemPortTag } from "../../domain/ports/file-system-port";
 import { MisePortTag } from "../../domain/ports/mise-port";
 

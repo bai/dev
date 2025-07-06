@@ -1,7 +1,7 @@
 import os from "os";
 import path from "path";
 
-import { Context, Effect, Layer } from "effect";
+import { Context, Layer } from "effect";
 
 import type { Config } from "../models";
 

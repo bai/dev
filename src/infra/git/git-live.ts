@@ -1,6 +1,6 @@
 import { Effect, Layer } from "effect";
 
-import { gitError, unknownError, type GitError, type UnknownError } from "../../domain/errors";
+import { gitError, type GitError, type UnknownError } from "../../domain/errors";
 import type { Repository } from "../../domain/models";
 import { GitPortTag, type GitPort } from "../../domain/ports/git-port";
 import { ShellPortTag, type ShellPort } from "../../domain/ports/shell-port";
