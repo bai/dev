@@ -32,6 +32,11 @@ export interface MisePort {
    * Get available tasks
    */
   getTasks(cwd?: string): Effect.Effect<string[], UnknownError>;
+
+  /**
+   * Setup mise global configuration from current config
+   */
+  setupGlobalConfig(): Effect.Effect<void, UnknownError>;
 }
 
 export class MisePortTag extends Context.Tag("MisePort")<MisePortTag, MisePort>() {}

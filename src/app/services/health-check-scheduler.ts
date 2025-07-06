@@ -23,7 +23,10 @@ export interface HealthCheckScheduler {
   shouldRunHealthCheck(): Effect.Effect<boolean, HealthCheckError>;
 }
 
-export class HealthCheckSchedulerTag extends Context.Tag("HealthCheckScheduler")<HealthCheckSchedulerTag, HealthCheckScheduler>() {}
+export class HealthCheckSchedulerTag extends Context.Tag("HealthCheckScheduler")<
+  HealthCheckSchedulerTag,
+  HealthCheckScheduler
+>() {}
 
 // Factory function that creates HealthCheckSchedulerService with dependencies
 export const makeHealthCheckSchedulerLive = (

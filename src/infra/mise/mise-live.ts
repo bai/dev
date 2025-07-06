@@ -1,11 +1,18 @@
+import path from "path";
+
+import { stringify } from "@iarna/toml";
 import { Effect, Layer } from "effect";
 
+import { ConfigLoaderTag, type ConfigLoader } from "../../config/loader";
 import { unknownError, type UnknownError } from "../../domain/errors";
-import { MisePortTag, type MisePort, type MiseInfo } from "../../domain/ports/mise-port";
+import { FileSystemPortTag, type FileSystemPort } from "../../domain/ports/file-system-port";
+import { MisePortTag, type MiseInfo, type MisePort } from "../../domain/ports/mise-port";
 import { ShellPortTag, type ShellPort } from "../../domain/ports/shell-port";
 
+const homeDir = process.env.HOME || process.env.USERPROFILE || "";
+
 // Factory function to create Mise implementation
-export const makeMiseLive = (shell: ShellPort): MisePort => ({
+export const makeMiseLive = (shell: ShellPort, fileSystem: FileSystemPort, configLoader: ConfigLoader): MisePort => ({
   checkInstallation: (): Effect.Effect<MiseInfo, UnknownError> =>
     shell.exec("mise", ["--version"]).pipe(
       Effect.flatMap((result) => {
@@ -99,6 +106,46 @@ export const makeMiseLive = (shell: ShellPort): MisePort => ({
         return Effect.succeed(tasks);
       }),
     ),
+
+  setupGlobalConfig: (): Effect.Effect<void, UnknownError> =>
+    Effect.gen(function* () {
+      yield* Effect.logDebug("🔧 Setting up mise global configuration...");
+
+      const miseConfigDir = path.join(homeDir, ".config", "mise");
+      const miseConfigFile = path.join(miseConfigDir, "config.toml");
+
+      // Create config directory if it doesn't exist
+      const configDirExists = yield* fileSystem.exists(miseConfigDir);
+      if (!configDirExists) {
+        yield* Effect.logDebug("   📂 Creating mise config directory...");
+        yield* fileSystem.mkdir(miseConfigDir, true).pipe(
+          Effect.mapError((error) => {
+            return unknownError(`Failed to create mise config directory: ${error}`);
+          }),
+        );
+      }
+
+      // Load config dynamically from the config loader
+      const config = yield* configLoader.load().pipe(
+        Effect.mapError((error) => {
+          return unknownError(`Failed to load config: ${error}`);
+        }),
+      );
+
+      // Write mise global config if it exists in the loaded config
+      if (config.miseGlobalConfig) {
+        const tomlContent = stringify(config.miseGlobalConfig as Record<string, any>);
+
+        yield* fileSystem.writeFile(miseConfigFile, tomlContent).pipe(
+          Effect.mapError((error) => {
+            return unknownError(`Failed to write mise config: ${error}`);
+          }),
+        );
+        yield* Effect.logDebug("   ✅ Mise global config ready");
+      } else {
+        yield* Effect.logDebug("   ⚠️  No mise global config found in loaded configuration");
+      }
+    }),
 });
 
 // Effect Layer for dependency injection
@@ -106,6 +153,8 @@ export const MisePortLiveLayer = Layer.effect(
   MisePortTag,
   Effect.gen(function* () {
     const shell = yield* ShellPortTag;
-    return makeMiseLive(shell);
+    const fileSystem = yield* FileSystemPortTag;
+    const configLoader = yield* ConfigLoaderTag;
+    return makeMiseLive(shell, fileSystem, configLoader);
   }),
 );

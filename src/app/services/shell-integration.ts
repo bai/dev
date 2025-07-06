@@ -59,7 +59,4 @@ export const ShellIntegrationLive: ShellIntegration = {
 export class ShellIntegrationTag extends Context.Tag("ShellIntegration")<ShellIntegrationTag, ShellIntegration>() {}
 
 // Layer that provides ShellIntegrationService (no `new` keyword)
-export const ShellIntegrationLiveLayer = Layer.effect(
-  ShellIntegrationTag,
-  Effect.succeed(ShellIntegrationLive),
-);
+export const ShellIntegrationLiveLayer = Layer.effect(ShellIntegrationTag, Effect.succeed(ShellIntegrationLive));

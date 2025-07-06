@@ -180,10 +180,7 @@ export const makeGcloudToolsLive = (shell: ShellPort, filesystem: FileSystemPort
 };
 
 // Service tag for Effect Context system
-export class GcloudToolsTag extends Context.Tag("GcloudTools")<
-  GcloudToolsTag,
-  GcloudTools
->() {}
+export class GcloudToolsTag extends Context.Tag("GcloudTools")<GcloudToolsTag, GcloudTools>() {}
 
 // Effect Layer for dependency injection using factory function
 export const GcloudToolsLiveLayer = Layer.effect(

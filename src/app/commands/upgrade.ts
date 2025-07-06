@@ -2,9 +2,12 @@ import { Command, Options } from "@effect/cli";
 import { Effect } from "effect";
 
 import { ConfigLoaderTag, type ConfigLoader } from "../../config/loader";
+import { type Config } from "../../config/schema";
 import { unknownError, type DevError } from "../../domain/errors";
 import { FileSystemPortTag, type FileSystemPort } from "../../domain/ports/file-system-port";
 import { GitPortTag, type GitPort } from "../../domain/ports/git-port";
+import { MisePortTag, type MisePort } from "../../domain/ports/mise-port";
+import { NetworkPortTag, type NetworkPort } from "../../domain/ports/network-port";
 import { ShellPortTag, type ShellPort } from "../../domain/ports/shell-port";
 import { ToolManagementPortTag, type ToolManagementPort } from "../../domain/ports/tool-management-port";
 import { PathServiceTag, type PathService } from "../../domain/services/path-service";
@@ -12,36 +15,38 @@ import { PathServiceTag, type PathService } from "../../domain/services/path-ser
 // No options needed for upgrade command
 
 // Create the upgrade command using @effect/cli
-export const upgradeCommand = Command.make(
-  "upgrade",
-  {},
-  () =>
-    Effect.gen(function* () {
-      const configLoader = yield* ConfigLoaderTag;
-      const pathService = yield* PathServiceTag;
+export const upgradeCommand = Command.make("upgrade", {}, () =>
+  Effect.gen(function* () {
+    const configLoader = yield* ConfigLoaderTag;
+    const pathService = yield* PathServiceTag;
 
-      yield* Effect.logInfo("🔄 Upgrading dev CLI tool...");
+    yield* Effect.logInfo("🔄 Upgrading dev CLI tool...");
 
-      // Step 1: Self-update the CLI repository
-      yield* selfUpdateCli(pathService);
+    // Step 1: Self-update the CLI repository
+    yield* selfUpdateCli(pathService);
 
-      // Step 2: Ensure necessary directories exist
-      yield* ensureDirectoriesExist(pathService);
+    // Step 2: Ensure necessary directories exist
+    yield* ensureDirectoriesExist(pathService);
 
-      // Step 3: Update shell integration
-      yield* ensureShellIntegration(pathService);
+    // Step 3: Update shell integration
+    yield* ensureShellIntegration(pathService);
 
-      // Step 4: Refresh remote configuration
-      yield* Effect.logInfo("🔄 Refreshing configuration from remote...");
-      const configResult = yield* configLoader.refresh();
-      yield* Effect.logInfo("✅ Configuration refreshed successfully");
+    // Step 4: Ensure local config has correct remote URL, then refresh from remote
+    yield* Effect.logInfo("🔄 Updating local config with correct remote URL...");
+    yield* ensureCorrectConfigUrl(pathService);
+    yield* Effect.logInfo("🔄 Refreshing dev configuration from remote...");
+    const refreshedConfig = yield* configLoader.refresh();
+    yield* Effect.logInfo("✅ Configuration refreshed successfully");
 
-      // Step 5: Tool version checks and upgrades
-      yield* upgradeEssentialTools();
+    // Step 5: Setup mise global configuration from refreshed config
+    yield* setupMiseGlobalConfiguration(refreshedConfig);
 
-      // Step 6: Final success message and usage examples
-      yield* showSuccessMessage();
-    }),
+    // Step 6: Tool version checks and upgrades
+    yield* upgradeEssentialTools();
+
+    // Step 7: Final success message and usage examples
+    yield* showSuccessMessage();
+  }),
 );
 
 /**
@@ -104,6 +109,102 @@ function ensureShellIntegration(pathService: PathService): Effect.Effect<void, D
     yield* fileSystem.mkdir(`${pathService.configDir}/shell`, true);
 
     yield* Effect.logInfo("✅ Shell integration ensured");
+  });
+}
+
+/**
+ * Ensure local config has the correct configUrl from project config
+ * This updates only the configUrl field so that configLoader.refresh() works correctly
+ */
+function ensureCorrectConfigUrl(pathService: PathService): Effect.Effect<void, DevError, any> {
+  return Effect.gen(function* () {
+    const fileSystem = yield* FileSystemPortTag;
+
+    // Step 1: Read the project config to get the authoritative configUrl
+    const projectConfigPath = `${pathService.devDir}/config.json`;
+    const projectConfigExists = yield* fileSystem.exists(projectConfigPath);
+
+    if (!projectConfigExists) {
+      return yield* Effect.fail(
+        unknownError("Project config.json not found. Cannot determine source of truth config URL."),
+      );
+    }
+
+    const projectConfigContent = yield* fileSystem.readFile(projectConfigPath);
+    let projectConfig: Config;
+
+    try {
+      projectConfig = JSON.parse(projectConfigContent);
+    } catch (error) {
+      return yield* Effect.fail(unknownError(`Invalid project config.json: ${error}`));
+    }
+
+    if (!projectConfig.configUrl) {
+      return yield* Effect.fail(unknownError("No configUrl found in project config.json"));
+    }
+
+    // Step 2: Read the current local config
+    const localConfigPath = `${pathService.configDir}/config.json`;
+    const localConfigExists = yield* fileSystem.exists(localConfigPath);
+
+    let localConfig: Config;
+    if (localConfigExists) {
+      const localConfigContent = yield* fileSystem.readFile(localConfigPath);
+      try {
+        localConfig = JSON.parse(localConfigContent);
+      } catch (error) {
+        return yield* Effect.fail(unknownError(`Invalid local config.json: ${error}`));
+      }
+    } else {
+      // If local config doesn't exist, create minimal config with correct URL
+      localConfig = {
+        version: 3,
+        configUrl: projectConfig.configUrl,
+        defaultOrg: projectConfig.defaultOrg || "default",
+        telemetry: { enabled: true },
+      };
+    }
+
+    // Step 3: Update configUrl if it's different
+    if (localConfig.configUrl !== projectConfig.configUrl) {
+      yield* Effect.logDebug(`📝 Updating configUrl from ${localConfig.configUrl} to ${projectConfig.configUrl}`);
+      localConfig.configUrl = projectConfig.configUrl;
+
+      const updatedConfigContent = JSON.stringify(localConfig, null, 2);
+      yield* fileSystem
+        .writeFile(localConfigPath, updatedConfigContent)
+        .pipe(Effect.mapError((error) => unknownError(`Failed to update local config: ${error}`)));
+
+      yield* Effect.logDebug("✅ Local config URL updated");
+    } else {
+      yield* Effect.logDebug("✅ Local config URL already correct");
+    }
+  });
+}
+
+/**
+ * Setup mise global configuration from refreshed config
+ */
+function setupMiseGlobalConfiguration(config: Config): Effect.Effect<void, DevError, any> {
+  return Effect.gen(function* () {
+    yield* Effect.logInfo("🔧 Setting up mise global configuration...");
+
+    const misePort = yield* MisePortTag;
+
+    if (config.miseGlobalConfig) {
+      yield* Effect.logDebug(
+        `📝 Found mise global config with ${Object.keys(config.miseGlobalConfig.tools || {}).length} tools`,
+      );
+
+      yield* misePort
+        .setupGlobalConfig()
+        .pipe(Effect.mapError((error) => unknownError(`Mise config setup failed: ${error}`)));
+
+      yield* Effect.logInfo("✅ Mise global configuration updated successfully");
+    } else {
+      yield* Effect.logWarning("⚠️  No mise global config found in refreshed configuration");
+      yield* Effect.logInfo("💡 Consider adding miseGlobalConfig to your remote configuration");
+    }
   });
 }
 

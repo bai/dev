@@ -28,7 +28,11 @@ const BootstrapLayer = Layer.mergeAll(
   Layer.provide(NetworkPortLiveLayer, FileSystemPortLiveLayer),
   Layer.provide(
     ConfigLoaderLiveLayer(path.join(os.homedir(), ".config", "dev", "config.json")),
-    Layer.mergeAll(PathLiveLayer, FileSystemPortLiveLayer, Layer.provide(NetworkPortLiveLayer, FileSystemPortLiveLayer)),
+    Layer.mergeAll(
+      PathLiveLayer,
+      FileSystemPortLiveLayer,
+      Layer.provide(NetworkPortLiveLayer, FileSystemPortLiveLayer),
+    ),
   ),
 );
 

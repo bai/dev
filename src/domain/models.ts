@@ -59,4 +59,3 @@ export interface Repository {
   provider: GitProvider;
   cloneUrl: string;
 }
-

@@ -1,8 +1,8 @@
-import { Context, type Effect } from "effect";
 import type { Database as BunSQLiteDatabase } from "bun:sqlite";
-import type { DrizzleDatabase } from "../types/drizzle";
+import { Context, type Effect } from "effect";
 
 import type { ConfigError, UnknownError } from "../errors";
+import type { DrizzleDatabase } from "../types/drizzle";
 
 /**
  * Database port for managing SQLite connections and operations

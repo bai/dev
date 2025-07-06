@@ -1,6 +1,10 @@
 import { Effect, Layer } from "effect";
 
-import { ToolManagementPortTag, type ToolManagementPort, type ToolManager } from "../../domain/ports/tool-management-port";
+import {
+  ToolManagementPortTag,
+  type ToolManagementPort,
+  type ToolManager,
+} from "../../domain/ports/tool-management-port";
 import { BunToolsTag, type BunTools } from "./bun";
 import { FzfToolsTag, type FzfTools } from "./fzf";
 import { GcloudToolsTag, type GcloudTools } from "./gcloud";

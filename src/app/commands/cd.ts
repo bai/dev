@@ -34,7 +34,7 @@ function handleDirectCd(folderName: string): Effect.Effect<void, DevError, any> 
     const directoryService = yield* DirectoryPortTag;
     const directories = yield* directoryService.findDirs().pipe(
       Effect.tap(() => Effect.annotateCurrentSpan("operation", "find_directories")),
-      Effect.withSpan("find-directories")
+      Effect.withSpan("find-directories"),
     );
     yield* Effect.annotateCurrentSpan("directories_found", directories.length.toString());
 
@@ -42,7 +42,7 @@ function handleDirectCd(folderName: string): Effect.Effect<void, DevError, any> 
       // Use filter() for fuzzy matching instead of simple includes
       const fuzzyMatches = yield* Effect.sync(() => filter(folderName, directories)).pipe(
         Effect.tap(() => Effect.annotateCurrentSpan("search_term", folderName)),
-        Effect.withSpan("fuzzy-match")
+        Effect.withSpan("fuzzy-match"),
       );
       yield* Effect.annotateCurrentSpan("fuzzy_matches", fuzzyMatches.length.toString());
 
@@ -53,7 +53,7 @@ function handleDirectCd(folderName: string): Effect.Effect<void, DevError, any> 
         const shellIntegration = yield* ShellIntegrationTag;
         yield* shellIntegration.changeDirectory(targetPath).pipe(
           Effect.tap(() => Effect.annotateCurrentSpan("operation", "change_directory")),
-          Effect.withSpan("change-directory")
+          Effect.withSpan("change-directory"),
         );
         return; // Successfully changed directory
       }
@@ -71,7 +71,7 @@ function handleInteractiveCd(): Effect.Effect<void, DevError, any> {
     const directoryService = yield* DirectoryPortTag;
     const directories = yield* directoryService.findDirs().pipe(
       Effect.tap(() => Effect.annotateCurrentSpan("operation", "find_directories")),
-      Effect.withSpan("find-directories")
+      Effect.withSpan("find-directories"),
     );
     yield* Effect.annotateCurrentSpan("directories_found", directories.length.toString());
 
@@ -84,7 +84,7 @@ function handleInteractiveCd(): Effect.Effect<void, DevError, any> {
     const selector = yield* InteractiveSelectorPortTag;
     const selectedPath = yield* selector.selectFromList(directories).pipe(
       Effect.tap(() => Effect.annotateCurrentSpan("operation", "interactive_selection")),
-      Effect.withSpan("interactive-selection")
+      Effect.withSpan("interactive-selection"),
     );
 
     if (selectedPath) {
@@ -93,7 +93,7 @@ function handleInteractiveCd(): Effect.Effect<void, DevError, any> {
       const shellIntegration = yield* ShellIntegrationTag;
       yield* shellIntegration.changeDirectory(selectedPath).pipe(
         Effect.tap(() => Effect.annotateCurrentSpan("operation", "change_directory")),
-        Effect.withSpan("change-directory")
+        Effect.withSpan("change-directory"),
       );
     }
   }).pipe(Effect.withSpan("handle-interactive-cd"));

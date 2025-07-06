@@ -14,4 +14,7 @@ export interface InteractiveSelectorPort {
   selectFromList(choices: string[]): Effect.Effect<string | null, UnknownError>;
 }
 
-export class InteractiveSelectorPortTag extends Context.Tag("InteractiveSelectorPort")<InteractiveSelectorPortTag, InteractiveSelectorPort>() {}
+export class InteractiveSelectorPortTag extends Context.Tag("InteractiveSelectorPort")<
+  InteractiveSelectorPortTag,
+  InteractiveSelectorPort
+>() {}

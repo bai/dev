@@ -40,7 +40,7 @@ export const makeDatabaseLive = (
   ): Effect.Effect<A, E | ConfigError | UnknownError> =>
     Effect.gen(function* () {
       yield* Effect.logDebug("Starting database transaction");
-      
+
       // For simplicity, we'll use the main database connection for now
       // In a production system, you'd want proper transaction support
       // For now, this provides the same interface but without true ACID transactions
@@ -125,16 +125,10 @@ export const DatabasePortLiveLayer = Layer.scoped(
   DatabasePortTag,
   Effect.gen(function* () {
     // Create the Database with proper resource management
-    const database = yield* Effect.acquireRelease(
-      createDatabase,
-      (database) =>
-        database
-          .close()
-          .pipe(
-            Effect.catchAll((error) =>
-              Effect.logWarning(`Failed to close database cleanly: ${error}`),
-            ),
-          ),
+    const database = yield* Effect.acquireRelease(createDatabase, (database) =>
+      database
+        .close()
+        .pipe(Effect.catchAll((error) => Effect.logWarning(`Failed to close database cleanly: ${error}`))),
     );
 
     // Return only the public DatabasePort interface, not the extended one with close

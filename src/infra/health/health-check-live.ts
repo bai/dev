@@ -9,8 +9,8 @@ import { healthCheckError, type HealthCheckError } from "../../domain/errors";
 import { DatabasePortTag, type DatabasePort } from "../../domain/ports/database-port";
 import {
   HealthCheckPortTag,
-  type HealthCheckResult,
   type HealthCheckPort,
+  type HealthCheckResult,
   type HealthCheckSummary,
 } from "../../domain/ports/health-check-port";
 import { PathServiceTag, type PathService } from "../../domain/services/path-service";
@@ -20,7 +20,6 @@ const HEALTH_CHECK_RETENTION_DAYS = 30;
 
 // Factory function that creates HealthCheckService with dependencies
 export const makeHealthCheckLive = (database: DatabasePort, pathService: PathService): HealthCheckPort => {
-
   // Individual functions implementing the service methods
   const runHealthChecks = (): Effect.Effect<HealthCheckResult[], HealthCheckError> =>
     Effect.gen(function* () {
@@ -31,7 +30,7 @@ export const makeHealthCheckLive = (database: DatabasePort, pathService: PathSer
         try: () => import("./run-checks"),
         catch: (error) => healthCheckError(`Failed to import health check worker: ${error}`),
       });
-      
+
       const runChecks = module.runHealthChecks;
 
       yield* runChecks();
@@ -64,7 +63,8 @@ export const makeHealthCheckLive = (database: DatabasePort, pathService: PathSer
     });
 
   const getLatestResults = (): Effect.Effect<HealthCheckSummary[], HealthCheckError> =>
-    database.query((db) =>
+    database
+      .query((db) =>
         Effect.tryPromise({
           try: async () => {
             // Use a subquery to get the latest check for each tool
@@ -89,13 +89,14 @@ export const makeHealthCheckLive = (database: DatabasePort, pathService: PathSer
             }));
           },
           catch: (error) => healthCheckError(`Failed to get latest health check results: ${error}`),
-      }),
-    ).pipe(
-      Effect.mapError((error) => {
-        if (error._tag === "HealthCheckError") return error;
-        return healthCheckError(`Database query failed: ${String(error)}`);
-      }),
-    );
+        }),
+      )
+      .pipe(
+        Effect.mapError((error) => {
+          if (error._tag === "HealthCheckError") return error;
+          return healthCheckError(`Database query failed: ${String(error)}`);
+        }),
+      );
 
   const pruneOldRecords = (
     retentionDays: number = HEALTH_CHECK_RETENTION_DAYS,
@@ -104,19 +105,21 @@ export const makeHealthCheckLive = (database: DatabasePort, pathService: PathSer
       const cutoffDateMs = yield* Clock.currentTimeMillis;
       const cutoffDate = new Date(cutoffDateMs - retentionDays * 24 * 60 * 60 * 1000);
 
-      yield* database.query((db) =>
-        Effect.tryPromise({
-          try: async () => {
-            await db.delete(toolHealthChecks).where(sql`checked_at < ${cutoffDate}`);
-          },
-          catch: (error) => healthCheckError(`Failed to prune old health check records: ${error}`),
-        }),
-      ).pipe(
-        Effect.mapError((error) => {
-          if (error._tag === "HealthCheckError") return error;
-          return healthCheckError(`Database operation failed: ${String(error)}`);
-        }),
-      );
+      yield* database
+        .query((db) =>
+          Effect.tryPromise({
+            try: async () => {
+              await db.delete(toolHealthChecks).where(sql`checked_at < ${cutoffDate}`);
+            },
+            catch: (error) => healthCheckError(`Failed to prune old health check records: ${error}`),
+          }),
+        )
+        .pipe(
+          Effect.mapError((error) => {
+            if (error._tag === "HealthCheckError") return error;
+            return healthCheckError(`Database operation failed: ${String(error)}`);
+          }),
+        );
 
       yield* Effect.logDebug(`Pruned health check records older than ${retentionDays} days`);
     });

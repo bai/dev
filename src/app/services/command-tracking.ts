@@ -1,8 +1,7 @@
 import { Clock, Context, Effect, Layer } from "effect";
 
 import { type ConfigError, type UnknownError } from "../../domain/errors";
-import type { GitPort } from "../../domain/ports/git-port";
-import type { GitPortTag } from "../../domain/ports/git-port";
+import type { GitPort, GitPortTag } from "../../domain/ports/git-port";
 import { RunStorePortTag } from "../../domain/ports/run-store-port";
 import type { PathServiceTag } from "../../domain/services/path-service";
 import { VersionTag } from "./version";
@@ -61,16 +60,16 @@ const completeCommandRun = (id: string, exitCode: number) =>
 
 const gracefulShutdown = Effect.gen(function* () {
   yield* Effect.logDebug("🛑 Gracefully shutting down command tracking...");
-  
+
   // Try to complete incomplete runs, but don't fail if database is unavailable
   yield* Effect.gen(function* () {
     const runStore = yield* RunStorePortTag;
     yield* runStore.completeIncompleteRuns();
     yield* Effect.logDebug("✅ Command tracking shutdown complete");
   }).pipe(
-    Effect.catchAll((error) => 
-      Effect.logDebug(`Command tracking shutdown skipped (database unavailable): ${error._tag}`)
-    )
+    Effect.catchAll((error) =>
+      Effect.logDebug(`Command tracking shutdown skipped (database unavailable): ${error._tag}`),
+    ),
   );
 });
 
@@ -83,7 +82,4 @@ export const CommandTrackerLive: CommandTracker = {
 
 export class CommandTrackerTag extends Context.Tag("CommandTracker")<CommandTrackerTag, CommandTracker>() {}
 
-export const CommandTrackerLiveLayer = Layer.effect(
-  CommandTrackerTag,
-  Effect.succeed(CommandTrackerLive),
-);
+export const CommandTrackerLiveLayer = Layer.effect(CommandTrackerTag, Effect.succeed(CommandTrackerLive));

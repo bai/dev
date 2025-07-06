@@ -31,4 +31,7 @@ export interface ToolManagementPort {
   readonly gcloud: ToolManager;
 }
 
-export class ToolManagementPortTag extends Context.Tag("ToolManagementPort")<ToolManagementPortTag, ToolManagementPort>() {}
+export class ToolManagementPortTag extends Context.Tag("ToolManagementPort")<
+  ToolManagementPortTag,
+  ToolManagementPort
+>() {}

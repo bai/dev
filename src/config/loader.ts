@@ -19,7 +19,11 @@ export interface ConfigLoader {
 }
 
 // Factory function that creates ConfigLoader with dependencies
-export const makeConfigLoaderLive = (fileSystem: FileSystemPort, network: NetworkPort, configPath: string): ConfigLoader => {
+export const makeConfigLoaderLive = (
+  fileSystem: FileSystemPort,
+  network: NetworkPort,
+  configPath: string,
+): ConfigLoader => {
   // Individual functions implementing the service methods
   const load = (): Effect.Effect<Config, ConfigError | FileSystemError | UnknownError> =>
     fileSystem.exists(configPath).pipe(

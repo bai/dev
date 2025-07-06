@@ -73,7 +73,7 @@ export const buildInfraLiveLayer = (configValues: DynamicConfigValues) => {
 
   // Tool services that depend on shell, filesystem, and logging
   const ToolServicesLayer = Layer.mergeAll(
-    Layer.provide(MisePortLiveLayer, BaseInfraLayer),
+    Layer.provide(MisePortLiveLayer, Layer.mergeAll(BaseInfraLayer, ConfigLayer)),
     Layer.provide(KeychainPortLiveLayer, BaseInfraLayer),
     Layer.provide(FzfToolsLiveLayer, BaseInfraLayer),
     Layer.provide(BunToolsLiveLayer, BaseInfraLayer),
@@ -92,14 +92,14 @@ export const buildInfraLiveLayer = (configValues: DynamicConfigValues) => {
 
   // Database layer that depends on PathService and FileSystem
   const DatabaseLayer = Layer.provide(DatabasePortLiveLayer, BaseInfraLayer);
-  
+
   // RunStore layer that depends on Database layer
   const RunStoreLayer = Layer.provide(RunStorePortLiveLayer, Layer.mergeAll(BaseInfraLayer, DatabaseLayer));
 
   // Health check service that depends on Database, Config and Path services
   const HealthCheckLayer = Layer.provide(
-    HealthCheckPortLiveLayer, 
-    Layer.mergeAll(BaseInfraLayer, ConfigLayer, DatabaseLayer)
+    HealthCheckPortLiveLayer,
+    Layer.mergeAll(BaseInfraLayer, ConfigLayer, DatabaseLayer),
   );
 
   // Complete Infrastructure Layer with dynamic values

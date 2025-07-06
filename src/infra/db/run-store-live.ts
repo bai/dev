@@ -12,7 +12,8 @@ export const makeRunStoreLive = (database: DatabasePort): RunStorePort => {
   // Individual functions implementing the service methods
 
   const record = (run: Omit<CommandRun, "id" | "duration_ms">): Effect.Effect<string, ConfigError | UnknownError> =>
-    database.query((db) =>
+    database
+      .query((db) =>
         Effect.tryPromise({
           try: async () => {
             return await db
@@ -31,29 +32,30 @@ export const makeRunStoreLive = (database: DatabasePort): RunStorePort => {
           },
           catch: (error) => configError(`Failed to record command run: ${error}`),
         }),
-    ).pipe(
-      Effect.flatMap((result) =>
-        Effect.fromNullable(result[0]).pipe(
-          Effect.orElseFail(() => configError("Insert operation did not return a record")),
-          Effect.map((insertedRun) => insertedRun.id),
+      )
+      .pipe(
+        Effect.flatMap((result) =>
+          Effect.fromNullable(result[0]).pipe(
+            Effect.orElseFail(() => configError("Insert operation did not return a record")),
+            Effect.map((insertedRun) => insertedRun.id),
+          ),
         ),
-      ),
-    );
+      );
 
   const complete = (id: string, exitCode: number, finishedAt: Date): Effect.Effect<void, ConfigError | UnknownError> =>
     database.query((db) =>
-        Effect.tryPromise({
-          try: async () => {
-            await db
-              .update(runs)
-              .set({
-                exit_code: exitCode,
-                finished_at: finishedAt,
-              })
-              .where(eq(runs.id, id));
-          },
-          catch: (error) => configError(`Failed to complete command run: ${error}`),
-        }),
+      Effect.tryPromise({
+        try: async () => {
+          await db
+            .update(runs)
+            .set({
+              exit_code: exitCode,
+              finished_at: finishedAt,
+            })
+            .where(eq(runs.id, id));
+        },
+        catch: (error) => configError(`Failed to complete command run: ${error}`),
+      }),
     );
 
   const prune = (keepDays: number): Effect.Effect<void, ConfigError | UnknownError> =>
@@ -61,13 +63,13 @@ export const makeRunStoreLive = (database: DatabasePort): RunStorePort => {
       Effect.flatMap((currentTimeMs) => {
         const cutoffDate = new Date(currentTimeMs);
         cutoffDate.setDate(cutoffDate.getDate() - keepDays);
-        
+
         return database.query((db) =>
-        Effect.tryPromise({
-          try: async () => {
-            await db.delete(runs).where(lt(runs.started_at, cutoffDate));
-          },
-          catch: (error) => configError(`Failed to prune old runs: ${error}`),
+          Effect.tryPromise({
+            try: async () => {
+              await db.delete(runs).where(lt(runs.started_at, cutoffDate));
+            },
+            catch: (error) => configError(`Failed to prune old runs: ${error}`),
           }),
         );
       }),
@@ -75,23 +77,23 @@ export const makeRunStoreLive = (database: DatabasePort): RunStorePort => {
 
   const getRecentRuns = (limit: number): Effect.Effect<CommandRun[], ConfigError | UnknownError> =>
     database.query((db) =>
-        Effect.tryPromise({
-          try: async () => {
-            const result = await db.select().from(runs).orderBy(desc(runs.started_at)).limit(limit);
+      Effect.tryPromise({
+        try: async () => {
+          const result = await db.select().from(runs).orderBy(desc(runs.started_at)).limit(limit);
 
-            return result.map((row) => ({
-              id: row.id,
-              cli_version: row.cli_version,
-              command_name: row.command_name,
-              arguments: row.arguments || undefined,
-              exit_code: row.exit_code || undefined,
-              cwd: row.cwd,
-              started_at: new Date(row.started_at),
-              finished_at: row.finished_at ? new Date(row.finished_at) : undefined,
-              duration_ms: row.duration_ms || undefined,
-            }));
-          },
-          catch: (error) => configError(`Failed to get recent runs: ${error}`),
+          return result.map((row) => ({
+            id: row.id,
+            cli_version: row.cli_version,
+            command_name: row.command_name,
+            arguments: row.arguments || undefined,
+            exit_code: row.exit_code || undefined,
+            cwd: row.cwd,
+            started_at: new Date(row.started_at),
+            finished_at: row.finished_at ? new Date(row.finished_at) : undefined,
+            duration_ms: row.duration_ms || undefined,
+          }));
+        },
+        catch: (error) => configError(`Failed to get recent runs: ${error}`),
       }),
     );
 
@@ -99,20 +101,20 @@ export const makeRunStoreLive = (database: DatabasePort): RunStorePort => {
     Clock.currentTimeMillis.pipe(
       Effect.flatMap((currentTimeMs) => {
         const now = new Date(currentTimeMs);
-        
+
         return database.query((db) =>
-        Effect.tryPromise({
-          try: async () => {
-            // Mark any runs that don't have a finished_at as interrupted
-            await db
-              .update(runs)
-              .set({
-                exit_code: 130, // Standard exit code for SIGINT (Ctrl+C)
-                finished_at: now,
-              })
-              .where(isNull(runs.finished_at));
-          },
-          catch: (error) => configError(`Failed to complete incomplete runs: ${error}`),
+          Effect.tryPromise({
+            try: async () => {
+              // Mark any runs that don't have a finished_at as interrupted
+              await db
+                .update(runs)
+                .set({
+                  exit_code: 130, // Standard exit code for SIGINT (Ctrl+C)
+                  finished_at: now,
+                })
+                .where(isNull(runs.finished_at));
+            },
+            catch: (error) => configError(`Failed to complete incomplete runs: ${error}`),
           }),
         );
       }),
@@ -132,7 +134,7 @@ export const RunStorePortLiveLayer = Layer.scoped(
   RunStorePortTag,
   Effect.gen(function* () {
     const database = yield* DatabasePortTag;
-    
+
     // Create the service
     const runStore = makeRunStoreLive(database);
 

@@ -25,7 +25,11 @@ export interface MiseTools {
 }
 
 // Factory function that creates MiseTools with dependencies
-export const makeMiseToolsLive = (shell: ShellPort, filesystem: FileSystemPort, configLoader: ConfigLoader): MiseTools => {
+export const makeMiseToolsLive = (
+  shell: ShellPort,
+  filesystem: FileSystemPort,
+  configLoader: ConfigLoader,
+): MiseTools => {
   // Helper function for version comparison
   const compareVersions = (version1: string, version2: string): number => {
     const v1Parts = version1.split(".").map(Number);
