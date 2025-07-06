@@ -28,7 +28,7 @@ export const makeHealthCheckServiceLive = (database: DatabasePort, pathService: 
 
       // Import and run the health checks directly
       const module = yield* Effect.tryPromise({
-        try: () => import("../../health/run-checks"),
+        try: () => import("./run-checks"),
         catch: (error) => healthCheckError(`Failed to import health check worker: ${error}`),
       });
       
@@ -45,7 +45,7 @@ export const makeHealthCheckServiceLive = (database: DatabasePort, pathService: 
       yield* Effect.logDebug("Spawning health check worker in background...");
 
       // Get the path to the health check worker script
-      const workerPath = path.join(pathService.devDir, "src", "health", "run-checks.ts");
+      const workerPath = path.join(pathService.devDir, "src", "infra", "health", "run-checks.ts");
 
       yield* Effect.try({
         try: () => {

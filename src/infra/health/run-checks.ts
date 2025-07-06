@@ -8,8 +8,8 @@ import { drizzle } from "drizzle-orm/bun-sqlite";
 import { BunRuntime } from "@effect/platform-bun";
 import { Clock, Effect, pipe } from "effect";
 
-import { toolHealthChecks } from "../../drizzle/schema";
-import { healthCheckError, type HealthCheckError } from "../domain/errors";
+import { toolHealthChecks } from "../../../drizzle/schema";
+import { healthCheckError, type HealthCheckError } from "../../domain/errors";
 
 // Health check probe commands (internal, not user-configurable)
 const PROBE_COMMANDS = {
