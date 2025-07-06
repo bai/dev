@@ -78,7 +78,7 @@ export const buildInfraLiveLayer = (configValues: DynamicConfigValues) => {
     Layer.provide(FzfToolsLiveLayer, BaseInfraLayer),
     Layer.provide(BunToolsLiveLayer, BaseInfraLayer),
     Layer.provide(GitToolsLiveLayer, BaseInfraLayer),
-    Layer.provide(MiseToolsLiveLayer, BaseInfraLayer),
+    Layer.provide(MiseToolsLiveLayer, Layer.mergeAll(BaseInfraLayer, ConfigLayer)),
     Layer.provide(GcloudToolsLiveLayer, BaseInfraLayer),
     InteractiveSelectorPortLiveLayer, // No dependencies needed
   );

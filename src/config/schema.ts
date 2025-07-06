@@ -37,16 +37,9 @@ export const configSchema: z.ZodType<Config> = z.object({
   configUrl: z.string().url(),
   defaultOrg: z.string(),
   logLevel: logLevelSchema.optional().default("info"),
-  paths: z.object({
-    base: z.string(),
-  }),
   telemetry: z.object({
     enabled: z.boolean(),
   }),
-  plugins: z.object({
-    git: z.array(z.string().url()),
-  }),
-  // Additional fields from dev-config.ts
   orgToProvider: z
     .record(z.string(), gitProviderSchema)
     .optional()
@@ -61,20 +54,14 @@ export type { Config } from "../domain/models";
 // Default configuration
 export const defaultConfig: Config = {
   version: 3,
-  configUrl: "https://raw.githubusercontent.com/acme/dev-configs/main/org.json",
-  defaultOrg: "acme",
+  configUrl: "https://gist.githubusercontent.com/bai/d5a4a92350e67af8aba1b9db33d5f077/raw/config.json",
+  defaultOrg: "flywheelsoftware",
   logLevel: "info",
-  paths: {
-    base: "~/src",
-  },
   telemetry: {
     enabled: true,
   },
-  plugins: {
-    git: [],
-  },
   orgToProvider: {
-    "gitlab-org": "gitlab",
+    flywheelsoftware: "gitlab",
   },
 };
 

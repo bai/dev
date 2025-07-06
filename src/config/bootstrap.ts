@@ -64,5 +64,5 @@ export const extractDynamicValues = (config: Config): DynamicConfigValues => ({
   defaultOrg: config.defaultOrg,
   configPath: path.join(os.homedir(), ".config", "dev", "config.json"),
   logLevel: config.logLevel ?? "info",
-  baseSearchPath: config.paths.base,
+  baseSearchPath: path.join(os.homedir(), "src"), // Default base search path
 });

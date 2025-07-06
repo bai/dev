@@ -3,7 +3,7 @@ import path from "path";
 import { stringify } from "@iarna/toml";
 import { Context, Effect, Layer } from "effect";
 
-import devConfig from "../../config/mise-dev-config.json" with { type: "json" };
+import { ConfigLoaderTag, type ConfigLoader } from "../../config/loader";
 import { externalToolError, unknownError, type ExternalToolError, type UnknownError } from "../../domain/errors";
 import { FileSystemPortTag, type FileSystemPort } from "../../domain/ports/file-system-port";
 import { ShellPortTag, type ShellPort } from "../../domain/ports/shell-port";
@@ -25,7 +25,7 @@ export interface MiseTools {
 }
 
 // Factory function that creates MiseTools with dependencies
-export const makeMiseToolsLive = (shell: ShellPort, filesystem: FileSystemPort): MiseTools => {
+export const makeMiseToolsLive = (shell: ShellPort, filesystem: FileSystemPort, configLoader: ConfigLoader): MiseTools => {
   // Helper function for version comparison
   const compareVersions = (version1: string, version2: string): number => {
     const v1Parts = version1.split(".").map(Number);
@@ -110,16 +110,26 @@ export const makeMiseToolsLive = (shell: ShellPort, filesystem: FileSystemPort):
         );
       }
 
-      // Write mise global config
-      const config = devConfig.miseGlobalConfig;
-      const tomlContent = stringify(config);
-
-      yield* filesystem.writeFile(miseConfigFile, tomlContent).pipe(
+      // Load config dynamically from the config loader
+      const config = yield* configLoader.load().pipe(
         Effect.mapError((error) => {
-          return unknownError(`Failed to write mise config: ${error}`);
+          return unknownError(`Failed to load config: ${error}`);
         }),
       );
-      yield* Effect.logDebug("   ✅ Mise global config ready");
+
+      // Write mise global config if it exists in the loaded config
+      if (config.miseGlobalConfig) {
+        const tomlContent = stringify(config.miseGlobalConfig as Record<string, any>);
+
+        yield* filesystem.writeFile(miseConfigFile, tomlContent).pipe(
+          Effect.mapError((error) => {
+            return unknownError(`Failed to write mise config: ${error}`);
+          }),
+        );
+        yield* Effect.logDebug("   ✅ Mise global config ready");
+      } else {
+        yield* Effect.logDebug("   ⚠️  No mise global config found in loaded configuration");
+      }
     });
 
   const ensureVersionOrUpgrade = (): Effect.Effect<void, ExternalToolError | UnknownError> =>
@@ -191,6 +201,7 @@ export const MiseToolsLiveLayer = Layer.effect(
   Effect.gen(function* () {
     const shell = yield* ShellPortTag;
     const filesystem = yield* FileSystemPortTag;
-    return makeMiseToolsLive(shell, filesystem);
+    const configLoader = yield* ConfigLoaderTag;
+    return makeMiseToolsLive(shell, filesystem, configLoader);
   }),
 );

@@ -30,10 +30,8 @@ export interface PathService {
 
 // Individual functions for each method
 const getBasePath = (config: Config): string => {
-  // Use config path if provided, otherwise default
-  return config.paths?.base
-    ? path.resolve(config.paths.base.replace(/^~/, DEFAULT_HOME_DIR))
-    : path.join(DEFAULT_HOME_DIR, DEFAULT_BASE_SEARCH_DIR);
+  // Default base search path since paths.base is no longer in config
+  return path.join(DEFAULT_HOME_DIR, DEFAULT_BASE_SEARCH_DIR);
 };
 
 // Plain object implementation

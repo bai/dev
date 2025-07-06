@@ -26,14 +26,8 @@ export interface Config {
   configUrl: string;
   defaultOrg: string;
   logLevel?: LogLevel;
-  paths: {
-    base: string;
-  };
   telemetry: {
     enabled: boolean;
-  };
-  plugins: {
-    git: string[];
   };
   orgToProvider?: Record<string, GitProviderType>;
   miseGlobalConfig?: MiseConfig;
