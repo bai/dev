@@ -17,13 +17,13 @@ Adhere to the following naming conventions for an idiomatic Effect.ts codebase.
 export interface Email {
   send(to: string, body: string): Effect<never, EmailError, void>
 }
-export class EmailTag extends Context.Tag("Email")<Email>() {}
+export class EmailTag extends Context.Tag("Email")<EmailTag, Email>() {}
 
 // domain/auth.ts
 export interface Auth {
   authenticate(credentials: Credentials): Effect<never, AuthError, User>
 }
-export class AuthTag extends Context.Tag("Auth")<Auth>() {}
+export class AuthTag extends Context.Tag("Auth")<AuthTag, Auth>() {}
 ```
 
 ---
@@ -40,13 +40,13 @@ export class AuthTag extends Context.Tag("Auth")<Auth>() {}
 export interface Database {
   query<T>(sql: string): Effect<never, DatabaseError, T[]>
 }
-export class DatabaseTag extends Context.Tag("Database")<Database>() {}
+export class DatabaseTag extends Context.Tag("Database")<DatabaseTag, Database>() {}
 
 // domain/user-repository.ts
 export interface UserRepository {
   findById(id: UserId): Effect<never, NotFoundError, User>
 }
-export class UserRepositoryTag extends Context.Tag("UserRepository")<UserRepository>() {}
+export class UserRepositoryTag extends Context.Tag("UserRepository")<UserRepositoryTag, UserRepository>() {}
 ```
 
 ---
@@ -129,7 +129,7 @@ export interface DbConfig {
   url: string
   poolSize: number
 }
-export class DbConfigTag extends Context.Tag("DbConfig")<DbConfig>() {}
+export class DbConfigTag extends Context.Tag("DbConfig")<DbConfigTag, DbConfig>() {}
 
 // config/smtp-config.ts
 export interface SmtpConfig {
@@ -137,7 +137,7 @@ export interface SmtpConfig {
   port: number
   secure: boolean
 }
-export class SmtpConfigTag extends Context.Tag("SmtpConfig")<SmtpConfig>() {}
+export class SmtpConfigTag extends Context.Tag("SmtpConfig")<SmtpConfigTag, SmtpConfig>() {}
 
 // config/schema.ts (using Schema for validation)
 export const AppConfigSchema = Schema.Struct({
@@ -208,24 +208,24 @@ export class UnauthorizedError extends Data.TaggedClass("UnauthorizedError")() {
 
 ```ts
 // infra/db/primary-db-live.ts
-export class PrimaryDbTag extends Context.Tag("PrimaryDb")<Database>() {}
+export class PrimaryDbTag extends Context.Tag("PrimaryDb")<PrimaryDbTag, Database>() {}
 export const PrimaryDbLiveLayer = Layer.succeed(
   PrimaryDbTag,
   new PostgresDatabase(primaryConfig)
 )
 
 // infra/db/replica-db-live.ts
-export class ReplicaDbTag extends Context.Tag("ReplicaDb")<Database>() {}
+export class ReplicaDbTag extends Context.Tag("ReplicaDb")<ReplicaDbTag, Database>() {}
 export const ReplicaDbLiveLayer = Layer.succeed(
   ReplicaDbTag,
   new PostgresDatabase(replicaConfig)
 )
 
 // infra/cache/redis-cache-live.ts
-export class RedisCacheTag extends Context.Tag("RedisCache")<Cache>() {}
+export class RedisCacheTag extends Context.Tag("RedisCache")<RedisCacheTag, Cache>() {}
 
 // infra/cache/memory-cache-live.ts
-export class MemoryCacheTag extends Context.Tag("MemoryCache")<Cache>() {}
+export class MemoryCacheTag extends Context.Tag("MemoryCache")<MemoryCacheTag, Cache>() {}
 ```
 
 ---
@@ -273,16 +273,16 @@ export const DatabaseTestLayer = Layer.succeed(DatabaseTag, {
 
 ```ts
 // domain/services/event-service.ts
-export class LogEventStreamTag extends Context.Tag("LogEventStream")<Stream<LogEvent>>() {}
+export class LogEventStreamTag extends Context.Tag("LogEventStream")<LogEventStreamTag, Stream<LogEvent>>() {}
 
 // domain/services/task-service.ts
-export class TaskQueueTag extends Context.Tag("TaskQueue")<Queue<Task>>() {}
+export class TaskQueueTag extends Context.Tag("TaskQueue")<TaskQueueTag, Queue<Task>>() {}
 
 // domain/services/notification-service.ts
-export class NotificationHubTag extends Context.Tag("NotificationHub")<Hub<Notification>>() {}
+export class NotificationHubTag extends Context.Tag("NotificationHub")<NotificationHubTag, Hub<Notification>>() {}
 
 // app/services/command-tracking-service.ts
-export class CommandStreamTag extends Context.Tag("CommandStream")<Stream<Command>>() {}
+export class CommandStreamTag extends Context.Tag("CommandStream")<CommandStreamTag, Stream<Command>>() {}
 ```
 
 ---
@@ -364,28 +364,28 @@ export interface DatabasePort {
   query<T>(sql: string): Effect<never, DatabaseError, T[]>
   transaction<R, E, A>(effect: Effect<R, E, A>): Effect<R, E | DatabaseError, A>
 }
-export class DatabasePortTag extends Context.Tag("DatabasePort")<DatabasePort>() {}
+export class DatabasePortTag extends Context.Tag("DatabasePort")<DatabasePortTag, DatabasePort>() {}
 
 // domain/ports/file-system-port.ts
 export interface FileSystemPort {
   readFile(path: string): Effect<never, FileSystemError, string>
   writeFile(path: string, content: string): Effect<never, FileSystemError, void>
 }
-export class FileSystemPortTag extends Context.Tag("FileSystemPort")<FileSystemPort>() {}
+export class FileSystemPortTag extends Context.Tag("FileSystemPort")<FileSystemPortTag, FileSystemPort>() {}
 
 // domain/ports/git-port.ts
 export interface GitPort {
   clone(url: string, path: string): Effect<never, GitError, void>
   checkout(branch: string): Effect<never, GitError, void>
 }
-export class GitPortTag extends Context.Tag("GitPort")<GitPort>() {}
+export class GitPortTag extends Context.Tag("GitPort")<GitPortTag, GitPort>() {}
 
 // domain/ports/keychain-port.ts
 export interface KeychainPort {
   get(key: string): Effect<never, KeychainError, string | null>
   set(key: string, value: string): Effect<never, KeychainError, void>
 }
-export class KeychainPortTag extends Context.Tag("KeychainPort")<KeychainPort>() {}
+export class KeychainPortTag extends Context.Tag("KeychainPort")<KeychainPortTag, KeychainPort>() {}
 ```
 
 ---
