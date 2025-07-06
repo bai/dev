@@ -8,7 +8,7 @@ import { externalToolError, unknownError, type ExternalToolError, type UnknownEr
 import { FileSystemPortTag, type FileSystemPort } from "../../domain/ports/file-system-port";
 import { ShellPortTag, type ShellPort } from "../../domain/ports/shell-port";
 
-export const MISE_MIN_VERSION = "2024.11.0";
+export const MISE_MIN_VERSION = "2025.7.1";
 
 const homeDir = process.env.HOME || process.env.USERPROFILE || "";
 
@@ -52,8 +52,9 @@ export const makeMiseToolsLive = (shell: ShellPort, filesystem: FileSystemPort):
       Effect.map((result) => {
         if (result.exitCode === 0 && result.stdout) {
           const output = result.stdout.trim();
-          // Mise version output is like "mise 2024.12.11"
-          const match = output.match(/mise (\d{4}\.\d{1,2}\.\d{1,2})/);
+          // Mise version output is like "2025.7.1 macos-arm64 (2025-07-06)"
+          // Extract the version number at the start
+          const match = output.match(/^(\d{4}\.\d{1,2}\.\d{1,2})/);
           return match && match[1] ? match[1] : null;
         }
         return null;
