@@ -7,7 +7,7 @@ import { GitPortTag } from "../../domain/ports/git-port";
 import { RepoProviderPortTag } from "../../domain/ports/repo-provider-port";
 import { PathServiceTag } from "../../domain/services/path-service";
 import { RepositoryServiceTag } from "../../domain/services/repository-service";
-import { ShellIntegrationTag } from "../services/shell-integration-service";
+import { ShellIntegrationTag } from "../services/shell-integration";
 
 // Define the repository argument as required
 const repo = Args.text({ name: "repo" });

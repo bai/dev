@@ -5,7 +5,7 @@ import type { GitPort } from "../../domain/ports/git-port";
 import type { GitPortTag } from "../../domain/ports/git-port";
 import { RunStorePortTag } from "../../domain/ports/run-store-port";
 import type { PathServiceTag } from "../../domain/services/path-service";
-import { VersionTag } from "./version-service";
+import { VersionTag } from "./version";
 
 /**
  * Command tracker for recording CLI runs

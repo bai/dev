@@ -5,7 +5,7 @@ import { unknownError, type DevError } from "../../domain/errors";
 import { filter } from "../../domain/matching";
 import { DirectoryPortTag } from "../../domain/ports/directory-port";
 import { InteractiveSelectorPortTag } from "../../domain/ports/interactive-selector-port";
-import { ShellIntegrationTag } from "../services/shell-integration-service";
+import { ShellIntegrationTag } from "../services/shell-integration";
 
 // Define the folder name argument as optional
 const folderName = Args.text({ name: "folder_name" }).pipe(Args.optional);

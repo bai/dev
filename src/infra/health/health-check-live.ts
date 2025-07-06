@@ -19,7 +19,7 @@ import { PathServiceTag, type PathService } from "../../domain/services/path-ser
 const HEALTH_CHECK_RETENTION_DAYS = 30;
 
 // Factory function that creates HealthCheckService with dependencies
-export const makeHealthCheckServiceLive = (database: DatabasePort, pathService: PathService): HealthCheckPort => {
+export const makeHealthCheckLive = (database: DatabasePort, pathService: PathService): HealthCheckPort => {
 
   // Individual functions implementing the service methods
   const runHealthChecks = (): Effect.Effect<HealthCheckResult[], HealthCheckError> =>
@@ -135,6 +135,6 @@ export const HealthCheckPortLiveLayer = Layer.effect(
   Effect.gen(function* () {
     const database = yield* DatabasePortTag;
     const pathService = yield* PathServiceTag;
-    return makeHealthCheckServiceLive(database, pathService);
+    return makeHealthCheckLive(database, pathService);
   }),
 );

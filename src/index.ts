@@ -3,9 +3,9 @@ import { Command } from "@effect/cli";
 import { BunRuntime } from "@effect/platform-bun";
 import { Effect } from "effect";
 
-import { CommandTrackerTag } from "./app/services/command-tracking-service";
-import { HealthCheckSchedulerTag } from "./app/services/health-check-scheduler-service";
-import { VersionTag } from "./app/services/version-service";
+import { CommandTrackerTag } from "./app/services/command-tracking";
+import { HealthCheckSchedulerTag } from "./app/services/health-check-scheduler";
+import { VersionTag } from "./app/services/version";
 import { TracingLive } from "./config/tracing";
 import { exitCode, type DevError } from "./domain/errors";
 import { getMainCommand, setupApplicationWithConfig } from "./wiring";

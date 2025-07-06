@@ -1,18 +1,18 @@
 import { Layer } from "effect";
 
-import { CommandTrackerLiveLayer } from "../app/services/command-tracking-service";
-import { HealthCheckSchedulerLiveLayer } from "../app/services/health-check-scheduler-service";
-import { ShellIntegrationLiveLayer } from "../app/services/shell-integration-service";
-import { UpdateCheckerLiveLayer } from "../app/services/update-check-service";
-import { VersionLiveLayer } from "../app/services/version-service";
+import { CommandTrackerLiveLayer } from "../app/services/command-tracking";
+import { HealthCheckSchedulerLiveLayer } from "../app/services/health-check-scheduler";
+import { ShellIntegrationLiveLayer } from "../app/services/shell-integration";
+import { UpdateCheckerLiveLayer } from "../app/services/update-check";
+import { VersionLiveLayer } from "../app/services/version";
 import { PathServiceLiveLayer } from "../domain/services/path-service";
 import { RepositoryServiceLiveLayer } from "../domain/services/repository-service";
 import { DatabasePortLiveLayer } from "../infra/db/database-live";
 import { RunStorePortLiveLayer } from "../infra/db/run-store-live";
-import { DirectoryPortLiveLayer } from "../infra/fs/directory-service-live";
+import { DirectoryPortLiveLayer } from "../infra/fs/directory-live";
 import { FileSystemPortLiveLayer } from "../infra/fs/file-system-live";
 import { GitPortLiveLayer } from "../infra/git/git-live";
-import { HealthCheckPortLiveLayer } from "../infra/health/health-check-service-live";
+import { HealthCheckPortLiveLayer } from "../infra/health/health-check-live";
 import { KeychainPortLiveLayer } from "../infra/keychain/keychain-live";
 import { MisePortLiveLayer } from "../infra/mise/mise-live";
 import { NetworkPortLiveLayer } from "../infra/network/network-live";
@@ -24,7 +24,7 @@ import { FzfToolsLiveLayer } from "../infra/tools/fzf";
 import { GcloudToolsLiveLayer } from "../infra/tools/gcloud";
 import { GitToolsLiveLayer } from "../infra/tools/git";
 import { MiseToolsLiveLayer } from "../infra/tools/mise";
-import { ToolManagementPortLiveLayer } from "../infra/tools/tool-management-service-live";
+import { ToolManagementPortLiveLayer } from "../infra/tools/tool-management-live";
 import { type DynamicConfigValues } from "./bootstrap";
 import { ConfigLoaderLiveLayer } from "./loader";
 

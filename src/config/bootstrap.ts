@@ -6,7 +6,7 @@ import { Effect, Layer } from "effect";
 import { PathServiceLiveLayer } from "../domain/services/path-service";
 import { FileSystemPortLiveLayer } from "../infra/fs/file-system-live";
 import { NetworkPortLiveLayer } from "../infra/network/network-live";
-import { ConfigLoaderLiveLayer, ConfigLoaderService } from "./loader";
+import { ConfigLoaderLiveLayer, ConfigLoaderTag } from "./loader";
 import { type Config } from "./schema";
 
 /**
@@ -40,7 +40,7 @@ export const loadConfiguration = () =>
   Effect.gen(function* () {
     yield* Effect.logDebug("🔧 Stage 1: Loading configuration...");
 
-    const configLoader = yield* ConfigLoaderService;
+    const configLoader = yield* ConfigLoaderTag;
     const config = yield* configLoader.load();
 
     yield* Effect.logDebug(`✅ Configuration loaded successfully (org: ${config.defaultOrg})`);

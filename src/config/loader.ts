@@ -87,12 +87,12 @@ export const makeConfigLoaderLive = (fileSystem: FileSystemPort, network: Networ
 };
 
 // Service tag for Effect Context system
-export class ConfigLoaderService extends Context.Tag("ConfigLoaderService")<ConfigLoaderService, ConfigLoader>() {}
+export class ConfigLoaderTag extends Context.Tag("ConfigLoader")<ConfigLoaderTag, ConfigLoader>() {}
 
 // Effect Layer for dependency injection using factory function
 export const ConfigLoaderLiveLayer = (configPath: string) =>
   Layer.effect(
-    ConfigLoaderService,
+    ConfigLoaderTag,
     Effect.gen(function* () {
       const fileSystem = yield* FileSystemPortTag;
       const network = yield* NetworkPortTag;

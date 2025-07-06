@@ -1,7 +1,7 @@
 import { Command, Options } from "@effect/cli";
 import { Effect } from "effect";
 
-import { ConfigLoaderService } from "../../config/loader";
+import { ConfigLoaderTag } from "../../config/loader";
 import { exitCode, statusCheckError, unknownError, type DevError } from "../../domain/errors";
 import { HealthCheckPortTag } from "../../domain/ports/health-check-port";
 import { PathServiceTag } from "../../domain/services/path-service";
@@ -22,7 +22,7 @@ const refresh = Options.boolean("refresh").pipe(Options.optional);
 export const statusCommand = Command.make("status", { json, refresh }, ({ json, refresh }) =>
   Effect.gen(function* () {
     const healthCheckService = yield* HealthCheckPortTag;
-    const configLoader = yield* ConfigLoaderService;
+    const configLoader = yield* ConfigLoaderTag;
     const pathService = yield* PathServiceTag;
 
     const jsonOutput = json._tag === "Some" ? json.value : false;

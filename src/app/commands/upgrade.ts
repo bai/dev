@@ -1,7 +1,7 @@
 import { Command, Options } from "@effect/cli";
 import { Effect } from "effect";
 
-import { ConfigLoaderService, type ConfigLoader } from "../../config/loader";
+import { ConfigLoaderTag, type ConfigLoader } from "../../config/loader";
 import { unknownError, type DevError } from "../../domain/errors";
 import { FileSystemPortTag, type FileSystemPort } from "../../domain/ports/file-system-port";
 import { GitPortTag, type GitPort } from "../../domain/ports/git-port";
@@ -18,7 +18,7 @@ export const upgradeCommand = Command.make(
   { force },
   ({ force }) =>
     Effect.gen(function* () {
-      const configLoader = yield* ConfigLoaderService;
+      const configLoader = yield* ConfigLoaderTag;
       const pathService = yield* PathServiceTag;
       const forceValue = force._tag === "Some" ? force.value : false;
 
