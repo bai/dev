@@ -25,7 +25,7 @@ const adaptToolService = (toolService: {
 /**
  * Factory function that creates the ToolManagementService implementation
  */
-const makeToolManagementServiceLive = (
+const makeToolManagementLive = (
   bunTools: BunTools,
   gitTools: GitTools,
   miseTools: MiseTools,
@@ -51,6 +51,6 @@ export const ToolManagementPortLiveLayer = Layer.effect(
     const fzfTools = yield* FzfToolsTag;
     const gcloudTools = yield* GcloudToolsTag;
 
-    return makeToolManagementServiceLive(bunTools, gitTools, miseTools, fzfTools, gcloudTools);
+    return makeToolManagementLive(bunTools, gitTools, miseTools, fzfTools, gcloudTools);
   }),
 );

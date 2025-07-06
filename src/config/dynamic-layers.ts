@@ -5,8 +5,8 @@ import { HealthCheckSchedulerLiveLayer } from "../app/services/health-check-sche
 import { ShellIntegrationLiveLayer } from "../app/services/shell-integration";
 import { UpdateCheckerLiveLayer } from "../app/services/update-check";
 import { VersionLiveLayer } from "../app/services/version";
-import { PathServiceLiveLayer } from "../domain/services/path-service";
-import { RepositoryServiceLiveLayer } from "../domain/services/repository-service";
+import { PathLiveLayer } from "../domain/services/path-service";
+import { RepositoryLiveLayer } from "../domain/services/repository-service";
 import { DatabasePortLiveLayer } from "../infra/db/database-live";
 import { RunStorePortLiveLayer } from "../infra/db/run-store-live";
 import { DirectoryPortLiveLayer } from "../infra/fs/directory-live";
@@ -16,7 +16,7 @@ import { HealthCheckPortLiveLayer } from "../infra/health/health-check-live";
 import { KeychainPortLiveLayer } from "../infra/keychain/keychain-live";
 import { MisePortLiveLayer } from "../infra/mise/mise-live";
 import { NetworkPortLiveLayer } from "../infra/network/network-live";
-import { GitHubProviderLayer } from "../infra/providers/github-provider";
+import { GitHubProviderLiveLayer } from "../infra/providers/github-provider";
 import { InteractiveSelectorPortLiveLayer } from "../infra/selector/fzf-selector-live";
 import { ShellPortLiveLayer } from "../infra/shell/shell-live";
 import { BunToolsLiveLayer } from "../infra/tools/bun";
@@ -41,7 +41,7 @@ import { ConfigLoaderLiveLayer } from "./loader";
  */
 export const buildInfraLiveLayer = (configValues: DynamicConfigValues) => {
   // Base services with no dependencies
-  const BaseServicesLayer = PathServiceLiveLayer;
+  const BaseServicesLayer = PathLiveLayer;
 
   // Self-contained services that truly don't need dependencies
   const SelfContainedServicesLayer = Layer.mergeAll(
@@ -51,7 +51,7 @@ export const buildInfraLiveLayer = (configValues: DynamicConfigValues) => {
 
   // Services that depend on base services
   const DependentServicesLayer = Layer.mergeAll(
-    Layer.provide(RepositoryServiceLiveLayer, BaseServicesLayer),
+    Layer.provide(RepositoryLiveLayer, BaseServicesLayer),
     Layer.provide(DirectoryPortLiveLayer, Layer.mergeAll(BaseServicesLayer, SelfContainedServicesLayer)),
   );
 
@@ -88,7 +88,7 @@ export const buildInfraLiveLayer = (configValues: DynamicConfigValues) => {
 
   // Repository provider with dynamic organization
   // This is where we use the runtime configuration value!
-  const RepoProviderLayer = Layer.provide(GitHubProviderLayer(configValues.defaultOrg), NetworkLayer);
+  const RepoProviderLayer = Layer.provide(GitHubProviderLiveLayer(configValues.defaultOrg), NetworkLayer);
 
   // Database layer that depends on PathService and FileSystem
   const DatabaseLayer = Layer.provide(DatabasePortLiveLayer, BaseInfraLayer);

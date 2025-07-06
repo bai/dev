@@ -101,7 +101,7 @@ const expandToFullGitUrl = (
   });
 
 // Functional service implementation as plain object
-export const RepositoryServiceLive: RepositoryService = {
+export const RepositoryLive: RepositoryService = {
   parseRepoUrlToPath: parseRepoUrlToPath,
   expandToFullGitUrl: expandToFullGitUrl,
 };
@@ -124,4 +124,4 @@ function isFullUrl(str: string): boolean {
 export class RepositoryServiceTag extends Context.Tag("RepositoryService")<RepositoryServiceTag, RepositoryService>() {}
 
 // Layer that provides RepositoryService (no `new` keyword)
-export const RepositoryServiceLiveLayer = Layer.effect(RepositoryServiceTag, Effect.succeed(RepositoryServiceLive));
+export const RepositoryLiveLayer = Layer.effect(RepositoryServiceTag, Effect.succeed(RepositoryLive));

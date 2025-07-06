@@ -82,7 +82,7 @@ export const makeGitHubProvider = (network: NetworkPort, defaultOrg = "octocat")
 };
 
 // Effect Layer for dependency injection using factory function
-export const GitHubProviderLayer = (defaultOrg: string) =>
+export const GitHubProviderLiveLayer = (defaultOrg: string) =>
   Layer.effect(
     RepoProviderPortTag,
     Effect.gen(function* () {

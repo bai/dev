@@ -37,7 +37,7 @@ const getBasePath = (config: Config): string => {
 };
 
 // Plain object implementation
-export const PathServiceLive: PathService = {
+export const PathLive: PathService = {
   homeDir: DEFAULT_HOME_DIR,
   devDir: path.join(DEFAULT_HOME_DIR, DEFAULT_DEV_DIR),
   configDir: path.join(XDG_CONFIG_HOME, "dev"),
@@ -55,4 +55,4 @@ export const PathServiceLive: PathService = {
 export class PathServiceTag extends Context.Tag("PathService")<PathServiceTag, PathService>() {}
 
 // Layer that provides PathService
-export const PathServiceLiveLayer = Layer.succeed(PathServiceTag, PathServiceLive);
+export const PathLiveLayer = Layer.succeed(PathServiceTag, PathLive);
