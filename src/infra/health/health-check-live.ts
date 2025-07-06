@@ -1,6 +1,6 @@
 
 import { sql } from "drizzle-orm";
-import { Clock, Duration, Effect, Layer } from "effect";
+import { Clock, Effect, Layer } from "effect";
 
 import { toolHealthChecks } from "../../../drizzle/schema";
 import { healthCheckError, type HealthCheckError } from "../../domain/errors";
@@ -28,130 +28,6 @@ interface InternalHealthCheckResult {
   readonly checkedAt: number;
 }
 
-// Execute a shell command and return the result
-const executeHealthCheckCommand = (
-  command: string,
-  shell: ShellPort,
-): Effect.Effect<{ readonly exitCode: number; readonly stdout: string; readonly stderr: string }, HealthCheckError> =>
-  Effect.gen(function* () {
-    const parts = command.split(" ");
-    const cmd = parts[0];
-    const args = parts.slice(1);
-    
-    if (!cmd) {
-      return yield* Effect.fail(healthCheckError(`Invalid command: ${command}`));
-    }
-    
-    const result = yield* shell.exec(cmd, args).pipe(
-      Effect.mapError(() => healthCheckError(`Command execution failed: ${command}`))
-    );
-    
-    return result;
-  });
-
-// Parse tool version from command output
-const parseToolVersion = (
-  toolName: string,
-  exitCode: number,
-  stdout: string,
-  stderr: string,
-  parseOutput?: (stdout: string, stderr: string) => {
-    readonly version?: string;
-    readonly status?: "ok" | "warning" | "fail";
-    readonly notes?: string;
-  },
-  versionPattern?: string,
-): Effect.Effect<InternalHealthCheckResult, never> =>
-  Effect.gen(function* () {
-    const checkedAtMs = yield* Clock.currentTimeMillis;
-
-    if (exitCode !== 0) {
-      return {
-        toolName,
-        status: "fail" as const,
-        notes: stderr.trim() || `Exit code: ${exitCode}`,
-        checkedAt: checkedAtMs,
-      };
-    }
-
-    // Parse version from output
-    let version: string | undefined;
-    let status: "ok" | "warning" | "fail" = "ok";
-    let notes: string | undefined;
-
-    // Use custom parseOutput function if provided
-    if (parseOutput) {
-      const result = parseOutput(stdout, stderr);
-      version = result.version;
-      status = result.status || "ok";
-      notes = result.notes;
-    } else if (versionPattern) {
-      // Use regex pattern to extract version
-      const regex = new RegExp(versionPattern);
-      const match = stdout.match(regex);
-      version = match?.[1] || stdout.trim();
-    } else {
-      // Default to using stdout as version
-      version = stdout.trim();
-    }
-
-    return {
-      toolName,
-      version,
-      status,
-      notes,
-      checkedAt: checkedAtMs,
-    };
-  });
-
-// Probe a single tool for version and health
-const probeToolVersion = (
-  toolName: string, 
-  command: string, 
-  shell: ShellPort,
-  parseOutput?: (stdout: string, stderr: string) => {
-    readonly version?: string;
-    readonly status?: "ok" | "warning" | "fail";
-    readonly notes?: string;
-  },
-  versionPattern?: string,
-  timeout?: number,
-): Effect.Effect<InternalHealthCheckResult, HealthCheckError> => {
-  const effect = executeHealthCheckCommand(command, shell).pipe(
-    Effect.flatMap(({ exitCode, stdout, stderr }) => parseToolVersion(toolName, exitCode, stdout, stderr, parseOutput, versionPattern)),
-    Effect.catchAll(() =>
-      Effect.gen(function* () {
-        const checkedAtMs = yield* Clock.currentTimeMillis;
-        return {
-          toolName,
-          status: "fail" as const,
-          notes: "Error running command",
-          checkedAt: checkedAtMs,
-        };
-      }),
-    ),
-  );
-
-  // Apply custom timeout if specified
-  if (timeout) {
-    return effect.pipe(
-      Effect.timeout(Duration.millis(timeout)),
-      Effect.catchTag("TimeoutException", () =>
-        Effect.gen(function* () {
-          const checkedAtMs = yield* Clock.currentTimeMillis;
-          return {
-            toolName,
-            status: "fail" as const,
-            notes: `Command timed out after ${timeout}ms`,
-            checkedAt: checkedAtMs,
-          };
-        }),
-      ),
-    );
-  }
-
-  return effect;
-};
 
 // Store health check results using DatabasePort
 const storeHealthCheckResults = (
@@ -206,44 +82,33 @@ const storeHealthCheckResults = (
 // Factory function that creates HealthCheckService with dependencies
 export const makeHealthCheckLive = (database: DatabasePort, pathService: PathService, configLoader: ConfigLoader, shell: ShellPort, healthCheckService: HealthCheckService): HealthCheckPort => {
   // Individual functions implementing the service methods
-  const runHealthChecks = (): Effect.Effect<HealthCheckResult[], HealthCheckError> =>
+  const runHealthChecks = (): Effect.Effect<readonly HealthCheckResult[], HealthCheckError> =>
     Effect.gen(function* () {
       yield* Effect.logDebug("Running health checks synchronously...");
 
-      // Load configuration
-      const config = yield* configLoader.load().pipe(
-        Effect.mapError((error) => healthCheckError(`Failed to load configuration: ${error}`)),
-        Effect.catchAll(() => Effect.succeed(undefined)),
-      );
+      // Get health check results from the service
+      const results = yield* healthCheckService.runAllHealthChecks();
 
-      // Get health check configurations
-      const healthCheckConfigs = yield* healthCheckService.getHealthCheckConfigs(config);
-
-      // Run all probes in parallel
-      const probeEffects = healthCheckConfigs.map((config) => {
-        return probeToolVersion(
-          config.toolName,
-          config.command,
-          shell,
-          config.parseOutput,
-          config.versionPattern,
-          config.timeout,
-        );
-      });
-
-      const results = yield* Effect.all(probeEffects, { concurrency: "unbounded" });
+      // Convert HealthCheckResult[] to InternalHealthCheckResult[] for storage
+      const internalResults: InternalHealthCheckResult[] = results.map((result) => ({
+        toolName: result.toolName,
+        version: result.version,
+        status: result.status,
+        notes: result.notes,
+        checkedAt: result.checkedAt.getTime(),
+      }));
 
       // Store results in database
-      yield* storeHealthCheckResults(results, database);
+      yield* storeHealthCheckResults(internalResults, database);
 
       yield* Effect.logDebug("Health checks completed successfully");
 
-      // Return the latest results from database
-      return yield* getLatestResults();
+      // Return the results
+      return results;
     });
 
 
-  const getLatestResults = (): Effect.Effect<HealthCheckSummary[], HealthCheckError> =>
+  const getLatestResults = (): Effect.Effect<readonly HealthCheckSummary[], HealthCheckError> =>
     database
       .query((db) =>
         Effect.tryPromise({

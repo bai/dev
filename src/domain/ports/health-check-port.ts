@@ -25,13 +25,13 @@ export interface HealthCheckPort {
    * Run health checks immediately and return results
    * Used by `dev status` command
    */
-  runHealthChecks(): Effect.Effect<HealthCheckResult[], HealthCheckError>;
+  runHealthChecks(): Effect.Effect<readonly HealthCheckResult[], HealthCheckError>;
 
   /**
    * Get the latest health check results for each tool from cache
    * Used for quick status display if available
    */
-  getLatestResults(): Effect.Effect<HealthCheckSummary[], HealthCheckError>;
+  getLatestResults(): Effect.Effect<readonly HealthCheckSummary[], HealthCheckError>;
 
   /**
    * Prune old health check records based on retention policy

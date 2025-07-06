@@ -1,4 +1,4 @@
-import { Layer } from "effect";
+import { Layer, Effect } from "effect";
 
 import { CommandTrackerLiveLayer } from "../app/services/command-tracking";
 import { ShellIntegrationLiveLayer } from "../app/services/shell-integration";
@@ -12,6 +12,8 @@ import { DirectoryPortLiveLayer } from "../infra/fs/directory-live";
 import { FileSystemPortLiveLayer } from "../infra/fs/file-system-live";
 import { GitPortLiveLayer } from "../infra/git/git-live";
 import { HealthCheckPortLiveLayer } from "../infra/health/health-check-live";
+import { ToolHealthRegistryPortLiveLayer } from "../infra/health/tool-health-registry";
+import { ToolHealthRegistryPortTag } from "../domain/ports/tool-health-registry-port";
 import { HealthCheckServiceTag, makeHealthCheckService } from "../domain/services/health-check-service";
 import { KeychainPortLiveLayer } from "../infra/keychain/keychain-live";
 import { MisePortLiveLayer } from "../infra/mise/mise-live";
@@ -96,8 +98,17 @@ export const buildInfraLiveLayer = (configValues: DynamicConfigValues) => {
   // RunStore layer that depends on Database layer
   const RunStoreLayer = Layer.provide(RunStorePortLiveLayer, Layer.mergeAll(BaseInfraLayer, DatabaseLayer));
 
-  // Health check service layer (no dependencies) - simple factory inlined
-  const HealthCheckServiceLayer = Layer.succeed(HealthCheckServiceTag, makeHealthCheckService());
+  // Tool health registry that depends on existing tool services layer
+  const ToolHealthRegistryLayer = Layer.provide(ToolHealthRegistryPortLiveLayer, ToolServicesLayer);
+
+  // Health check service layer that depends on tool health registry
+  const HealthCheckServiceLayer = Layer.effect(
+    HealthCheckServiceTag,
+    Effect.gen(function* () {
+      const toolHealthRegistry = yield* ToolHealthRegistryPortTag;
+      return makeHealthCheckService(toolHealthRegistry);
+    })
+  ).pipe(Layer.provide(ToolHealthRegistryLayer));
 
   // Health check port that depends on Database, Config, Path services, and HealthCheckService
   const HealthCheckLayer = Layer.provide(

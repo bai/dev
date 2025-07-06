@@ -1,14 +1,17 @@
 import path from "path";
 
-import { Context, Effect, Layer } from "effect";
+import { Context, Effect, Layer, Clock } from "effect";
 
 import {
   externalToolError,
+  healthCheckError,
   unknownError,
   type ExternalToolError,
   type ShellExecutionError,
   type UnknownError,
+  type HealthCheckError,
 } from "../../domain/errors";
+import { type HealthCheckResult } from "../../domain/ports/health-check-port";
 import { FileSystemPortTag, type FileSystemPort } from "../../domain/ports/file-system-port";
 import { ShellPortTag, type ShellPort } from "../../domain/ports/shell-port";
 
@@ -23,6 +26,7 @@ export interface GcloudTools {
   checkVersion(): Effect.Effect<{ isValid: boolean; currentVersion: string | null }, ShellExecutionError>;
   performUpgrade(): Effect.Effect<boolean, ShellExecutionError>;
   ensureVersionOrUpgrade(): Effect.Effect<void, ExternalToolError | ShellExecutionError | UnknownError>;
+  performHealthCheck(): Effect.Effect<HealthCheckResult, HealthCheckError>;
   setupConfig(): Effect.Effect<void, UnknownError>;
 }
 
@@ -173,12 +177,38 @@ export const makeGcloudToolsLive = (shell: ShellPort, filesystem: FileSystemPort
       }
     });
 
+  const performHealthCheck = (): Effect.Effect<HealthCheckResult, HealthCheckError> =>
+    Effect.gen(function* () {
+      const checkedAt = new Date(yield* Clock.currentTimeMillis);
+      
+      const currentVersion = yield* getCurrentVersion().pipe(
+        Effect.mapError(() => healthCheckError("Failed to get gcloud version", "gcloud"))
+      );
+
+      if (!currentVersion) {
+        return {
+          toolName: "gcloud",
+          status: "fail",
+          notes: "Gcloud not found or unable to determine version",
+          checkedAt,
+        };
+      }
+
+      return {
+        toolName: "gcloud",
+        version: `Google Cloud SDK ${currentVersion}`,
+        status: "ok",
+        checkedAt,
+      };
+    });
+
   return {
     getCurrentVersion,
     checkVersion,
     performUpgrade,
     ensureVersionOrUpgrade,
     setupConfig,
+    performHealthCheck,
   };
 };
 

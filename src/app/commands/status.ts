@@ -265,11 +265,6 @@ const checkForFailures = (statusItems: readonly StatusItem[]): Effect.Effect<voi
  */
 const getToolPath = (toolName: string): Effect.Effect<string | null, never, ShellPortTag> =>
   Effect.gen(function* () {
-    // Skip network as it's not a real tool
-    if (toolName === "network") {
-      return null;
-    }
-    
     // Try mise which first
     const misePath = yield* executeCommand(["mise", "which", toolName]).pipe(
       Effect.map((result) => result.exitCode === 0 ? result.stdout.trim() : null),

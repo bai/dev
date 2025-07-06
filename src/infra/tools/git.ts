@@ -1,6 +1,7 @@
-import { Context, Effect, Layer } from "effect";
+import { Context, Effect, Layer, Clock } from "effect";
 
-import { externalToolError, type ExternalToolError, type ShellExecutionError } from "../../domain/errors";
+import { externalToolError, healthCheckError, type ExternalToolError, type ShellExecutionError, type HealthCheckError } from "../../domain/errors";
+import { type HealthCheckResult } from "../../domain/ports/health-check-port";
 import { ShellPortTag, type ShellPort } from "../../domain/ports/shell-port";
 
 export const GIT_MIN_VERSION = "2.50.0";
@@ -14,6 +15,7 @@ export interface GitTools {
   checkVersion(): Effect.Effect<{ isValid: boolean; currentVersion: string | null }, ShellExecutionError>;
   performUpgrade(): Effect.Effect<boolean, ShellExecutionError>;
   ensureVersionOrUpgrade(): Effect.Effect<void, ExternalToolError | ShellExecutionError>;
+  performHealthCheck(): Effect.Effect<HealthCheckResult, HealthCheckError>;
 }
 
 // Helper function for version comparison
@@ -133,6 +135,32 @@ export const makeGitToolsLive = (shell: ShellPort): GitTools => ({
       if (versionAfterUpgrade) {
         yield* Effect.logInfo(`✨ Git successfully upgraded to version ${versionAfterUpgrade}`);
       }
+    }),
+
+  performHealthCheck: (): Effect.Effect<HealthCheckResult, HealthCheckError> =>
+    Effect.gen(function* () {
+      const gitTools = makeGitToolsLive(shell);
+      const checkedAt = new Date(yield* Clock.currentTimeMillis);
+      
+      const currentVersion = yield* gitTools.getCurrentVersion().pipe(
+        Effect.mapError(() => healthCheckError("Failed to get git version", "git"))
+      );
+
+      if (!currentVersion) {
+        return {
+          toolName: "git",
+          status: "fail",
+          notes: "Git not found or unable to determine version",
+          checkedAt,
+        };
+      }
+
+      return {
+        toolName: "git",
+        version: `git version ${currentVersion}`,
+        status: "ok",
+        checkedAt,
+      };
     }),
 });
 

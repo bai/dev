@@ -1,10 +1,11 @@
 import path from "path";
 
 import { stringify } from "@iarna/toml";
-import { Context, Effect, Layer } from "effect";
+import { Context, Effect, Layer, Clock } from "effect";
 
 import { ConfigLoaderTag, type ConfigLoader } from "../../config/loader";
-import { externalToolError, unknownError, type ExternalToolError, type ShellExecutionError, type UnknownError } from "../../domain/errors";
+import { externalToolError, healthCheckError, unknownError, type ExternalToolError, type ShellExecutionError, type UnknownError, type HealthCheckError } from "../../domain/errors";
+import { type HealthCheckResult } from "../../domain/ports/health-check-port";
 import { FileSystemPortTag, type FileSystemPort } from "../../domain/ports/file-system-port";
 import { ShellPortTag, type ShellPort } from "../../domain/ports/shell-port";
 
@@ -22,6 +23,7 @@ export interface MiseTools {
   performUpgrade(): Effect.Effect<boolean, ShellExecutionError>;
   ensureVersionOrUpgrade(): Effect.Effect<void, ExternalToolError | ShellExecutionError | UnknownError>;
   setupGlobalConfig(): Effect.Effect<void, UnknownError>;
+  performHealthCheck(): Effect.Effect<HealthCheckResult, HealthCheckError>;
 }
 
 // Factory function that creates MiseTools with dependencies
@@ -187,12 +189,38 @@ export const makeMiseToolsLive = (
       }
     });
 
+  const performHealthCheck = (): Effect.Effect<HealthCheckResult, HealthCheckError> =>
+    Effect.gen(function* () {
+      const checkedAt = new Date(yield* Clock.currentTimeMillis);
+      
+      const currentVersion = yield* getCurrentVersion().pipe(
+        Effect.mapError(() => healthCheckError("Failed to get mise version", "mise"))
+      );
+
+      if (!currentVersion) {
+        return {
+          toolName: "mise",
+          status: "fail",
+          notes: "Mise not found or unable to determine version",
+          checkedAt,
+        };
+      }
+
+      return {
+        toolName: "mise",
+        version: currentVersion,
+        status: "ok",
+        checkedAt,
+      };
+    });
+
   return {
     getCurrentVersion,
     checkVersion,
     performUpgrade,
     ensureVersionOrUpgrade,
     setupGlobalConfig,
+    performHealthCheck,
   };
 };
 

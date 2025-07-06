@@ -153,7 +153,7 @@ Idiomatic Effect focuses on *values* – no classes, no `this`, no hidden state 
 ### 5.1 Service Declaration
 
 ```ts
-// src/domain/ports/Git.ts
+// src/domain/ports/git-port.ts
 export interface Git {
   clone: (repo: Repository, dest: string) => Effect.Effect<void, GitError>;
   currentCommitSha: (cwd?: string) => Effect.Effect<string, GitError>;
@@ -165,7 +165,7 @@ export const GitTag = Context.Tag<Git>("Git");
 ### 5.2 Functional Adapter (Factory)
 
 ```ts
-// src/infra/git/GitLive.ts
+// src/infra/git/git-live.ts
 import { Effect, Layer } from "effect";
 import { Git, GitTag } from "../../domain/ports/Git";
 import { ShellTag } from "../../domain/ports/Shell";
@@ -244,7 +244,7 @@ export const exitCode = (e: DevError): number => ({
 Each port is a pure TypeScript *interface* + a Context Tag.
 
 ```ts
-// src/domain/ports/FileSystem.ts
+// src/domain/ports/file-system-port.ts
 export interface FileSystem {
   exists: (path: string) => Effect.Effect<boolean, FileSystemError>;
   readFile: (path: string) => Effect.Effect<string, FileSystemError>;
