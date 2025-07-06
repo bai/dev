@@ -1,5 +1,5 @@
 import { NodeSdk } from "@effect/opentelemetry";
-import { BatchSpanProcessor, ConsoleSpanExporter } from "@opentelemetry/sdk-trace-base";
+import { BatchSpanProcessor, ConsoleSpanExporter, NoopSpanProcessor } from "@opentelemetry/sdk-trace-base";
 
 /**
  * Creates a tracing layer that outputs spans to console
@@ -14,5 +14,8 @@ export const TracingLive = NodeSdk.layer(() => ({
     serviceName: "dev-cli",
     serviceVersion: "0.0.1",
   },
-  spanProcessor: new BatchSpanProcessor(new ConsoleSpanExporter()),
+  spanProcessor:
+    process.env.NODE_ENV === "development"
+      ? new BatchSpanProcessor(new ConsoleSpanExporter())
+      : new NoopSpanProcessor(),
 }));
