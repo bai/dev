@@ -1,18 +1,17 @@
 import fs from "fs/promises";
+import fsSync from "fs";
 import os from "os";
 import path from "path";
 
 import { it } from "@effect/vitest";
 import { Effect } from "effect";
-import { afterEach, beforeEach, describe, expect, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect } from "vitest";
 
-import { fileSystemError } from "../domain/errors";
 import type { FileSystemPort } from "../domain/file-system-port";
 import { FileSystemLive } from "./file-system-live";
 
 // Mock Bun.Glob for testing since we're running in Node/Vitest
 if (!globalThis.Bun) {
-  const fsSync = require("fs");
   globalThis.Bun = {
     Glob: class {
       constructor(private pattern: string) {}
@@ -34,7 +33,7 @@ if (!globalThis.Bun) {
         // Handle ** patterns separately
         if (this.pattern.includes("**/")) {
           const searchPattern = this.pattern.replace("**/", "");
-          function searchDir(dir: string, relPath: string = "") {
+          function searchDir(dir: string, relPath = "") {
             const items = fsSync.readdirSync(dir, { withFileTypes: true });
             for (const item of items) {
               const itemPath = relPath ? `${relPath}/${item.name}` : item.name;
@@ -93,7 +92,9 @@ describe("file-system-live", () => {
         const result = yield* Effect.flip(fileSystem.readFile(filePath));
         expect(result._tag).toBe("FileSystemError");
         expect(result.reason).toContain("Failed to read file");
-        expect(result.path).toBe(filePath);
+        if (result._tag === "FileSystemError") {
+          expect(result.path).toBe(filePath);
+        }
       }),
     );
   });

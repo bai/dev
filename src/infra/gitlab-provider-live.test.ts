@@ -50,7 +50,14 @@ describe("gitlab-provider-live", () => {
           body: JSON.stringify({
             id: 123,
             name: "myrepo",
+            path: "myrepo",
+            path_with_namespace: "myorg/myrepo",
             namespace: { full_path: "myorg" },
+            http_url_to_repo: "https://gitlab.com/myorg/myrepo.git",
+            ssh_url_to_repo: "git@gitlab.com:myorg/myrepo.git",
+            web_url: "https://gitlab.com/myorg/myrepo",
+            description: "Test repository",
+            visibility: "public",
           }),
         });
 
@@ -74,7 +81,14 @@ describe("gitlab-provider-live", () => {
           body: JSON.stringify({
             id: 123,
             name: "myrepo",
+            path: "myrepo",
+            path_with_namespace: "default-org/myrepo",
             namespace: { full_path: "default-org" },
+            http_url_to_repo: "https://gitlab.com/default-org/myrepo.git",
+            ssh_url_to_repo: "git@gitlab.com:default-org/myrepo.git",
+            web_url: "https://gitlab.com/default-org/myrepo",
+            description: "Test repository",
+            visibility: "public",
           }),
         });
 
@@ -139,14 +153,26 @@ describe("gitlab-provider-live", () => {
             {
               id: 1,
               name: "test-repo",
+              path: "test-repo",
+              path_with_namespace: "myorg/test-repo",
               namespace: { full_path: "myorg" },
               http_url_to_repo: "https://gitlab.com/myorg/test-repo.git",
+              ssh_url_to_repo: "git@gitlab.com:myorg/test-repo.git",
+              web_url: "https://gitlab.com/myorg/test-repo",
+              description: "Test repository",
+              visibility: "public",
             },
             {
               id: 2,
               name: "another-test",
+              path: "another-test",
+              path_with_namespace: "otherorg/another-test",
               namespace: { full_path: "otherorg" },
               http_url_to_repo: "https://gitlab.com/otherorg/another-test.git",
+              ssh_url_to_repo: "git@gitlab.com:otherorg/another-test.git",
+              web_url: "https://gitlab.com/otherorg/another-test",
+              description: "Another test repository",
+              visibility: "public",
             },
           ]),
         });
@@ -172,14 +198,26 @@ describe("gitlab-provider-live", () => {
             {
               id: 1,
               name: "test-repo",
+              path: "test-repo",
+              path_with_namespace: "myorg/test-repo",
               namespace: { full_path: "myorg" },
               http_url_to_repo: "https://gitlab.com/myorg/test-repo.git",
+              ssh_url_to_repo: "git@gitlab.com:myorg/test-repo.git",
+              web_url: "https://gitlab.com/myorg/test-repo",
+              description: "Test repository",
+              visibility: "public",
             },
             {
               id: 2,
               name: "another-test",
+              path: "another-test",
+              path_with_namespace: "otherorg/another-test",
               namespace: { full_path: "otherorg" },
               http_url_to_repo: "https://gitlab.com/otherorg/another-test.git",
+              ssh_url_to_repo: "git@gitlab.com:otherorg/another-test.git",
+              web_url: "https://gitlab.com/otherorg/another-test",
+              description: "Another test repository",
+              visibility: "public",
             },
           ]),
         });
@@ -230,7 +268,34 @@ describe("gitlab-provider-live", () => {
         if (Exit.isFailure(result)) {
           const error = result.cause._tag === "Fail" ? result.cause.error : null;
           expect(error?._tag).toBe("UnknownError");
-          expect(String(error?.reason)).toContain("Failed to parse GitLab API response");
+          expect(String(error?.reason)).toContain("Failed to parse GitLab search response");
+        }
+      }),
+    );
+
+    it.effect("handles invalid schema in API response", () =>
+      Effect.gen(function* () {
+        const network = new MockNetwork();
+        network.setResponse("https://gitlab.com/api/v4/search?search=test&scope=projects", {
+          status: 200,
+          statusText: "OK",
+          body: JSON.stringify([
+            {
+              id: "not-a-number", // Schema expects number
+              name: "test-repo",
+              // Missing required fields: path, path_with_namespace, namespace, etc.
+            },
+          ]),
+        });
+
+        const provider = makeGitLabProvider(network, "default-org");
+        const result = yield* Effect.exit(provider.searchRepositories("test"));
+
+        expect(Exit.isFailure(result)).toBe(true);
+        if (Exit.isFailure(result)) {
+          const error = result.cause._tag === "Fail" ? result.cause.error : null;
+          expect(error?._tag).toBe("UnknownError");
+          expect(String(error?.reason)).toContain("Invalid GitLab search response");
         }
       }),
     );

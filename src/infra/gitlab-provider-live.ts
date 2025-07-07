@@ -1,5 +1,6 @@
 import { Effect, Layer } from "effect";
 
+import { gitLabProjectToRepository, parseGitLabProject, parseGitLabSearchResponse } from "../domain/api-schemas";
 import { networkError, unknownError, type NetworkError, type UnknownError } from "../domain/errors";
 import type { GitProvider, Repository } from "../domain/models";
 import { NetworkPortTag, type NetworkPort } from "../domain/network-port";
@@ -22,7 +23,7 @@ export const makeGitLabProvider = (network: NetworkPort, defaultOrg = "gitlab-or
     const apiUrl = `https://gitlab.com/api/v4/projects/${encodeURIComponent(`${organization}/${name}`)}`;
 
     return network.get(apiUrl).pipe(
-      Effect.flatMap((response) => {
+      Effect.flatMap((response): Effect.Effect<Repository, NetworkError | UnknownError> => {
         if (response.status === 404) {
           return Effect.fail(networkError(`Repository ${organization}/${name} not found`));
         }
@@ -30,11 +31,18 @@ export const makeGitLabProvider = (network: NetworkPort, defaultOrg = "gitlab-or
           return Effect.fail(networkError(`GitLab API error: ${response.status} ${response.statusText}`));
         }
 
-        return Effect.succeed({
-          name,
-          organization,
-          provider,
-          cloneUrl,
+        return Effect.try({
+          try: () => {
+            const data = JSON.parse(response.body);
+            const parseResult = parseGitLabProject(data);
+            
+            if (!parseResult.success) {
+              throw new Error(parseResult.error);
+            }
+            
+            return gitLabProjectToRepository(parseResult.data, provider as { name: "gitlab"; baseUrl: string });
+          },
+          catch: (error) => unknownError(`Failed to parse GitLab repository: ${error}`),
         });
       }),
     );
@@ -66,12 +74,13 @@ export const makeGitLabProvider = (network: NetworkPort, defaultOrg = "gitlab-or
         return Effect.try({
           try: () => {
             const data = JSON.parse(response.body);
-            let repositories: Repository[] = data.map((item: any) => ({
-              name: item.name,
-              organization: item.namespace.full_path,
-              provider,
-              cloneUrl: item.http_url_to_repo,
-            }));
+            const parseResult = parseGitLabSearchResponse(data);
+            
+            if (!parseResult.success) {
+              throw new Error(parseResult.error);
+            }
+            
+            let repositories = parseResult.data.map((item) => gitLabProjectToRepository(item, provider as { name: "gitlab"; baseUrl: string }));
 
             // Filter by organization if provided
             if (org) {
@@ -80,7 +89,7 @@ export const makeGitLabProvider = (network: NetworkPort, defaultOrg = "gitlab-or
 
             return repositories;
           },
-          catch: (error) => unknownError(`Failed to parse GitLab API response: ${error}`),
+          catch: (error) => unknownError(`Failed to parse GitLab search response: ${error}`),
         });
       }),
     );

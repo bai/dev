@@ -50,8 +50,13 @@ describe("github-provider-live", () => {
           body: JSON.stringify({
             id: 123,
             name: "myrepo",
+            full_name: "myorg/myrepo",
             owner: { login: "myorg" },
             clone_url: "https://github.com/myorg/myrepo.git",
+            ssh_url: "git@github.com:myorg/myrepo.git",
+            html_url: "https://github.com/myorg/myrepo",
+            description: "Test repository",
+            private: false,
           }),
         });
 
@@ -75,8 +80,13 @@ describe("github-provider-live", () => {
           body: JSON.stringify({
             id: 123,
             name: "myrepo",
+            full_name: "octocat/myrepo",
             owner: { login: "octocat" },
             clone_url: "https://github.com/octocat/myrepo.git",
+            ssh_url: "git@github.com:octocat/myrepo.git",
+            html_url: "https://github.com/octocat/myrepo",
+            description: "Test repository",
+            private: false,
           }),
         });
 
@@ -164,14 +174,24 @@ describe("github-provider-live", () => {
               {
                 id: 1,
                 name: "test-repo",
+                full_name: "myorg/test-repo",
                 owner: { login: "myorg" },
                 clone_url: "https://github.com/myorg/test-repo.git",
+                ssh_url: "git@github.com:myorg/test-repo.git",
+                html_url: "https://github.com/myorg/test-repo",
+                description: "Test repository",
+                private: false,
               },
               {
                 id: 2,
                 name: "another-test",
+                full_name: "otherorg/another-test",
                 owner: { login: "otherorg" },
                 clone_url: "https://github.com/otherorg/another-test.git",
+                ssh_url: "git@github.com:otherorg/another-test.git",
+                html_url: "https://github.com/otherorg/another-test",
+                description: "Another test repository",
+                private: false,
               },
             ],
           }),
@@ -200,8 +220,13 @@ describe("github-provider-live", () => {
               {
                 id: 1,
                 name: "test-repo",
+                full_name: "myorg/test-repo",
                 owner: { login: "myorg" },
                 clone_url: "https://github.com/myorg/test-repo.git",
+                ssh_url: "git@github.com:myorg/test-repo.git",
+                html_url: "https://github.com/myorg/test-repo",
+                description: "Test repository",
+                private: false,
               },
             ],
           }),
@@ -272,7 +297,37 @@ describe("github-provider-live", () => {
         if (Exit.isFailure(result)) {
           const error = result.cause._tag === "Fail" ? result.cause.error : null;
           expect(error?._tag).toBe("UnknownError");
-          expect(String(error?.reason)).toContain("Failed to parse GitHub API response");
+          expect(String(error?.reason)).toContain("Failed to parse GitHub search response");
+        }
+      }),
+    );
+
+    it.effect("handles invalid schema in API response", () =>
+      Effect.gen(function* () {
+        const network = new MockNetwork();
+        network.setResponse("https://api.github.com/search/repositories?q=test", {
+          status: 200,
+          statusText: "OK",
+          body: JSON.stringify({
+            total_count: 1,
+            items: [
+              {
+                id: "not-a-number", // Schema expects number
+                name: "test-repo",
+                // Missing required fields: full_name, owner, clone_url, etc.
+              },
+            ],
+          }),
+        });
+
+        const provider = makeGitHubProvider(network, "default-org");
+        const result = yield* Effect.exit(provider.searchRepositories("test"));
+
+        expect(Exit.isFailure(result)).toBe(true);
+        if (Exit.isFailure(result)) {
+          const error = result.cause._tag === "Fail" ? result.cause.error : null;
+          expect(error?._tag).toBe("UnknownError");
+          expect(String(error?.reason)).toContain("Invalid GitHub search response");
         }
       }),
     );
@@ -291,8 +346,13 @@ describe("github-provider-live", () => {
               {
                 id: 1,
                 name: "typescript-test",
+                full_name: "tsorg/typescript-test",
                 owner: { login: "tsorg" },
                 clone_url: "https://github.com/tsorg/typescript-test.git",
+                ssh_url: "git@github.com:tsorg/typescript-test.git",
+                html_url: "https://github.com/tsorg/typescript-test",
+                description: "TypeScript test repository",
+                private: false,
               },
             ],
           }),

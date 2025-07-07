@@ -1,5 +1,6 @@
 import { Effect, Layer } from "effect";
 
+import { gitHubRepoToRepository, parseGitHubRepo, parseGitHubSearchResponse } from "../domain/api-schemas";
 import { networkError, unknownError, type NetworkError, type UnknownError } from "../domain/errors";
 import type { GitProvider, Repository } from "../domain/models";
 import { NetworkPortTag, type NetworkPort } from "../domain/network-port";
@@ -21,7 +22,7 @@ export const makeGitHubProvider = (network: NetworkPort, defaultOrg = "octocat")
     const apiUrl = `https://api.github.com/repos/${organization}/${name}`;
 
     return network.get(apiUrl).pipe(
-      Effect.flatMap((response) => {
+      Effect.flatMap((response): Effect.Effect<Repository, NetworkError | UnknownError> => {
         if (response.status === 404) {
           return Effect.fail(networkError(`Repository ${organization}/${name} not found`));
         }
@@ -29,11 +30,18 @@ export const makeGitHubProvider = (network: NetworkPort, defaultOrg = "octocat")
           return Effect.fail(networkError(`GitHub API error: ${response.status} ${response.statusText}`));
         }
 
-        return Effect.succeed({
-          name,
-          organization,
-          provider,
-          cloneUrl,
+        return Effect.try({
+          try: () => {
+            const data = JSON.parse(response.body);
+            const parseResult = parseGitHubRepo(data);
+            
+            if (!parseResult.success) {
+              throw new Error(parseResult.error);
+            }
+            
+            return gitHubRepoToRepository(parseResult.data, provider as { name: "github"; baseUrl: string });
+          },
+          catch: (error) => unknownError(`Failed to parse GitHub repository: ${error}`),
         });
       }),
     );
@@ -59,15 +67,15 @@ export const makeGitHubProvider = (network: NetworkPort, defaultOrg = "octocat")
         return Effect.try({
           try: () => {
             const data = JSON.parse(response.body);
-            const repositories: Repository[] = data.items.map((item: any) => ({
-              name: item.name,
-              organization: item.owner.login,
-              provider,
-              cloneUrl: item.clone_url,
-            }));
-            return repositories;
+            const parseResult = parseGitHubSearchResponse(data);
+            
+            if (!parseResult.success) {
+              throw new Error(parseResult.error);
+            }
+            
+            return parseResult.data.items.map((item) => gitHubRepoToRepository(item, provider as { name: "github"; baseUrl: string }));
           },
-          catch: (error) => unknownError(`Failed to parse GitHub API response: ${error}`),
+          catch: (error) => unknownError(`Failed to parse GitHub search response: ${error}`),
         });
       }),
     );
