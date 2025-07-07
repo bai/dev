@@ -3,9 +3,9 @@ import path from "path";
 
 import { Effect, Layer } from "effect";
 
-import { PathLiveLayer } from "../domain/services/path-service";
-import { FileSystemPortLiveLayer } from "../infra/fs/file-system-live";
-import { NetworkPortLiveLayer } from "../infra/network/network-live";
+import { PathLiveLayer } from "../domain/path-service";
+import { FileSystemPortLiveLayer } from "../infra/file-system-live";
+import { NetworkPortLiveLayer } from "../infra/network-live";
 import { ConfigLoaderLiveLayer, ConfigLoaderTag } from "./loader";
 import { type Config } from "./schema";
 

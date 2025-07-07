@@ -106,10 +106,10 @@ This eliminates hardcoded values and allows for dynamic configuration at runtime
 
 #### File Structure Patterns
 
-- **Commands**: `src/app/commands/` - Each command is a separate module
-- **Services**: `src/app/services/` - Application-level services
-- **Ports**: `src/domain/ports/` - Interface definitions
-- **Infrastructure**: `src/infra/` - Concrete implementations organized by concern
+- **Commands**: `src/app/` - Command files with `-command.ts` suffix
+- **Services**: `src/app/` - Service files with `-service.ts` suffix
+- **Ports**: `src/domain/` - Interface files with `-port.ts` suffix
+- **Infrastructure**: `src/infra/` - Implementation files with technology prefix and `-live.ts` suffix
 - **Wiring**: `src/wiring.ts` - Main composition root
 
 #### Key Dependencies

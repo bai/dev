@@ -2,8 +2,8 @@ import { Command } from "@effect/cli";
 import { BunRuntime } from "@effect/platform-bun";
 import { Effect } from "effect";
 
-import { CommandTrackerTag } from "./app/services/command-tracking";
-import { VersionTag } from "./app/services/version";
+import { CommandTrackerTag } from "./app/command-tracking-service";
+import { VersionTag } from "./app/version-service";
 import { TracingLive } from "./config/tracing";
 import { exitCode, type DevError } from "./domain/errors";
 import { getMainCommand, setupApplicationWithConfig } from "./wiring";

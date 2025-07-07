@@ -100,26 +100,43 @@ Infra →  Domain
 
 ```text
 src/
-├── domain/        # 🏛️ Pure business logic
+├── domain/        # 🏛️ Pure business logic (flat structure)
 │   ├── models.ts
 │   ├── errors.ts
 │   ├── matching.ts
-│   ├── ports/
-│   └── services/
+│   ├── drizzle-types.ts
+│   ├── *-port.ts      # Domain interfaces (e.g., git-port.ts, database-port.ts)
+│   └── *-service.ts   # Domain services (e.g., repository-service.ts, health-check-service.ts)
 │
-├── app/           # 🔄 Use-cases (commands & app-services)
-│   ├── commands/
-│   └── services/
+├── app/           # 🔄 Use-cases (flat structure)
+│   ├── *-command.ts   # Command implementations (e.g., clone-command.ts, cd-command.ts)
+│   └── *-service.ts   # Application services (e.g., command-tracking-service.ts, version-service.ts)
 │
-├── infra/         # 🔌 Adapters (FS, Git, DB, …)
-│   ├── fs/
-│   ├── git/
-│   ├── network/
-│   ├── shell/
-│   └── db/
+├── infra/         # 🔌 Adapters (flat structure with -live suffix)
+│   ├── database-live.ts
+│   ├── run-store-live.ts
+│   ├── directory-live.ts
+│   ├── file-system-live.ts
+│   ├── git-live.ts
+│   ├── health-check-live.ts
+│   ├── tool-health-registry-live.ts
+│   ├── keychain-live.ts
+│   ├── mise-live.ts
+│   ├── network-live.ts
+│   ├── github-provider-live.ts
+│   ├── fzf-selector-live.ts
+│   ├── shell-live.ts
+│   ├── *-tools-live.ts  # Tool implementations (e.g., bun-tools-live.ts, git-tools-live.ts)
+│   └── tool-management-live.ts
 │
 ├── config/        # ⚙️ Config schema, loader & migrations
-├── effect/        # 🔧 Effect-TS specific helpers (optional)
+│   ├── bootstrap.ts
+│   ├── dynamic-layers.ts
+│   ├── loader.ts
+│   ├── migrations.ts
+│   ├── schema.ts
+│   └── tracing.ts
+│
 ├── wiring.ts      # 🏗️ Composition root
 └── index.ts       # 🚀 Entry point
 ```
@@ -153,7 +170,7 @@ Idiomatic Effect focuses on *values* – no classes, no `this`, no hidden state 
 ### 5.1 Service Declaration
 
 ```ts
-// src/domain/ports/git-port.ts
+// src/domain/git-port.ts
 export interface Git {
   clone: (repo: Repository, dest: string) => Effect.Effect<void, GitError>;
   currentCommitSha: (cwd?: string) => Effect.Effect<string, GitError>;
@@ -165,10 +182,10 @@ export const GitTag = Context.Tag<Git>("Git");
 ### 5.2 Functional Adapter (Factory)
 
 ```ts
-// src/infra/git/git-live.ts
+// src/infra/git-live.ts
 import { Effect, Layer } from "effect";
-import { Git, GitTag } from "../../domain/ports/Git";
-import { ShellTag } from "../../domain/ports/Shell";
+import { Git, GitTag } from "../domain/git-port";
+import { ShellTag } from "../domain/shell-port";
 
 const makeGitLive = (shell: Shell): Git => ({
   clone: (repo, dest) =>
@@ -244,7 +261,7 @@ export const exitCode = (e: DevError): number => ({
 Each port is a pure TypeScript *interface* + a Context Tag.
 
 ```ts
-// src/domain/ports/file-system-port.ts
+// src/domain/file-system-port.ts
 export interface FileSystem {
   exists: (path: string) => Effect.Effect<boolean, FileSystemError>;
   readFile: (path: string) => Effect.Effect<string, FileSystemError>;
@@ -254,7 +271,7 @@ export interface FileSystem {
 export const FileSystemTag = Context.Tag<FileSystem>("FileSystem");
 ```
 
-Adapters live in `src/infra/**` and are wired in the composition root via **Effect Layers**.
+Adapters live in `src/infra/` (flat structure) and are wired in the composition root via **Effect Layers**.
 
 ---
 
@@ -349,9 +366,9 @@ export const ConfigTag = Context.Tag<Config>("Config");
 Place pure unit tests beside the code they test:
 
 ```text
-src/app/commands/
-  ├ clone.ts
-  └ clone.test.ts
+src/app/
+  ├ clone-command.ts
+  └ clone-command.test.ts
 ```
 
 Use in-memory fakes to avoid I/O.

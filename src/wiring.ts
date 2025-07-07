@@ -1,12 +1,12 @@
 import { Command } from "@effect/cli";
 import { Effect } from "effect";
 
-import { cdCommand } from "./app/commands/cd";
-import { cloneCommand } from "./app/commands/clone";
-import { runCommand } from "./app/commands/run";
-import { statusCommand } from "./app/commands/status";
-import { upCommand } from "./app/commands/up";
-import { upgradeCommand } from "./app/commands/upgrade";
+import { cdCommand } from "./app/cd-command";
+import { cloneCommand } from "./app/clone-command";
+import { runCommand } from "./app/run-command";
+import { statusCommand } from "./app/status-command";
+import { upCommand } from "./app/up-command";
+import { upgradeCommand } from "./app/upgrade-command";
 import { extractDynamicValues, loadConfiguration } from "./config/bootstrap";
 import { buildAppLiveLayer } from "./config/dynamic-layers";
 

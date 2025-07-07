@@ -7,8 +7,8 @@ import {
   type NetworkError,
   type UnknownError,
 } from "../domain/errors";
-import { FileSystemPortTag, type FileSystemPort } from "../domain/ports/file-system-port";
-import { NetworkPortTag, type NetworkPort } from "../domain/ports/network-port";
+import { FileSystemPortTag, type FileSystemPort } from "../domain/file-system-port";
+import { NetworkPortTag, type NetworkPort } from "../domain/network-port";
 import { migrateConfig } from "./migrations";
 import { configSchema, defaultConfig, type Config } from "./schema";
 

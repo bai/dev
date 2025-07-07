@@ -10,16 +10,16 @@ Adhere to the following naming conventions for an idiomatic Effect.ts codebase.
 
 * **Name** as a plain noun reflecting the core capability or role (e.g. `Email`, `Auth`, `Database`).
 * **Do not** add a trailing "Service" unless "Service" is literally part of your ubiquitous language (e.g. a wrapped third-party `PaymentService`).
-* **File naming**: `domain/[interface-name].ts` (kebab-case)
+* **File naming**: `domain/[interface-name]-port.ts` (kebab-case with -port suffix for ports)
 
 ```ts
-// domain/email.ts
+// domain/email-port.ts
 export interface Email {
   send(to: string, body: string): Effect<never, EmailError, void>
 }
 export class EmailTag extends Context.Tag("Email")<EmailTag, Email>() {}
 
-// domain/auth.ts
+// domain/auth-port.ts
 export interface Auth {
   authenticate(credentials: Credentials): Effect<never, AuthError, User>
 }
@@ -36,13 +36,13 @@ export class AuthTag extends Context.Tag("Auth")<AuthTag, Auth>() {}
 * **File naming**: Export from the same file as the interface
 
 ```ts
-// domain/database.ts
+// domain/database-port.ts
 export interface Database {
   query<T>(sql: string): Effect<never, DatabaseError, T[]>
 }
 export class DatabaseTag extends Context.Tag("Database")<DatabaseTag, Database>() {}
 
-// domain/user-repository.ts
+// domain/user-repository-port.ts
 export interface UserRepository {
   findById(id: UserId): Effect<never, NotFoundError, User>
 }
@@ -55,22 +55,22 @@ export class UserRepositoryTag extends Context.Tag("UserRepository")<UserReposit
 
 * **Suffix** with `Live` (never `Impl`), e.g. `EmailLive`, `DatabaseLive`.
 * Expose via a layer named `<Interface>LiveLayer`.
-* **File naming**: `infra/[category]/[interface-name]-live.ts`
+* **File naming**: `infra/[interface-name]-live.ts` (flat structure)
 
 ```ts
-// infra/email/email-live.ts
+// infra/email-live.ts
 export class SmtpEmail implements Email {
   // implementation
 }
 export const EmailLiveLayer = Layer.succeed(EmailTag, new SmtpEmail())
 
-// infra/auth/auth-live.ts
+// infra/auth-live.ts
 export class JwtAuth implements Auth {
   // implementation
 }
 export const AuthLiveLayer = Layer.succeed(AuthTag, new JwtAuth())
 
-// infra/db/database-live.ts
+// infra/database-live.ts
 export class PostgresDatabase implements Database {
   // implementation
 }
@@ -102,7 +102,7 @@ export const ConfigLayer = Layer.mergeAll(
   Layer.succeed(SmtpConfigTag, { host: ENV.SMTP_HOST, port: 587, secure: true })
 )
 
-// infra/email/email-live.ts (showing proper dependency order)
+// infra/email-live.ts (showing proper dependency order)
 export const EmailLiveLayer = Layer.effect(
   EmailTag,
   Effect.gen(function* (_) {
@@ -207,24 +207,24 @@ export class UnauthorizedError extends Data.TaggedClass("UnauthorizedError")() {
 * **File naming**: Export from the relevant implementation files
 
 ```ts
-// infra/db/primary-db-live.ts
+// infra/primary-db-live.ts
 export class PrimaryDbTag extends Context.Tag("PrimaryDb")<PrimaryDbTag, Database>() {}
 export const PrimaryDbLiveLayer = Layer.succeed(
   PrimaryDbTag,
   new PostgresDatabase(primaryConfig)
 )
 
-// infra/db/replica-db-live.ts
+// infra/replica-db-live.ts
 export class ReplicaDbTag extends Context.Tag("ReplicaDb")<ReplicaDbTag, Database>() {}
 export const ReplicaDbLiveLayer = Layer.succeed(
   ReplicaDbTag,
   new PostgresDatabase(replicaConfig)
 )
 
-// infra/cache/redis-cache-live.ts
+// infra/redis-cache-live.ts
 export class RedisCacheTag extends Context.Tag("RedisCache")<RedisCacheTag, Cache>() {}
 
-// infra/cache/memory-cache-live.ts
+// infra/memory-cache-live.ts
 export class MemoryCacheTag extends Context.Tag("MemoryCache")<MemoryCacheTag, Cache>() {}
 ```
 
@@ -272,16 +272,16 @@ export const DatabaseTestLayer = Layer.succeed(DatabaseTag, {
 * **File naming**: Export from relevant service files
 
 ```ts
-// domain/services/event-service.ts
+// domain/event-service.ts
 export class LogEventStreamTag extends Context.Tag("LogEventStream")<LogEventStreamTag, Stream<LogEvent>>() {}
 
-// domain/services/task-service.ts
+// domain/task-service.ts
 export class TaskQueueTag extends Context.Tag("TaskQueue")<TaskQueueTag, Queue<Task>>() {}
 
-// domain/services/notification-service.ts
+// domain/notification-service.ts
 export class NotificationHubTag extends Context.Tag("NotificationHub")<NotificationHubTag, Hub<Notification>>() {}
 
-// app/services/command-tracking-service.ts
+// app/command-tracking-service.ts
 export class CommandStreamTag extends Context.Tag("CommandStream")<CommandStreamTag, Stream<Command>>() {}
 ```
 
@@ -324,21 +324,19 @@ export const ConfigSchema = Schema.Struct({
 * **Use** branded types for domain modeling to ensure type safety.
 * **Export** both the type and its constructor/validator.
 * **Avoid** name collisions with interfaces (e.g. use `EmailAddress` for branded string, not `Email`).
-* **File naming**: `domain/types/[type-name].ts` or `domain/models.ts` for grouped types
+* **File naming**: `domain/models.ts` for grouped types or `domain/drizzle-types.ts` for database-specific types
 
 ```ts
-// domain/types/user-id.ts
+// domain/models.ts (grouping related branded types)
 export type UserId = string & Brand.Brand<"UserId">
 export const UserId = Brand.nominal<UserId>()
 
-// domain/types/email-address.ts (avoiding collision with Email interface)
 export type EmailAddress = string & Brand.Brand<"EmailAddress">
 export const EmailAddress = Brand.refined<EmailAddress>(
   (s) => s.includes("@"),
   (s) => Brand.error(`Invalid email: ${s}`)
 )
 
-// domain/models.ts (grouping related branded types)
 export type RepositoryId = string & Brand.Brand<"RepositoryId">
 export const RepositoryId = Brand.nominal<RepositoryId>()
 
@@ -354,33 +352,33 @@ export const CommitHash = Brand.refined<CommitHash>(
 ### 12. Ports (Hexagonal Architecture)
 
 * **Suffix** port interfaces with `Port` to distinguish from domain interfaces.
-* **Place** in `domain/ports/` directory to separate from core domain.
+* **Place** in `domain/` directory with `-port` suffix to distinguish from services.
 * **Use** the same Tag naming convention with the full interface name.
-* **File naming**: `domain/ports/[port-name].ts` (kebab-case)
+* **File naming**: `domain/[port-name]-port.ts` (kebab-case with -port suffix)
 
 ```ts
-// domain/ports/database-port.ts
+// domain/database-port.ts
 export interface DatabasePort {
   query<T>(sql: string): Effect<never, DatabaseError, T[]>
   transaction<R, E, A>(effect: Effect<R, E, A>): Effect<R, E | DatabaseError, A>
 }
 export class DatabasePortTag extends Context.Tag("DatabasePort")<DatabasePortTag, DatabasePort>() {}
 
-// domain/ports/file-system-port.ts
+// domain/file-system-port.ts
 export interface FileSystemPort {
   readFile(path: string): Effect<never, FileSystemError, string>
   writeFile(path: string, content: string): Effect<never, FileSystemError, void>
 }
 export class FileSystemPortTag extends Context.Tag("FileSystemPort")<FileSystemPortTag, FileSystemPort>() {}
 
-// domain/ports/git-port.ts
+// domain/git-port.ts
 export interface GitPort {
   clone(url: string, path: string): Effect<never, GitError, void>
   checkout(branch: string): Effect<never, GitError, void>
 }
 export class GitPortTag extends Context.Tag("GitPort")<GitPortTag, GitPort>() {}
 
-// domain/ports/keychain-port.ts
+// domain/keychain-port.ts
 export interface KeychainPort {
   get(key: string): Effect<never, KeychainError, string | null>
   set(key: string, value: string): Effect<never, KeychainError, void>
@@ -392,13 +390,13 @@ export class KeychainPortTag extends Context.Tag("KeychainPort")<KeychainPortTag
 
 ### 13. Adapters (Hexagonal Architecture)
 
-* **Place** adapter implementations in `infra/` directory, organized by infrastructure type.
-* **Name** adapters descriptively based on the technology they use.
+* **Place** adapter implementations in `infra/` directory (flat structure).
+* **Name** files descriptively with `-live` suffix.
 * **Follow** the `Live` suffix pattern for layer exports.
-* **File naming**: `infra/[category]/[technology]-[adapter-name]-live.ts` for clarity
+* **File naming**: `infra/[adapter-name]-live.ts` for clarity
 
 ```ts
-// infra/db/postgres-database-live.ts
+// infra/database-live.ts
 export class PostgresDatabase implements DatabasePort {
   // implementation
 }
@@ -410,7 +408,7 @@ export const DatabasePortLiveLayer = Layer.effect(
   })
 )
 
-// infra/fs/node-filesystem-live.ts
+// infra/file-system-live.ts
 export class NodeFileSystem implements FileSystemPort {
   // implementation
 }
@@ -419,13 +417,13 @@ export const FileSystemPortLiveLayer = Layer.succeed(
   new NodeFileSystem()
 )
 
-// infra/git/simple-git-live.ts
+// infra/git-live.ts
 export class SimpleGit implements GitPort {
   // implementation
 }
 export const GitPortLiveLayer = Layer.succeed(GitPortTag, new SimpleGit())
 
-// infra/keychain/macos-keychain-live.ts
+// infra/keychain-live.ts
 export class MacOSKeychain implements KeychainPort {
   // implementation
 }
