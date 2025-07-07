@@ -1,7 +1,7 @@
 import { Effect, Layer } from "effect";
 
-import { type FileSystemError, type UnknownError } from "../domain/errors";
 import { DirectoryPortTag, type DirectoryPort } from "../domain/directory-port";
+import { type FileSystemError, type UnknownError } from "../domain/errors";
 import { FileSystemPortTag } from "../domain/file-system-port";
 import { PathServiceTag } from "../domain/path-service";
 

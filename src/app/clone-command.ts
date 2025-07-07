@@ -4,8 +4,8 @@ import { Effect } from "effect";
 import { unknownError } from "../domain/errors";
 import { FileSystemPortTag } from "../domain/file-system-port";
 import { GitPortTag } from "../domain/git-port";
-import { RepoProviderPortTag } from "../domain/repo-provider-port";
 import { PathServiceTag } from "../domain/path-service";
+import { RepoProviderPortTag } from "../domain/repo-provider-port";
 import { RepositoryServiceTag } from "../domain/repository-service";
 import { ShellIntegrationTag } from "./shell-integration-service";
 

@@ -1,20 +1,19 @@
-
 import { sql } from "drizzle-orm";
 import { Clock, Effect, Layer } from "effect";
 
 import { toolHealthChecks } from "../../drizzle/schema";
-import { healthCheckError, type HealthCheckError } from "../domain/errors";
+import { ConfigLoaderTag, type ConfigLoader } from "../config/loader";
 import { DatabasePortTag, type DatabasePort } from "../domain/database-port";
+import { healthCheckError, type HealthCheckError } from "../domain/errors";
 import {
   HealthCheckPortTag,
   type HealthCheckPort,
   type HealthCheckResult,
   type HealthCheckSummary,
 } from "../domain/health-check-port";
-import { PathServiceTag, type PathService } from "../domain/path-service";
-import { ConfigLoaderTag, type ConfigLoader } from "../config/loader";
-import { ShellPortTag, type ShellPort } from "../domain/shell-port";
 import { HealthCheckServiceTag, type HealthCheckService } from "../domain/health-check-service";
+import { PathServiceTag, type PathService } from "../domain/path-service";
+import { ShellPortTag, type ShellPort } from "../domain/shell-port";
 
 // Health check constants (internal, not user-configurable)
 const HEALTH_CHECK_RETENTION_DAYS = 30;
@@ -27,7 +26,6 @@ interface InternalHealthCheckResult {
   readonly notes?: string;
   readonly checkedAt: number;
 }
-
 
 // Store health check results using DatabasePort
 const storeHealthCheckResults = (
@@ -61,7 +59,7 @@ const storeHealthCheckResults = (
         // Also run pruning while we have the database open
         const cutoffDateMs = yield* Clock.currentTimeMillis;
         const cutoffDate = new Date(cutoffDateMs - HEALTH_CHECK_RETENTION_DAYS * 24 * 60 * 60 * 1000);
-        
+
         yield* Effect.tryPromise({
           try: async () => {
             await db.delete(toolHealthChecks).where(sql`checked_at < ${cutoffDate}`);
@@ -78,7 +76,13 @@ const storeHealthCheckResults = (
     );
 
 // Factory function that creates HealthCheckService with dependencies
-export const makeHealthCheckLive = (database: DatabasePort, pathService: PathService, configLoader: ConfigLoader, shell: ShellPort, healthCheckService: HealthCheckService): HealthCheckPort => {
+export const makeHealthCheckLive = (
+  database: DatabasePort,
+  pathService: PathService,
+  configLoader: ConfigLoader,
+  shell: ShellPort,
+  healthCheckService: HealthCheckService,
+): HealthCheckPort => {
   // Individual functions implementing the service methods
   const runHealthChecks = (): Effect.Effect<readonly HealthCheckResult[], HealthCheckError> =>
     Effect.gen(function* () {
@@ -104,7 +108,6 @@ export const makeHealthCheckLive = (database: DatabasePort, pathService: PathSer
       // Return the results
       return results;
     });
-
 
   const getLatestResults = (): Effect.Effect<readonly HealthCheckSummary[], HealthCheckError> =>
     database

@@ -7,8 +7,8 @@ import { unknownError, type DevError } from "../domain/errors";
 import { FileSystemPortTag } from "../domain/file-system-port";
 import { GitPortTag } from "../domain/git-port";
 import { MisePortTag } from "../domain/mise-port";
-import { ToolManagementPortTag, type ToolManagementPort } from "../domain/tool-management-port";
 import { PathServiceTag, type PathService } from "../domain/path-service";
+import { ToolManagementPortTag, type ToolManagementPort } from "../domain/tool-management-port";
 
 // No options needed for upgrade command
 

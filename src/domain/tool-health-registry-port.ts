@@ -24,4 +24,7 @@ export interface ToolHealthRegistryPort {
   checkAllTools(): Effect.Effect<readonly HealthCheckResult[], HealthCheckError>;
 }
 
-export class ToolHealthRegistryPortTag extends Context.Tag("ToolHealthRegistryPort")<ToolHealthRegistryPortTag, ToolHealthRegistryPort>() {}
+export class ToolHealthRegistryPortTag extends Context.Tag("ToolHealthRegistryPort")<
+  ToolHealthRegistryPortTag,
+  ToolHealthRegistryPort
+>() {}

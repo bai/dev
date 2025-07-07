@@ -1,18 +1,18 @@
 import path from "path";
 
-import { Context, Effect, Layer, Clock } from "effect";
+import { Clock, Context, Effect, Layer } from "effect";
 
 import {
   externalToolError,
   healthCheckError,
   unknownError,
   type ExternalToolError,
+  type HealthCheckError,
   type ShellExecutionError,
   type UnknownError,
-  type HealthCheckError,
 } from "../domain/errors";
-import { type HealthCheckResult } from "../domain/health-check-port";
 import { FileSystemPortTag, type FileSystemPort } from "../domain/file-system-port";
+import { type HealthCheckResult } from "../domain/health-check-port";
 import { ShellPortTag, type ShellPort } from "../domain/shell-port";
 
 export const GCLOUD_MIN_VERSION = "450.0.0";
@@ -180,9 +180,9 @@ export const makeGcloudToolsLive = (shell: ShellPort, filesystem: FileSystemPort
   const performHealthCheck = (): Effect.Effect<HealthCheckResult, HealthCheckError> =>
     Effect.gen(function* () {
       const checkedAt = new Date(yield* Clock.currentTimeMillis);
-      
+
       const currentVersion = yield* getCurrentVersion().pipe(
-        Effect.mapError(() => healthCheckError("Failed to get gcloud version", "gcloud"))
+        Effect.mapError(() => healthCheckError("Failed to get gcloud version", "gcloud")),
       );
 
       if (!currentVersion) {

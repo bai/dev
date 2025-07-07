@@ -1,31 +1,31 @@
-import { Layer, Effect } from "effect";
+import { Effect, Layer } from "effect";
 
 import { CommandTrackerLiveLayer } from "../app/command-tracking-service";
 import { ShellIntegrationLiveLayer } from "../app/shell-integration-service";
 import { UpdateCheckerLiveLayer } from "../app/update-check-service";
 import { VersionLiveLayer } from "../app/version-service";
+import { HealthCheckServiceTag, makeHealthCheckService } from "../domain/health-check-service";
 import { PathLiveLayer } from "../domain/path-service";
 import { RepositoryLiveLayer } from "../domain/repository-service";
+import { ToolHealthRegistryPortTag } from "../domain/tool-health-registry-port";
+import { BunToolsLiveLayer } from "../infra/bun-tools-live";
 import { DatabasePortLiveLayer } from "../infra/database-live";
-import { RunStorePortLiveLayer } from "../infra/run-store-live";
 import { DirectoryPortLiveLayer } from "../infra/directory-live";
 import { FileSystemPortLiveLayer } from "../infra/file-system-live";
-import { GitPortLiveLayer } from "../infra/git-live";
-import { HealthCheckPortLiveLayer } from "../infra/health-check-live";
-import { ToolHealthRegistryPortLiveLayer } from "../infra/tool-health-registry-live";
-import { ToolHealthRegistryPortTag } from "../domain/tool-health-registry-port";
-import { HealthCheckServiceTag, makeHealthCheckService } from "../domain/health-check-service";
-import { KeychainPortLiveLayer } from "../infra/keychain-live";
-import { MisePortLiveLayer } from "../infra/mise-live";
-import { NetworkPortLiveLayer } from "../infra/network-live";
-import { GitHubProviderLiveLayer } from "../infra/github-provider-live";
 import { InteractiveSelectorPortLiveLayer } from "../infra/fzf-selector-live";
-import { ShellPortLiveLayer } from "../infra/shell-live";
-import { BunToolsLiveLayer } from "../infra/bun-tools-live";
 import { FzfToolsLiveLayer } from "../infra/fzf-tools-live";
 import { GcloudToolsLiveLayer } from "../infra/gcloud-tools-live";
+import { GitPortLiveLayer } from "../infra/git-live";
 import { GitToolsLiveLayer } from "../infra/git-tools-live";
+import { GitHubProviderLiveLayer } from "../infra/github-provider-live";
+import { HealthCheckPortLiveLayer } from "../infra/health-check-live";
+import { KeychainPortLiveLayer } from "../infra/keychain-live";
+import { MisePortLiveLayer } from "../infra/mise-live";
 import { MiseToolsLiveLayer } from "../infra/mise-tools-live";
+import { NetworkPortLiveLayer } from "../infra/network-live";
+import { RunStorePortLiveLayer } from "../infra/run-store-live";
+import { ShellPortLiveLayer } from "../infra/shell-live";
+import { ToolHealthRegistryPortLiveLayer } from "../infra/tool-health-registry-live";
 import { ToolManagementPortLiveLayer } from "../infra/tool-management-live";
 import { type DynamicConfigValues } from "./bootstrap";
 import { ConfigLoaderLiveLayer } from "./loader";
@@ -107,7 +107,7 @@ export const buildInfraLiveLayer = (configValues: DynamicConfigValues) => {
     Effect.gen(function* () {
       const toolHealthRegistry = yield* ToolHealthRegistryPortTag;
       return makeHealthCheckService(toolHealthRegistry);
-    })
+    }),
   ).pipe(Layer.provide(ToolHealthRegistryLayer));
 
   // Health check port that depends on Database, Config, Path services, and HealthCheckService

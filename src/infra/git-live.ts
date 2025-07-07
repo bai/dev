@@ -1,8 +1,8 @@
 import { Effect, Layer } from "effect";
 
 import { gitError, type GitError, type ShellExecutionError } from "../domain/errors";
-import type { Repository } from "../domain/models";
 import { GitPortTag, type GitPort } from "../domain/git-port";
+import type { Repository } from "../domain/models";
 import { ShellPortTag, type ShellPort } from "../domain/shell-port";
 
 // Factory function to create Git implementation

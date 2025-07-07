@@ -16,7 +16,10 @@ export interface HealthCheckService {
   getRegisteredTools(): Effect.Effect<readonly string[], never>;
 }
 
-export class HealthCheckServiceTag extends Context.Tag("HealthCheckService")<HealthCheckServiceTag, HealthCheckService>() {}
+export class HealthCheckServiceTag extends Context.Tag("HealthCheckService")<
+  HealthCheckServiceTag,
+  HealthCheckService
+>() {}
 
 /**
  * Simple service that delegates to the ToolHealthRegistryPort

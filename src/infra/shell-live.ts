@@ -2,7 +2,12 @@ import { spawn } from "bun";
 
 import { Duration, Effect, Layer } from "effect";
 
-import { shellExecutionError, shellTimeoutError, type ShellExecutionError, type ShellTimeoutError } from "../domain/errors";
+import {
+  shellExecutionError,
+  shellTimeoutError,
+  type ShellExecutionError,
+  type ShellTimeoutError,
+} from "../domain/errors";
 import { ShellPortTag, type ShellPort, type SpawnResult } from "../domain/shell-port";
 
 // Individual functions for each method
@@ -33,12 +38,8 @@ const exec = (
         stderr: stderr.trim(),
       };
     },
-    catch: (error) => shellExecutionError(
-      command,
-      args,
-      `Failed to execute command`,
-      { cwd: options.cwd, underlyingError: error }
-    ),
+    catch: (error) =>
+      shellExecutionError(command, args, `Failed to execute command`, { cwd: options.cwd, underlyingError: error }),
   });
 
 const execInteractive = (
@@ -57,12 +58,11 @@ const execInteractive = (
 
       return await proc.exited;
     },
-    catch: (error) => shellExecutionError(
-      command,
-      args,
-      `Failed to execute interactive command`,
-      { cwd: options.cwd, underlyingError: error }
-    ),
+    catch: (error) =>
+      shellExecutionError(command, args, `Failed to execute interactive command`, {
+        cwd: options.cwd,
+        underlyingError: error,
+      }),
   });
 
 const setProcessCwd = (path: string): Effect.Effect<void> =>

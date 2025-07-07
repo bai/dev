@@ -2,8 +2,8 @@ import { Clock, Context, Effect, Layer } from "effect";
 
 import { type ConfigError, type UnknownError } from "../domain/errors";
 import type { GitPortTag } from "../domain/git-port";
-import { RunStorePortTag } from "../domain/run-store-port";
 import type { PathServiceTag } from "../domain/path-service";
+import { RunStorePortTag } from "../domain/run-store-port";
 import { VersionTag } from "./version-service";
 
 /**

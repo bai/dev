@@ -4,7 +4,7 @@ import { stringify } from "@iarna/toml";
 import { Effect, Layer } from "effect";
 
 import { ConfigLoaderTag, type ConfigLoader } from "../config/loader";
-import { unknownError, shellExecutionError, type ShellExecutionError, type UnknownError } from "../domain/errors";
+import { shellExecutionError, unknownError, type ShellExecutionError, type UnknownError } from "../domain/errors";
 import { FileSystemPortTag, type FileSystemPort } from "../domain/file-system-port";
 import { MisePortTag, type MiseInfo, type MisePort } from "../domain/mise-port";
 import { ShellPortTag, type ShellPort } from "../domain/shell-port";
@@ -63,7 +63,13 @@ export const makeMiseLive = (shell: ShellPort, fileSystem: FileSystemPort, confi
       .pipe(
         Effect.flatMap((result) => {
           if (result.exitCode !== 0) {
-            return Effect.fail(shellExecutionError("curl", ["-sSfL", "https://mise.run", "|", "sh"], `Failed to install mise: ${result.stderr}`));
+            return Effect.fail(
+              shellExecutionError(
+                "curl",
+                ["-sSfL", "https://mise.run", "|", "sh"],
+                `Failed to install mise: ${result.stderr}`,
+              ),
+            );
           }
           return Effect.void;
         }),
@@ -73,7 +79,9 @@ export const makeMiseLive = (shell: ShellPort, fileSystem: FileSystemPort, confi
     shell.exec("mise", ["install"], { cwd }).pipe(
       Effect.flatMap((result) => {
         if (result.exitCode !== 0) {
-          return Effect.fail(shellExecutionError("mise", ["install"], `Failed to install tools: ${result.stderr}`, { cwd }));
+          return Effect.fail(
+            shellExecutionError("mise", ["install"], `Failed to install tools: ${result.stderr}`, { cwd }),
+          );
         }
         return Effect.void;
       }),
@@ -83,7 +91,11 @@ export const makeMiseLive = (shell: ShellPort, fileSystem: FileSystemPort, confi
     shell.execInteractive("mise", ["run", taskName], { cwd }).pipe(
       Effect.flatMap((exitCode) => {
         if (exitCode !== 0) {
-          return Effect.fail(shellExecutionError("mise", ["run", taskName], `Task '${taskName}' failed with exit code ${exitCode}`, { cwd }));
+          return Effect.fail(
+            shellExecutionError("mise", ["run", taskName], `Task '${taskName}' failed with exit code ${exitCode}`, {
+              cwd,
+            }),
+          );
         }
         return Effect.void;
       }),
@@ -93,7 +105,9 @@ export const makeMiseLive = (shell: ShellPort, fileSystem: FileSystemPort, confi
     shell.exec("mise", ["tasks", "--list"], { cwd }).pipe(
       Effect.flatMap((result) => {
         if (result.exitCode !== 0) {
-          return Effect.fail(shellExecutionError("mise", ["tasks", "--list"], `Failed to get tasks: ${result.stderr}`, { cwd }));
+          return Effect.fail(
+            shellExecutionError("mise", ["tasks", "--list"], `Failed to get tasks: ${result.stderr}`, { cwd }),
+          );
         }
 
         const tasks = result.stdout

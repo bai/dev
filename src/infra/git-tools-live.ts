@@ -1,6 +1,12 @@
-import { Context, Effect, Layer, Clock } from "effect";
+import { Clock, Context, Effect, Layer } from "effect";
 
-import { externalToolError, healthCheckError, type ExternalToolError, type ShellExecutionError, type HealthCheckError } from "../domain/errors";
+import {
+  externalToolError,
+  healthCheckError,
+  type ExternalToolError,
+  type HealthCheckError,
+  type ShellExecutionError,
+} from "../domain/errors";
 import { type HealthCheckResult } from "../domain/health-check-port";
 import { ShellPortTag, type ShellPort } from "../domain/shell-port";
 
@@ -141,10 +147,10 @@ export const makeGitToolsLive = (shell: ShellPort): GitTools => ({
     Effect.gen(function* () {
       const gitTools = makeGitToolsLive(shell);
       const checkedAt = new Date(yield* Clock.currentTimeMillis);
-      
-      const currentVersion = yield* gitTools.getCurrentVersion().pipe(
-        Effect.mapError(() => healthCheckError("Failed to get git version", "git"))
-      );
+
+      const currentVersion = yield* gitTools
+        .getCurrentVersion()
+        .pipe(Effect.mapError(() => healthCheckError("Failed to get git version", "git")));
 
       if (!currentVersion) {
         return {

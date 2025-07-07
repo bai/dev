@@ -1,12 +1,20 @@
 import path from "path";
 
 import { stringify } from "@iarna/toml";
-import { Context, Effect, Layer, Clock } from "effect";
+import { Clock, Context, Effect, Layer } from "effect";
 
 import { ConfigLoaderTag, type ConfigLoader } from "../config/loader";
-import { externalToolError, healthCheckError, unknownError, type ExternalToolError, type ShellExecutionError, type UnknownError, type HealthCheckError } from "../domain/errors";
-import { type HealthCheckResult } from "../domain/health-check-port";
+import {
+  externalToolError,
+  healthCheckError,
+  unknownError,
+  type ExternalToolError,
+  type HealthCheckError,
+  type ShellExecutionError,
+  type UnknownError,
+} from "../domain/errors";
 import { FileSystemPortTag, type FileSystemPort } from "../domain/file-system-port";
+import { type HealthCheckResult } from "../domain/health-check-port";
 import { ShellPortTag, type ShellPort } from "../domain/shell-port";
 
 export const MISE_MIN_VERSION = "2025.7.1";
@@ -192,9 +200,9 @@ export const makeMiseToolsLive = (
   const performHealthCheck = (): Effect.Effect<HealthCheckResult, HealthCheckError> =>
     Effect.gen(function* () {
       const checkedAt = new Date(yield* Clock.currentTimeMillis);
-      
+
       const currentVersion = yield* getCurrentVersion().pipe(
-        Effect.mapError(() => healthCheckError("Failed to get mise version", "mise"))
+        Effect.mapError(() => healthCheckError("Failed to get mise version", "mise")),
       );
 
       if (!currentVersion) {

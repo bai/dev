@@ -1,10 +1,10 @@
 import { Args, Command } from "@effect/cli";
 import { Effect } from "effect";
 
-import { unknownError, type DevError } from "../domain/errors";
-import { filter } from "../domain/matching";
 import { DirectoryPortTag } from "../domain/directory-port";
+import { unknownError, type DevError } from "../domain/errors";
 import { InteractiveSelectorPortTag } from "../domain/interactive-selector-port";
+import { filter } from "../domain/matching";
 import { ShellIntegrationTag } from "./shell-integration-service";
 
 // Define the folder name argument as optional

@@ -2,9 +2,9 @@ import { desc, eq, isNull, lt } from "drizzle-orm";
 import { Clock, Effect, Layer } from "effect";
 
 import { runs } from "../../drizzle/schema";
+import { DatabasePortTag, type DatabasePort } from "../domain/database-port";
 import { configError, type ConfigError, type UnknownError } from "../domain/errors";
 import type { CommandRun } from "../domain/models";
-import { DatabasePortTag, type DatabasePort } from "../domain/database-port";
 import { RunStorePortTag, type RunStorePort } from "../domain/run-store-port";
 
 // Factory function that creates RunStore

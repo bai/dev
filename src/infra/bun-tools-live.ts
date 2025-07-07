@@ -1,6 +1,12 @@
-import { Context, Effect, Layer, Clock } from "effect";
+import { Clock, Context, Effect, Layer } from "effect";
 
-import { externalToolError, healthCheckError, type ExternalToolError, type ShellExecutionError, type HealthCheckError } from "../domain/errors";
+import {
+  externalToolError,
+  healthCheckError,
+  type ExternalToolError,
+  type HealthCheckError,
+  type ShellExecutionError,
+} from "../domain/errors";
 import { type HealthCheckResult } from "../domain/health-check-port";
 import { ShellPortTag, type ShellPort } from "../domain/shell-port";
 
@@ -141,10 +147,10 @@ export const makeBunToolsLive = (shell: ShellPort): BunTools => ({
     Effect.gen(function* () {
       const bunTools = makeBunToolsLive(shell);
       const checkedAt = new Date(yield* Clock.currentTimeMillis);
-      
-      const currentVersion = yield* bunTools.getCurrentVersion().pipe(
-        Effect.mapError(() => healthCheckError("Failed to get bun version", "bun"))
-      );
+
+      const currentVersion = yield* bunTools
+        .getCurrentVersion()
+        .pipe(Effect.mapError(() => healthCheckError("Failed to get bun version", "bun")));
 
       if (!currentVersion) {
         return {

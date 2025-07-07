@@ -130,7 +130,6 @@ const program = Effect.scoped(
             ),
         ),
       );
-
     }).pipe(Effect.provide(appLayer), Effect.withSpan("cli-execution"));
 
     yield* Effect.logDebug("✅ CLI execution completed successfully");

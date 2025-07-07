@@ -119,14 +119,10 @@ export const shellExecutionError = (
   command: string,
   args: readonly string[],
   reason: string,
-  options?: { cwd?: string; underlyingError?: unknown }
+  options?: { cwd?: string; underlyingError?: unknown },
 ) => new ShellExecutionError({ command, args, reason, ...options });
-export const shellTimeoutError = (
-  command: string,
-  args: readonly string[],
-  timeoutMs: number,
-  cwd?: string
-) => new ShellTimeoutError({ command, args, timeoutMs, cwd });
+export const shellTimeoutError = (command: string, args: readonly string[], timeoutMs: number, cwd?: string) =>
+  new ShellTimeoutError({ command, args, timeoutMs, cwd });
 
 // Type guards (using Effect's built-in error matching)
 export const isConfigError = (e: DevError): e is ConfigError => e._tag === "ConfigError";

@@ -7,7 +7,10 @@ export interface GitPort {
   /**
    * Clone a repository to a destination path
    */
-  cloneRepositoryToPath(repository: Repository, destinationPath: string): Effect.Effect<void, GitError | ShellExecutionError>;
+  cloneRepositoryToPath(
+    repository: Repository,
+    destinationPath: string,
+  ): Effect.Effect<void, GitError | ShellExecutionError>;
 
   /**
    * Fetch latest updates for a repository

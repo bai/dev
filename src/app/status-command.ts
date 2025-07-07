@@ -19,13 +19,13 @@ interface StatusItem {
 export const statusCommand = Command.make("status", {}, () =>
   Effect.gen(function* () {
     yield* showEnvironmentInfo;
-    
+
     const statusItems = yield* getHealthCheckResults;
-    
+
     yield* displayHealthCheckResults(statusItems);
-    
+
     yield* showSummary(statusItems);
-    
+
     yield* checkForFailures(statusItems);
   }),
 );
@@ -38,20 +38,20 @@ export const statusCommand = Command.make("status", {}, () =>
 const showEnvironmentInfo: Effect.Effect<void, never, ShellPortTag> = Effect.gen(function* () {
   yield* Effect.logInfo("🌍 Environment Information:");
   yield* Effect.logInfo("");
-  
+
   const currentDir = process.cwd();
   yield* Effect.logInfo(`📁 Current Directory: ${currentDir}`);
-  
+
   const gitInfo = yield* getGitBranch(currentDir);
   if (gitInfo !== null) {
     yield* Effect.logInfo(`🌿 Git Branch: ${gitInfo}`);
   }
-  
+
   const remoteInfo = yield* getGitRemote(currentDir);
   if (remoteInfo !== null) {
     yield* Effect.logInfo(`🔗 Git Remote: ${remoteInfo}`);
   }
-  
+
   yield* Effect.logInfo("");
   yield* Effect.logInfo("🔍 Health Check Results:");
   yield* Effect.logInfo("");
@@ -62,7 +62,7 @@ const showEnvironmentInfo: Effect.Effect<void, never, ShellPortTag> = Effect.gen
  */
 const getGitBranch = (cwd: string): Effect.Effect<string | null, never, ShellPortTag> =>
   executeCommand(["git", "rev-parse", "--abbrev-ref", "HEAD"], { cwd }).pipe(
-    Effect.map((result) => result.exitCode === 0 ? result.stdout.trim() : null),
+    Effect.map((result) => (result.exitCode === 0 ? result.stdout.trim() : null)),
     Effect.catchAll(() => Effect.succeed(null)),
   );
 
@@ -71,7 +71,7 @@ const getGitBranch = (cwd: string): Effect.Effect<string | null, never, ShellPor
  */
 const getGitRemote = (cwd: string): Effect.Effect<string | null, never, ShellPortTag> =>
   executeCommand(["git", "remote", "get-url", "origin"], { cwd }).pipe(
-    Effect.map((result) => result.exitCode === 0 ? result.stdout.trim() : null),
+    Effect.map((result) => (result.exitCode === 0 ? result.stdout.trim() : null)),
     Effect.catchAll(() => Effect.succeed(null)),
   );
 
@@ -79,57 +79,62 @@ const getGitRemote = (cwd: string): Effect.Effect<string | null, never, ShellPor
  * Execute a command and return structured result
  */
 const executeCommand = (
-  command: readonly string[], 
-  options: { readonly cwd?: string } = {}
-): Effect.Effect<{ readonly exitCode: number; readonly stdout: string; readonly stderr: string }, never, ShellPortTag> =>
+  command: readonly string[],
+  options: { readonly cwd?: string } = {},
+): Effect.Effect<
+  { readonly exitCode: number; readonly stdout: string; readonly stderr: string },
+  never,
+  ShellPortTag
+> =>
   Effect.gen(function* () {
     const shell = yield* ShellPortTag;
     const [cmd, ...args] = command;
-    
+
     if (!cmd) {
       return { exitCode: -1, stdout: "", stderr: "No command provided" } as const;
     }
-    
-    const result = yield* shell.exec(cmd, args, options).pipe(
-      Effect.catchAll(() => Effect.succeed({ exitCode: -1, stdout: "", stderr: "" } as const))
-    );
-    
+
+    const result = yield* shell
+      .exec(cmd, args, options)
+      .pipe(Effect.catchAll(() => Effect.succeed({ exitCode: -1, stdout: "", stderr: "" } as const)));
+
     return result;
   });
 
 /**
  * Get health check results and transform them
  */
-const getHealthCheckResults: Effect.Effect<readonly StatusItem[], never, HealthCheckPortTag | ConfigLoaderTag> = Effect.gen(function* () {
-  yield* Effect.logDebug("Running fresh health checks...");
-  
-  const healthCheckService = yield* HealthCheckPortTag;
-  const configLoader = yield* ConfigLoaderTag;
-  
-  const config = yield* configLoader.load().pipe(
-    Effect.catchAll(() => Effect.succeed(undefined)),
-  );
-  
-  // Run health checks directly and bypass cached results
-  const results = yield* healthCheckService.runHealthChecks().pipe(
-    Effect.catchAll(() => {
-      return Effect.gen(function* () {
-        yield* Effect.logError("Health check failed, using empty results");
-        return [] as const;
-      });
-    }),
-  );
-  
-  const statusItems = results.map((result: any): StatusItem => ({
-    tool: result.toolName,
-    version: result.version,
-    status: result.status,
-    notes: result.notes,
-  }));
+const getHealthCheckResults: Effect.Effect<readonly StatusItem[], never, HealthCheckPortTag | ConfigLoaderTag> =
+  Effect.gen(function* () {
+    yield* Effect.logDebug("Running fresh health checks...");
 
-  // Sort by tool name for consistent output
-  return statusItems.sort((a: StatusItem, b: StatusItem) => a.tool.localeCompare(b.tool));
-});
+    const healthCheckService = yield* HealthCheckPortTag;
+    const configLoader = yield* ConfigLoaderTag;
+
+    const config = yield* configLoader.load().pipe(Effect.catchAll(() => Effect.succeed(undefined)));
+
+    // Run health checks directly and bypass cached results
+    const results = yield* healthCheckService.runHealthChecks().pipe(
+      Effect.catchAll(() => {
+        return Effect.gen(function* () {
+          yield* Effect.logError("Health check failed, using empty results");
+          return [] as const;
+        });
+      }),
+    );
+
+    const statusItems = results.map(
+      (result: any): StatusItem => ({
+        tool: result.toolName,
+        version: result.version,
+        status: result.status,
+        notes: result.notes,
+      }),
+    );
+
+    // Sort by tool name for consistent output
+    return statusItems.sort((a: StatusItem, b: StatusItem) => a.tool.localeCompare(b.tool));
+  });
 
 /**
  * Display health check results
@@ -149,9 +154,9 @@ const displayHealthCheckResults = (statusItems: readonly StatusItem[]): Effect.E
 const displayToolGroup = (title: string, items: readonly StatusItem[]): Effect.Effect<void, never, ShellPortTag> =>
   Effect.gen(function* () {
     yield* Effect.logInfo(title);
-    
+
     yield* Effect.forEach(items, displayToolItem, { concurrency: "unbounded" });
-    
+
     yield* Effect.logInfo("");
   });
 
@@ -163,18 +168,15 @@ const displayToolItem = (item: StatusItem): Effect.Effect<void, never, ShellPort
     const icon = item.status === "ok" ? "✔" : item.status === "warning" ? "⚠" : "✗";
     const versionText = item.version ? ` ${item.version}` : "";
     const statusText = item.status === "warning" || item.status === "fail" ? ` (${item.status})` : "";
-    
+
     const toolPath = yield* getToolPath(item.tool);
     const pathText = toolPath ? ` - ${toolPath}` : "";
-    
-    yield* Effect.logInfo(
-      `  ${icon} ${item.tool}${versionText}${statusText}${pathText}`,
-    );
-    
+
+    yield* Effect.logInfo(`  ${icon} ${item.tool}${versionText}${statusText}${pathText}`);
+
     if (item.notes && (item.status === "warning" || item.status === "fail")) {
       yield* Effect.logInfo(`     Note: ${item.notes}`);
     }
-    
   });
 
 /**
@@ -198,10 +200,12 @@ const showSummary = (statusItems: readonly StatusItem[]): Effect.Effect<void, ne
 /**
  * Check for failures and exit with error if found
  */
-const checkForFailures = (statusItems: readonly StatusItem[]): Effect.Effect<void, ReturnType<typeof statusCheckError>, never> =>
+const checkForFailures = (
+  statusItems: readonly StatusItem[],
+): Effect.Effect<void, ReturnType<typeof statusCheckError>, never> =>
   Effect.gen(function* () {
     const failedItems = statusItems.filter((item) => item.status === "fail");
-    
+
     if (failedItems.length > 0) {
       const failedComponents = failedItems.map((item) => item.tool);
       const failCount = failedItems.length;
@@ -220,20 +224,18 @@ const getToolPath = (toolName: string): Effect.Effect<string | null, never, Shel
   Effect.gen(function* () {
     // Try mise which first
     const misePath = yield* executeCommand(["mise", "which", toolName]).pipe(
-      Effect.map((result) => result.exitCode === 0 ? result.stdout.trim() : null),
+      Effect.map((result) => (result.exitCode === 0 ? result.stdout.trim() : null)),
     );
-    
+
     // Return if mise found the tool
     if (misePath !== null) {
       return misePath;
     }
-    
+
     // Fallback to system which
     const systemPath = yield* executeCommand(["which", toolName]).pipe(
-      Effect.map((result) => result.exitCode === 0 ? result.stdout.trim() : null),
+      Effect.map((result) => (result.exitCode === 0 ? result.stdout.trim() : null)),
     );
-    
+
     return systemPath;
   });
-
-

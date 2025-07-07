@@ -1,8 +1,8 @@
 import { Context, type Effect } from "effect";
 
 import type { FileSystemError, UnknownError } from "./errors";
-import type { PathServiceTag } from "./path-service";
 import type { FileSystemPortTag } from "./file-system-port";
+import type { PathServiceTag } from "./path-service";
 
 /**
  * Directory port for managing development directories

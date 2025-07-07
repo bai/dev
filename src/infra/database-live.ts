@@ -3,11 +3,11 @@ import { drizzle } from "drizzle-orm/bun-sqlite";
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
 import { Effect, Layer } from "effect";
 
-import { configError, unknownError, type ConfigError, type UnknownError } from "../domain/errors";
 import { DatabasePortTag, type DatabasePort } from "../domain/database-port";
+import type { DrizzleDatabase } from "../domain/drizzle-types";
+import { configError, unknownError, type ConfigError, type UnknownError } from "../domain/errors";
 import { FileSystemPortTag } from "../domain/file-system-port";
 import { PathServiceTag } from "../domain/path-service";
-import type { DrizzleDatabase } from "../domain/drizzle-types";
 
 // Extended interface for internal use with close method
 interface DatabaseWithClose extends DatabasePort {

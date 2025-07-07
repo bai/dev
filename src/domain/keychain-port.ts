@@ -6,7 +6,11 @@ export interface KeychainPort {
   /**
    * Store a credential in the keychain
    */
-  setCredential(service: string, account: string, password: string): Effect.Effect<void, AuthError | ShellExecutionError>;
+  setCredential(
+    service: string,
+    account: string,
+    password: string,
+  ): Effect.Effect<void, AuthError | ShellExecutionError>;
 
   /**
    * Retrieve a credential from the keychain

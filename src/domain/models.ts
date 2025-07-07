@@ -1,5 +1,3 @@
-
-
 // Core configuration types (moved from config schema to maintain proper layering)
 export interface MiseConfig {
   min_version?: string;
@@ -24,7 +22,10 @@ export interface BuiltInHealthCheck {
   readonly command: string;
   readonly versionPattern?: string;
   readonly timeout?: number;
-  readonly parseOutput?: (stdout: string, stderr: string) => {
+  readonly parseOutput?: (
+    stdout: string,
+    stderr: string,
+  ) => {
     readonly version?: string;
     readonly status?: "ok" | "warning" | "fail";
     readonly notes?: string;

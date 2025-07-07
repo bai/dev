@@ -6,7 +6,11 @@ import { ShellPortTag, type ShellPort } from "../domain/shell-port";
 
 // Factory function to create Keychain implementation
 export const makeKeychainLive = (shell: ShellPort): KeychainPort => ({
-  setCredential: (service: string, account: string, password: string): Effect.Effect<void, AuthError | ShellExecutionError> =>
+  setCredential: (
+    service: string,
+    account: string,
+    password: string,
+  ): Effect.Effect<void, AuthError | ShellExecutionError> =>
     shell
       .exec("security", [
         "add-generic-password",
