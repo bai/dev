@@ -1,6 +1,7 @@
 import { Effect, Layer } from "effect";
 import { bench, describe } from "vitest";
 
+import type { GitProviderType } from "./models";
 import { PathServiceTag, type PathService } from "./path-service";
 import { RepositoryLive } from "./repository-service";
 
@@ -52,7 +53,7 @@ describe("repository URL parsing performance", () => {
   });
 
   bench("expand with provider mapping", () => {
-    const orgMapping = {
+    const orgMapping: Record<string, GitProviderType> = {
       "gitlab-org": "gitlab",
       "github-org": "github",
     };

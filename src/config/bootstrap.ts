@@ -59,6 +59,8 @@ export interface DynamicConfigValues {
   readonly configPath: string;
   readonly logLevel: string;
   readonly baseSearchPath: string;
+  readonly defaultProvider: "github" | "gitlab";
+  readonly orgToProvider: Record<string, "github" | "gitlab">;
 }
 
 /**
@@ -69,4 +71,6 @@ export const extractDynamicValues = (config: Config): DynamicConfigValues => ({
   configPath: path.join(os.homedir(), ".config", "dev", "config.json"),
   logLevel: config.logLevel ?? "info",
   baseSearchPath: path.join(os.homedir(), "src"), // Default base search path
+  defaultProvider: config.orgToProvider?.[config.defaultOrg] ?? "github",
+  orgToProvider: config.orgToProvider ?? {},
 });

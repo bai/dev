@@ -18,6 +18,7 @@ import { GcloudToolsLiveLayer } from "../infra/gcloud-tools-live";
 import { GitPortLiveLayer } from "../infra/git-live";
 import { GitToolsLiveLayer } from "../infra/git-tools-live";
 import { GitHubProviderLiveLayer } from "../infra/github-provider-live";
+import { GitLabProviderLiveLayer } from "../infra/gitlab-provider-live";
 import { HealthCheckPortLiveLayer } from "../infra/health-check-live";
 import { KeychainPortLiveLayer } from "../infra/keychain-live";
 import { MisePortLiveLayer } from "../infra/mise-live";
@@ -88,9 +89,12 @@ export const buildInfraLiveLayer = (configValues: DynamicConfigValues) => {
   // Tool management service that aggregates all tool services
   const ToolManagementLayer = Layer.provide(ToolManagementPortLiveLayer, ToolServicesLayer);
 
-  // Repository provider with dynamic organization
+  // Repository provider with dynamic organization and provider selection
   // This is where we use the runtime configuration value!
-  const RepoProviderLayer = Layer.provide(GitHubProviderLiveLayer(configValues.defaultOrg), NetworkLayer);
+  const RepoProviderLayer =
+    configValues.defaultProvider === "gitlab"
+      ? Layer.provide(GitLabProviderLiveLayer(configValues.defaultOrg), NetworkLayer)
+      : Layer.provide(GitHubProviderLiveLayer(configValues.defaultOrg), NetworkLayer);
 
   // Database layer that depends on PathService and FileSystem
   const DatabaseLayer = Layer.provide(DatabasePortLiveLayer, BaseInfraLayer);
