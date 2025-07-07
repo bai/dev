@@ -24,7 +24,7 @@ export const cdCommand = Command.make("cd", { folderName }, ({ folderName }) =>
   }).pipe(Effect.withSpan("cd-command")),
 );
 
-function handleDirectCd(folderName: string): Effect.Effect<void, DevError, any> {
+export function handleDirectCd(folderName: string): Effect.Effect<void, DevError, any> {
   return Effect.gen(function* () {
     if (!folderName || folderName.trim() === "") {
       return yield* Effect.fail(unknownError("Folder name for 'cd' command cannot be empty."));
@@ -65,7 +65,7 @@ function handleDirectCd(folderName: string): Effect.Effect<void, DevError, any> 
   }).pipe(Effect.withSpan("handle-direct-cd"));
 }
 
-function handleInteractiveCd(): Effect.Effect<void, DevError, any> {
+export function handleInteractiveCd(): Effect.Effect<void, DevError, any> {
   return Effect.gen(function* () {
     // Use DirectoryService to get directories
     const directoryService = yield* DirectoryPortTag;
