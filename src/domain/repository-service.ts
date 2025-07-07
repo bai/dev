@@ -29,7 +29,8 @@ const parseRepoUrlToPath = (repoUrl: string): Effect.Effect<string, ConfigError,
     let domain = "";
 
     // Handle scp-style SSH URLs (git@github.com:org/repo.git)
-    const scpMatch = repoUrl.match(/^([^@]+)@([^:]+):([^/]+)\/(.+?)(?:\.git)?$/);
+    // Must not start with a protocol (ssh://, https://, etc)
+    const scpMatch = repoUrl.match(/^([^@:/]+)@([^:]+):([^/]+)\/(.+?)(?:\.git)?$/);
     if (scpMatch && scpMatch[2] && scpMatch[3] && scpMatch[4]) {
       domain = scpMatch[2];
       orgName = scpMatch[3];
@@ -45,6 +46,7 @@ const parseRepoUrlToPath = (repoUrl: string): Effect.Effect<string, ConfigError,
       catch: (error: any) => configError(`Invalid repository URL: ${repoUrl} - ${error.message}`),
     });
 
+    // url.hostname should not include port, but use url.host and strip port to be safe
     domain = url.hostname;
     const pathParts = url.pathname.split("/").filter(Boolean);
 
