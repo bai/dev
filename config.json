@@ -3,6 +3,7 @@
   "configUrl": "https://gist.githubusercontent.com/bai/d5a4a92350e67af8aba1b9db33d5f077/raw/config.json",
   "defaultOrg": "flywheelsoftware",
   "logLevel": "debug",
+  "defaultProvider": "github",
   "orgToProvider": {
     "flywheelsoftware": "gitlab"
   },
