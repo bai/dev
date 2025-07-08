@@ -59,8 +59,8 @@ const resolvePath = (filePath: string): string => {
   return path.resolve(filePath);
 };
 
-// Plain object implementation
-export const FileSystemLive: FileSystemPort = {
+// Factory function to create FileSystem implementation
+export const makeFileSystemLive = (): FileSystemPort => ({
   readFile,
   writeFile,
   exists,
@@ -68,7 +68,7 @@ export const FileSystemLive: FileSystemPort = {
   findDirectoriesGlob,
   getCwd,
   resolvePath,
-};
+});
 
 // Effect Layer for dependency injection
-export const FileSystemPortLiveLayer = Layer.succeed(FileSystemPortTag, FileSystemLive);
+export const FileSystemPortLiveLayer = Layer.succeed(FileSystemPortTag, makeFileSystemLive());

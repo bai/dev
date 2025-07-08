@@ -3,7 +3,7 @@ import { Effect } from "effect";
 
 import { ConfigLoaderTag } from "../config/loader";
 import { statusCheckError } from "../domain/errors";
-import { HealthCheckPortTag } from "../domain/health-check-port";
+import { HealthCheckPortTag, type HealthCheckResult } from "../domain/health-check-port";
 import { ShellPortTag } from "../domain/shell-port";
 
 interface StatusItem {
@@ -124,7 +124,7 @@ const getHealthCheckResults: Effect.Effect<readonly StatusItem[], never, HealthC
     );
 
     const statusItems = results.map(
-      (result: any): StatusItem => ({
+      (result: HealthCheckResult): StatusItem => ({
         tool: result.toolName,
         version: result.version,
         status: result.status,
@@ -133,7 +133,7 @@ const getHealthCheckResults: Effect.Effect<readonly StatusItem[], never, HealthC
     );
 
     // Sort by tool name for consistent output
-    return statusItems.sort((a: StatusItem, b: StatusItem) => a.tool.localeCompare(b.tool));
+    return statusItems.sort((a, b) => a.tool.localeCompare(b.tool));
   });
 
 /**
