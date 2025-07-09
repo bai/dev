@@ -2,8 +2,7 @@ import { Args, Command } from "@effect/cli";
 import { Effect } from "effect";
 
 import { DirectoryTag } from "../domain/directory-port";
-import { unknownError } from "../domain/errors";
-import type { DevError } from "../domain/errors";
+import { unknownError, type DevError } from "../domain/errors";
 import { InteractiveSelectorTag } from "../domain/interactive-selector-port";
 import { filter } from "../domain/matching";
 import { ShellIntegrationTag } from "./shell-integration-service";

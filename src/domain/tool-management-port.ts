@@ -31,7 +31,4 @@ export interface ToolManagement {
   readonly gcloud: ToolManager;
 }
 
-export class ToolManagementTag extends Context.Tag("ToolManagement")<
-  ToolManagementTag,
-  ToolManagement
->() {}
+export class ToolManagementTag extends Context.Tag("ToolManagement")<ToolManagementTag, ToolManagement>() {}

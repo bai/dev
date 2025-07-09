@@ -5,10 +5,10 @@ import { Duration, Effect, Layer } from "effect";
 import {
   shellExecutionError,
   shellTimeoutError,
+  type ShellExecutionError,
+  type ShellTimeoutError,
 } from "../domain/errors";
-import type { ShellExecutionError, ShellTimeoutError } from "../domain/errors";
-import { ShellTag } from "../domain/shell-port";
-import type { Shell, SpawnResult } from "../domain/shell-port";
+import { ShellTag, type Shell, type SpawnResult } from "../domain/shell-port";
 
 // Individual functions for each method
 const exec = (
@@ -110,7 +110,4 @@ export const makeShellLive = (): Shell & {
 });
 
 // Effect Layer for dependency injection with proper resource management
-export const ShellLiveLayer = Layer.effect(
-  ShellTag,
-  Effect.succeed(makeShellLive()),
-);
+export const ShellLiveLayer = Layer.effect(ShellTag, Effect.succeed(makeShellLive()));

@@ -3,11 +3,9 @@ import { drizzle } from "drizzle-orm/bun-sqlite";
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
 import { Effect, Layer } from "effect";
 
-import { DatabaseTag } from "../domain/database-port";
-import type { Database } from "../domain/database-port";
+import { DatabaseTag, type Database } from "../domain/database-port";
 import type { DrizzleDatabase } from "../domain/drizzle-types";
-import { configError, unknownError } from "../domain/errors";
-import type { ConfigError, UnknownError } from "../domain/errors";
+import { configError, unknownError, type ConfigError, type UnknownError } from "../domain/errors";
 import { FileSystemTag } from "../domain/file-system-port";
 import { PathServiceTag } from "../domain/path-service";
 

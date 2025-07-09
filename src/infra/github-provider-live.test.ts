@@ -101,7 +101,7 @@ describe("github-provider-live", () => {
       Effect.gen(function* () {
         const network = new MockNetwork();
         // No network call should be made anymore
-        
+
         const provider = makeGitHubProvider(network, "default-org");
         const result = yield* provider.resolveRepository("nonexistent", "myorg");
 

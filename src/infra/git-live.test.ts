@@ -17,11 +17,7 @@ class MockShell implements Shell {
     this.responses.set(key, response);
   }
 
-  exec(
-    command: string,
-    args: string[] = [],
-    _options?: { cwd?: string },
-  ): Effect.Effect<SpawnResult, never> {
+  exec(command: string, args: string[] = [], _options?: { cwd?: string }): Effect.Effect<SpawnResult, never> {
     const key = `${command} ${args.join(" ")}`;
     const response = this.responses.get(key);
 
@@ -40,11 +36,7 @@ class MockShell implements Shell {
     return Effect.succeed(response);
   }
 
-  execInteractive(
-    _command: string,
-    _args?: string[],
-    _options?: { cwd?: string },
-  ): Effect.Effect<number, never> {
+  execInteractive(_command: string, _args?: string[], _options?: { cwd?: string }): Effect.Effect<number, never> {
     return Effect.succeed(0);
   }
 

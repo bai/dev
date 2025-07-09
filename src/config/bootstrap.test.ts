@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import type { Config } from "./schema";
 import { extractDynamicValues } from "./bootstrap";
+import type { Config } from "./schema";
 
 describe("bootstrap", () => {
   describe("extractDynamicValues", () => {

@@ -1,12 +1,9 @@
 import { Effect, Layer } from "effect";
 
-import { gitError } from "../domain/errors";
-import type { GitError, ShellExecutionError } from "../domain/errors";
-import { GitTag } from "../domain/git-port";
-import type { Git } from "../domain/git-port";
+import { gitError, type GitError, type ShellExecutionError } from "../domain/errors";
+import { GitTag, type Git } from "../domain/git-port";
 import type { Repository } from "../domain/models";
-import { ShellTag } from "../domain/shell-port";
-import type { Shell } from "../domain/shell-port";
+import { ShellTag, type Shell } from "../domain/shell-port";
 
 // Factory function to create Git implementation
 export const makeGitLive = (shell: Shell): Git => ({

@@ -57,12 +57,14 @@ export const makeGitLabProvider = (network: Network, defaultOrg = "gitlab-org"):
           try: () => {
             const data = JSON.parse(response.body);
             const parseResult = parseGitLabSearchResponse(data);
-            
+
             if (!parseResult.success) {
               throw new Error(parseResult.error);
             }
-            
-            let repositories = parseResult.data.map((item) => gitLabProjectToRepository(item, provider as { name: "gitlab"; baseUrl: string }));
+
+            let repositories = parseResult.data.map((item) =>
+              gitLabProjectToRepository(item, provider as { name: "gitlab"; baseUrl: string }),
+            );
 
             // Filter by organization if provided
             if (org) {

@@ -103,7 +103,7 @@ describe("gitlab-provider-live", () => {
       Effect.gen(function* () {
         const network = new MockNetwork();
         // No network call should be made anymore
-        
+
         const provider = makeGitLabProvider(network, "default-org");
         const result = yield* provider.resolveRepository("nonexistent", "myorg");
 

@@ -6,7 +6,7 @@ import { Effect, Layer } from "effect";
 import { ConfigLoaderTag, type ConfigLoader } from "../config/loader";
 import { shellExecutionError, unknownError, type ShellExecutionError, type UnknownError } from "../domain/errors";
 import { FileSystemTag, type FileSystem } from "../domain/file-system-port";
-import { MiseTag, type MiseInfo, type Mise } from "../domain/mise-port";
+import { MiseTag, type Mise, type MiseInfo } from "../domain/mise-port";
 import { ShellTag, type Shell } from "../domain/shell-port";
 
 const homeDir = process.env.HOME || process.env.USERPROFILE || "";

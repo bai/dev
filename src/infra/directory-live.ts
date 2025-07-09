@@ -49,7 +49,4 @@ export const makeDirectoryLive = (): Directory => ({
 });
 
 // Layer that provides DirectoryService with proper dependency injection
-export const DirectoryLiveLayer = Layer.effect(
-  DirectoryTag,
-  Effect.succeed(makeDirectoryLive()),
-);
+export const DirectoryLiveLayer = Layer.effect(DirectoryTag, Effect.succeed(makeDirectoryLive()));

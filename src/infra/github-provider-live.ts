@@ -51,12 +51,14 @@ export const makeGitHubProvider = (network: Network, defaultOrg = "octocat"): Re
           try: () => {
             const data = JSON.parse(response.body);
             const parseResult = parseGitHubSearchResponse(data);
-            
+
             if (!parseResult.success) {
               throw new Error(parseResult.error);
             }
-            
-            return parseResult.data.items.map((item) => gitHubRepoToRepository(item, provider as { name: "github"; baseUrl: string }));
+
+            return parseResult.data.items.map((item) =>
+              gitHubRepoToRepository(item, provider as { name: "github"; baseUrl: string }),
+            );
           },
           catch: (error) => unknownError(`Failed to parse GitHub search response: ${error}`),
         });

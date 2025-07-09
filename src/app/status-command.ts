@@ -3,9 +3,8 @@ import { Effect } from "effect";
 
 import { ConfigLoaderTag } from "../config/loader";
 import { statusCheckError } from "../domain/errors";
-import { HealthCheckTag } from "../domain/health-check-port";
-import type { HealthCheckResult } from "../domain/health-check-port";
-import type { GitInfo, EnvironmentInfo } from "../domain/models";
+import { HealthCheckTag, type HealthCheckResult } from "../domain/health-check-port";
+import type { EnvironmentInfo, GitInfo } from "../domain/models";
 import { ShellTag } from "../domain/shell-port";
 
 interface StatusItem {
@@ -63,9 +62,9 @@ const showEnvironmentInfo: Effect.Effect<void, never, ShellTag> = Effect.gen(fun
 const getEnvironmentInfo = (): Effect.Effect<EnvironmentInfo, never, ShellTag> =>
   Effect.gen(function* () {
     const currentDir = process.cwd();
-    
+
     const gitInfo = yield* getGitInfo(currentDir);
-    
+
     return {
       currentDirectory: currentDir,
       git: gitInfo,
@@ -79,7 +78,7 @@ const getGitInfo = (cwd: string): Effect.Effect<GitInfo, never, ShellTag> =>
   Effect.gen(function* () {
     const branch = yield* getGitBranch(cwd);
     const remote = yield* getGitRemote(cwd);
-    
+
     return {
       branch,
       remote,
@@ -110,11 +109,7 @@ const getGitRemote = (cwd: string): Effect.Effect<string | null, never, ShellTag
 const executeCommand = (
   command: readonly string[],
   options: { readonly cwd?: string } = {},
-): Effect.Effect<
-  { readonly exitCode: number; readonly stdout: string; readonly stderr: string },
-  never,
-  ShellTag
-> =>
+): Effect.Effect<{ readonly exitCode: number; readonly stdout: string; readonly stderr: string }, never, ShellTag> =>
   Effect.gen(function* () {
     const shell = yield* ShellTag;
     const [cmd, ...args] = command;
@@ -133,8 +128,8 @@ const executeCommand = (
 /**
  * Get health check results and transform them
  */
-const getHealthCheckResults: Effect.Effect<readonly StatusItem[], never, HealthCheckTag | ConfigLoaderTag> =
-  Effect.gen(function* () {
+const getHealthCheckResults: Effect.Effect<readonly StatusItem[], never, HealthCheckTag | ConfigLoaderTag> = Effect.gen(
+  function* () {
     yield* Effect.logDebug("Running fresh health checks...");
 
     const healthCheckService = yield* HealthCheckTag;
@@ -163,7 +158,8 @@ const getHealthCheckResults: Effect.Effect<readonly StatusItem[], never, HealthC
 
     // Sort by tool name for consistent output
     return statusItems.sort((a, b) => a.tool.localeCompare(b.tool));
-  });
+  },
+);
 
 /**
  * Display health check results
