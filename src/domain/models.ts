@@ -34,6 +34,7 @@ export interface BuiltInHealthCheck {
 }
 
 export interface Config {
+  readonly version?: number;
   readonly configUrl: string;
   readonly defaultOrg: string;
   readonly defaultProvider?: GitProviderType;

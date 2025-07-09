@@ -9,7 +9,7 @@ describe("repository URL parsing performance", () => {
   // Mock PathService for benchmarks
   const mockPathService: PathService = {
     homeDir: "/home/user",
-    baseSearchDir: "/home/user/dev",
+    baseSearchPath: "/home/user/dev",
     devDir: "/home/user/.dev",
     configDir: "/home/user/.config/dev",
     configPath: "/home/user/.config/dev/config.json",

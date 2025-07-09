@@ -50,7 +50,7 @@ export const cloneCommand = Command.make("clone", { repo }, ({ repo }) =>
       const destinationPath = yield* repositoryService.parseRepoUrlToPath(repository.cloneUrl);
 
       // Calculate relative path from base directory for cd command
-      const relativePath = destinationPath.replace(pathService.baseSearchDir + "/", "");
+      const relativePath = destinationPath.replace(pathService.baseSearchPath + "/", "");
 
       // Check if destination already exists
       const exists = yield* fileSystem.exists(destinationPath);

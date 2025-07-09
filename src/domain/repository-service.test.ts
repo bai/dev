@@ -10,7 +10,7 @@ describe("repository-service", () => {
   // Mock PathService implementation
   class MockPathService implements PathService {
     homeDir = "/home/user";
-    baseSearchDir = "/home/user/dev";
+    baseSearchPath = "/home/user/dev";
     devDir = "/home/user/.dev";
     configDir = "/home/user/.config/dev";
     configPath = "/home/user/.config/dev/config.json";
@@ -19,7 +19,7 @@ describe("repository-service", () => {
     cacheDir = "/home/user/.cache/dev";
 
     getBasePath(_config: Config): string {
-      return this.baseSearchDir;
+      return this.baseSearchPath;
     }
   }
 
@@ -170,7 +170,7 @@ describe("repository-service", () => {
     it.effect("uses custom base path from PathService", () =>
       Effect.gen(function* () {
         class CustomPathService extends MockPathService {
-          baseSearchDir = "/custom/projects";
+          baseSearchPath = "/custom/projects";
         }
 
         const pathService = new CustomPathService();

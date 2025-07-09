@@ -31,7 +31,7 @@ const changeDirectory = (targetPath: string) =>
     if (path.isAbsolute(cleanedTargetPath)) {
       absolutePath = cleanedTargetPath;
     } else {
-      absolutePath = path.join(pathService.baseSearchDir, cleanedTargetPath);
+      absolutePath = path.join(pathService.baseSearchPath, cleanedTargetPath);
     }
 
     // Validate path exists before attempting to cd

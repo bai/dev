@@ -33,6 +33,7 @@ const miseConfigSchema = z.object({
 const gitProviderSchema: z.ZodType<GitProviderType> = z.enum(["github", "gitlab"]);
 
 export const configSchema = z.object({
+  version: z.number().optional(),
   configUrl: z.url(),
   defaultOrg: z.string(),
   defaultProvider: gitProviderSchema.optional().default("github"),

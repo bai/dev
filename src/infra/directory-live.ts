@@ -15,7 +15,7 @@ const ensureBaseDirectoryExists = (): Effect.Effect<
     const pathService = yield* PathServiceTag;
     const fileSystem = yield* FileSystemTag;
 
-    const baseDir = pathService.baseSearchDir;
+    const baseDir = pathService.baseSearchPath;
     const exists = yield* fileSystem.exists(baseDir);
 
     if (!exists) {
@@ -28,7 +28,7 @@ const findDirs = (): Effect.Effect<string[], FileSystemError | UnknownError, Fil
     const pathService = yield* PathServiceTag;
     const fileSystem = yield* FileSystemTag;
 
-    const baseDir = pathService.baseSearchDir;
+    const baseDir = pathService.baseSearchPath;
 
     // Ensure base directory exists
     const exists = yield* fileSystem.exists(baseDir);

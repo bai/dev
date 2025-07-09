@@ -102,7 +102,7 @@ describe("clone-command", () => {
 
   class MockPathService implements PathService {
     homeDir = "/home/user";
-    baseSearchDir = "/home/user/dev";
+    baseSearchPath = "/home/user/dev";
     devDir = "/home/user/.dev";
     configDir = "/home/user/.config/dev";
     configPath = "/home/user/.config/dev/config.json";
@@ -111,7 +111,7 @@ describe("clone-command", () => {
     cacheDir = "/home/user/.cache/dev";
 
     getBasePath(_config: Config): string {
-      return this.baseSearchDir;
+      return this.baseSearchPath;
     }
   }
 
@@ -357,7 +357,7 @@ describe("clone-command", () => {
         const shellIntegration = new MockShellIntegration();
 
         class CustomPathService extends MockPathService {
-          baseSearchDir = "/Users/developer/projects";
+          baseSearchPath = "/Users/developer/projects";
         }
 
         class CustomRepositoryService extends MockRepositoryService {

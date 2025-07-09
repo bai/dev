@@ -35,7 +35,7 @@ const parseRepoUrlToPath = (repoUrl: string): Effect.Effect<string, ConfigError,
       domain = scpMatch[2];
       orgName = scpMatch[3];
       repoName = scpMatch[4];
-      return path.join(pathService.baseSearchDir, domain, orgName, repoName);
+      return path.join(pathService.baseSearchPath, domain, orgName, repoName);
     }
 
     // Normalize URLs like git+ssh:// and ssh://
@@ -53,7 +53,7 @@ const parseRepoUrlToPath = (repoUrl: string): Effect.Effect<string, ConfigError,
     if (pathParts.length >= 2 && pathParts[0] && pathParts[1]) {
       orgName = pathParts[0];
       repoName = pathParts[1].replace(/\.git$/, "");
-      return path.join(pathService.baseSearchDir, domain, orgName, repoName);
+      return path.join(pathService.baseSearchPath, domain, orgName, repoName);
     }
 
     return yield* Effect.fail(configError(`URL path does not contain organization and repository: ${repoUrl}`));

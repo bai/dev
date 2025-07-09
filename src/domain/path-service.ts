@@ -18,7 +18,7 @@ export const XDG_CACHE_HOME = process.env.XDG_CACHE_HOME || path.join(DEFAULT_HO
 // Path service interface - pure domain logic for path handling
 export interface PathService {
   readonly homeDir: string;
-  readonly baseSearchDir: string;
+  readonly baseSearchPath: string;
   readonly devDir: string;
   readonly configDir: string;
   readonly configPath: string;
@@ -45,7 +45,7 @@ export const createPathService = (baseSearchPath?: string): PathService => {
     dataDir: path.join(XDG_DATA_HOME, "dev"),
     dbPath: path.join(XDG_DATA_HOME, "dev", "dev.db"),
     cacheDir: path.join(XDG_CACHE_HOME, "dev"),
-    baseSearchDir: resolvedBaseSearchPath,
+    baseSearchPath: resolvedBaseSearchPath,
     getBasePath,
   };
 };
