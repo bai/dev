@@ -33,9 +33,9 @@ const miseConfigSchema = z.object({
 const gitProviderSchema: z.ZodType<GitProviderType> = z.enum(["github", "gitlab"]);
 
 export const configSchema = z.object({
-  version: z.literal(3),
-  configUrl: z.string().url(),
+  configUrl: z.url(),
   defaultOrg: z.string(),
+  defaultProvider: gitProviderSchema.optional().default("github"),
   logLevel: logLevelSchema.optional().default("info"),
   telemetry: z.object({
     enabled: z.boolean(),
@@ -65,7 +65,6 @@ export type { Config } from "../domain/models";
 
 // Default configuration
 export const defaultConfig: Config = {
-  version: 3,
   configUrl: "https://gist.githubusercontent.com/bai/d5a4a92350e67af8aba1b9db33d5f077/raw/config.json",
   defaultOrg: "flywheelsoftware",
   logLevel: "info",

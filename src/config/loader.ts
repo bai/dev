@@ -9,7 +9,6 @@ import {
 } from "../domain/errors";
 import { FileSystemTag, type FileSystem } from "../domain/file-system-port";
 import { NetworkTag, type Network } from "../domain/network-port";
-import { migrateConfig } from "./migrations";
 import { configSchema, defaultConfig, type Config } from "./schema";
 
 export interface ConfigLoader {
@@ -25,21 +24,18 @@ export const makeConfigLoaderLive = (fileSystem: FileSystem, network: Network, c
     fileSystem.exists(configPath).pipe(
       Effect.flatMap((exists) => {
         if (!exists) {
-          // Create default config if it doesn't exist
           return save(defaultConfig).pipe(Effect.map(() => defaultConfig));
         }
-
         return fileSystem.readFile(configPath).pipe(
-          Effect.flatMap((content) => {
-            return Effect.try({
+          Effect.flatMap((content) =>
+            Effect.try({
               try: () => {
                 const rawConfig = JSON.parse(content);
-                const migratedConfig = migrateConfig(rawConfig);
-                return configSchema.parse(migratedConfig);
+                return configSchema.parse(rawConfig);
               },
               catch: (error) => configError(`Invalid config file: ${error}`),
-            });
-          }),
+            }),
+          ),
         );
       }),
     );
@@ -67,8 +63,7 @@ export const makeConfigLoaderLive = (fileSystem: FileSystem, network: Network, c
             return Effect.try({
               try: () => {
                 const remoteConfig = JSON.parse(response.body);
-                const migratedConfig = migrateConfig(remoteConfig);
-                return configSchema.parse(migratedConfig);
+                return configSchema.parse(remoteConfig);
               },
               catch: (error) => configError(`Invalid remote config: ${error}`),
             }).pipe(Effect.flatMap((validatedConfig) => save(validatedConfig).pipe(Effect.map(() => validatedConfig))));

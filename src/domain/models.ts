@@ -34,7 +34,6 @@ export interface BuiltInHealthCheck {
 }
 
 export interface Config {
-  readonly version: 3;
   readonly configUrl: string;
   readonly defaultOrg: string;
   readonly logLevel?: LogLevel;

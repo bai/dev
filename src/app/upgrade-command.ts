@@ -156,7 +156,6 @@ function ensureCorrectConfigUrl(pathService: PathService): Effect.Effect<void, D
     } else {
       // If local config doesn't exist, create minimal config with correct URL
       localConfig = {
-        version: 3,
         configUrl: projectConfig.configUrl,
         defaultOrg: projectConfig.defaultOrg || "default",
         telemetry: { enabled: true },
