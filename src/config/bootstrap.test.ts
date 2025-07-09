@@ -1,3 +1,6 @@
+import os from "os";
+import path from "path";
+
 import { describe, expect, it } from "vitest";
 
 import { extractDynamicValues } from "./bootstrap";
@@ -88,6 +91,91 @@ describe("bootstrap", () => {
       expect(result.orgToProvider).toEqual({ acme: "gitlab" });
       expect(result.configPath).toContain(".config/dev/config.json");
       expect(result.baseSearchPath).toContain("/src");
+    });
+
+    it("expands tilde in baseSearchPath to home directory", () => {
+      const config: Config = {
+        configUrl: "https://example.com/config.json",
+        defaultOrg: "myorg",
+        baseSearchPath: "~/src",
+        telemetry: { enabled: true },
+      };
+
+      const result = extractDynamicValues(config);
+
+      // Should expand ~ to actual home directory
+      expect(result.baseSearchPath).toBe(`${os.homedir()}/src`);
+      expect(result.baseSearchPath).not.toContain("~");
+    });
+
+    it("preserves absolute paths in baseSearchPath", () => {
+      const config: Config = {
+        configUrl: "https://example.com/config.json",
+        defaultOrg: "myorg",
+        baseSearchPath: "/absolute/path/to/src",
+        telemetry: { enabled: true },
+      };
+
+      const result = extractDynamicValues(config);
+
+      // Should keep absolute path unchanged
+      expect(result.baseSearchPath).toBe("/absolute/path/to/src");
+    });
+
+    it("handles complex tilde paths in baseSearchPath", () => {
+      const config: Config = {
+        configUrl: "https://example.com/config.json",
+        defaultOrg: "myorg",
+        baseSearchPath: "~/Documents/Projects",
+        telemetry: { enabled: true },
+      };
+
+      const result = extractDynamicValues(config);
+
+      // Should expand ~ to home directory
+      expect(result.baseSearchPath).toBe(`${os.homedir()}/Documents/Projects`);
+      expect(result.baseSearchPath).not.toContain("~");
+    });
+
+    it("expands standalone tilde in baseSearchPath", () => {
+      const config: Config = {
+        configUrl: "https://example.com/config.json",
+        defaultOrg: "myorg",
+        baseSearchPath: "~",
+        telemetry: { enabled: true },
+      };
+
+      const result = extractDynamicValues(config);
+
+      // Should expand standalone ~ to home directory
+      expect(result.baseSearchPath).toBe(os.homedir());
+    });
+
+    it("resolves relative paths in baseSearchPath", () => {
+      const config: Config = {
+        configUrl: "https://example.com/config.json",
+        defaultOrg: "myorg",
+        baseSearchPath: "./src",
+        telemetry: { enabled: true },
+      };
+
+      const result = extractDynamicValues(config);
+
+      // Should resolve relative path
+      expect(result.baseSearchPath).toBe(path.resolve("./src"));
+    });
+
+    it("uses default baseSearchPath when not provided", () => {
+      const config: Config = {
+        configUrl: "https://example.com/config.json",
+        defaultOrg: "myorg",
+        telemetry: { enabled: true },
+      };
+
+      const result = extractDynamicValues(config);
+
+      // Should default to ~/src expanded
+      expect(result.baseSearchPath).toBe(`${os.homedir()}/src`);
     });
   });
 });

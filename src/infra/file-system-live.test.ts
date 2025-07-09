@@ -262,6 +262,11 @@ describe("file-system-live", () => {
       expect(result).toBe(path.join(os.homedir(), "test"));
     });
 
+    it("expands standalone tilde to home directory", () => {
+      const result = fileSystem.resolvePath("~");
+      expect(result).toBe(os.homedir());
+    });
+
     it("resolves relative paths", () => {
       const result = fileSystem.resolvePath("./test");
       expect(result).toBe(path.resolve("./test"));

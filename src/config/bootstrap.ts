@@ -60,13 +60,26 @@ export interface DynamicConfigValues {
 }
 
 /**
+ * Expands tilde in file paths - pure function for config processing
+ */
+const expandTildePath = (filePath: string): string => {
+  if (filePath.startsWith("~/")) {
+    return path.join(os.homedir(), filePath.slice(2));
+  }
+  if (filePath === "~") {
+    return os.homedir();
+  }
+  return path.resolve(filePath);
+};
+
+/**
  * Extract the values needed for dynamic layer composition
  */
 export const extractDynamicValues = (config: Config): DynamicConfigValues => ({
   defaultOrg: config.defaultOrg,
   configPath: path.join(os.homedir(), ".config", "dev", "config.json"),
   logLevel: config.logLevel ?? "info",
-  baseSearchPath: config.baseSearchPath ?? path.join(os.homedir(), "src"),
+  baseSearchPath: expandTildePath(config.baseSearchPath ?? path.join(os.homedir(), "src")),
   defaultProvider: config.defaultProvider ?? "github",
   orgToProvider: config.orgToProvider ?? {},
 });

@@ -53,8 +53,11 @@ const findDirectoriesGlob = (
 const getCwd = (): Effect.Effect<string> => Effect.sync(() => process.cwd());
 
 const resolvePath = (filePath: string): string => {
-  if (filePath.startsWith("~")) {
-    return path.join(os.homedir(), filePath.slice(1));
+  if (filePath.startsWith("~/")) {
+    return path.join(os.homedir(), filePath.slice(2));
+  }
+  if (filePath === "~") {
+    return os.homedir();
   }
   return path.resolve(filePath);
 };
