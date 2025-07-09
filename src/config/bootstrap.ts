@@ -71,6 +71,6 @@ export const extractDynamicValues = (config: Config): DynamicConfigValues => ({
   configPath: path.join(os.homedir(), ".config", "dev", "config.json"),
   logLevel: config.logLevel ?? "info",
   baseSearchPath: path.join(os.homedir(), "src"), // Default base search path
-  defaultProvider: config.orgToProvider?.[config.defaultOrg] ?? "github",
+  defaultProvider: "github", // Always default to GitHub unless explicitly mapped
   orgToProvider: config.orgToProvider ?? {},
 });
