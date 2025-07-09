@@ -18,11 +18,6 @@ export interface RepoProvider {
    * Get the provider info
    */
   getProvider(): GitProvider;
-
-  /**
-   * Search for repositories
-   */
-  searchRepositories(query: string, org?: string): Effect.Effect<Repository[], NetworkError | UnknownError>;
 }
 
 export class RepoProviderTag extends Context.Tag("RepoProvider")<RepoProviderTag, RepoProvider>() {}

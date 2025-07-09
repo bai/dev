@@ -1,5 +1,5 @@
 import { it } from "@effect/vitest";
-import { Effect, Exit } from "effect";
+import { Effect } from "effect";
 import { describe, expect } from "vitest";
 
 import type { GitProvider } from "../domain/models";
@@ -44,21 +44,7 @@ describe("github-provider-live", () => {
     it.effect("resolves repository successfully", () =>
       Effect.gen(function* () {
         const network = new MockNetwork();
-        network.setResponse("https://api.github.com/repos/myorg/myrepo", {
-          status: 200,
-          statusText: "OK",
-          body: JSON.stringify({
-            id: 123,
-            name: "myrepo",
-            full_name: "myorg/myrepo",
-            owner: { login: "myorg" },
-            clone_url: "https://github.com/myorg/myrepo.git",
-            ssh_url: "git@github.com:myorg/myrepo.git",
-            html_url: "https://github.com/myorg/myrepo",
-            description: "Test repository",
-            private: false,
-          }),
-        });
+        // No network call should be made anymore
 
         const provider = makeGitHubProvider(network, "default-org");
         const repository = yield* provider.resolveRepository("myrepo", "myorg");
@@ -74,21 +60,7 @@ describe("github-provider-live", () => {
     it.effect("uses default org when not specified", () =>
       Effect.gen(function* () {
         const network = new MockNetwork();
-        network.setResponse("https://api.github.com/repos/octocat/myrepo", {
-          status: 200,
-          statusText: "OK",
-          body: JSON.stringify({
-            id: 123,
-            name: "myrepo",
-            full_name: "octocat/myrepo",
-            owner: { login: "octocat" },
-            clone_url: "https://github.com/octocat/myrepo.git",
-            ssh_url: "git@github.com:octocat/myrepo.git",
-            html_url: "https://github.com/octocat/myrepo",
-            description: "Test repository",
-            private: false,
-          }),
-        });
+        // No network call should be made anymore
 
         const provider = makeGitHubProvider(network, "octocat");
         const repository = yield* provider.resolveRepository("myrepo");
@@ -115,211 +87,7 @@ describe("github-provider-live", () => {
     // Note: API error handling tests removed since resolveRepository no longer makes API calls
   });
 
-  describe("searchRepositories", () => {
-    it.effect("searches repositories successfully", () =>
-      Effect.gen(function* () {
-        const network = new MockNetwork();
-        network.setResponse("https://api.github.com/search/repositories?q=test", {
-          status: 200,
-          statusText: "OK",
-          body: JSON.stringify({
-            total_count: 2,
-            items: [
-              {
-                id: 1,
-                name: "test-repo",
-                full_name: "myorg/test-repo",
-                owner: { login: "myorg" },
-                clone_url: "https://github.com/myorg/test-repo.git",
-                ssh_url: "git@github.com:myorg/test-repo.git",
-                html_url: "https://github.com/myorg/test-repo",
-                description: "Test repository",
-                private: false,
-              },
-              {
-                id: 2,
-                name: "another-test",
-                full_name: "otherorg/another-test",
-                owner: { login: "otherorg" },
-                clone_url: "https://github.com/otherorg/another-test.git",
-                ssh_url: "git@github.com:otherorg/another-test.git",
-                html_url: "https://github.com/otherorg/another-test",
-                description: "Another test repository",
-                private: false,
-              },
-            ],
-          }),
-        });
-
-        const provider = makeGitHubProvider(network, "default-org");
-        const repositories = yield* provider.searchRepositories("test");
-
-        expect(repositories).toHaveLength(2);
-        expect(repositories[0]?.name).toBe("test-repo");
-        expect(repositories[0]?.organization).toBe("myorg");
-        expect(repositories[1]?.name).toBe("another-test");
-        expect(repositories[1]?.organization).toBe("otherorg");
-      }),
-    );
-
-    it.effect("searches with organization filter", () =>
-      Effect.gen(function* () {
-        const network = new MockNetwork();
-        network.setResponse("https://api.github.com/search/repositories?q=test%20org%3Amyorg", {
-          status: 200,
-          statusText: "OK",
-          body: JSON.stringify({
-            total_count: 1,
-            items: [
-              {
-                id: 1,
-                name: "test-repo",
-                full_name: "myorg/test-repo",
-                owner: { login: "myorg" },
-                clone_url: "https://github.com/myorg/test-repo.git",
-                ssh_url: "git@github.com:myorg/test-repo.git",
-                html_url: "https://github.com/myorg/test-repo",
-                description: "Test repository",
-                private: false,
-              },
-            ],
-          }),
-        });
-
-        const provider = makeGitHubProvider(network, "default-org");
-        const repositories = yield* provider.searchRepositories("test", "myorg");
-
-        expect(repositories).toHaveLength(1);
-        expect(repositories[0]?.name).toBe("test-repo");
-        expect(repositories[0]?.organization).toBe("myorg");
-      }),
-    );
-
-    it.effect("handles empty search results", () =>
-      Effect.gen(function* () {
-        const network = new MockNetwork();
-        network.setResponse("https://api.github.com/search/repositories?q=veryrandomquery", {
-          status: 200,
-          statusText: "OK",
-          body: JSON.stringify({
-            total_count: 0,
-            items: [],
-          }),
-        });
-
-        const provider = makeGitHubProvider(network, "default-org");
-        const repositories = yield* provider.searchRepositories("veryrandomquery");
-
-        expect(repositories).toHaveLength(0);
-      }),
-    );
-
-    it.effect("handles search API errors", () =>
-      Effect.gen(function* () {
-        const network = new MockNetwork();
-        network.setResponse("https://api.github.com/search/repositories?q=test", {
-          status: 422,
-          statusText: "Unprocessable Entity",
-          body: JSON.stringify({ message: "Validation Failed" }),
-        });
-
-        const provider = makeGitHubProvider(network, "default-org");
-        const result = yield* Effect.exit(provider.searchRepositories("test"));
-
-        expect(Exit.isFailure(result)).toBe(true);
-        if (Exit.isFailure(result)) {
-          const error = result.cause._tag === "Fail" ? result.cause.error : null;
-          expect(error?._tag).toBe("NetworkError");
-          expect(error?.reason).toContain("GitHub search API error: 422");
-        }
-      }),
-    );
-
-    it.effect("handles malformed JSON response", () =>
-      Effect.gen(function* () {
-        const network = new MockNetwork();
-        network.setResponse("https://api.github.com/search/repositories?q=test", {
-          status: 200,
-          statusText: "OK",
-          body: "invalid json",
-        });
-
-        const provider = makeGitHubProvider(network, "default-org");
-        const result = yield* Effect.exit(provider.searchRepositories("test"));
-
-        expect(Exit.isFailure(result)).toBe(true);
-        if (Exit.isFailure(result)) {
-          const error = result.cause._tag === "Fail" ? result.cause.error : null;
-          expect(error?._tag).toBe("UnknownError");
-          expect(String(error?.reason)).toContain("Failed to parse GitHub search response");
-        }
-      }),
-    );
-
-    it.effect("handles invalid schema in API response", () =>
-      Effect.gen(function* () {
-        const network = new MockNetwork();
-        network.setResponse("https://api.github.com/search/repositories?q=test", {
-          status: 200,
-          statusText: "OK",
-          body: JSON.stringify({
-            total_count: 1,
-            items: [
-              {
-                id: "not-a-number", // Schema expects number
-                name: "test-repo",
-                // Missing required fields: full_name, owner, clone_url, etc.
-              },
-            ],
-          }),
-        });
-
-        const provider = makeGitHubProvider(network, "default-org");
-        const result = yield* Effect.exit(provider.searchRepositories("test"));
-
-        expect(Exit.isFailure(result)).toBe(true);
-        if (Exit.isFailure(result)) {
-          const error = result.cause._tag === "Fail" ? result.cause.error : null;
-          expect(error?._tag).toBe("UnknownError");
-          expect(String(error?.reason)).toContain("Invalid GitHub search response");
-        }
-      }),
-    );
-
-    it.effect("encodes special characters in search query", () =>
-      Effect.gen(function* () {
-        const network = new MockNetwork();
-        const searchQuery = "test language:typescript stars:>100";
-        const encodedQuery = encodeURIComponent(searchQuery);
-        network.setResponse(`https://api.github.com/search/repositories?q=${encodedQuery}`, {
-          status: 200,
-          statusText: "OK",
-          body: JSON.stringify({
-            total_count: 1,
-            items: [
-              {
-                id: 1,
-                name: "typescript-test",
-                full_name: "tsorg/typescript-test",
-                owner: { login: "tsorg" },
-                clone_url: "https://github.com/tsorg/typescript-test.git",
-                ssh_url: "git@github.com:tsorg/typescript-test.git",
-                html_url: "https://github.com/tsorg/typescript-test",
-                description: "TypeScript test repository",
-                private: false,
-              },
-            ],
-          }),
-        });
-
-        const provider = makeGitHubProvider(network, "default-org");
-        const repositories = yield* provider.searchRepositories(searchQuery);
-
-        expect(repositories).toHaveLength(1);
-        expect(repositories[0]?.name).toBe("typescript-test");
-      }),
-    );
-  });
+  // searchRepositories method removed - no longer needed since we don't validate repos via API
 
   describe("getDefaultOrg", () => {
     it.effect("returns configured default org", () =>

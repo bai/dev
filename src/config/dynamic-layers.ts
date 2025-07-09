@@ -17,12 +17,11 @@ import { FzfToolsLiveLayer } from "../infra/fzf-tools-live";
 import { GcloudToolsLiveLayer } from "../infra/gcloud-tools-live";
 import { GitLiveLayer } from "../infra/git-live";
 import { GitToolsLiveLayer } from "../infra/git-tools-live";
-import { GitHubProviderLiveLayer } from "../infra/github-provider-live";
-import { GitLabProviderLiveLayer } from "../infra/gitlab-provider-live";
 import { HealthCheckLiveLayer } from "../infra/health-check-live";
 import { KeychainLiveLayer } from "../infra/keychain-live";
 import { MiseLiveLayer } from "../infra/mise-live";
 import { MiseToolsLiveLayer } from "../infra/mise-tools-live";
+import { MultiRepoProviderLiveLayer } from "../infra/multi-repo-provider-live";
 import { NetworkLiveLayer } from "../infra/network-live";
 import { RunStoreLiveLayer } from "../infra/run-store-live";
 import { ShellLiveLayer } from "../infra/shell-live";
@@ -90,11 +89,11 @@ export const buildInfraLiveLayer = (configValues: DynamicConfigValues) => {
   const ToolManagementLayer = Layer.provide(ToolManagementLiveLayer, ToolServicesLayer);
 
   // Repository provider with dynamic organization and provider selection
-  // This is where we use the runtime configuration value!
-  const RepoProviderLayer =
-    configValues.defaultProvider === "gitlab"
-      ? Layer.provide(GitLabProviderLiveLayer(configValues.defaultOrg), NetworkLayer)
-      : Layer.provide(GitHubProviderLiveLayer(configValues.defaultOrg), NetworkLayer);
+  // Use multi-provider that can select the appropriate provider based on org
+  const RepoProviderLayer = Layer.provide(
+    MultiRepoProviderLiveLayer(configValues.defaultOrg, configValues.defaultProvider, configValues.orgToProvider),
+    NetworkLayer,
+  );
 
   // Database layer that depends on PathService and FileSystem
   const DatabaseLayer = Layer.provide(DatabaseLiveLayer, BaseInfraLayer);

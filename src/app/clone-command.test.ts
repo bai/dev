@@ -94,10 +94,6 @@ describe("clone-command", () => {
     getProvider(): GitProvider {
       return this.provider;
     }
-
-    searchRepositories(_query: string, _org?: string): Effect.Effect<Repository[], never, never> {
-      return Effect.succeed([]);
-    }
   }
 
   class MockPathService implements PathService {

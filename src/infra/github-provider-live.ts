@@ -1,7 +1,7 @@
 import { Effect, Layer } from "effect";
 
-import { gitHubRepoToRepository, parseGitHubSearchResponse } from "../domain/api-schemas";
-import { networkError, unknownError, type NetworkError, type UnknownError } from "../domain/errors";
+// API schemas removed - no longer needed since we don't validate repos via API
+import type { NetworkError, UnknownError } from "../domain/errors";
 import type { GitProvider, Repository } from "../domain/models";
 import { NetworkTag, type Network } from "../domain/network-port";
 import { RepoProviderTag, type RepoProvider } from "../domain/repo-provider-port";
@@ -34,43 +34,10 @@ export const makeGitHubProvider = (network: Network, defaultOrg = "octocat"): Re
 
   const getProvider = (): GitProvider => provider;
 
-  const searchRepositories = (
-    query: string,
-    org?: string,
-  ): Effect.Effect<Repository[], NetworkError | UnknownError> => {
-    const searchQuery = org ? `${query} org:${org}` : query;
-    const apiUrl = `https://api.github.com/search/repositories?q=${encodeURIComponent(searchQuery)}`;
-
-    return network.get(apiUrl).pipe(
-      Effect.flatMap((response): Effect.Effect<Repository[], NetworkError | UnknownError> => {
-        if (response.status !== 200) {
-          return Effect.fail(networkError(`GitHub search API error: ${response.status} ${response.statusText}`));
-        }
-
-        return Effect.try({
-          try: () => {
-            const data = JSON.parse(response.body);
-            const parseResult = parseGitHubSearchResponse(data);
-
-            if (!parseResult.success) {
-              throw new Error(parseResult.error);
-            }
-
-            return parseResult.data.items.map((item) =>
-              gitHubRepoToRepository(item, provider as { name: "github"; baseUrl: string }),
-            );
-          },
-          catch: (error) => unknownError(`Failed to parse GitHub search response: ${error}`),
-        });
-      }),
-    );
-  };
-
   return {
     resolveRepository,
     getDefaultOrg,
     getProvider,
-    searchRepositories,
   };
 };
 
