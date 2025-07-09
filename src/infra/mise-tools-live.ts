@@ -13,9 +13,9 @@ import {
   type ShellExecutionError,
   type UnknownError,
 } from "../domain/errors";
-import { FileSystemPortTag, type FileSystemPort } from "../domain/file-system-port";
+import { FileSystemTag, type FileSystem } from "../domain/file-system-port";
 import { type HealthCheckResult } from "../domain/health-check-port";
-import { ShellPortTag, type ShellPort } from "../domain/shell-port";
+import { ShellTag, type Shell } from "../domain/shell-port";
 
 export const MISE_MIN_VERSION = "2025.7.1";
 
@@ -36,8 +36,8 @@ export interface MiseTools {
 
 // Factory function that creates MiseTools with dependencies
 export const makeMiseToolsLive = (
-  shell: ShellPort,
-  filesystem: FileSystemPort,
+  shell: Shell,
+  filesystem: FileSystem,
   configLoader: ConfigLoader,
 ): MiseTools => {
   // Helper function for version comparison
@@ -239,8 +239,8 @@ export class MiseToolsTag extends Context.Tag("MiseTools")<MiseToolsTag, MiseToo
 export const MiseToolsLiveLayer = Layer.effect(
   MiseToolsTag,
   Effect.gen(function* () {
-    const shell = yield* ShellPortTag;
-    const filesystem = yield* FileSystemPortTag;
+    const shell = yield* ShellTag;
+    const filesystem = yield* FileSystemTag;
     const configLoader = yield* ConfigLoaderTag;
     return makeMiseToolsLive(shell, filesystem, configLoader);
   }),

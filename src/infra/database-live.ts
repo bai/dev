@@ -3,14 +3,16 @@ import { drizzle } from "drizzle-orm/bun-sqlite";
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
 import { Effect, Layer } from "effect";
 
-import { DatabasePortTag, type DatabasePort } from "../domain/database-port";
+import { DatabaseTag } from "../domain/database-port";
+import type { Database } from "../domain/database-port";
 import type { DrizzleDatabase } from "../domain/drizzle-types";
-import { configError, unknownError, type ConfigError, type UnknownError } from "../domain/errors";
-import { FileSystemPortTag } from "../domain/file-system-port";
+import { configError, unknownError } from "../domain/errors";
+import type { ConfigError, UnknownError } from "../domain/errors";
+import { FileSystemTag } from "../domain/file-system-port";
 import { PathServiceTag } from "../domain/path-service";
 
 // Extended interface for internal use with close method
-interface DatabaseWithClose extends DatabasePort {
+interface DatabaseWithClose extends Database {
   readonly close: () => Effect.Effect<void>;
 }
 
@@ -89,7 +91,7 @@ export const makeDatabaseLive = (
 
 // Create and initialize database with migrations
 const createDatabase = Effect.gen(function* () {
-  const fileSystem = yield* FileSystemPortTag;
+  const fileSystem = yield* FileSystemTag;
   const pathService = yield* PathServiceTag;
   const dbPath = pathService.dbPath;
 
@@ -121,8 +123,8 @@ const createDatabase = Effect.gen(function* () {
 });
 
 // Effect Layer for dependency injection with proper resource management
-export const DatabasePortLiveLayer = Layer.scoped(
-  DatabasePortTag,
+export const DatabaseLiveLayer = Layer.scoped(
+  DatabaseTag,
   Effect.gen(function* () {
     // Create the Database with proper resource management
     const database = yield* Effect.acquireRelease(createDatabase, (database) =>
@@ -131,8 +133,8 @@ export const DatabasePortLiveLayer = Layer.scoped(
         .pipe(Effect.catchAll((error) => Effect.logWarning(`Failed to close database cleanly: ${error}`))),
     );
 
-    // Return only the public DatabasePort interface, not the extended one with close
-    const publicDatabase: DatabasePort = {
+    // Return only the public Database interface, not the extended one with close
+    const publicDatabase: Database = {
       query: database.query,
       transaction: database.transaction,
       raw: database.raw,

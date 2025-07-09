@@ -11,9 +11,9 @@ import {
   type ShellExecutionError,
   type UnknownError,
 } from "../domain/errors";
-import { FileSystemPortTag, type FileSystemPort } from "../domain/file-system-port";
+import { FileSystemTag, type FileSystem } from "../domain/file-system-port";
 import { type HealthCheckResult } from "../domain/health-check-port";
-import { ShellPortTag, type ShellPort } from "../domain/shell-port";
+import { ShellTag, type Shell } from "../domain/shell-port";
 
 export const GCLOUD_MIN_VERSION = "450.0.0";
 
@@ -31,7 +31,7 @@ export interface GcloudTools {
 }
 
 // Factory function that creates GcloudTools with dependencies
-export const makeGcloudToolsLive = (shell: ShellPort, filesystem: FileSystemPort): GcloudTools => {
+export const makeGcloudToolsLive = (shell: Shell, filesystem: FileSystem): GcloudTools => {
   // Helper function for version comparison
   const compareVersions = (version1: string, version2: string): number => {
     const v1Parts = version1.split(".").map(Number);
@@ -219,8 +219,8 @@ export class GcloudToolsTag extends Context.Tag("GcloudTools")<GcloudToolsTag, G
 export const GcloudToolsLiveLayer = Layer.effect(
   GcloudToolsTag,
   Effect.gen(function* () {
-    const shell = yield* ShellPortTag;
-    const filesystem = yield* FileSystemPortTag;
+    const shell = yield* ShellTag;
+    const filesystem = yield* FileSystemTag;
     return makeGcloudToolsLive(shell, filesystem);
   }),
 );

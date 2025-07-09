@@ -3,12 +3,12 @@ import { Effect, Exit } from "effect";
 import { describe, expect } from "vitest";
 
 import type { GitProvider } from "../domain/models";
-import type { HttpResponse, NetworkPort } from "../domain/network-port";
+import type { HttpResponse, Network } from "../domain/network-port";
 import { makeGitHubProvider } from "./github-provider-live";
 
 describe("github-provider-live", () => {
   // Mock NetworkPort implementation
-  class MockNetwork implements NetworkPort {
+  class MockNetwork implements Network {
     private responses = new Map<string, { status: number; statusText: string; body: string }>();
 
     setResponse(url: string, response: { status: number; statusText: string; body: string }): void {

@@ -1,9 +1,9 @@
 import { Clock, Context, Effect, Layer } from "effect";
 
 import { type ConfigError, type UnknownError } from "../domain/errors";
-import type { GitPortTag } from "../domain/git-port";
+import type { GitTag } from "../domain/git-port";
 import type { PathServiceTag } from "../domain/path-service";
-import { RunStorePortTag } from "../domain/run-store-port";
+import { RunStoreTag } from "../domain/run-store-port";
 import { VersionTag } from "./version-service";
 
 /**
@@ -14,19 +14,19 @@ export interface CommandTracker {
   recordCommandRun(): Effect.Effect<
     string,
     ConfigError | UnknownError,
-    RunStorePortTag | VersionTag | GitPortTag | PathServiceTag
+    RunStoreTag | VersionTag | GitTag | PathServiceTag
   >;
-  completeCommandRun(id: string, exitCode: number): Effect.Effect<void, ConfigError | UnknownError, RunStorePortTag>;
+  completeCommandRun(id: string, exitCode: number): Effect.Effect<void, ConfigError | UnknownError, RunStoreTag>;
 
   /**
    * Gracefully shutdown command tracking by completing any incomplete runs
    */
-  gracefulShutdown(): Effect.Effect<void, ConfigError | UnknownError, RunStorePortTag>;
+  gracefulShutdown(): Effect.Effect<void, ConfigError | UnknownError, RunStoreTag>;
 }
 
 // Individual functions implementing the service methods
 const recordCommandRun = Effect.gen(function* () {
-  const runStore = yield* RunStorePortTag;
+  const runStore = yield* RunStoreTag;
   const version = yield* VersionTag;
 
   // Gather run information
@@ -51,7 +51,7 @@ const recordCommandRun = Effect.gen(function* () {
 
 const completeCommandRun = (id: string, exitCode: number) =>
   Effect.gen(function* () {
-    const runStore = yield* RunStorePortTag;
+    const runStore = yield* RunStoreTag;
     const finishedAtMs = yield* Clock.currentTimeMillis;
     const finishedAt = new Date(finishedAtMs);
 
@@ -63,7 +63,7 @@ const gracefulShutdown = Effect.gen(function* () {
 
   // Try to complete incomplete runs, but don't fail if database is unavailable
   yield* Effect.gen(function* () {
-    const runStore = yield* RunStorePortTag;
+    const runStore = yield* RunStoreTag;
     yield* runStore.completeIncompleteRuns();
     yield* Effect.logDebug("✅ Command tracking shutdown complete");
   }).pipe(

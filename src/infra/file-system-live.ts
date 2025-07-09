@@ -4,8 +4,10 @@ import path from "path";
 
 import { Effect, Layer } from "effect";
 
-import { fileSystemError, type FileSystemError, type UnknownError } from "../domain/errors";
-import { FileSystemPortTag, type FileSystemPort } from "../domain/file-system-port";
+import { fileSystemError } from "../domain/errors";
+import type { FileSystemError, UnknownError } from "../domain/errors";
+import { FileSystemTag } from "../domain/file-system-port";
+import type { FileSystem } from "../domain/file-system-port";
 
 // Individual functions for each method
 const readFile = (filePath: string): Effect.Effect<string, FileSystemError | UnknownError> =>
@@ -60,7 +62,7 @@ const resolvePath = (filePath: string): string => {
 };
 
 // Factory function to create FileSystem implementation
-export const makeFileSystemLive = (): FileSystemPort => ({
+export const makeFileSystemLive = (): FileSystem => ({
   readFile,
   writeFile,
   exists,
@@ -70,5 +72,8 @@ export const makeFileSystemLive = (): FileSystemPort => ({
   resolvePath,
 });
 
-// Effect Layer for dependency injection
-export const FileSystemPortLiveLayer = Layer.succeed(FileSystemPortTag, makeFileSystemLive());
+// Effect Layer for dependency injection with proper resource management
+export const FileSystemLiveLayer = Layer.effect(
+  FileSystemTag,
+  Effect.succeed(makeFileSystemLive()),
+);

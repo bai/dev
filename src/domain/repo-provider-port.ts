@@ -3,7 +3,7 @@ import { Context, type Effect } from "effect";
 import type { NetworkError, UnknownError } from "./errors";
 import type { GitProvider, Repository } from "./models";
 
-export interface RepoProviderPort {
+export interface RepoProvider {
   /**
    * Resolve a repository name to full repository details
    */
@@ -25,4 +25,4 @@ export interface RepoProviderPort {
   searchRepositories(query: string, org?: string): Effect.Effect<Repository[], NetworkError | UnknownError>;
 }
 
-export class RepoProviderPortTag extends Context.Tag("RepoProviderPort")<RepoProviderPortTag, RepoProviderPort>() {}
+export class RepoProviderTag extends Context.Tag("RepoProvider")<RepoProviderTag, RepoProvider>() {}

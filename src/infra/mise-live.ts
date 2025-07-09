@@ -5,14 +5,14 @@ import { Effect, Layer } from "effect";
 
 import { ConfigLoaderTag, type ConfigLoader } from "../config/loader";
 import { shellExecutionError, unknownError, type ShellExecutionError, type UnknownError } from "../domain/errors";
-import { FileSystemPortTag, type FileSystemPort } from "../domain/file-system-port";
-import { MisePortTag, type MiseInfo, type MisePort } from "../domain/mise-port";
-import { ShellPortTag, type ShellPort } from "../domain/shell-port";
+import { FileSystemTag, type FileSystem } from "../domain/file-system-port";
+import { MiseTag, type MiseInfo, type Mise } from "../domain/mise-port";
+import { ShellTag, type Shell } from "../domain/shell-port";
 
 const homeDir = process.env.HOME || process.env.USERPROFILE || "";
 
 // Factory function to create Mise implementation
-export const makeMiseLive = (shell: ShellPort, fileSystem: FileSystemPort, configLoader: ConfigLoader): MisePort => ({
+export const makeMiseLive = (shell: Shell, fileSystem: FileSystem, configLoader: ConfigLoader): Mise => ({
   checkInstallation: (): Effect.Effect<MiseInfo, ShellExecutionError> =>
     shell.exec("mise", ["--version"]).pipe(
       Effect.flatMap((result) => {
@@ -163,11 +163,11 @@ export const makeMiseLive = (shell: ShellPort, fileSystem: FileSystemPort, confi
 });
 
 // Effect Layer for dependency injection
-export const MisePortLiveLayer = Layer.effect(
-  MisePortTag,
+export const MiseLiveLayer = Layer.effect(
+  MiseTag,
   Effect.gen(function* () {
-    const shell = yield* ShellPortTag;
-    const fileSystem = yield* FileSystemPortTag;
+    const shell = yield* ShellTag;
+    const fileSystem = yield* FileSystemTag;
     const configLoader = yield* ConfigLoaderTag;
     return makeMiseLive(shell, fileSystem, configLoader);
   }),

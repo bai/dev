@@ -8,7 +8,7 @@ import {
   type ShellExecutionError,
 } from "../domain/errors";
 import { type HealthCheckResult } from "../domain/health-check-port";
-import { ShellPortTag, type ShellPort } from "../domain/shell-port";
+import { ShellTag, type Shell } from "../domain/shell-port";
 
 export const BUN_MIN_VERSION = "1.2.0";
 
@@ -45,7 +45,7 @@ const compareVersions = (version1: string, version2: string): number => {
 };
 
 // Factory function to create BunTools implementation
-export const makeBunToolsLive = (shell: ShellPort): BunTools => ({
+export const makeBunToolsLive = (shell: Shell): BunTools => ({
   getCurrentVersion: (): Effect.Effect<string | null, ShellExecutionError> =>
     shell.exec("bun", ["--version"]).pipe(
       Effect.map((result) => {
@@ -177,7 +177,7 @@ export class BunToolsTag extends Context.Tag("BunTools")<BunToolsTag, BunTools>(
 export const BunToolsLiveLayer = Layer.effect(
   BunToolsTag,
   Effect.gen(function* () {
-    const shell = yield* ShellPortTag;
+    const shell = yield* ShellTag;
     return makeBunToolsLive(shell);
   }),
 );

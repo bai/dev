@@ -1,19 +1,19 @@
 import { Effect, Layer } from "effect";
 
-import { DirectoryPortTag, type DirectoryPort } from "../domain/directory-port";
+import { DirectoryTag, type Directory } from "../domain/directory-port";
 import { type FileSystemError, type UnknownError } from "../domain/errors";
-import { FileSystemPortTag } from "../domain/file-system-port";
+import { FileSystemTag } from "../domain/file-system-port";
 import { PathServiceTag } from "../domain/path-service";
 
 // Individual effect functions
 const ensureBaseDirectoryExists = (): Effect.Effect<
   void,
   FileSystemError | UnknownError,
-  FileSystemPortTag | PathServiceTag
+  FileSystemTag | PathServiceTag
 > =>
   Effect.gen(function* () {
     const pathService = yield* PathServiceTag;
-    const fileSystem = yield* FileSystemPortTag;
+    const fileSystem = yield* FileSystemTag;
 
     const baseDir = pathService.baseSearchDir;
     const exists = yield* fileSystem.exists(baseDir);
@@ -23,10 +23,10 @@ const ensureBaseDirectoryExists = (): Effect.Effect<
     }
   });
 
-const findDirs = (): Effect.Effect<string[], FileSystemError | UnknownError, FileSystemPortTag | PathServiceTag> =>
+const findDirs = (): Effect.Effect<string[], FileSystemError | UnknownError, FileSystemTag | PathServiceTag> =>
   Effect.gen(function* () {
     const pathService = yield* PathServiceTag;
-    const fileSystem = yield* FileSystemPortTag;
+    const fileSystem = yield* FileSystemTag;
 
     const baseDir = pathService.baseSearchDir;
 
@@ -43,10 +43,13 @@ const findDirs = (): Effect.Effect<string[], FileSystemError | UnknownError, Fil
   });
 
 // Factory function to create Directory implementation
-export const makeDirectoryLive = (): DirectoryPort => ({
+export const makeDirectoryLive = (): Directory => ({
   ensureBaseDirectoryExists,
   findDirs,
 });
 
 // Layer that provides DirectoryService with proper dependency injection
-export const DirectoryPortLiveLayer = Layer.effect(DirectoryPortTag, Effect.succeed(makeDirectoryLive()));
+export const DirectoryLiveLayer = Layer.effect(
+  DirectoryTag,
+  Effect.succeed(makeDirectoryLive()),
+);

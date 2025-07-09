@@ -8,7 +8,7 @@ import {
   type ShellExecutionError,
 } from "../domain/errors";
 import { type HealthCheckResult } from "../domain/health-check-port";
-import { ShellPortTag, type ShellPort } from "../domain/shell-port";
+import { ShellTag, type Shell } from "../domain/shell-port";
 
 export const GIT_MIN_VERSION = "2.50.0";
 
@@ -45,7 +45,7 @@ const compareVersions = (version1: string, version2: string): number => {
 };
 
 // Factory function to create GitTools implementation
-export const makeGitToolsLive = (shell: ShellPort): GitTools => ({
+export const makeGitToolsLive = (shell: Shell): GitTools => ({
   getCurrentVersion: (): Effect.Effect<string | null, ShellExecutionError> =>
     shell.exec("git", ["--version"]).pipe(
       Effect.map((result) => {
@@ -177,7 +177,7 @@ export class GitToolsTag extends Context.Tag("GitTools")<GitToolsTag, GitTools>(
 export const GitToolsLiveLayer = Layer.effect(
   GitToolsTag,
   Effect.gen(function* () {
-    const shell = yield* ShellPortTag;
+    const shell = yield* ShellTag;
     return makeGitToolsLive(shell);
   }),
 );

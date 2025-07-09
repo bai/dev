@@ -9,7 +9,7 @@ export interface HttpResponse {
   headers: Record<string, string>;
 }
 
-export interface NetworkPort {
+export interface Network {
   /**
    * Make an HTTP GET request
    */
@@ -29,4 +29,4 @@ export interface NetworkPort {
   checkConnectivity(url: string): Effect.Effect<boolean>;
 }
 
-export class NetworkPortTag extends Context.Tag("NetworkPort")<NetworkPortTag, NetworkPort>() {}
+export class NetworkTag extends Context.Tag("Network")<NetworkTag, Network>() {}

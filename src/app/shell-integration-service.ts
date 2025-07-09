@@ -3,7 +3,7 @@ import path from "path";
 import { Context, Effect, Layer } from "effect";
 
 import { configError, type ConfigError, type FileSystemError, type UnknownError } from "../domain/errors";
-import { FileSystemPortTag } from "../domain/file-system-port";
+import { FileSystemTag } from "../domain/file-system-port";
 import { PathServiceTag } from "../domain/path-service";
 
 /**
@@ -13,7 +13,7 @@ import { PathServiceTag } from "../domain/path-service";
 export interface ShellIntegration {
   changeDirectory(
     targetPath: string,
-  ): Effect.Effect<void, ConfigError | UnknownError | FileSystemError, FileSystemPortTag | PathServiceTag>;
+  ): Effect.Effect<void, ConfigError | UnknownError | FileSystemError, FileSystemTag | PathServiceTag>;
 }
 
 // Helper function to get the cd target file path
@@ -23,7 +23,7 @@ const getCdFilePath = (pathService: { dataDir: string }): string => path.join(pa
 const changeDirectory = (targetPath: string) =>
   Effect.gen(function* () {
     const pathService = yield* PathServiceTag;
-    const fileSystem = yield* FileSystemPortTag;
+    const fileSystem = yield* FileSystemTag;
 
     let absolutePath: string;
     const cleanedTargetPath = targetPath.replace(/\/$/, ""); // Remove trailing slash

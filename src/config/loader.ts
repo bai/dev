@@ -7,8 +7,8 @@ import {
   type NetworkError,
   type UnknownError,
 } from "../domain/errors";
-import { FileSystemPortTag, type FileSystemPort } from "../domain/file-system-port";
-import { NetworkPortTag, type NetworkPort } from "../domain/network-port";
+import { FileSystemTag, type FileSystem } from "../domain/file-system-port";
+import { NetworkTag, type Network } from "../domain/network-port";
 import { migrateConfig } from "./migrations";
 import { configSchema, defaultConfig, type Config } from "./schema";
 
@@ -20,8 +20,8 @@ export interface ConfigLoader {
 
 // Factory function that creates ConfigLoader with dependencies
 export const makeConfigLoaderLive = (
-  fileSystem: FileSystemPort,
-  network: NetworkPort,
+  fileSystem: FileSystem,
+  network: Network,
   configPath: string,
 ): ConfigLoader => {
   // Individual functions implementing the service methods
@@ -98,8 +98,8 @@ export const ConfigLoaderLiveLayer = (configPath: string) =>
   Layer.effect(
     ConfigLoaderTag,
     Effect.gen(function* () {
-      const fileSystem = yield* FileSystemPortTag;
-      const network = yield* NetworkPortTag;
+      const fileSystem = yield* FileSystemTag;
+      const network = yield* NetworkTag;
       return makeConfigLoaderLive(fileSystem, network, configPath);
     }),
   );

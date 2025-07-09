@@ -2,7 +2,7 @@ import { Context, type Effect } from "effect";
 
 import type { FileSystemError, UnknownError } from "./errors";
 
-export interface FileSystemPort {
+export interface FileSystem {
   /**
    * Read a file as text
    */
@@ -39,4 +39,4 @@ export interface FileSystemPort {
   resolvePath(path: string): string;
 }
 
-export class FileSystemPortTag extends Context.Tag("FileSystemPort")<FileSystemPortTag, FileSystemPort>() {}
+export class FileSystemTag extends Context.Tag("FileSystem")<FileSystemTag, FileSystem>() {}

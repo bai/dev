@@ -8,7 +8,7 @@ import {
   type ShellExecutionError,
 } from "../domain/errors";
 import { type HealthCheckResult } from "../domain/health-check-port";
-import { ShellPortTag, type ShellPort } from "../domain/shell-port";
+import { ShellTag, type Shell } from "../domain/shell-port";
 
 export const FZF_MIN_VERSION = "0.35.0";
 
@@ -45,7 +45,7 @@ const compareVersions = (version1: string, version2: string): number => {
 };
 
 // Factory function to create FzfTools implementation
-export const makeFzfToolsLive = (shell: ShellPort): FzfTools => ({
+export const makeFzfToolsLive = (shell: Shell): FzfTools => ({
   getCurrentVersion: (): Effect.Effect<string | null, ShellExecutionError> =>
     shell.exec("fzf", ["--version"]).pipe(
       Effect.map((result) => {
@@ -176,7 +176,7 @@ export class FzfToolsTag extends Context.Tag("FzfTools")<FzfToolsTag, FzfTools>(
 export const FzfToolsLiveLayer = Layer.effect(
   FzfToolsTag,
   Effect.gen(function* () {
-    const shell = yield* ShellPortTag;
+    const shell = yield* ShellTag;
     return makeFzfToolsLive(shell);
   }),
 );

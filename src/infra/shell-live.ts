@@ -5,10 +5,10 @@ import { Duration, Effect, Layer } from "effect";
 import {
   shellExecutionError,
   shellTimeoutError,
-  type ShellExecutionError,
-  type ShellTimeoutError,
 } from "../domain/errors";
-import { ShellPortTag, type ShellPort, type SpawnResult } from "../domain/shell-port";
+import type { ShellExecutionError, ShellTimeoutError } from "../domain/errors";
+import { ShellTag } from "../domain/shell-port";
+import type { Shell, SpawnResult } from "../domain/shell-port";
 
 // Individual functions for each method
 const exec = (
@@ -98,7 +98,7 @@ const execInteractiveWithTimeout = (
   );
 
 // Factory function to create Shell implementation
-export const makeShellLive = (): ShellPort & {
+export const makeShellLive = (): Shell & {
   execWithTimeout: typeof execWithTimeout;
   execInteractiveWithTimeout: typeof execInteractiveWithTimeout;
 } => ({
@@ -109,5 +109,8 @@ export const makeShellLive = (): ShellPort & {
   execInteractiveWithTimeout,
 });
 
-// Effect Layer for dependency injection
-export const ShellPortLiveLayer = Layer.succeed(ShellPortTag, makeShellLive());
+// Effect Layer for dependency injection with proper resource management
+export const ShellLiveLayer = Layer.effect(
+  ShellTag,
+  Effect.succeed(makeShellLive()),
+);

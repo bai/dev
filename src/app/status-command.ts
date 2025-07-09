@@ -3,8 +3,10 @@ import { Effect } from "effect";
 
 import { ConfigLoaderTag } from "../config/loader";
 import { statusCheckError } from "../domain/errors";
-import { HealthCheckPortTag, type HealthCheckResult } from "../domain/health-check-port";
-import { ShellPortTag } from "../domain/shell-port";
+import { HealthCheckTag } from "../domain/health-check-port";
+import type { HealthCheckResult } from "../domain/health-check-port";
+import type { GitInfo, EnvironmentInfo } from "../domain/models";
+import { ShellTag } from "../domain/shell-port";
 
 interface StatusItem {
   readonly tool: string;
@@ -35,21 +37,19 @@ export const statusCommand = Command.make("status", {}, () =>
 /**
  * Show environment information
  */
-const showEnvironmentInfo: Effect.Effect<void, never, ShellPortTag> = Effect.gen(function* () {
+const showEnvironmentInfo: Effect.Effect<void, never, ShellTag> = Effect.gen(function* () {
   yield* Effect.logInfo("🌍 Environment Information:");
   yield* Effect.logInfo("");
 
-  const currentDir = process.cwd();
-  yield* Effect.logInfo(`📁 Current Directory: ${currentDir}`);
+  const envInfo = yield* getEnvironmentInfo();
+  yield* Effect.logInfo(`📁 Current Directory: ${envInfo.currentDirectory}`);
 
-  const gitInfo = yield* getGitBranch(currentDir);
-  if (gitInfo !== null) {
-    yield* Effect.logInfo(`🌿 Git Branch: ${gitInfo}`);
+  if (envInfo.git.branch !== null) {
+    yield* Effect.logInfo(`🌿 Git Branch: ${envInfo.git.branch}`);
   }
 
-  const remoteInfo = yield* getGitRemote(currentDir);
-  if (remoteInfo !== null) {
-    yield* Effect.logInfo(`🔗 Git Remote: ${remoteInfo}`);
+  if (envInfo.git.remote !== null) {
+    yield* Effect.logInfo(`🔗 Git Remote: ${envInfo.git.remote}`);
   }
 
   yield* Effect.logInfo("");
@@ -58,9 +58,38 @@ const showEnvironmentInfo: Effect.Effect<void, never, ShellPortTag> = Effect.gen
 });
 
 /**
+ * Get comprehensive environment information
+ */
+const getEnvironmentInfo = (): Effect.Effect<EnvironmentInfo, never, ShellTag> =>
+  Effect.gen(function* () {
+    const currentDir = process.cwd();
+    
+    const gitInfo = yield* getGitInfo(currentDir);
+    
+    return {
+      currentDirectory: currentDir,
+      git: gitInfo,
+    };
+  });
+
+/**
+ * Get git information
+ */
+const getGitInfo = (cwd: string): Effect.Effect<GitInfo, never, ShellTag> =>
+  Effect.gen(function* () {
+    const branch = yield* getGitBranch(cwd);
+    const remote = yield* getGitRemote(cwd);
+    
+    return {
+      branch,
+      remote,
+    };
+  });
+
+/**
  * Get git branch information
  */
-const getGitBranch = (cwd: string): Effect.Effect<string | null, never, ShellPortTag> =>
+const getGitBranch = (cwd: string): Effect.Effect<string | null, never, ShellTag> =>
   executeCommand(["git", "rev-parse", "--abbrev-ref", "HEAD"], { cwd }).pipe(
     Effect.map((result) => (result.exitCode === 0 ? result.stdout.trim() : null)),
     Effect.catchAll(() => Effect.succeed(null)),
@@ -69,7 +98,7 @@ const getGitBranch = (cwd: string): Effect.Effect<string | null, never, ShellPor
 /**
  * Get git remote information
  */
-const getGitRemote = (cwd: string): Effect.Effect<string | null, never, ShellPortTag> =>
+const getGitRemote = (cwd: string): Effect.Effect<string | null, never, ShellTag> =>
   executeCommand(["git", "remote", "get-url", "origin"], { cwd }).pipe(
     Effect.map((result) => (result.exitCode === 0 ? result.stdout.trim() : null)),
     Effect.catchAll(() => Effect.succeed(null)),
@@ -84,10 +113,10 @@ const executeCommand = (
 ): Effect.Effect<
   { readonly exitCode: number; readonly stdout: string; readonly stderr: string },
   never,
-  ShellPortTag
+  ShellTag
 > =>
   Effect.gen(function* () {
-    const shell = yield* ShellPortTag;
+    const shell = yield* ShellTag;
     const [cmd, ...args] = command;
 
     if (!cmd) {
@@ -104,11 +133,11 @@ const executeCommand = (
 /**
  * Get health check results and transform them
  */
-const getHealthCheckResults: Effect.Effect<readonly StatusItem[], never, HealthCheckPortTag | ConfigLoaderTag> =
+const getHealthCheckResults: Effect.Effect<readonly StatusItem[], never, HealthCheckTag | ConfigLoaderTag> =
   Effect.gen(function* () {
     yield* Effect.logDebug("Running fresh health checks...");
 
-    const healthCheckService = yield* HealthCheckPortTag;
+    const healthCheckService = yield* HealthCheckTag;
     const configLoader = yield* ConfigLoaderTag;
 
     const config = yield* configLoader.load().pipe(Effect.catchAll(() => Effect.succeed(undefined)));
@@ -139,7 +168,7 @@ const getHealthCheckResults: Effect.Effect<readonly StatusItem[], never, HealthC
 /**
  * Display health check results
  */
-const displayHealthCheckResults = (statusItems: readonly StatusItem[]): Effect.Effect<void, never, ShellPortTag> =>
+const displayHealthCheckResults = (statusItems: readonly StatusItem[]): Effect.Effect<void, never, ShellTag> =>
   Effect.gen(function* () {
     if (statusItems.length > 0) {
       yield* displayToolGroup("🔧 Development Tools:", statusItems);
@@ -151,7 +180,7 @@ const displayHealthCheckResults = (statusItems: readonly StatusItem[]): Effect.E
 /**
  * Display a group of tools
  */
-const displayToolGroup = (title: string, items: readonly StatusItem[]): Effect.Effect<void, never, ShellPortTag> =>
+const displayToolGroup = (title: string, items: readonly StatusItem[]): Effect.Effect<void, never, ShellTag> =>
   Effect.gen(function* () {
     yield* Effect.logInfo(title);
 
@@ -163,7 +192,7 @@ const displayToolGroup = (title: string, items: readonly StatusItem[]): Effect.E
 /**
  * Display a single tool item
  */
-const displayToolItem = (item: StatusItem): Effect.Effect<void, never, ShellPortTag> =>
+const displayToolItem = (item: StatusItem): Effect.Effect<void, never, ShellTag> =>
   Effect.gen(function* () {
     const icon = item.status === "ok" ? "✔" : item.status === "warning" ? "⚠" : "✗";
     const versionText = item.version ? ` ${item.version}` : "";
@@ -220,7 +249,7 @@ const checkForFailures = (
 /**
  * Get tool path using mise which, falling back to system which
  */
-const getToolPath = (toolName: string): Effect.Effect<string | null, never, ShellPortTag> =>
+const getToolPath = (toolName: string): Effect.Effect<string | null, never, ShellTag> =>
   Effect.gen(function* () {
     // Try mise which first
     const misePath = yield* executeCommand(["mise", "which", toolName]).pipe(

@@ -3,17 +3,17 @@ import { Clock, Effect, Layer } from "effect";
 
 import { toolHealthChecks } from "../../drizzle/schema";
 import { ConfigLoaderTag, type ConfigLoader } from "../config/loader";
-import { DatabasePortTag, type DatabasePort } from "../domain/database-port";
+import { DatabaseTag, type Database } from "../domain/database-port";
 import { healthCheckError, type HealthCheckError } from "../domain/errors";
 import {
-  HealthCheckPortTag,
-  type HealthCheckPort,
+  HealthCheckTag,
+  type HealthCheck,
   type HealthCheckResult,
   type HealthCheckSummary,
 } from "../domain/health-check-port";
 import { HealthCheckServiceTag, type HealthCheckService } from "../domain/health-check-service";
 import { PathServiceTag, type PathService } from "../domain/path-service";
-import { ShellPortTag, type ShellPort } from "../domain/shell-port";
+import { ShellTag, type Shell } from "../domain/shell-port";
 
 // Health check constants (internal, not user-configurable)
 const HEALTH_CHECK_RETENTION_DAYS = 30;
@@ -27,10 +27,10 @@ interface InternalHealthCheckResult {
   readonly checkedAt: number;
 }
 
-// Store health check results using DatabasePort
+// Store health check results using Database
 const storeHealthCheckResults = (
   results: InternalHealthCheckResult[],
-  database: DatabasePort,
+  database: Database,
 ): Effect.Effect<void, HealthCheckError> =>
   database
     .query((db) =>
@@ -77,12 +77,12 @@ const storeHealthCheckResults = (
 
 // Factory function that creates HealthCheckService with dependencies
 export const makeHealthCheckLive = (
-  database: DatabasePort,
+  database: Database,
   pathService: PathService,
   configLoader: ConfigLoader,
-  shell: ShellPort,
+  shell: Shell,
   healthCheckService: HealthCheckService,
-): HealthCheckPort => {
+): HealthCheck => {
   // Individual functions implementing the service methods
   const runHealthChecks = (): Effect.Effect<readonly HealthCheckResult[], HealthCheckError> =>
     Effect.gen(function* () {
@@ -179,13 +179,13 @@ export const makeHealthCheckLive = (
 };
 
 // Effect Layer for dependency injection
-export const HealthCheckPortLiveLayer = Layer.effect(
-  HealthCheckPortTag,
+export const HealthCheckLiveLayer = Layer.effect(
+  HealthCheckTag,
   Effect.gen(function* () {
-    const database = yield* DatabasePortTag;
+    const database = yield* DatabaseTag;
     const pathService = yield* PathServiceTag;
     const configLoader = yield* ConfigLoaderTag;
-    const shell = yield* ShellPortTag;
+    const shell = yield* ShellTag;
     const healthCheckService = yield* HealthCheckServiceTag;
     return makeHealthCheckLive(database, pathService, configLoader, shell, healthCheckService);
   }),

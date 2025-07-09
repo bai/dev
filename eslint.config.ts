@@ -66,7 +66,7 @@ export default tseslint.config(
       "@typescript-eslint/array-type": "off",
       "@typescript-eslint/consistent-type-definitions": "off",
       "@typescript-eslint/consistent-type-imports": [
-        "warn",
+        "error",
         {
           prefer: "type-imports",
           fixStyle: "separate-type-imports",

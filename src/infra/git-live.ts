@@ -1,12 +1,15 @@
 import { Effect, Layer } from "effect";
 
-import { gitError, type GitError, type ShellExecutionError } from "../domain/errors";
-import { GitPortTag, type GitPort } from "../domain/git-port";
+import { gitError } from "../domain/errors";
+import type { GitError, ShellExecutionError } from "../domain/errors";
+import { GitTag } from "../domain/git-port";
+import type { Git } from "../domain/git-port";
 import type { Repository } from "../domain/models";
-import { ShellPortTag, type ShellPort } from "../domain/shell-port";
+import { ShellTag } from "../domain/shell-port";
+import type { Shell } from "../domain/shell-port";
 
 // Factory function to create Git implementation
-export const makeGitLive = (shell: ShellPort): GitPort => ({
+export const makeGitLive = (shell: Shell): Git => ({
   cloneRepositoryToPath: (
     repository: Repository,
     destinationPath: string,
@@ -66,10 +69,10 @@ export const makeGitLive = (shell: ShellPort): GitPort => ({
 });
 
 // Effect Layer for dependency injection
-export const GitPortLiveLayer = Layer.effect(
-  GitPortTag,
+export const GitLiveLayer = Layer.effect(
+  GitTag,
   Effect.gen(function* () {
-    const shell = yield* ShellPortTag;
+    const shell = yield* ShellTag;
     return makeGitLive(shell);
   }),
 );

@@ -4,11 +4,11 @@ import { Effect } from "effect";
 import { ConfigLoaderTag } from "../config/loader";
 import { type Config } from "../config/schema";
 import { unknownError, type DevError } from "../domain/errors";
-import { FileSystemPortTag } from "../domain/file-system-port";
-import { GitPortTag } from "../domain/git-port";
-import { MisePortTag } from "../domain/mise-port";
+import { FileSystemTag } from "../domain/file-system-port";
+import { GitTag } from "../domain/git-port";
+import { MiseTag } from "../domain/mise-port";
 import { PathServiceTag, type PathService } from "../domain/path-service";
-import { ToolManagementPortTag, type ToolManagementPort } from "../domain/tool-management-port";
+import { ToolManagementTag, type ToolManagement } from "../domain/tool-management-port";
 
 // No options needed for upgrade command
 
@@ -54,8 +54,8 @@ function selfUpdateCli(pathService: PathService): Effect.Effect<void, DevError, 
   return Effect.gen(function* () {
     yield* Effect.logInfo("🔄 Self-updating CLI repository...");
 
-    const fileSystem = yield* FileSystemPortTag;
-    const git = yield* GitPortTag;
+    const fileSystem = yield* FileSystemTag;
+    const git = yield* GitTag;
 
     // Check if we're in a git repository
     const isGitRepo = yield* git.isGitRepository(pathService.devDir);
@@ -78,7 +78,7 @@ function ensureDirectoriesExist(pathService: PathService): Effect.Effect<void, D
   return Effect.gen(function* () {
     yield* Effect.logInfo("📁 Ensuring necessary directories exist...");
 
-    const fileSystem = yield* FileSystemPortTag;
+    const fileSystem = yield* FileSystemTag;
 
     // Ensure config directory exists
     yield* fileSystem.mkdir(pathService.configDir, true);
@@ -100,7 +100,7 @@ function ensureShellIntegration(pathService: PathService): Effect.Effect<void, D
   return Effect.gen(function* () {
     yield* Effect.logInfo("🐚 Ensuring shell integration...");
 
-    const fileSystem = yield* FileSystemPortTag;
+    const fileSystem = yield* FileSystemTag;
 
     // For now, just ensure the directory exists
     // In the future, this could copy shell scripts, update PATH, etc.
@@ -116,7 +116,7 @@ function ensureShellIntegration(pathService: PathService): Effect.Effect<void, D
  */
 function ensureCorrectConfigUrl(pathService: PathService): Effect.Effect<void, DevError, any> {
   return Effect.gen(function* () {
-    const fileSystem = yield* FileSystemPortTag;
+    const fileSystem = yield* FileSystemTag;
 
     // Step 1: Read the project config to get the authoritative configUrl
     const projectConfigPath = `${pathService.devDir}/config.json`;
@@ -187,7 +187,7 @@ function setupMiseGlobalConfiguration(config: Config): Effect.Effect<void, DevEr
   return Effect.gen(function* () {
     yield* Effect.logInfo("🔧 Setting up mise global configuration...");
 
-    const misePort = yield* MisePortTag;
+    const misePort = yield* MiseTag;
 
     if (config.miseGlobalConfig) {
       yield* Effect.logDebug(
@@ -213,7 +213,7 @@ function upgradeEssentialTools(): Effect.Effect<void, DevError, any> {
   return Effect.gen(function* () {
     yield* Effect.logInfo("🛠️ Checking essential tools...");
 
-    const toolManagement = yield* ToolManagementPortTag;
+    const toolManagement = yield* ToolManagementTag;
 
     // Check and potentially upgrade tools in parallel
     const toolChecks = yield* Effect.all(
@@ -243,7 +243,7 @@ function upgradeEssentialTools(): Effect.Effect<void, DevError, any> {
  */
 function checkTool(
   toolName: string,
-  toolManager: ToolManagementPort[keyof ToolManagementPort],
+  toolManager: ToolManagement[keyof ToolManagement],
 ): Effect.Effect<void, DevError, any> {
   return Effect.gen(function* () {
     const { isValid, currentVersion } = yield* toolManager

@@ -1,6 +1,6 @@
 import { Effect, Layer } from "effect";
 
-import { ToolManagementPortTag, type ToolManagementPort, type ToolManager } from "../domain/tool-management-port";
+import { ToolManagementTag, type ToolManagement, type ToolManager } from "../domain/tool-management-port";
 import { BunToolsTag, type BunTools } from "./bun-tools-live";
 import { FzfToolsTag, type FzfTools } from "./fzf-tools-live";
 import { GcloudToolsTag, type GcloudTools } from "./gcloud-tools-live";
@@ -31,7 +31,7 @@ const makeToolManagementLive = (
   miseTools: MiseTools,
   fzfTools: FzfTools,
   gcloudTools: GcloudTools,
-): ToolManagementPort => ({
+): ToolManagement => ({
   bun: adaptToolService(bunTools),
   git: adaptToolService(gitTools),
   mise: adaptToolService(miseTools),
@@ -42,8 +42,8 @@ const makeToolManagementLive = (
 /**
  * Effect Layer that provides the ToolManagementService implementation
  */
-export const ToolManagementPortLiveLayer = Layer.effect(
-  ToolManagementPortTag,
+export const ToolManagementLiveLayer = Layer.effect(
+  ToolManagementTag,
   Effect.gen(function* () {
     const bunTools = yield* BunToolsTag;
     const gitTools = yield* GitToolsTag;

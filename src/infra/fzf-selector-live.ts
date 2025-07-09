@@ -1,10 +1,10 @@
 import { Effect, Layer } from "effect";
 
 import { unknownError, UnknownError } from "../domain/errors";
-import { InteractiveSelectorPortTag, type InteractiveSelectorPort } from "../domain/interactive-selector-port";
+import { InteractiveSelectorTag, type InteractiveSelector } from "../domain/interactive-selector-port";
 
 // Factory function to create FzfSelector implementation
-export const makeFzfSelector = (): InteractiveSelectorPort => ({
+export const makeFzfSelector = (): InteractiveSelector => ({
   selectFromList: (choices: string[]): Effect.Effect<string | null, UnknownError> =>
     Effect.gen(function* () {
       const directoryList = choices.join("\n") + "\n";
@@ -56,4 +56,4 @@ export const makeFzfSelector = (): InteractiveSelectorPort => ({
 });
 
 // Effect Layer for dependency injection
-export const InteractiveSelectorPortLiveLayer = Layer.succeed(InteractiveSelectorPortTag, makeFzfSelector());
+export const InteractiveSelectorLiveLayer = Layer.succeed(InteractiveSelectorTag, makeFzfSelector());

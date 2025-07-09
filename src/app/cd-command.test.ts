@@ -2,14 +2,14 @@ import { it } from "@effect/vitest";
 import { Effect, Exit, Layer } from "effect";
 import { describe, expect } from "vitest";
 
-import { DirectoryPortTag, type DirectoryPort } from "../domain/directory-port";
-import { InteractiveSelectorPortTag, type InteractiveSelectorPort } from "../domain/interactive-selector-port";
+import { DirectoryTag, type Directory } from "../domain/directory-port";
+import { InteractiveSelectorTag, type InteractiveSelector } from "../domain/interactive-selector-port";
 import { handleDirectCd, handleInteractiveCd } from "./cd-command";
 import { ShellIntegrationTag, type ShellIntegration } from "./shell-integration-service";
 
 describe("cd-command", () => {
   // Mock implementations
-  class MockDirectoryService implements DirectoryPort {
+  class MockDirectoryService implements Directory {
     constructor(private readonly directories: readonly string[]) {}
 
     ensureBaseDirectoryExists(): Effect.Effect<void, never, never> {
@@ -21,7 +21,7 @@ describe("cd-command", () => {
     }
   }
 
-  class MockInteractiveSelector implements InteractiveSelectorPort {
+  class MockInteractiveSelector implements InteractiveSelector {
     constructor(private readonly selectedPath: string | null) {}
 
     selectFromList(_items: readonly string[]): Effect.Effect<string | null, never, never> {
@@ -44,8 +44,8 @@ describe("cd-command", () => {
         const shellIntegration = new MockShellIntegration();
 
         const testLayer = Layer.mergeAll(
-          Layer.succeed(DirectoryPortTag, new MockDirectoryService(["src", "docs", "tests"])),
-          Layer.succeed(InteractiveSelectorPortTag, new MockInteractiveSelector(null)),
+          Layer.succeed(DirectoryTag, new MockDirectoryService(["src", "docs", "tests"])),
+          Layer.succeed(InteractiveSelectorTag, new MockInteractiveSelector(null)),
           Layer.succeed(ShellIntegrationTag, shellIntegration),
         );
 
@@ -60,8 +60,8 @@ describe("cd-command", () => {
         const shellIntegration = new MockShellIntegration();
 
         const testLayer = Layer.mergeAll(
-          Layer.succeed(DirectoryPortTag, new MockDirectoryService(["src/domain", "src/infra", "src/app"])),
-          Layer.succeed(InteractiveSelectorPortTag, new MockInteractiveSelector(null)),
+          Layer.succeed(DirectoryTag, new MockDirectoryService(["src/domain", "src/infra", "src/app"])),
+          Layer.succeed(InteractiveSelectorTag, new MockInteractiveSelector(null)),
           Layer.succeed(ShellIntegrationTag, shellIntegration),
         );
 
@@ -76,8 +76,8 @@ describe("cd-command", () => {
         const shellIntegration = new MockShellIntegration();
 
         const testLayer = Layer.mergeAll(
-          Layer.succeed(DirectoryPortTag, new MockDirectoryService(["src", "docs"])),
-          Layer.succeed(InteractiveSelectorPortTag, new MockInteractiveSelector(null)),
+          Layer.succeed(DirectoryTag, new MockDirectoryService(["src", "docs"])),
+          Layer.succeed(InteractiveSelectorTag, new MockInteractiveSelector(null)),
           Layer.succeed(ShellIntegrationTag, shellIntegration),
         );
 
@@ -96,8 +96,8 @@ describe("cd-command", () => {
         const shellIntegration = new MockShellIntegration();
 
         const testLayer = Layer.mergeAll(
-          Layer.succeed(DirectoryPortTag, new MockDirectoryService(["src", "docs"])),
-          Layer.succeed(InteractiveSelectorPortTag, new MockInteractiveSelector(null)),
+          Layer.succeed(DirectoryTag, new MockDirectoryService(["src", "docs"])),
+          Layer.succeed(InteractiveSelectorTag, new MockInteractiveSelector(null)),
           Layer.succeed(ShellIntegrationTag, shellIntegration),
         );
 
@@ -113,8 +113,8 @@ describe("cd-command", () => {
         const shellIntegration = new MockShellIntegration();
 
         const testLayer = Layer.mergeAll(
-          Layer.succeed(DirectoryPortTag, new MockDirectoryService([])),
-          Layer.succeed(InteractiveSelectorPortTag, new MockInteractiveSelector(null)),
+          Layer.succeed(DirectoryTag, new MockDirectoryService([])),
+          Layer.succeed(InteractiveSelectorTag, new MockInteractiveSelector(null)),
           Layer.succeed(ShellIntegrationTag, shellIntegration),
         );
 
@@ -130,8 +130,8 @@ describe("cd-command", () => {
         const shellIntegration = new MockShellIntegration();
 
         const testLayer = Layer.mergeAll(
-          Layer.succeed(DirectoryPortTag, new MockDirectoryService(["my documents", "project files", "test data"])),
-          Layer.succeed(InteractiveSelectorPortTag, new MockInteractiveSelector(null)),
+          Layer.succeed(DirectoryTag, new MockDirectoryService(["my documents", "project files", "test data"])),
+          Layer.succeed(InteractiveSelectorTag, new MockInteractiveSelector(null)),
           Layer.succeed(ShellIntegrationTag, shellIntegration),
         );
 
@@ -146,8 +146,8 @@ describe("cd-command", () => {
         const shellIntegration = new MockShellIntegration();
 
         const testLayer = Layer.mergeAll(
-          Layer.succeed(DirectoryPortTag, new MockDirectoryService(["src@2.0", "docs#draft", "test_data"])),
-          Layer.succeed(InteractiveSelectorPortTag, new MockInteractiveSelector(null)),
+          Layer.succeed(DirectoryTag, new MockDirectoryService(["src@2.0", "docs#draft", "test_data"])),
+          Layer.succeed(InteractiveSelectorTag, new MockInteractiveSelector(null)),
           Layer.succeed(ShellIntegrationTag, shellIntegration),
         );
 
@@ -163,10 +163,10 @@ describe("cd-command", () => {
 
         const testLayer = Layer.mergeAll(
           Layer.succeed(
-            DirectoryPortTag,
+            DirectoryTag,
             new MockDirectoryService(["infrastructure", "infrastructure-as-code", "infra-scripts"]),
           ),
-          Layer.succeed(InteractiveSelectorPortTag, new MockInteractiveSelector(null)),
+          Layer.succeed(InteractiveSelectorTag, new MockInteractiveSelector(null)),
           Layer.succeed(ShellIntegrationTag, shellIntegration),
         );
 
@@ -184,8 +184,8 @@ describe("cd-command", () => {
         const shellIntegration = new MockShellIntegration();
 
         const testLayer = Layer.mergeAll(
-          Layer.succeed(DirectoryPortTag, new MockDirectoryService(["src", "docs", "tests"])),
-          Layer.succeed(InteractiveSelectorPortTag, new MockInteractiveSelector("docs")),
+          Layer.succeed(DirectoryTag, new MockDirectoryService(["src", "docs", "tests"])),
+          Layer.succeed(InteractiveSelectorTag, new MockInteractiveSelector("docs")),
           Layer.succeed(ShellIntegrationTag, shellIntegration),
         );
 
@@ -200,8 +200,8 @@ describe("cd-command", () => {
         const shellIntegration = new MockShellIntegration();
 
         const testLayer = Layer.mergeAll(
-          Layer.succeed(DirectoryPortTag, new MockDirectoryService(["src", "docs", "tests"])),
-          Layer.succeed(InteractiveSelectorPortTag, new MockInteractiveSelector(null)),
+          Layer.succeed(DirectoryTag, new MockDirectoryService(["src", "docs", "tests"])),
+          Layer.succeed(InteractiveSelectorTag, new MockInteractiveSelector(null)),
           Layer.succeed(ShellIntegrationTag, shellIntegration),
         );
 
@@ -216,8 +216,8 @@ describe("cd-command", () => {
         const shellIntegration = new MockShellIntegration();
 
         const testLayer = Layer.mergeAll(
-          Layer.succeed(DirectoryPortTag, new MockDirectoryService([])),
-          Layer.succeed(InteractiveSelectorPortTag, new MockInteractiveSelector(null)),
+          Layer.succeed(DirectoryTag, new MockDirectoryService([])),
+          Layer.succeed(InteractiveSelectorTag, new MockInteractiveSelector(null)),
           Layer.succeed(ShellIntegrationTag, shellIntegration),
         );
 
@@ -231,7 +231,7 @@ describe("cd-command", () => {
       Effect.gen(function* () {
         let presentedItems: readonly string[] = [];
 
-        class CapturingSelector implements InteractiveSelectorPort {
+        class CapturingSelector implements InteractiveSelector {
           selectFromList(items: readonly string[]): Effect.Effect<string | null, never, never> {
             presentedItems = items;
             return Effect.succeed("src");
@@ -242,8 +242,8 @@ describe("cd-command", () => {
         const directories = ["src", "docs", "tests", "node_modules"];
 
         const testLayer = Layer.mergeAll(
-          Layer.succeed(DirectoryPortTag, new MockDirectoryService(directories)),
-          Layer.succeed(InteractiveSelectorPortTag, new CapturingSelector()),
+          Layer.succeed(DirectoryTag, new MockDirectoryService(directories)),
+          Layer.succeed(InteractiveSelectorTag, new CapturingSelector()),
           Layer.succeed(ShellIntegrationTag, shellIntegration),
         );
 
@@ -262,7 +262,7 @@ describe("cd-command", () => {
 
         const testLayer = Layer.mergeAll(
           Layer.succeed(
-            DirectoryPortTag,
+            DirectoryTag,
             new MockDirectoryService([
               "src/app/commands",
               "src/domain/models",
@@ -271,7 +271,7 @@ describe("cd-command", () => {
               "tests/integration/infra",
             ]),
           ),
-          Layer.succeed(InteractiveSelectorPortTag, new MockInteractiveSelector(null)),
+          Layer.succeed(InteractiveSelectorTag, new MockInteractiveSelector(null)),
           Layer.succeed(ShellIntegrationTag, shellIntegration),
         );
 
@@ -287,7 +287,7 @@ describe("cd-command", () => {
 
         const testLayer = Layer.mergeAll(
           Layer.succeed(
-            DirectoryPortTag,
+            DirectoryTag,
             new MockDirectoryService([
               "test",
               "tests",
@@ -295,7 +295,7 @@ describe("cd-command", () => {
               "test-utils",
             ]),
           ),
-          Layer.succeed(InteractiveSelectorPortTag, new MockInteractiveSelector(null)),
+          Layer.succeed(InteractiveSelectorTag, new MockInteractiveSelector(null)),
           Layer.succeed(ShellIntegrationTag, shellIntegration),
         );
 

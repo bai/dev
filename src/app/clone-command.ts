@@ -2,10 +2,10 @@ import { Args, Command } from "@effect/cli";
 import { Effect } from "effect";
 
 import { unknownError } from "../domain/errors";
-import { FileSystemPortTag } from "../domain/file-system-port";
-import { GitPortTag } from "../domain/git-port";
+import { FileSystemTag } from "../domain/file-system-port";
+import { GitTag } from "../domain/git-port";
 import { PathServiceTag } from "../domain/path-service";
-import { RepoProviderPortTag } from "../domain/repo-provider-port";
+import { RepoProviderTag } from "../domain/repo-provider-port";
 import { RepositoryServiceTag } from "../domain/repository-service";
 import { ShellIntegrationTag } from "./shell-integration-service";
 
@@ -20,9 +20,9 @@ export const cloneCommand = Command.make("clone", { repo }, ({ repo }) =>
       yield* Effect.addFinalizer(() => Effect.logDebug("Clone command finalizer called - cleanup complete"));
 
       // Get services from Effect Context
-      const git = yield* GitPortTag;
-      const repoProvider = yield* RepoProviderPortTag;
-      const fileSystem = yield* FileSystemPortTag;
+      const git = yield* GitTag;
+      const repoProvider = yield* RepoProviderTag;
+      const fileSystem = yield* FileSystemTag;
       const pathService = yield* PathServiceTag;
       const repositoryService = yield* RepositoryServiceTag;
       const shellIntegration = yield* ShellIntegrationTag;

@@ -1,11 +1,11 @@
 import { Effect, Layer } from "effect";
 
 import { authError, type AuthError, type ShellExecutionError } from "../domain/errors";
-import { KeychainPortTag, type KeychainPort } from "../domain/keychain-port";
-import { ShellPortTag, type ShellPort } from "../domain/shell-port";
+import { KeychainTag, type Keychain } from "../domain/keychain-port";
+import { ShellTag, type Shell } from "../domain/shell-port";
 
 // Factory function to create Keychain implementation
-export const makeKeychainLive = (shell: ShellPort): KeychainPort => ({
+export const makeKeychainLive = (shell: Shell): Keychain => ({
   setCredential: (
     service: string,
     account: string,
@@ -84,10 +84,10 @@ export const makeKeychainLive = (shell: ShellPort): KeychainPort => ({
 });
 
 // Effect Layer for dependency injection
-export const KeychainPortLiveLayer = Layer.effect(
-  KeychainPortTag,
+export const KeychainLiveLayer = Layer.effect(
+  KeychainTag,
   Effect.gen(function* () {
-    const shell = yield* ShellPortTag;
+    const shell = yield* ShellTag;
     return makeKeychainLive(shell);
   }),
 );

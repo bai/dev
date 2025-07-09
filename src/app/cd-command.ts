@@ -1,9 +1,10 @@
 import { Args, Command } from "@effect/cli";
 import { Effect } from "effect";
 
-import { DirectoryPortTag } from "../domain/directory-port";
-import { unknownError, type DevError } from "../domain/errors";
-import { InteractiveSelectorPortTag } from "../domain/interactive-selector-port";
+import { DirectoryTag } from "../domain/directory-port";
+import { unknownError } from "../domain/errors";
+import type { DevError } from "../domain/errors";
+import { InteractiveSelectorTag } from "../domain/interactive-selector-port";
 import { filter } from "../domain/matching";
 import { ShellIntegrationTag } from "./shell-integration-service";
 
@@ -31,7 +32,7 @@ export function handleDirectCd(folderName: string): Effect.Effect<void, DevError
     }
 
     // Use DirectoryService to get directories
-    const directoryService = yield* DirectoryPortTag;
+    const directoryService = yield* DirectoryTag;
     const directories = yield* directoryService.findDirs().pipe(
       Effect.tap(() => Effect.annotateCurrentSpan("operation", "find_directories")),
       Effect.withSpan("find-directories"),
@@ -68,7 +69,7 @@ export function handleDirectCd(folderName: string): Effect.Effect<void, DevError
 export function handleInteractiveCd(): Effect.Effect<void, DevError, any> {
   return Effect.gen(function* () {
     // Use DirectoryService to get directories
-    const directoryService = yield* DirectoryPortTag;
+    const directoryService = yield* DirectoryTag;
     const directories = yield* directoryService.findDirs().pipe(
       Effect.tap(() => Effect.annotateCurrentSpan("operation", "find_directories")),
       Effect.withSpan("find-directories"),
@@ -81,7 +82,7 @@ export function handleInteractiveCd(): Effect.Effect<void, DevError, any> {
     }
 
     // Use InteractiveSelector for interactive selection
-    const selector = yield* InteractiveSelectorPortTag;
+    const selector = yield* InteractiveSelectorTag;
     const selectedPath = yield* selector.selectFromList(directories).pipe(
       Effect.tap(() => Effect.annotateCurrentSpan("operation", "interactive_selection")),
       Effect.withSpan("interactive-selection"),

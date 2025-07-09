@@ -3,7 +3,7 @@ import { Context, type Effect } from "effect";
 import type { GitError, ShellExecutionError } from "./errors";
 import type { Repository } from "./models";
 
-export interface GitPort {
+export interface Git {
   /**
    * Clone a repository to a destination path
    */
@@ -33,4 +33,4 @@ export interface GitPort {
   getRemoteOriginUrl(repositoryPath: string): Effect.Effect<string, GitError | ShellExecutionError>;
 }
 
-export class GitPortTag extends Context.Tag("GitPort")<GitPortTag, GitPort>() {}
+export class GitTag extends Context.Tag("Git")<GitTag, Git>() {}

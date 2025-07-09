@@ -1,11 +1,11 @@
 import { Effect, Layer } from "effect";
 
 import { networkError, type NetworkError, type UnknownError } from "../domain/errors";
-import { FileSystemPortTag, type FileSystemPort } from "../domain/file-system-port";
-import { NetworkPortTag, type HttpResponse, type NetworkPort } from "../domain/network-port";
+import { FileSystemTag, type FileSystem } from "../domain/file-system-port";
+import { NetworkTag, type HttpResponse, type Network } from "../domain/network-port";
 
 // Factory function to create Network implementation
-export const makeNetworkLive = (fileSystem: FileSystemPort): NetworkPort => ({
+export const makeNetworkLive = (fileSystem: FileSystem): Network => ({
   get: (
     url: string,
     options: { headers?: Record<string, string> } = {},
@@ -75,10 +75,10 @@ export const makeNetworkLive = (fileSystem: FileSystemPort): NetworkPort => ({
 });
 
 // Effect Layer for dependency injection
-export const NetworkPortLiveLayer = Layer.effect(
-  NetworkPortTag,
+export const NetworkLiveLayer = Layer.effect(
+  NetworkTag,
   Effect.gen(function* () {
-    const fileSystem = yield* FileSystemPortTag;
+    const fileSystem = yield* FileSystemTag;
     return makeNetworkLive(fileSystem);
   }),
 );

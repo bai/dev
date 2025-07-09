@@ -2,13 +2,13 @@ import { desc, eq, isNull, lt } from "drizzle-orm";
 import { Clock, Effect, Layer } from "effect";
 
 import { runs } from "../../drizzle/schema";
-import { DatabasePortTag, type DatabasePort } from "../domain/database-port";
+import { DatabaseTag, type Database } from "../domain/database-port";
 import { configError, type ConfigError, type UnknownError } from "../domain/errors";
 import type { CommandRun } from "../domain/models";
-import { RunStorePortTag, type RunStorePort } from "../domain/run-store-port";
+import { RunStoreTag, type RunStore } from "../domain/run-store-port";
 
 // Factory function that creates RunStore
-export const makeRunStoreLive = (database: DatabasePort): RunStorePort => {
+export const makeRunStoreLive = (database: Database): RunStore => {
   // Individual functions implementing the service methods
 
   const record = (run: Omit<CommandRun, "id" | "duration_ms">): Effect.Effect<string, ConfigError | UnknownError> =>
@@ -130,10 +130,10 @@ export const makeRunStoreLive = (database: DatabasePort): RunStorePort => {
 };
 
 // Effect Layer for dependency injection
-export const RunStorePortLiveLayer = Layer.scoped(
-  RunStorePortTag,
+export const RunStoreLiveLayer = Layer.scoped(
+  RunStoreTag,
   Effect.gen(function* () {
-    const database = yield* DatabasePortTag;
+    const database = yield* DatabaseTag;
 
     // Create the service
     const runStore = makeRunStoreLive(database);

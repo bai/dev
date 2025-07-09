@@ -3,11 +3,11 @@ import { Effect, Layer } from "effect";
 import { gitHubRepoToRepository, parseGitHubRepo, parseGitHubSearchResponse } from "../domain/api-schemas";
 import { networkError, unknownError, type NetworkError, type UnknownError } from "../domain/errors";
 import type { GitProvider, Repository } from "../domain/models";
-import { NetworkPortTag, type NetworkPort } from "../domain/network-port";
-import { RepoProviderPortTag, type RepoProviderPort } from "../domain/repo-provider-port";
+import { NetworkTag, type Network } from "../domain/network-port";
+import { RepoProviderTag, type RepoProvider } from "../domain/repo-provider-port";
 
 // Factory function that creates GitHubProvider with dependencies
-export const makeGitHubProvider = (network: NetworkPort, defaultOrg = "octocat"): RepoProviderPort => {
+export const makeGitHubProvider = (network: Network, defaultOrg = "octocat"): RepoProvider => {
   const provider: GitProvider = {
     name: "github",
     baseUrl: "https://github.com",
@@ -92,9 +92,9 @@ export const makeGitHubProvider = (network: NetworkPort, defaultOrg = "octocat")
 // Effect Layer for dependency injection using factory function
 export const GitHubProviderLiveLayer = (defaultOrg: string) =>
   Layer.effect(
-    RepoProviderPortTag,
+    RepoProviderTag,
     Effect.gen(function* () {
-      const network = yield* NetworkPortTag;
+      const network = yield* NetworkTag;
       return makeGitHubProvider(network, defaultOrg);
     }),
   );

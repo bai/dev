@@ -1,12 +1,12 @@
 import { z } from "zod/v4";
 
-import type { Config, GitProviderType, LogLevel, MiseConfig } from "../domain/models";
+import type { Config, GitProviderType, LogLevel } from "../domain/models";
 
 // Log level schema
 const logLevelSchema: z.ZodType<LogLevel> = z.enum(["debug", "info", "warning", "error", "fatal"]);
 
 // Mise configuration schema (matching domain types)
-const miseConfigSchema: z.ZodType<MiseConfig> = z.object({
+const miseConfigSchema = z.object({
   min_version: z.string().optional(),
   env: z
     .record(z.string(), z.any())
@@ -32,7 +32,7 @@ const miseConfigSchema: z.ZodType<MiseConfig> = z.object({
 
 const gitProviderSchema: z.ZodType<GitProviderType> = z.enum(["github", "gitlab"]);
 
-export const configSchema: z.ZodType<Config> = z.object({
+export const configSchema = z.object({
   version: z.literal(3),
   configUrl: z.string().url(),
   defaultOrg: z.string(),
@@ -46,6 +46,18 @@ export const configSchema: z.ZodType<Config> = z.object({
     .describe("Map of organizations to their preferred git provider"),
   miseGlobalConfig: miseConfigSchema.optional().describe("Mise global configuration settings"),
   miseRepoConfig: miseConfigSchema.optional().describe("Mise repository configuration settings"),
+  builtInHealthChecks: z
+    .record(
+      z.string(),
+      z.object({
+        command: z.string(),
+        versionPattern: z.string().optional(),
+        timeout: z.number().optional(),
+        parseOutput: z.any().optional(),
+      }),
+    )
+    .optional()
+    .describe("Built-in health check configurations"),
 });
 
 // Export Config type that was moved to domain

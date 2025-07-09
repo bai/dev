@@ -8,7 +8,7 @@ export interface SpawnResult {
   stderr: string;
 }
 
-export interface ShellPort {
+export interface Shell {
   /**
    * Execute a command and return the result
    */
@@ -29,4 +29,4 @@ export interface ShellPort {
   setProcessCwd(path: string): Effect.Effect<void>;
 }
 
-export class ShellPortTag extends Context.Tag("ShellPort")<ShellPortTag, ShellPort>() {}
+export class ShellTag extends Context.Tag("Shell")<ShellTag, Shell>() {}

@@ -1,16 +1,17 @@
 // Core configuration types (moved from config schema to maintain proper layering)
+
 export interface MiseConfig {
-  min_version?: string;
-  env?: Record<string, any> & {
-    _?: {
-      path?: string[];
-      file?: string[];
+  readonly min_version?: string;
+  readonly env?: Record<string, any> & {
+    readonly _?: {
+      readonly path?: string[];
+      readonly file?: string[];
     };
   };
-  tools?: Record<string, string | string[]>;
-  settings?: {
-    idiomatic_version_file_enable_tools?: string[];
-    trusted_config_paths?: string[];
+  readonly tools?: Record<string, string | string[]>;
+  readonly settings?: {
+    readonly idiomatic_version_file_enable_tools?: string[];
+    readonly trusted_config_paths?: string[];
   };
 }
 
@@ -49,25 +50,35 @@ export interface Config {
 // Core domain models
 
 export interface CommandRun {
-  id: string;
-  cli_version: string;
-  command_name: string;
-  arguments?: string;
-  exit_code?: number;
-  cwd: string;
-  started_at: Date;
-  finished_at?: Date;
-  duration_ms?: number;
+  readonly id: string;
+  readonly cli_version: string;
+  readonly command_name: string;
+  readonly arguments?: string;
+  readonly exit_code?: number;
+  readonly cwd: string;
+  readonly started_at: Date;
+  readonly finished_at?: Date;
+  readonly duration_ms?: number;
 }
 
 export interface GitProvider {
-  name: "github" | "gitlab";
-  baseUrl: string;
+  readonly name: "github" | "gitlab";
+  readonly baseUrl: string;
 }
 
 export interface Repository {
-  name: string;
-  organization: string;
-  provider: GitProvider;
-  cloneUrl: string;
+  readonly name: string;
+  readonly organization: string;
+  readonly provider: GitProvider;
+  readonly cloneUrl: string;
+}
+
+export interface GitInfo {
+  readonly branch: string | null;
+  readonly remote: string | null;
+}
+
+export interface EnvironmentInfo {
+  readonly currentDirectory: string;
+  readonly git: GitInfo;
 }

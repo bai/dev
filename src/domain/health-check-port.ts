@@ -20,7 +20,7 @@ export interface HealthCheckSummary {
   readonly checkedAt: Date;
 }
 
-export interface HealthCheckPort {
+export interface HealthCheck {
   /**
    * Run health checks immediately and return results
    * Used by `dev status` command
@@ -39,4 +39,4 @@ export interface HealthCheckPort {
   pruneOldRecords(retentionDays?: number): Effect.Effect<void, HealthCheckError>;
 }
 
-export class HealthCheckPortTag extends Context.Tag("HealthCheckPort")<HealthCheckPortTag, HealthCheckPort>() {}
+export class HealthCheckTag extends Context.Tag("HealthCheck")<HealthCheckTag, HealthCheck>() {}

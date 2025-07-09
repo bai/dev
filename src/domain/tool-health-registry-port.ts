@@ -7,7 +7,7 @@ import type { HealthCheckResult } from "./health-check-port";
  * Domain port for tool health registry
  * Provides health check capabilities for tools
  */
-export interface ToolHealthRegistryPort {
+export interface ToolHealthRegistry {
   /**
    * Get list of all registered tools that can be health checked
    */
@@ -24,7 +24,7 @@ export interface ToolHealthRegistryPort {
   checkAllTools(): Effect.Effect<readonly HealthCheckResult[], HealthCheckError>;
 }
 
-export class ToolHealthRegistryPortTag extends Context.Tag("ToolHealthRegistryPort")<
-  ToolHealthRegistryPortTag,
-  ToolHealthRegistryPort
+export class ToolHealthRegistryTag extends Context.Tag("ToolHealthRegistry")<
+  ToolHealthRegistryTag,
+  ToolHealthRegistry
 >() {}

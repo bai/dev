@@ -2,7 +2,7 @@ import { Effect, Layer } from "effect";
 
 import { healthCheckError, type HealthCheckError } from "../domain/errors";
 import { type HealthCheckResult } from "../domain/health-check-port";
-import { ToolHealthRegistryPortTag, type ToolHealthRegistryPort } from "../domain/tool-health-registry-port";
+import { ToolHealthRegistryTag, type ToolHealthRegistry } from "../domain/tool-health-registry-port";
 import { BunToolsTag, type BunTools } from "./bun-tools-live";
 import { FzfToolsTag, type FzfTools } from "./fzf-tools-live";
 import { GcloudToolsTag, type GcloudTools } from "./gcloud-tools-live";
@@ -18,7 +18,7 @@ export const makeToolHealthRegistryLive = (
   miseTools: MiseTools,
   fzfTools: FzfTools,
   gcloudTools: GcloudTools,
-): ToolHealthRegistryPort => {
+): ToolHealthRegistry => {
   // Map of tool names to their health check functions
   const toolCheckers = new Map<string, () => Effect.Effect<HealthCheckResult, HealthCheckError>>([
     ["bun", () => bunTools.performHealthCheck()],
@@ -62,8 +62,8 @@ export const makeToolHealthRegistryLive = (
 /**
  * Effect Layer for dependency injection
  */
-export const ToolHealthRegistryPortLiveLayer = Layer.effect(
-  ToolHealthRegistryPortTag,
+export const ToolHealthRegistryLiveLayer = Layer.effect(
+  ToolHealthRegistryTag,
   Effect.gen(function* () {
     const bunTools = yield* BunToolsTag;
     const gitTools = yield* GitToolsTag;

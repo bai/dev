@@ -3,13 +3,13 @@ import { Effect } from "effect";
 import { afterEach, beforeEach, describe, expect, vi } from "vitest";
 
 import { gitError, shellExecutionError } from "../domain/errors";
-import type { GitPort } from "../domain/git-port";
+import type { Git } from "../domain/git-port";
 import type { Repository } from "../domain/models";
-import type { ShellPort, SpawnResult } from "../domain/shell-port";
+import type { Shell, SpawnResult } from "../domain/shell-port";
 import { makeGitLive } from "./git-live";
 
 // Mock shell implementation for testing
-class MockShell implements ShellPort {
+class MockShell implements Shell {
   private responses = new Map<string, SpawnResult | Error>();
 
   setResponse(command: string, args: string[], response: SpawnResult | Error): void {
@@ -55,7 +55,7 @@ class MockShell implements ShellPort {
 
 describe("git-live", () => {
   let mockShell: MockShell;
-  let git: GitPort;
+  let git: Git;
 
   beforeEach(() => {
     mockShell = new MockShell();

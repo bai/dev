@@ -53,4 +53,4 @@ export const PathLive: PathService = {
 export class PathServiceTag extends Context.Tag("PathService")<PathServiceTag, PathService>() {}
 
 // Layer that provides PathService
-export const PathLiveLayer = Layer.succeed(PathServiceTag, PathLive);
+export const PathServiceLiveLayer = Layer.succeed(PathServiceTag, PathLive);

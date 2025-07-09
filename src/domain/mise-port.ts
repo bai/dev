@@ -7,7 +7,7 @@ export interface MiseInfo {
   runtimeVersions: Record<string, string>;
 }
 
-export interface MisePort {
+export interface Mise {
   /**
    * Check if mise is installed and get version info
    */
@@ -39,4 +39,4 @@ export interface MisePort {
   setupGlobalConfig(): Effect.Effect<void, UnknownError>;
 }
 
-export class MisePortTag extends Context.Tag("MisePort")<MisePortTag, MisePort>() {}
+export class MiseTag extends Context.Tag("Mise")<MiseTag, Mise>() {}

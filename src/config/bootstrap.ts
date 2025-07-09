@@ -3,9 +3,9 @@ import path from "path";
 
 import { Effect, Layer } from "effect";
 
-import { PathLiveLayer } from "../domain/path-service";
-import { FileSystemPortLiveLayer } from "../infra/file-system-live";
-import { NetworkPortLiveLayer } from "../infra/network-live";
+import { PathServiceLiveLayer } from "../domain/path-service";
+import { FileSystemLiveLayer } from "../infra/file-system-live";
+import { NetworkLiveLayer } from "../infra/network-live";
 import { ConfigLoaderLiveLayer, ConfigLoaderTag } from "./loader";
 import { type Config } from "./schema";
 
@@ -23,15 +23,15 @@ import { type Config } from "./schema";
 
 // Minimal layer for configuration bootstrap
 const BootstrapLayer = Layer.mergeAll(
-  PathLiveLayer,
-  FileSystemPortLiveLayer,
-  Layer.provide(NetworkPortLiveLayer, FileSystemPortLiveLayer),
+  PathServiceLiveLayer,
+  FileSystemLiveLayer,
+  Layer.provide(NetworkLiveLayer, FileSystemLiveLayer),
   Layer.provide(
     ConfigLoaderLiveLayer(path.join(os.homedir(), ".config", "dev", "config.json")),
     Layer.mergeAll(
-      PathLiveLayer,
-      FileSystemPortLiveLayer,
-      Layer.provide(NetworkPortLiveLayer, FileSystemPortLiveLayer),
+      PathServiceLiveLayer,
+      FileSystemLiveLayer,
+      Layer.provide(NetworkLiveLayer, FileSystemLiveLayer),
     ),
   ),
 );

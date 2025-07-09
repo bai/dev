@@ -3,18 +3,18 @@ import { Effect, Exit, Layer } from "effect";
 import { describe, expect } from "vitest";
 
 import { unknownError } from "../domain/errors";
-import { FileSystemPortTag, type FileSystemPort } from "../domain/file-system-port";
-import { GitPortTag, type GitPort } from "../domain/git-port";
+import { FileSystemTag, type FileSystem } from "../domain/file-system-port";
+import { GitTag, type Git } from "../domain/git-port";
 import type { Config, GitProvider, Repository } from "../domain/models";
 import { PathServiceTag, type PathService } from "../domain/path-service";
-import { RepoProviderPortTag, type RepoProviderPort } from "../domain/repo-provider-port";
+import { RepoProviderTag, type RepoProvider } from "../domain/repo-provider-port";
 import { RepositoryServiceTag, type RepositoryService } from "../domain/repository-service";
 import { cloneCommand } from "./clone-command";
 import { ShellIntegrationTag, type ShellIntegration } from "./shell-integration-service";
 
 describe("clone-command", () => {
   // Mock implementations
-  class MockFileSystem implements FileSystemPort {
+  class MockFileSystem implements FileSystem {
     public existingPaths = new Set<string>();
 
     exists(path: string): Effect.Effect<boolean, never, never> {
@@ -46,7 +46,7 @@ describe("clone-command", () => {
     }
   }
 
-  class MockGit implements GitPort {
+  class MockGit implements Git {
     public clonedRepos: Array<{ repository: Repository; destinationPath: string }> = [];
 
     cloneRepositoryToPath(repository: Repository, destinationPath: string): Effect.Effect<void, never, never> {
@@ -71,7 +71,7 @@ describe("clone-command", () => {
     }
   }
 
-  class MockRepoProvider implements RepoProviderPort {
+  class MockRepoProvider implements RepoProvider {
     constructor(
       private readonly defaultOrg = "default-org",
       private readonly provider: GitProvider = { name: "github", baseUrl: "https://github.com" },
@@ -155,9 +155,9 @@ describe("clone-command", () => {
         const shellIntegration = new MockShellIntegration();
 
         const testLayer = Layer.mergeAll(
-          Layer.succeed(FileSystemPortTag, fileSystem),
-          Layer.succeed(GitPortTag, git),
-          Layer.succeed(RepoProviderPortTag, new MockRepoProvider()),
+          Layer.succeed(FileSystemTag, fileSystem),
+          Layer.succeed(GitTag, git),
+          Layer.succeed(RepoProviderTag, new MockRepoProvider()),
           Layer.succeed(PathServiceTag, new MockPathService()),
           Layer.succeed(RepositoryServiceTag, new MockRepositoryService()),
           Layer.succeed(ShellIntegrationTag, shellIntegration),
@@ -184,9 +184,9 @@ describe("clone-command", () => {
         const shellIntegration = new MockShellIntegration();
 
         const testLayer = Layer.mergeAll(
-          Layer.succeed(FileSystemPortTag, fileSystem),
-          Layer.succeed(GitPortTag, git),
-          Layer.succeed(RepoProviderPortTag, new MockRepoProvider("default-org")),
+          Layer.succeed(FileSystemTag, fileSystem),
+          Layer.succeed(GitTag, git),
+          Layer.succeed(RepoProviderTag, new MockRepoProvider("default-org")),
           Layer.succeed(PathServiceTag, new MockPathService()),
           Layer.succeed(RepositoryServiceTag, new MockRepositoryService()),
           Layer.succeed(ShellIntegrationTag, shellIntegration),
@@ -213,9 +213,9 @@ describe("clone-command", () => {
         const shellIntegration = new MockShellIntegration();
 
         const testLayer = Layer.mergeAll(
-          Layer.succeed(FileSystemPortTag, fileSystem),
-          Layer.succeed(GitPortTag, git),
-          Layer.succeed(RepoProviderPortTag, new MockRepoProvider()),
+          Layer.succeed(FileSystemTag, fileSystem),
+          Layer.succeed(GitTag, git),
+          Layer.succeed(RepoProviderTag, new MockRepoProvider()),
           Layer.succeed(PathServiceTag, new MockPathService()),
           Layer.succeed(RepositoryServiceTag, new MockRepositoryService()),
           Layer.succeed(ShellIntegrationTag, shellIntegration),
@@ -240,9 +240,9 @@ describe("clone-command", () => {
         const shellIntegration = new MockShellIntegration();
 
         const testLayer = Layer.mergeAll(
-          Layer.succeed(FileSystemPortTag, fileSystem),
-          Layer.succeed(GitPortTag, git),
-          Layer.succeed(RepoProviderPortTag, new MockRepoProvider()),
+          Layer.succeed(FileSystemTag, fileSystem),
+          Layer.succeed(GitTag, git),
+          Layer.succeed(RepoProviderTag, new MockRepoProvider()),
           Layer.succeed(PathServiceTag, new MockPathService()),
           Layer.succeed(RepositoryServiceTag, new MockRepositoryService()),
           Layer.succeed(ShellIntegrationTag, shellIntegration),
@@ -276,9 +276,9 @@ describe("clone-command", () => {
         const shellIntegration = new MockShellIntegration();
 
         const testLayer = Layer.mergeAll(
-          Layer.succeed(FileSystemPortTag, fileSystem),
-          Layer.succeed(GitPortTag, git),
-          Layer.succeed(RepoProviderPortTag, new FailingRepoProvider()),
+          Layer.succeed(FileSystemTag, fileSystem),
+          Layer.succeed(GitTag, git),
+          Layer.succeed(RepoProviderTag, new FailingRepoProvider()),
           Layer.succeed(PathServiceTag, new MockPathService()),
           Layer.succeed(RepositoryServiceTag, new MockRepositoryService()),
           Layer.succeed(ShellIntegrationTag, shellIntegration),
@@ -304,9 +304,9 @@ describe("clone-command", () => {
         const githubProvider: GitProvider = { name: "github", baseUrl: "https://github.com" };
 
         const testLayer = Layer.mergeAll(
-          Layer.succeed(FileSystemPortTag, fileSystem),
-          Layer.succeed(GitPortTag, git),
-          Layer.succeed(RepoProviderPortTag, new MockRepoProvider("github-org", githubProvider)),
+          Layer.succeed(FileSystemTag, fileSystem),
+          Layer.succeed(GitTag, git),
+          Layer.succeed(RepoProviderTag, new MockRepoProvider("github-org", githubProvider)),
           Layer.succeed(PathServiceTag, new MockPathService()),
           Layer.succeed(RepositoryServiceTag, new MockRepositoryService()),
           Layer.succeed(ShellIntegrationTag, shellIntegration),
@@ -330,9 +330,9 @@ describe("clone-command", () => {
         const gitlabProvider: GitProvider = { name: "gitlab", baseUrl: "https://gitlab.com" };
 
         const testLayer = Layer.mergeAll(
-          Layer.succeed(FileSystemPortTag, fileSystem),
-          Layer.succeed(GitPortTag, git),
-          Layer.succeed(RepoProviderPortTag, new MockRepoProvider("gitlab-org", gitlabProvider)),
+          Layer.succeed(FileSystemTag, fileSystem),
+          Layer.succeed(GitTag, git),
+          Layer.succeed(RepoProviderTag, new MockRepoProvider("gitlab-org", gitlabProvider)),
           Layer.succeed(PathServiceTag, new MockPathService()),
           Layer.succeed(RepositoryServiceTag, new MockRepositoryService()),
           Layer.succeed(ShellIntegrationTag, shellIntegration),
@@ -371,9 +371,9 @@ describe("clone-command", () => {
         }
 
         const testLayer = Layer.mergeAll(
-          Layer.succeed(FileSystemPortTag, fileSystem),
-          Layer.succeed(GitPortTag, git),
-          Layer.succeed(RepoProviderPortTag, new MockRepoProvider()),
+          Layer.succeed(FileSystemTag, fileSystem),
+          Layer.succeed(GitTag, git),
+          Layer.succeed(RepoProviderTag, new MockRepoProvider()),
           Layer.succeed(PathServiceTag, new CustomPathService()),
           Layer.succeed(RepositoryServiceTag, new CustomRepositoryService()),
           Layer.succeed(ShellIntegrationTag, shellIntegration),
@@ -396,9 +396,9 @@ describe("clone-command", () => {
         const shellIntegration = new MockShellIntegration();
 
         const testLayer = Layer.mergeAll(
-          Layer.succeed(FileSystemPortTag, fileSystem),
-          Layer.succeed(GitPortTag, git),
-          Layer.succeed(RepoProviderPortTag, new MockRepoProvider()),
+          Layer.succeed(FileSystemTag, fileSystem),
+          Layer.succeed(GitTag, git),
+          Layer.succeed(RepoProviderTag, new MockRepoProvider()),
           Layer.succeed(PathServiceTag, new MockPathService()),
           Layer.succeed(RepositoryServiceTag, new MockRepositoryService()),
           Layer.succeed(ShellIntegrationTag, shellIntegration),

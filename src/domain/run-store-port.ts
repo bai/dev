@@ -3,7 +3,7 @@ import { Context, type Effect } from "effect";
 import type { ConfigError, UnknownError } from "./errors";
 import type { CommandRun } from "./models";
 
-export interface RunStorePort {
+export interface RunStore {
   /**
    * Record a new command run
    */
@@ -30,4 +30,4 @@ export interface RunStorePort {
   completeIncompleteRuns(): Effect.Effect<void, ConfigError | UnknownError>;
 }
 
-export class RunStorePortTag extends Context.Tag("RunStorePort")<RunStorePortTag, RunStorePort>() {}
+export class RunStoreTag extends Context.Tag("RunStore")<RunStoreTag, RunStore>() {}
