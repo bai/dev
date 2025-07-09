@@ -7,57 +7,7 @@ import { makeGitHubProvider } from "./github-provider-live";
 import { makeGitLabProvider } from "./gitlab-provider-live";
 
 /**
- * Multi-provider that can select the appropriate provider based on organization
- */
-export class MultiRepoProvider implements RepoProvider {
-  private readonly githubProvider: RepoProvider;
-  private readonly gitlabProvider: RepoProvider;
-
-  constructor(
-    network: Network,
-    private readonly defaultOrg: string,
-    private readonly defaultProvider: GitProviderType,
-    private readonly orgToProvider: Record<string, GitProviderType>,
-  ) {
-    this.githubProvider = makeGitHubProvider(network, defaultOrg);
-    this.gitlabProvider = makeGitLabProvider(network, defaultOrg);
-  }
-
-  /**
-   * Get the default organization
-   */
-  getDefaultOrg(): string {
-    return this.defaultOrg;
-  }
-
-  /**
-   * Get the provider for the default org
-   */
-  getProvider() {
-    const defaultOrgProvider = this.orgToProvider[this.defaultOrg] || this.defaultProvider;
-    return defaultOrgProvider === "gitlab" ? this.gitlabProvider.getProvider() : this.githubProvider.getProvider();
-  }
-
-  /**
-   * Resolve repository using the appropriate provider for the org
-   */
-  resolveRepository(name: string, org?: string) {
-    const targetOrg = org || this.defaultOrg;
-    const provider = this.selectProvider(targetOrg);
-    return provider.resolveRepository(name, targetOrg);
-  }
-
-  /**
-   * Select the appropriate provider based on organization
-   */
-  private selectProvider(org: string): RepoProvider {
-    const providerType = this.orgToProvider[org] || this.defaultProvider;
-    return providerType === "gitlab" ? this.gitlabProvider : this.githubProvider;
-  }
-}
-
-/**
- * Factory function to create MultiRepoProvider
+ * Factory function that creates a multi-provider that can select the appropriate provider based on organization
  */
 export const makeMultiRepoProvider = (
   network: Network,
@@ -65,7 +15,45 @@ export const makeMultiRepoProvider = (
   defaultProvider: GitProviderType,
   orgToProvider: Record<string, GitProviderType>,
 ): RepoProvider => {
-  return new MultiRepoProvider(network, defaultOrg, defaultProvider, orgToProvider);
+  // Create provider instances using the factory functions
+  const githubProvider = makeGitHubProvider(network, defaultOrg);
+  const gitlabProvider = makeGitLabProvider(network, defaultOrg);
+
+  /**
+   * Select the appropriate provider based on organization
+   */
+  const selectProvider = (org: string): RepoProvider => {
+    const providerType = orgToProvider[org] || defaultProvider;
+    return providerType === "gitlab" ? gitlabProvider : githubProvider;
+  };
+
+  /**
+   * Get the default organization
+   */
+  const getDefaultOrg = (): string => defaultOrg;
+
+  /**
+   * Get the provider for the default org
+   */
+  const getProvider = () => {
+    const defaultOrgProvider = orgToProvider[defaultOrg] || defaultProvider;
+    return defaultOrgProvider === "gitlab" ? gitlabProvider.getProvider() : githubProvider.getProvider();
+  };
+
+  /**
+   * Resolve repository using the appropriate provider for the org
+   */
+  const resolveRepository = (name: string, org?: string) => {
+    const targetOrg = org || defaultOrg;
+    const provider = selectProvider(targetOrg);
+    return provider.resolveRepository(name, targetOrg);
+  };
+
+  return {
+    getDefaultOrg,
+    getProvider,
+    resolveRepository,
+  };
 };
 
 /**
