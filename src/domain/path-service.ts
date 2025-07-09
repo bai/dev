@@ -30,27 +30,35 @@ export interface PathService {
 
 // Individual functions for each method
 const getBasePath = (config: Config): string => {
-  // Default base search path since paths.base is no longer in config
-  return path.join(DEFAULT_HOME_DIR, DEFAULT_BASE_SEARCH_DIR);
+  return config.baseSearchPath ?? path.join(DEFAULT_HOME_DIR, DEFAULT_BASE_SEARCH_DIR);
 };
 
-// Plain object implementation
-export const PathLive: PathService = {
-  homeDir: DEFAULT_HOME_DIR,
-  devDir: path.join(DEFAULT_HOME_DIR, DEFAULT_DEV_DIR),
-  configDir: path.join(XDG_CONFIG_HOME, "dev"),
-  configPath: path.join(XDG_CONFIG_HOME, "dev", "config.json"),
-  dataDir: path.join(XDG_DATA_HOME, "dev"),
-  dbPath: path.join(XDG_DATA_HOME, "dev", "dev.db"),
-  cacheDir: path.join(XDG_CACHE_HOME, "dev"),
-  get baseSearchDir(): string {
-    return path.join(DEFAULT_HOME_DIR, DEFAULT_BASE_SEARCH_DIR);
-  },
-  getBasePath,
+// Factory function to create PathService with dynamic baseSearchPath
+export const createPathService = (baseSearchPath?: string): PathService => {
+  const resolvedBaseSearchPath = baseSearchPath ?? path.join(DEFAULT_HOME_DIR, DEFAULT_BASE_SEARCH_DIR);
+
+  return {
+    homeDir: DEFAULT_HOME_DIR,
+    devDir: path.join(DEFAULT_HOME_DIR, DEFAULT_DEV_DIR),
+    configDir: path.join(XDG_CONFIG_HOME, "dev"),
+    configPath: path.join(XDG_CONFIG_HOME, "dev", "config.json"),
+    dataDir: path.join(XDG_DATA_HOME, "dev"),
+    dbPath: path.join(XDG_DATA_HOME, "dev", "dev.db"),
+    cacheDir: path.join(XDG_CACHE_HOME, "dev"),
+    baseSearchDir: resolvedBaseSearchPath,
+    getBasePath,
+  };
 };
+
+// Plain object implementation (default)
+export const PathLive: PathService = createPathService();
 
 // Service tag for Effect Context system
 export class PathServiceTag extends Context.Tag("PathService")<PathServiceTag, PathService>() {}
 
-// Layer that provides PathService
+// Layer that provides PathService (default)
 export const PathServiceLiveLayer = Layer.succeed(PathServiceTag, PathLive);
+
+// Layer factory that provides PathService with dynamic baseSearchPath
+export const createPathServiceLiveLayer = (baseSearchPath?: string) =>
+  Layer.succeed(PathServiceTag, createPathService(baseSearchPath));

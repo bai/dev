@@ -2,7 +2,7 @@ import { it } from "@effect/vitest";
 import { Effect, Exit, Layer } from "effect";
 import { describe, expect } from "vitest";
 
-import type { GitProviderType } from "./models";
+import type { Config, GitProviderType } from "./models";
 import { PathServiceTag, type PathService } from "./path-service";
 import { RepositoryLive } from "./repository-service";
 
@@ -18,7 +18,7 @@ describe("repository-service", () => {
     dbPath = "/home/user/.local/share/dev/dev.db";
     cacheDir = "/home/user/.cache/dev";
 
-    getBasePath(): string {
+    getBasePath(_config: Config): string {
       return this.baseSearchDir;
     }
   }

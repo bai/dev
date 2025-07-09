@@ -36,6 +36,7 @@ export const configSchema = z.object({
   configUrl: z.url(),
   defaultOrg: z.string(),
   defaultProvider: gitProviderSchema.optional().default("github"),
+  baseSearchPath: z.string().optional().describe("Base directory for searching repositories"),
   logLevel: logLevelSchema.optional().default("info"),
   telemetry: z.object({
     enabled: z.boolean(),

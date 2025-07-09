@@ -5,7 +5,7 @@ import { ShellIntegrationLiveLayer } from "../app/shell-integration-service";
 import { UpdateCheckerLiveLayer } from "../app/update-check-service";
 import { VersionLiveLayer } from "../app/version-service";
 import { HealthCheckServiceTag, makeHealthCheckService } from "../domain/health-check-service";
-import { PathServiceLiveLayer } from "../domain/path-service";
+import { createPathServiceLiveLayer } from "../domain/path-service";
 import { RepositoryServiceLiveLayer } from "../domain/repository-service";
 import { ToolHealthRegistryTag } from "../domain/tool-health-registry-port";
 import { BunToolsLiveLayer } from "../infra/bun-tools-live";
@@ -43,8 +43,8 @@ import { ConfigLoaderLiveLayer } from "./loader";
  * Build the complete infrastructure layer with dynamic configuration values
  */
 export const buildInfraLiveLayer = (configValues: DynamicConfigValues) => {
-  // Base services with no dependencies
-  const BaseServicesLayer = PathServiceLiveLayer;
+  // Base services with no dependencies - now using dynamic baseSearchPath
+  const BaseServicesLayer = createPathServiceLiveLayer(configValues.baseSearchPath);
 
   // Self-contained services that truly don't need dependencies
   const SelfContainedServicesLayer = Layer.mergeAll(

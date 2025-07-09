@@ -36,6 +36,8 @@ export interface BuiltInHealthCheck {
 export interface Config {
   readonly configUrl: string;
   readonly defaultOrg: string;
+  readonly defaultProvider?: GitProviderType;
+  readonly baseSearchPath?: string;
   readonly logLevel?: LogLevel;
   readonly telemetry: {
     readonly enabled: boolean;

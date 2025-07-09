@@ -4,6 +4,7 @@
   "defaultOrg": "flywheelsoftware",
   "logLevel": "debug",
   "defaultProvider": "github",
+  "baseSearchDir": "~/src",
   "orgToProvider": {
     "flywheelsoftware": "gitlab"
   },
