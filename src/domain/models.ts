@@ -12,26 +12,12 @@ export interface MiseConfig {
   readonly settings?: {
     readonly idiomatic_version_file_enable_tools?: string[];
     readonly trusted_config_paths?: string[];
+    readonly experimental?: boolean;
   };
 }
 
 export type GitProviderType = "github" | "gitlab";
 export type LogLevel = "debug" | "info" | "warning" | "error" | "fatal";
-
-// Built-in health check tools configuration
-export interface BuiltInHealthCheck {
-  readonly command: string;
-  readonly versionPattern?: string;
-  readonly timeout?: number;
-  readonly parseOutput?: (
-    stdout: string,
-    stderr: string,
-  ) => {
-    readonly version?: string;
-    readonly status?: "ok" | "warning" | "fail";
-    readonly notes?: string;
-  };
-}
 
 export interface Config {
   readonly version?: number;
@@ -46,7 +32,6 @@ export interface Config {
   readonly orgToProvider?: Record<string, GitProviderType>;
   readonly miseGlobalConfig?: MiseConfig;
   readonly miseRepoConfig?: MiseConfig;
-  readonly builtInHealthChecks?: Record<string, BuiltInHealthCheck>;
 }
 
 // Core domain models

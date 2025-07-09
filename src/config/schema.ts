@@ -26,6 +26,7 @@ const miseConfigSchema = z.object({
     .object({
       idiomatic_version_file_enable_tools: z.array(z.string()).optional(),
       trusted_config_paths: z.array(z.string()).optional(),
+      experimental: z.boolean().optional(),
     })
     .optional(),
 });
@@ -48,18 +49,6 @@ export const configSchema = z.object({
     .describe("Map of organizations to their preferred git provider"),
   miseGlobalConfig: miseConfigSchema.optional().describe("Mise global configuration settings"),
   miseRepoConfig: miseConfigSchema.optional().describe("Mise repository configuration settings"),
-  builtInHealthChecks: z
-    .record(
-      z.string(),
-      z.object({
-        command: z.string(),
-        versionPattern: z.string().optional(),
-        timeout: z.number().optional(),
-        parseOutput: z.any().optional(),
-      }),
-    )
-    .optional()
-    .describe("Built-in health check configurations"),
 });
 
 // Export Config type that was moved to domain

@@ -305,7 +305,6 @@ A tiny adapter (`RunStoreLive`) inserts a row *before* command execution and fin
 
 ```ts
 export interface Config {
-  version: 3;
   configUrl: string;
   defaultOrg: string;
   paths: { base: string };
@@ -316,11 +315,10 @@ export interface Config {
 export const ConfigTag = Context.Tag<Config>("Config");
 ```
 
-### 9.1 Example `config.json` (Schema v3)
+### 9.1 Example `config.json`
 
 ```jsonc
 {
-  "version": 3,
   "configUrl": "https://raw.githubusercontent.com/acme/dev-configs/main/org.json",
   "defaultOrg": "acme",
   "paths": { "base": "~/src" },
