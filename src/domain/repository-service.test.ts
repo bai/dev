@@ -291,6 +291,20 @@ describe("repository-service", () => {
         expect(result).toBe("https://github.com/my-org/my-repo_2.0");
       }),
     );
+
+    it.effect("uses github for unmapped org even when defaultOrg maps to gitlab", () =>
+      Effect.gen(function* () {
+        const orgToProvider: Record<string, GitProviderType> = {
+          flywheelsoftware: "gitlab", // defaultOrg maps to gitlab
+        };
+
+        // When cloning bai/config (bai is not in orgToProvider)
+        const result = yield* RepositoryLive.expandToFullGitUrl("bai/config", "flywheelsoftware", orgToProvider);
+
+        // Should use GitHub, not GitLab
+        expect(result).toBe("https://github.com/bai/config");
+      }),
+    );
   });
 
   describe("edge cases", () => {
