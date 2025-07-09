@@ -9,6 +9,7 @@ import { upCommand } from "./app/up-command";
 import { upgradeCommand } from "./app/upgrade-command";
 import { extractDynamicValues, loadConfiguration } from "./config/bootstrap";
 import { buildAppLiveLayer } from "./config/dynamic-layers";
+import { DirectoryTag } from "./domain/directory-port";
 
 /**
  * Composition Root - Two-Stage Dynamic Wiring
@@ -39,6 +40,7 @@ export const getMainCommand = () => {
  * This replaces the static layer composition with a dynamic system:
  * 1. First, load configuration values (self-contained)
  * 2. Then, build layers using those runtime values
+ * 3. Finally, ensure base directory exists before commands run
  *
  * This function is completely self-contained and provides all its own dependencies.
  */
@@ -54,6 +56,14 @@ export const setupApplicationWithConfig = () =>
     const appLayer = buildAppLiveLayer(configValues);
 
     yield* Effect.logDebug(`✅ Dynamic layers built successfully with org: ${configValues.defaultOrg}`);
+
+    // Stage 3: Ensure base directory exists on startup
+    yield* Effect.gen(function* () {
+      yield* Effect.logDebug("📁 Ensuring base directory exists...");
+      const directoryService = yield* DirectoryTag;
+      yield* directoryService.ensureBaseDirectoryExists();
+      yield* Effect.logDebug(`✅ Base directory ensured at: ${configValues.baseSearchPath}`);
+    }).pipe(Effect.provide(appLayer), Effect.withSpan("ensure-base-directory"));
 
     return {
       config,

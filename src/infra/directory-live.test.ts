@@ -2,8 +2,8 @@ import { it } from "@effect/vitest";
 import { describe, expect } from "vitest";
 import { Effect, Layer } from "effect";
 
-import { DirectoryTag, type Directory } from "../domain/directory-port";
-import { FileSystemError, fileSystemError } from "../domain/errors";
+import { DirectoryTag } from "../domain/directory-port";
+import { fileSystemError } from "../domain/errors";
 import { type FileSystem, FileSystemTag } from "../domain/file-system-port";
 import { type PathService, PathServiceTag } from "../domain/path-service";
 import { makeDirectoryLive, DirectoryLiveLayer } from "./directory-live";
@@ -30,7 +30,7 @@ describe("directory-live", () => {
           writeFile: () => Effect.fail(fileSystemError("Not implemented")),
           findDirectoriesGlob: () => Effect.fail(fileSystemError("Not implemented")),
           getCwd: () => Effect.succeed("/current"),
-          resolvePath: (p: string) => Effect.succeed(p),
+          resolvePath: (p: string) => p,
         };
 
         const mockPathService: PathService = {
@@ -63,7 +63,7 @@ describe("directory-live", () => {
         
         const mockFileSystem: FileSystem = {
           exists: () => Effect.succeed(true),
-          mkdir: () => Effect.gen(function* () {
+          mkdir: () => Effect.sync(() => {
             mkdirCalled = true;
             return undefined;
           }),
@@ -71,7 +71,7 @@ describe("directory-live", () => {
           writeFile: () => Effect.fail(fileSystemError("Not implemented")),
           findDirectoriesGlob: () => Effect.fail(fileSystemError("Not implemented")),
           getCwd: () => Effect.succeed("/current"),
-          resolvePath: (p: string) => Effect.succeed(p),
+          resolvePath: (p: string) => p,
         };
 
         const mockPathService: PathService = {
@@ -99,16 +99,16 @@ describe("directory-live", () => {
       })
     );
 
-    it.effect("propagates filesystem errors", () =>
+    it.effect("propagates filesystem errors from mkdir", () =>
       Effect.gen(function* () {
         const mockFileSystem: FileSystem = {
-          exists: () => Effect.fail(fileSystemError("Permission denied", "/home/user/dev")),
-          mkdir: () => Effect.succeed(undefined),
+          exists: () => Effect.succeed(false),
+          mkdir: () => Effect.fail(fileSystemError("Permission denied", "/home/user/dev")),
           readFile: () => Effect.fail(fileSystemError("Not implemented")),
           writeFile: () => Effect.fail(fileSystemError("Not implemented")),
           findDirectoriesGlob: () => Effect.fail(fileSystemError("Not implemented")),
           getCwd: () => Effect.succeed("/current"),
-          resolvePath: (p: string) => Effect.succeed(p),
+          resolvePath: (p: string) => p,
         };
 
         const mockPathService: PathService = {
@@ -149,7 +149,7 @@ describe("directory-live", () => {
           writeFile: () => Effect.fail(fileSystemError("Not implemented")),
           findDirectoriesGlob: () => Effect.succeed([]),
           getCwd: () => Effect.succeed("/current"),
-          resolvePath: (p: string) => Effect.succeed(p),
+          resolvePath: (p: string) => p,
         };
 
         const mockPathService: PathService = {
@@ -190,7 +190,7 @@ describe("directory-live", () => {
         writeFile: () => Effect.fail(fileSystemError("Not implemented")),
         findDirectoriesGlob: () => Effect.succeed(expectedDirs),
         getCwd: () => Effect.succeed("/current"),
-        resolvePath: (p: string) => Effect.succeed(p),
+        resolvePath: (p: string) => p,
       };
 
       const mockPathService: PathService = {
@@ -227,13 +227,13 @@ describe("directory-live", () => {
         mkdir: () => Effect.succeed(undefined),
         readFile: () => Effect.fail(fileSystemError("Not implemented")),
         writeFile: () => Effect.fail(fileSystemError("Not implemented")),
-        findDirectoriesGlob: (baseDir: string, pattern: string) => Effect.gen(function* () {
+        findDirectoriesGlob: (baseDir: string, pattern: string) => Effect.sync(() => {
           capturedBaseDir = baseDir;
           capturedGlob = pattern;
           return [];
         }),
         getCwd: () => Effect.succeed("/current"),
-        resolvePath: (p: string) => Effect.succeed(p),
+        resolvePath: (p: string) => p,
       };
 
       const mockPathService: PathService = {
@@ -261,16 +261,16 @@ describe("directory-live", () => {
       })
     );
 
-    it.effect("propagates filesystem errors from exists check", () =>
+    it.effect("propagates filesystem errors from findDirectoriesGlob", () =>
       Effect.gen(function* () {
         const mockFileSystem: FileSystem = {
-          exists: () => Effect.fail(fileSystemError("Permission denied", "/home/user/dev")),
+          exists: () => Effect.succeed(true),
           mkdir: () => Effect.succeed(undefined),
           readFile: () => Effect.fail(fileSystemError("Not implemented")),
           writeFile: () => Effect.fail(fileSystemError("Not implemented")),
-          findDirectoriesGlob: () => Effect.succeed([]),
+          findDirectoriesGlob: () => Effect.fail(fileSystemError("Permission denied", "/home/user/dev")),
           getCwd: () => Effect.succeed("/current"),
-          resolvePath: (p: string) => Effect.succeed(p),
+          resolvePath: (p: string) => p,
         };
 
         const mockPathService: PathService = {
@@ -309,7 +309,7 @@ describe("directory-live", () => {
           writeFile: () => Effect.fail(fileSystemError("Not implemented")),
           findDirectoriesGlob: () => Effect.fail(fileSystemError("Glob search failed")),
           getCwd: () => Effect.succeed("/current"),
-          resolvePath: (p: string) => Effect.succeed(p),
+          resolvePath: (p: string) => p,
         };
 
         const mockPathService: PathService = {
@@ -350,7 +350,7 @@ describe("directory-live", () => {
         writeFile: () => Effect.fail(fileSystemError("Not implemented")),
         findDirectoriesGlob: () => Effect.succeed([]),
         getCwd: () => Effect.succeed("/current"),
-        resolvePath: (p: string) => Effect.succeed(p),
+        resolvePath: (p: string) => p,
       };
 
       const mockPathService: PathService = {
@@ -398,7 +398,7 @@ describe("directory-live", () => {
         writeFile: () => Effect.fail(fileSystemError("Not implemented")),
         findDirectoriesGlob: () => Effect.succeed(mockDirs),
         getCwd: () => Effect.succeed("/current"),
-        resolvePath: (p: string) => Effect.succeed(p),
+        resolvePath: (p: string) => p,
       };
 
       const mockPathService: PathService = {
@@ -434,7 +434,7 @@ describe("directory-live", () => {
         writeFile: () => Effect.fail(fileSystemError("Not implemented")),
         findDirectoriesGlob: () => Effect.succeed([]),
         getCwd: () => Effect.succeed("/current"),
-        resolvePath: (p: string) => Effect.succeed(p),
+        resolvePath: (p: string) => p,
       };
 
       const mockPathService: PathService = {
