@@ -144,8 +144,6 @@ describe("multi-repo-provider-live", () => {
     );
   });
 
-  // searchRepositories method removed - no longer needed since we don't validate repos via API
-
   describe("provider selection logic", () => {
     it("selects GitHub provider when org not in mapping and default is github", () => {
       const provider = makeMultiRepoProvider(mockNetwork, "defaultorg", "github", { flywheelsoftware: "gitlab" });

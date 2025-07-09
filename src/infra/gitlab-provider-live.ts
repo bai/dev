@@ -1,6 +1,5 @@
 import { Effect, Layer } from "effect";
 
-// API schemas removed - no longer needed since we don't validate repos via API
 import type { NetworkError, UnknownError } from "../domain/errors";
 import type { GitProvider, Repository } from "../domain/models";
 import { NetworkTag, type Network } from "../domain/network-port";
@@ -18,8 +17,6 @@ export const makeGitLabProvider = (network: Network, defaultOrg = "gitlab-org"):
     const organization = org || defaultOrg;
     const cloneUrl = `${provider.baseUrl}/${organization}/${name}.git`;
 
-    // Skip API verification and construct repository directly
-    // The actual verification will happen when git tries to clone
     const repository: Repository = {
       name,
       organization,

@@ -44,7 +44,6 @@ describe("github-provider-live", () => {
     it.effect("resolves repository successfully", () =>
       Effect.gen(function* () {
         const network = new MockNetwork();
-        // No network call should be made anymore
 
         const provider = makeGitHubProvider(network, "default-org");
         const repository = yield* provider.resolveRepository("myrepo", "myorg");
@@ -60,7 +59,6 @@ describe("github-provider-live", () => {
     it.effect("uses default org when not specified", () =>
       Effect.gen(function* () {
         const network = new MockNetwork();
-        // No network call should be made anymore
 
         const provider = makeGitHubProvider(network, "octocat");
         const repository = yield* provider.resolveRepository("myrepo");
@@ -72,7 +70,6 @@ describe("github-provider-live", () => {
     it.effect("always succeeds even for non-existent repositories", () =>
       Effect.gen(function* () {
         const network = new MockNetwork();
-        // No network call should be made anymore
 
         const provider = makeGitHubProvider(network, "default-org");
         const result = yield* provider.resolveRepository("nonexistent", "myorg");
@@ -83,11 +80,7 @@ describe("github-provider-live", () => {
         expect(result.cloneUrl).toBe("https://github.com/myorg/nonexistent.git");
       }),
     );
-
-    // Note: API error handling tests removed since resolveRepository no longer makes API calls
   });
-
-  // searchRepositories method removed - no longer needed since we don't validate repos via API
 
   describe("getDefaultOrg", () => {
     it.effect("returns configured default org", () =>
