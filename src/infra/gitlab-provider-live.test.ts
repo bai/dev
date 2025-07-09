@@ -99,47 +99,22 @@ describe("gitlab-provider-live", () => {
       }),
     );
 
-    it.effect("fails when repository not found", () =>
+    it.effect("always succeeds even for non-existent repositories", () =>
       Effect.gen(function* () {
         const network = new MockNetwork();
-        network.setResponse("https://gitlab.com/api/v4/projects/myorg%2Fnonexistent", {
-          status: 404,
-          statusText: "Not Found",
-          body: JSON.stringify({ message: "404 Project Not Found" }),
-        });
-
+        // No network call should be made anymore
+        
         const provider = makeGitLabProvider(network, "default-org");
-        const result = yield* Effect.exit(provider.resolveRepository("nonexistent", "myorg"));
+        const result = yield* provider.resolveRepository("nonexistent", "myorg");
 
-        expect(Exit.isFailure(result)).toBe(true);
-        if (Exit.isFailure(result)) {
-          const error = result.cause._tag === "Fail" ? result.cause.error : null;
-          expect(error?._tag).toBe("NetworkError");
-          expect(error?.reason).toContain("Repository myorg/nonexistent not found");
-        }
+        expect(result.name).toBe("nonexistent");
+        expect(result.organization).toBe("myorg");
+        expect(result.provider.name).toBe("gitlab");
+        expect(result.cloneUrl).toBe("https://gitlab.com/myorg/nonexistent.git");
       }),
     );
 
-    it.effect("handles API errors", () =>
-      Effect.gen(function* () {
-        const network = new MockNetwork();
-        network.setResponse("https://gitlab.com/api/v4/projects/myorg%2Fmyrepo", {
-          status: 500,
-          statusText: "Internal Server Error",
-          body: "",
-        });
-
-        const provider = makeGitLabProvider(network, "default-org");
-        const result = yield* Effect.exit(provider.resolveRepository("myrepo", "myorg"));
-
-        expect(Exit.isFailure(result)).toBe(true);
-        if (Exit.isFailure(result)) {
-          const error = result.cause._tag === "Fail" ? result.cause.error : null;
-          expect(error?._tag).toBe("NetworkError");
-          expect(error?.reason).toContain("GitLab API error: 500");
-        }
-      }),
-    );
+    // Note: API error handling tests removed since resolveRepository no longer makes API calls
   });
 
   describe("searchRepositories", () => {

@@ -97,68 +97,22 @@ describe("github-provider-live", () => {
       }),
     );
 
-    it.effect("fails when repository not found", () =>
+    it.effect("always succeeds even for non-existent repositories", () =>
       Effect.gen(function* () {
         const network = new MockNetwork();
-        network.setResponse("https://api.github.com/repos/myorg/nonexistent", {
-          status: 404,
-          statusText: "Not Found",
-          body: JSON.stringify({ message: "Not Found" }),
-        });
-
+        // No network call should be made anymore
+        
         const provider = makeGitHubProvider(network, "default-org");
-        const result = yield* Effect.exit(provider.resolveRepository("nonexistent", "myorg"));
+        const result = yield* provider.resolveRepository("nonexistent", "myorg");
 
-        expect(Exit.isFailure(result)).toBe(true);
-        if (Exit.isFailure(result)) {
-          const error = result.cause._tag === "Fail" ? result.cause.error : null;
-          expect(error?._tag).toBe("NetworkError");
-          expect(error?.reason).toContain("Repository myorg/nonexistent not found");
-        }
+        expect(result.name).toBe("nonexistent");
+        expect(result.organization).toBe("myorg");
+        expect(result.provider.name).toBe("github");
+        expect(result.cloneUrl).toBe("https://github.com/myorg/nonexistent.git");
       }),
     );
 
-    it.effect("handles API errors", () =>
-      Effect.gen(function* () {
-        const network = new MockNetwork();
-        network.setResponse("https://api.github.com/repos/myorg/myrepo", {
-          status: 500,
-          statusText: "Internal Server Error",
-          body: "",
-        });
-
-        const provider = makeGitHubProvider(network, "default-org");
-        const result = yield* Effect.exit(provider.resolveRepository("myrepo", "myorg"));
-
-        expect(Exit.isFailure(result)).toBe(true);
-        if (Exit.isFailure(result)) {
-          const error = result.cause._tag === "Fail" ? result.cause.error : null;
-          expect(error?._tag).toBe("NetworkError");
-          expect(error?.reason).toContain("GitHub API error: 500");
-        }
-      }),
-    );
-
-    it.effect("handles rate limit errors", () =>
-      Effect.gen(function* () {
-        const network = new MockNetwork();
-        network.setResponse("https://api.github.com/repos/myorg/myrepo", {
-          status: 403,
-          statusText: "Forbidden",
-          body: JSON.stringify({ message: "API rate limit exceeded" }),
-        });
-
-        const provider = makeGitHubProvider(network, "default-org");
-        const result = yield* Effect.exit(provider.resolveRepository("myrepo", "myorg"));
-
-        expect(Exit.isFailure(result)).toBe(true);
-        if (Exit.isFailure(result)) {
-          const error = result.cause._tag === "Fail" ? result.cause.error : null;
-          expect(error?._tag).toBe("NetworkError");
-          expect(error?.reason).toContain("GitHub API error: 403");
-        }
-      }),
-    );
+    // Note: API error handling tests removed since resolveRepository no longer makes API calls
   });
 
   describe("searchRepositories", () => {

@@ -1,6 +1,6 @@
 import { Effect, Layer } from "effect";
 
-import { gitHubRepoToRepository, parseGitHubRepo, parseGitHubSearchResponse } from "../domain/api-schemas";
+import { gitHubRepoToRepository, parseGitHubSearchResponse } from "../domain/api-schemas";
 import { networkError, unknownError, type NetworkError, type UnknownError } from "../domain/errors";
 import type { GitProvider, Repository } from "../domain/models";
 import { NetworkTag, type Network } from "../domain/network-port";
@@ -18,33 +18,16 @@ export const makeGitHubProvider = (network: Network, defaultOrg = "octocat"): Re
     const organization = org || defaultOrg;
     const cloneUrl = `${provider.baseUrl}/${organization}/${name}.git`;
 
-    // Verify repository exists by checking the API
-    const apiUrl = `https://api.github.com/repos/${organization}/${name}`;
+    // Skip API verification and construct repository directly
+    // The actual verification will happen when git tries to clone
+    const repository: Repository = {
+      name,
+      organization,
+      provider,
+      cloneUrl,
+    };
 
-    return network.get(apiUrl).pipe(
-      Effect.flatMap((response): Effect.Effect<Repository, NetworkError | UnknownError> => {
-        if (response.status === 404) {
-          return Effect.fail(networkError(`Repository ${organization}/${name} not found`));
-        }
-        if (response.status !== 200) {
-          return Effect.fail(networkError(`GitHub API error: ${response.status} ${response.statusText}`));
-        }
-
-        return Effect.try({
-          try: () => {
-            const data = JSON.parse(response.body);
-            const parseResult = parseGitHubRepo(data);
-            
-            if (!parseResult.success) {
-              throw new Error(parseResult.error);
-            }
-            
-            return gitHubRepoToRepository(parseResult.data, provider as { name: "github"; baseUrl: string });
-          },
-          catch: (error) => unknownError(`Failed to parse GitHub repository: ${error}`),
-        });
-      }),
-    );
+    return Effect.succeed(repository);
   };
 
   const getDefaultOrg = (): string => defaultOrg;

@@ -1,6 +1,6 @@
 import { Effect, Layer } from "effect";
 
-import { gitLabProjectToRepository, parseGitLabProject, parseGitLabSearchResponse } from "../domain/api-schemas";
+import { gitLabProjectToRepository, parseGitLabSearchResponse } from "../domain/api-schemas";
 import { networkError, unknownError, type NetworkError, type UnknownError } from "../domain/errors";
 import type { GitProvider, Repository } from "../domain/models";
 import { NetworkTag, type Network } from "../domain/network-port";
@@ -18,34 +18,16 @@ export const makeGitLabProvider = (network: Network, defaultOrg = "gitlab-org"):
     const organization = org || defaultOrg;
     const cloneUrl = `${provider.baseUrl}/${organization}/${name}.git`;
 
-    // Verify repository exists by checking the API
-    // GitLab API v4 endpoint
-    const apiUrl = `https://gitlab.com/api/v4/projects/${encodeURIComponent(`${organization}/${name}`)}`;
+    // Skip API verification and construct repository directly
+    // The actual verification will happen when git tries to clone
+    const repository: Repository = {
+      name,
+      organization,
+      provider,
+      cloneUrl,
+    };
 
-    return network.get(apiUrl).pipe(
-      Effect.flatMap((response): Effect.Effect<Repository, NetworkError | UnknownError> => {
-        if (response.status === 404) {
-          return Effect.fail(networkError(`Repository ${organization}/${name} not found`));
-        }
-        if (response.status !== 200) {
-          return Effect.fail(networkError(`GitLab API error: ${response.status} ${response.statusText}`));
-        }
-
-        return Effect.try({
-          try: () => {
-            const data = JSON.parse(response.body);
-            const parseResult = parseGitLabProject(data);
-            
-            if (!parseResult.success) {
-              throw new Error(parseResult.error);
-            }
-            
-            return gitLabProjectToRepository(parseResult.data, provider as { name: "gitlab"; baseUrl: string });
-          },
-          catch: (error) => unknownError(`Failed to parse GitLab repository: ${error}`),
-        });
-      }),
-    );
+    return Effect.succeed(repository);
   };
 
   const getDefaultOrg = (): string => defaultOrg;
