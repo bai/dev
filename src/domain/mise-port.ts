@@ -26,7 +26,7 @@ export interface Mise {
   /**
    * Run a task using mise
    */
-  runTask(taskName: string, cwd?: string): Effect.Effect<void, ShellExecutionError>;
+  runTask(taskName: string, args?: readonly string[], cwd?: string): Effect.Effect<void, ShellExecutionError>;
 
   /**
    * Get available tasks

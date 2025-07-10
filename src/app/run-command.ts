@@ -6,9 +6,11 @@ import { MiseTag } from "../domain/mise-port";
 
 // Define the task argument as optional
 const task = Args.text({ name: "task" }).pipe(Args.optional);
+// Define additional arguments as variadic
+const taskArgs = Args.text({ name: "args" }).pipe(Args.repeated);
 
 // Create the run command using @effect/cli
-export const runCommand = Command.make("run", { task }, ({ task }) =>
+export const runCommand = Command.make("run", { task, taskArgs }, ({ task, taskArgs }) =>
   Effect.gen(function* () {
     yield* Effect.logInfo("Running command...");
     const mise = yield* MiseTag;
@@ -34,10 +36,13 @@ export const runCommand = Command.make("run", { task }, ({ task }) =>
       return;
     }
 
-    yield* Effect.logInfo(`Running task: ${taskName}`);
+    const args = taskArgs.map((arg) => arg);
+    const fullCommand = args.length > 0 ? `${taskName} ${args.join(" ")}` : taskName;
 
-    yield* mise.runTask(taskName, cwd);
+    yield* Effect.logInfo(`Running task: ${fullCommand}`);
 
-    yield* Effect.logInfo(`✅ Task '${taskName}' completed successfully`);
+    yield* mise.runTask(taskName, args, cwd);
+
+    yield* Effect.logInfo(`✅ Task '${fullCommand}' completed successfully`);
   }),
 );

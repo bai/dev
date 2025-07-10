@@ -87,19 +87,21 @@ export const makeMiseLive = (shell: Shell, fileSystem: FileSystem, configLoader:
       }),
     ),
 
-  runTask: (taskName: string, cwd?: string): Effect.Effect<void, ShellExecutionError> =>
-    shell.execInteractive("mise", ["run", taskName], { cwd }).pipe(
+  runTask: (taskName: string, args?: readonly string[], cwd?: string): Effect.Effect<void, ShellExecutionError> => {
+    const miseArgs = ["run", taskName, ...(args || [])];
+    return shell.execInteractive("mise", miseArgs, { cwd }).pipe(
       Effect.flatMap((exitCode) => {
         if (exitCode !== 0) {
           return Effect.fail(
-            shellExecutionError("mise", ["run", taskName], `Task '${taskName}' failed with exit code ${exitCode}`, {
+            shellExecutionError("mise", miseArgs, `Task '${taskName}' failed with exit code ${exitCode}`, {
               cwd,
             }),
           );
         }
         return Effect.void;
       }),
-    ),
+    );
+  },
 
   getTasks: (cwd?: string): Effect.Effect<string[], ShellExecutionError> =>
     shell.exec("mise", ["tasks", "--list"], { cwd }).pipe(

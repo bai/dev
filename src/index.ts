@@ -5,10 +5,15 @@ import { Effect } from "effect";
 import { CommandTrackerTag } from "./app/command-tracking-service";
 import { VersionTag } from "./app/version-service";
 import { TracingLive } from "./config/tracing";
-import { exitCode, type DevError } from "./domain/errors";
+import { exitCode, extractErrorMessage, type DevError } from "./domain/errors";
 import { getMainCommand, setupApplicationWithConfig } from "./wiring";
 
-// CLI application runner (moved from cli/effect-cli.ts)
+/**
+ * CLI application runner that executes Effect CLI commands with proper error handling
+ * @param mainCommand - The main CLI command to execute
+ * @param metadata - CLI metadata including name, version, and description
+ * @returns Effect that never fails (errors are caught and logged)
+ */
 const runCli = (
   mainCommand: Command.Command<string, any, any, any>,
   metadata: {
@@ -47,7 +52,8 @@ const runCli = (
     }).pipe(
       Effect.catchAll((error) =>
         Effect.gen(function* () {
-          yield* Effect.logError(`❌ CLI error: ${String(error)}`);
+          const errorMessage = extractErrorMessage(error);
+          yield* Effect.logError(`❌ CLI error: ${errorMessage}`);
           yield* Effect.sync(() => {
             process.exitCode = 1;
           });
@@ -140,13 +146,14 @@ const program = Effect.scoped(
       // Try to handle as DevError first
       if (error && typeof error === "object" && "_tag" in error) {
         const devError = error as DevError;
-        yield* Effect.logError(`❌ ${devError._tag}: ${String(devError)}`);
+        yield* Effect.logError(`❌ ${devError._tag}: ${extractErrorMessage(devError)}`);
         yield* Effect.sync(() => {
           process.exitCode = exitCode(devError);
         });
       } else {
         // Handle unknown errors
-        yield* Effect.logError(`❌ Unknown error: ${String(error)}`);
+        const errorMessage = extractErrorMessage(error);
+        yield* Effect.logError(`❌ Unknown error: ${errorMessage}`);
         yield* Effect.sync(() => {
           process.exitCode = 1;
         });

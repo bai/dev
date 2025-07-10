@@ -136,3 +136,50 @@ export const isStatusCheckError = (e: DevError): e is StatusCheckError => e._tag
 export const isHealthCheckError = (e: DevError): e is HealthCheckError => e._tag === "HealthCheckError";
 export const isShellExecutionError = (e: DevError): e is ShellExecutionError => e._tag === "ShellExecutionError";
 export const isShellTimeoutError = (e: DevError): e is ShellTimeoutError => e._tag === "ShellTimeoutError";
+
+/**
+ * Extracts a human-readable error message from various error types
+ * @param error - The error to extract message from
+ * @returns Human-readable error message string
+ */
+export const extractErrorMessage = (error: unknown): string => {
+  if (error instanceof Error) {
+    // Check if it's an Effect-TS tagged error with empty message
+    if (error.message === "" && error && typeof error === "object" && "_tag" in error) {
+      // Handle Effect domain errors that extend Error but have empty message
+      try {
+        return JSON.stringify(error);
+      } catch {
+        return String(error);
+      }
+    }
+    return error.message;
+  }
+
+  if (error && typeof error === "object") {
+    if ("message" in error) {
+      return String(error.message);
+    }
+
+    // Handle Effect CLI errors with nested structure
+    if (
+      "error" in error &&
+      error.error &&
+      typeof error.error === "object" &&
+      "value" in error.error &&
+      error.error.value &&
+      typeof error.error.value === "object" &&
+      "value" in error.error.value
+    ) {
+      return String(error.error.value.value);
+    }
+
+    try {
+      return JSON.stringify(error);
+    } catch {
+      return String(error);
+    }
+  }
+
+  return String(error);
+};
