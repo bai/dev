@@ -8,6 +8,7 @@ import { FileSystemTag } from "../domain/file-system-port";
 import { GitTag } from "../domain/git-port";
 import { MiseTag } from "../domain/mise-port";
 import { PathServiceTag, type PathService } from "../domain/path-service";
+import { ShellTag } from "../domain/shell-port";
 import { ToolManagementTag, type ToolManagement } from "../domain/tool-management-port";
 
 // No options needed for upgrade command
@@ -56,6 +57,7 @@ function selfUpdateCli(pathService: PathService): Effect.Effect<void, DevError, 
 
     const fileSystem = yield* FileSystemTag;
     const git = yield* GitTag;
+    const shell = yield* ShellTag;
 
     // Check if we're in a git repository
     const isGitRepo = yield* git.isGitRepository(pathService.devDir);
@@ -68,6 +70,19 @@ function selfUpdateCli(pathService: PathService): Effect.Effect<void, DevError, 
     // Pull latest changes
     yield* git.pullLatestChanges(pathService.devDir);
     yield* Effect.logInfo("✅ CLI repository updated successfully");
+
+    // Run bun install to update dependencies
+    yield* Effect.logInfo("📦 Installing/updating dependencies...");
+    yield* shell.exec("bun", ["install"], { cwd: pathService.devDir }).pipe(
+      Effect.mapError((error) => unknownError(`Failed to install dependencies: ${error.message}`)),
+      Effect.flatMap((result) => {
+        if (result.exitCode !== 0) {
+          return Effect.fail(unknownError(`bun install failed with exit code ${result.exitCode}: ${result.stderr}`));
+        }
+        return Effect.succeed(result);
+      }),
+    );
+    yield* Effect.logInfo("✅ Dependencies updated successfully");
   });
 }
 
