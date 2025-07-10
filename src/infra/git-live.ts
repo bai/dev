@@ -28,11 +28,11 @@ export const makeGitLive = (shell: Shell): Git => ({
       }),
     ),
 
-  fetchLatestUpdates: (repositoryPath: string): Effect.Effect<void, GitError | ShellExecutionError> =>
-    shell.exec("git", ["fetch"], { cwd: repositoryPath }).pipe(
+  pullLatestChanges: (repositoryPath: string): Effect.Effect<void, GitError | ShellExecutionError> =>
+    shell.exec("git", ["pull"], { cwd: repositoryPath }).pipe(
       Effect.flatMap((result) => {
         if (result.exitCode !== 0) {
-          return Effect.fail(gitError(`Failed to fetch: ${result.stderr}`));
+          return Effect.fail(gitError(`Failed to pull: ${result.stderr}`));
         }
         return Effect.void;
       }),

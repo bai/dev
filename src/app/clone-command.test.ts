@@ -54,7 +54,7 @@ describe("clone-command", () => {
       return Effect.succeed(undefined);
     }
 
-    fetchLatestUpdates(_repositoryPath: string): Effect.Effect<void, never, never> {
+    pullLatestChanges(_repositoryPath: string): Effect.Effect<void, never, never> {
       return Effect.succeed(undefined);
     }
 

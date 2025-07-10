@@ -13,9 +13,9 @@ export interface Git {
   ): Effect.Effect<void, GitError | ShellExecutionError>;
 
   /**
-   * Fetch latest updates for a repository
+   * Pull latest changes from the remote repository
    */
-  fetchLatestUpdates(repositoryPath: string): Effect.Effect<void, GitError | ShellExecutionError>;
+  pullLatestChanges(repositoryPath: string): Effect.Effect<void, GitError | ShellExecutionError>;
 
   /**
    * Check if a directory is a git repository

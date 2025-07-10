@@ -100,30 +100,30 @@ describe("git-live", () => {
     );
   });
 
-  describe("fetchLatestUpdates", () => {
-    it.effect("fetches updates successfully", () =>
+  describe("pullLatestChanges", () => {
+    it.effect("pulls changes successfully", () =>
       Effect.gen(function* () {
-        mockShell.setResponse("git", ["fetch"], {
+        mockShell.setResponse("git", ["pull"], {
           exitCode: 0,
-          stdout: "From https://github.com/test-org/test-repo\n * branch main -> FETCH_HEAD",
+          stdout: "Already up to date.",
           stderr: "",
         });
 
-        const result = yield* git.fetchLatestUpdates("/tmp/test-repo");
+        const result = yield* git.pullLatestChanges("/tmp/test-repo");
         expect(result).toBeUndefined();
       }),
     );
 
-    it.effect("fails when git fetch returns non-zero exit code", () =>
+    it.effect("fails when git pull returns non-zero exit code", () =>
       Effect.gen(function* () {
-        mockShell.setResponse("git", ["fetch"], {
+        mockShell.setResponse("git", ["pull"], {
           exitCode: 128,
           stdout: "",
           stderr: "fatal: not a git repository",
         });
 
-        const result = yield* Effect.flip(git.fetchLatestUpdates("/tmp/test-repo"));
-        expect(result).toEqual(gitError("Failed to fetch: fatal: not a git repository"));
+        const result = yield* Effect.flip(git.pullLatestChanges("/tmp/test-repo"));
+        expect(result).toEqual(gitError("Failed to pull: fatal: not a git repository"));
       }),
     );
   });

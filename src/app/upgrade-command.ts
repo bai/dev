@@ -65,8 +65,8 @@ function selfUpdateCli(pathService: PathService): Effect.Effect<void, DevError, 
       return;
     }
 
-    // Fetch latest updates
-    yield* git.fetchLatestUpdates(pathService.devDir);
+    // Pull latest changes
+    yield* git.pullLatestChanges(pathService.devDir);
     yield* Effect.logInfo("✅ CLI repository updated successfully");
   });
 }
