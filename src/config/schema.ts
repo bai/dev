@@ -1,4 +1,4 @@
-import { z } from "zod/v4";
+import { z } from "zod";
 
 import type { Config, GitProviderType, LogLevel } from "../domain/models";
 
