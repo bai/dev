@@ -125,5 +125,5 @@ function isFullUrl(str: string): boolean {
 // Service tag for Effect Context system
 export class RepositoryServiceTag extends Context.Tag("RepositoryService")<RepositoryServiceTag, RepositoryService>() {}
 
-// Layer that provides RepositoryService (no `new` keyword)
+// Layer that provides RepositoryService
 export const RepositoryServiceLiveLayer = Layer.effect(RepositoryServiceTag, Effect.succeed(RepositoryLive));

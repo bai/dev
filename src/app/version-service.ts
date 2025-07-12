@@ -33,5 +33,5 @@ export const VersionLive: Version = {
 // Service tag for Effect Context system
 export class VersionTag extends Context.Tag("Version")<VersionTag, Version>() {}
 
-// Layer that provides VersionService (no `new` keyword)
+// Layer that provides VersionService
 export const VersionLiveLayer = Layer.effect(VersionTag, Effect.succeed(VersionLive));

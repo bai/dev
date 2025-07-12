@@ -58,5 +58,5 @@ export const ShellIntegrationLive: ShellIntegration = {
 // Service tag for Effect Context system
 export class ShellIntegrationTag extends Context.Tag("ShellIntegration")<ShellIntegrationTag, ShellIntegration>() {}
 
-// Layer that provides ShellIntegrationService (no `new` keyword)
+// Layer that provides ShellIntegrationService
 export const ShellIntegrationLiveLayer = Layer.effect(ShellIntegrationTag, Effect.succeed(ShellIntegrationLive));

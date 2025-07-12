@@ -55,5 +55,5 @@ export const UpdateCheckerLive: UpdateChecker = {
 // Service tag for Effect Context system
 export class UpdateCheckerTag extends Context.Tag("UpdateChecker")<UpdateCheckerTag, UpdateChecker>() {}
 
-// Layer that provides UpdateCheckService (no `new` keyword)
+// Layer that provides UpdateCheckService
 export const UpdateCheckerLiveLayer = Layer.effect(UpdateCheckerTag, Effect.succeed(UpdateCheckerLive));
