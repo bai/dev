@@ -8,7 +8,9 @@
     "flywheelsoftware": "gitlab"
   },
   "telemetry": {
-    "enabled": true
+    "enabled": true,
+    "mode": "console",
+    "projectId": "devcli-465111"
   },
   "miseGlobalConfig": {
     "tools": {
@@ -29,7 +31,6 @@
       "terraform": "latest",
       "terragrunt": "latest",
       "uv": "latest",
-      "npm:@anthropic-ai/claude-code": "latest",
       "npm:eslint": "latest",
       "npm:npm-check-updates": "latest",
       "npm:pnpm": "latest",

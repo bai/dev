@@ -1,7 +1,6 @@
 import { Command } from "@effect/cli";
 import { NodeSdk } from "@effect/opentelemetry";
 import { BunRuntime } from "@effect/platform-bun";
-import { BatchSpanProcessor, ConsoleSpanExporter, NoopSpanProcessor } from "@opentelemetry/sdk-trace-base";
 import { Effect } from "effect";
 
 import { cdCommand } from "./app/cd-command";
@@ -13,6 +12,7 @@ import { upCommand } from "./app/up-command";
 import { upgradeCommand } from "./app/upgrade-command";
 import { VersionTag } from "./app/version-service";
 import { exitCode, extractErrorMessage, type DevError } from "./domain/errors";
+import { TracingTag } from "./domain/tracing-port";
 import { setupApplication } from "./wiring";
 
 // Create main command with all subcommands
@@ -181,17 +181,35 @@ const program = Effect.scoped(
   ),
 ) as Effect.Effect<void, never, never>;
 
-// Tracing configuration
-const TracingLive = NodeSdk.layer(() => ({
-  resource: {
-    serviceName: "dev-cli",
-    serviceVersion: "0.0.1",
-  },
-  spanProcessor:
-    process.env.NODE_ENV === "development"
-      ? new BatchSpanProcessor(new ConsoleSpanExporter())
-      : new NoopSpanProcessor(),
-}));
+// Create the main program with tracing
+const mainProgram = Effect.gen(function* () {
+  // Setup application and get the app layer
+  const { appLayer } = yield* setupApplication();
 
-// Run the program with BunRuntime and tracing
-BunRuntime.runMain(program.pipe(Effect.provide(TracingLive)));
+  // Get tracing configuration from the tracing service
+  const sdkConfig = yield* Effect.gen(function* () {
+    const tracing = yield* TracingTag;
+    return yield* tracing.createSdkConfig();
+  }).pipe(
+    Effect.provide(appLayer),
+    Effect.catchAll((error) => {
+      console.warn("Failed to initialize tracing configuration, using defaults:", error);
+      return Effect.succeed({
+        resource: {
+          serviceName: "dev-cli",
+          serviceVersion: "0.0.1",
+        },
+        spanProcessor: undefined, // Will use default NoopSpanProcessor
+      });
+    }),
+  );
+
+  // Create tracing layer with the configuration
+  const TracingLive = NodeSdk.layer(() => sdkConfig);
+
+  // Run the program with tracing
+  yield* program.pipe(Effect.provide(TracingLive));
+}).pipe(Effect.scoped);
+
+// Run the program with BunRuntime
+BunRuntime.runMain(mainProgram as Effect.Effect<void, never, never>);

@@ -19,6 +19,14 @@ export interface MiseConfig {
 export type GitProviderType = "github" | "gitlab";
 export type LogLevel = "debug" | "info" | "warning" | "error" | "fatal";
 
+export type TelemetryMode = "console" | "google" | "disabled";
+
+export interface TelemetryConfig {
+  readonly enabled: boolean;
+  readonly mode?: TelemetryMode;
+  readonly projectId?: string;
+}
+
 export interface Config {
   readonly version?: number;
   readonly configUrl: string;
@@ -26,9 +34,7 @@ export interface Config {
   readonly defaultProvider?: GitProviderType;
   readonly baseSearchPath?: string;
   readonly logLevel?: LogLevel;
-  readonly telemetry: {
-    readonly enabled: boolean;
-  };
+  readonly telemetry: TelemetryConfig;
   readonly orgToProvider?: Record<string, GitProviderType>;
   readonly miseGlobalConfig?: MiseConfig;
   readonly miseRepoConfig?: MiseConfig;

@@ -34,6 +34,7 @@ import { RunStoreLiveLayer } from "./infra/run-store-live";
 import { ShellLiveLayer } from "./infra/shell-live";
 import { ToolHealthRegistryLiveLayer } from "./infra/tool-health-registry-live";
 import { ToolManagementLiveLayer } from "./infra/tool-management-live";
+import { TracingLiveLayer } from "./infra/tracing-live";
 
 /**
  * Expands tilde in file paths
@@ -142,6 +143,9 @@ export const buildAppLayer = (config: Config) => {
     }),
   ).pipe(Layer.provide(toolHealthRegistryLayer));
 
+  // Tracing layer (needs config and shell)
+  const tracingLayer = Layer.provide(TracingLiveLayer, Layer.mergeAll(configLoaderLayer, baseServices));
+
   // Stage 4: Application services
   const infraLayer = Layer.mergeAll(
     baseServices,
@@ -156,6 +160,7 @@ export const buildAppLayer = (config: Config) => {
     toolHealthRegistryLayer,
     repoProviderLayer,
     healthCheckServiceLayer,
+    tracingLayer,
   );
 
   // Database-dependent services

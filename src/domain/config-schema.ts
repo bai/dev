@@ -1,6 +1,6 @@
 import { z } from "zod/v4";
 
-import type { Config, GitProviderType, LogLevel } from "./models";
+import type { Config, GitProviderType, LogLevel, TelemetryMode } from "./models";
 
 // Log level schema
 const logLevelSchema: z.ZodType<LogLevel> = z.enum(["debug", "info", "warning", "error", "fatal"]);
@@ -33,6 +33,14 @@ const miseConfigSchema = z.object({
 
 const gitProviderSchema: z.ZodType<GitProviderType> = z.enum(["github", "gitlab"]);
 
+const telemetryModeSchema: z.ZodType<TelemetryMode> = z.enum(["console", "google", "disabled"]);
+
+const telemetryConfigSchema = z.object({
+  enabled: z.boolean(),
+  mode: telemetryModeSchema.optional(),
+  projectId: z.string().optional(),
+});
+
 export const configSchema = z.object({
   version: z.number().optional(),
   configUrl: z.url(),
@@ -40,9 +48,7 @@ export const configSchema = z.object({
   defaultProvider: gitProviderSchema.optional().default("github"),
   baseSearchPath: z.string().optional().describe("Base directory for searching repositories"),
   logLevel: logLevelSchema.optional().default("info"),
-  telemetry: z.object({
-    enabled: z.boolean(),
-  }),
+  telemetry: telemetryConfigSchema,
   orgToProvider: z
     .record(z.string(), gitProviderSchema)
     .optional()
