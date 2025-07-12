@@ -19,8 +19,6 @@ import { ToolManagementTag, type ToolManagement } from "../domain/tool-managemen
  */
 export const displayHelp = (): Effect.Effect<void, never, never> =>
   Effect.gen(function* () {
-    yield* Effect.logInfo("\nupgrade");
-    yield* Effect.logInfo("━".repeat(50));
     yield* Effect.logInfo("Upgrade the dev CLI tool and all essential development tools\n");
 
     yield* Effect.logInfo("USAGE");

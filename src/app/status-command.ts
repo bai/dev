@@ -22,8 +22,6 @@ interface StatusItem {
  */
 export const displayHelp = (): Effect.Effect<void, never, never> =>
   Effect.gen(function* () {
-    yield* Effect.logInfo("\nstatus");
-    yield* Effect.logInfo("━".repeat(50));
     yield* Effect.logInfo("Check the health and status of your development environment\n");
 
     yield* Effect.logInfo("USAGE");

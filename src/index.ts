@@ -21,8 +21,6 @@ import { setupApplication } from "./wiring";
  */
 const displayMainHelp = (): Effect.Effect<void, never, never> =>
   Effect.gen(function* () {
-    yield* Effect.logInfo("\ndev");
-    yield* Effect.logInfo("━".repeat(50));
     yield* Effect.logInfo("A CLI tool for quick navigation and environment management\n");
 
     yield* Effect.logInfo("USAGE");
@@ -137,7 +135,7 @@ const runCli = (
 
       yield* Effect.logDebug("🚀 Starting Effect CLI...");
 
-      // Get args (trim node and script name from argv)
+      // Get args (just the command arguments, not executable/script)
       const args = process.argv.slice(2);
 
       // Check for help flags and show custom help instead
@@ -158,7 +156,8 @@ const runCli = (
       });
 
       // Execute CLI effect directly - cli() returns an Effect
-      yield* cli(["node", "script", ...args]);
+      // Pass the full process.argv since @effect/cli expects it
+      yield* cli(process.argv);
 
       yield* Effect.logDebug("✅ CLI execution completed successfully");
     }).pipe(

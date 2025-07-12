@@ -10,8 +10,6 @@ import { MiseTag } from "../domain/mise-port";
  */
 export const displayHelp = (): Effect.Effect<void, never, never> =>
   Effect.gen(function* () {
-    yield* Effect.logInfo("\nrun");
-    yield* Effect.logInfo("━".repeat(50));
     yield* Effect.logInfo("Execute project tasks and scripts using mise\n");
 
     yield* Effect.logInfo("USAGE");

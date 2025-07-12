@@ -18,8 +18,6 @@ const repo = Args.text({ name: "repo" });
  */
 export const displayHelp = (): Effect.Effect<void, never, never> =>
   Effect.gen(function* () {
-    yield* Effect.logInfo("\nclone");
-    yield* Effect.logInfo("━".repeat(50));
     yield* Effect.logInfo("Clone repositories from various providers (GitHub, GitLab, etc.)\n");
 
     yield* Effect.logInfo("USAGE");

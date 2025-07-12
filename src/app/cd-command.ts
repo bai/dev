@@ -16,8 +16,6 @@ const folderName = Args.text({ name: "folder_name" }).pipe(Args.optional);
  */
 export const displayHelp = (): Effect.Effect<void, never, never> =>
   Effect.gen(function* () {
-    yield* Effect.logInfo("\ncd");
-    yield* Effect.logInfo("━".repeat(50));
     yield* Effect.logInfo("Navigate to directories using fuzzy search capabilities\n");
 
     yield* Effect.logInfo("USAGE");
