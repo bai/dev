@@ -10,10 +10,10 @@ import { registerRunCommand } from "./app/run-command";
 import { registerStatusCommand } from "./app/status-command";
 import { registerUpCommand } from "./app/up-command";
 import { registerUpgradeCommand } from "./app/upgrade-command";
-import { VersionTag } from "./app/version-service";
 import { CommandRegistryTag, type CommandRegistry } from "./domain/command-registry-port";
 import { exitCode, extractErrorMessage, type DevError } from "./domain/errors";
 import { TracingTag } from "./domain/tracing-port";
+import { VersionTag } from "./domain/version-port";
 import { setupApplication } from "./wiring";
 
 /**

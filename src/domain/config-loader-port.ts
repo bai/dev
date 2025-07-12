@@ -1,7 +1,7 @@
 import { Context, type Effect } from "effect";
 
 import type { ConfigError, FileSystemError, NetworkError, UnknownError } from "./errors";
-import type { Config } from "./models";
+import type { Config } from "./config-schema";
 
 export interface ConfigLoader {
   load(): Effect.Effect<Config, ConfigError | FileSystemError | UnknownError>;

@@ -91,9 +91,9 @@ export const buildAppLayer = (config: Config) => {
   // Extract configuration values
   const defaultOrg = config.defaultOrg;
   const configPath = path.join(os.homedir(), ".config", "dev", "config.json");
-  const baseSearchPath = expandTildePath(config.baseSearchPath ?? path.join(os.homedir(), "src"));
-  const defaultProvider = config.defaultProvider ?? "github";
-  const orgToProvider = config.orgToProvider ?? {};
+  const baseSearchPath = expandTildePath(config.baseSearchPath);
+  const defaultProvider = config.defaultProvider;
+  const orgToProvider = config.orgToProvider;
 
   // Stage 1: Base foundation services (no dependencies)
   const baseServices = Layer.mergeAll(FileSystemLiveLayer, ShellLiveLayer, createPathServiceLiveLayer(baseSearchPath));
@@ -144,8 +144,11 @@ export const buildAppLayer = (config: Config) => {
     }),
   ).pipe(Layer.provide(toolHealthRegistryLayer));
 
-  // Tracing layer (needs config and shell)
-  const tracingLayer = Layer.provide(TracingLiveLayer, Layer.mergeAll(configLoaderLayer, baseServices));
+  // Version layer (needs git and path service from infraLayer components)
+  const versionLayer = Layer.provide(VersionLiveLayer, Layer.mergeAll(gitLayer, baseServices));
+
+  // Tracing layer (needs config, shell, and version)
+  const tracingLayer = Layer.provide(TracingLiveLayer, Layer.mergeAll(configLoaderLayer, baseServices, versionLayer));
 
   // Stage 4: Application services
   const infraLayer = Layer.mergeAll(
@@ -161,6 +164,7 @@ export const buildAppLayer = (config: Config) => {
     toolHealthRegistryLayer,
     repoProviderLayer,
     healthCheckServiceLayer,
+    versionLayer,
     tracingLayer,
   );
 
@@ -174,7 +178,6 @@ export const buildAppLayer = (config: Config) => {
   // Final application services
   const appServices = Layer.mergeAll(
     Layer.provide(ShellIntegrationLiveLayer, infraLayer),
-    Layer.provide(VersionLiveLayer, infraLayer),
     Layer.provide(UpdateCheckerLiveLayer, infraLayer),
     Layer.provide(CommandTrackerLiveLayer, infraLayer),
     CommandRegistryLiveLayer,

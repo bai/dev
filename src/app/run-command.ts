@@ -38,14 +38,20 @@ export const runCommand = Command.make("run", { task, taskArgs }, ({ task, taskA
     const mise = yield* MiseTag;
     const fileSystem = yield* FileSystemTag;
     const taskName = task._tag === "Some" ? task.value : undefined;
+    yield* Effect.annotateCurrentSpan("mode", taskName ? "run" : "list");
+    if (taskName) {
+      yield* Effect.annotateCurrentSpan("task_name", taskName);
+    }
 
-    const cwd = yield* fileSystem.getCwd();
+    const cwd = yield* fileSystem.getCwd().pipe(Effect.withSpan("get-cwd"));
+    yield* Effect.annotateCurrentSpan("cwd", cwd);
 
     if (!taskName) {
       // List available tasks
       yield* Effect.logInfo("Available tasks:");
 
-      const tasks = yield* mise.getTasks(cwd);
+      const tasks = yield* mise.getTasks(cwd).pipe(Effect.withSpan("get-tasks"));
+      yield* Effect.annotateCurrentSpan("task_count", tasks.length.toString());
 
       if (tasks.length === 0) {
         yield* Effect.logInfo("No tasks found in current directory");
@@ -63,10 +69,22 @@ export const runCommand = Command.make("run", { task, taskArgs }, ({ task, taskA
 
     yield* Effect.logInfo(`Running task: ${fullCommand}`);
 
-    yield* mise.runTask(taskName, args, cwd);
+    // Annotate with structured data for better tracing
+    yield* Effect.annotateCurrentSpan("task_command", taskName);
+    yield* Effect.annotateCurrentSpan("task_args_count", args.length.toString());
+
+    // Annotate each argument individually
+    for (let i = 0; i < args.length; i++) {
+      yield* Effect.annotateCurrentSpan(`task_arg_${i}`, args[i]);
+    }
+
+    // Also include the full command for convenience
+    yield* Effect.annotateCurrentSpan("task_full_command", fullCommand);
+
+    yield* mise.runTask(taskName, args, cwd).pipe(Effect.withSpan("run-task"));
 
     yield* Effect.logInfo(`✅ Task '${fullCommand}' completed successfully`);
-  }),
+  }).pipe(Effect.withSpan("run-command")),
 );
 
 /**

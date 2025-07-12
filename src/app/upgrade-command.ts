@@ -3,7 +3,7 @@ import { Effect } from "effect";
 
 import { CommandRegistryTag } from "../domain/command-registry-port";
 import { ConfigLoaderTag } from "../domain/config-loader-port";
-import { type Config } from "../domain/config-schema";
+import { configSchema, type Config } from "../domain/config-schema";
 import { unknownError, type DevError } from "../domain/errors";
 import { FileSystemTag } from "../domain/file-system-port";
 import { GitTag } from "../domain/git-port";
@@ -37,30 +37,30 @@ export const upgradeCommand = Command.make("upgrade", {}, () =>
     yield* Effect.logInfo("🔄 Upgrading dev CLI tool...");
 
     // Step 1: Self-update the CLI repository
-    yield* selfUpdateCli(pathService);
+    yield* selfUpdateCli(pathService).pipe(Effect.withSpan("self-update-cli"));
 
     // Step 2: Ensure necessary directories exist
-    yield* ensureDirectoriesExist(pathService);
+    yield* ensureDirectoriesExist(pathService).pipe(Effect.withSpan("ensure-directories"));
 
     // Step 3: Update shell integration
-    yield* ensureShellIntegration(pathService);
+    yield* ensureShellIntegration(pathService).pipe(Effect.withSpan("ensure-shell-integration"));
 
     // Step 4: Ensure local config has correct remote URL, then refresh from remote
     yield* Effect.logInfo("🔄 Updating local config with correct remote URL...");
-    yield* ensureCorrectConfigUrl(pathService);
+    yield* ensureCorrectConfigUrl(pathService).pipe(Effect.withSpan("ensure-config-url"));
     yield* Effect.logInfo("🔄 Refreshing dev configuration from remote...");
-    const refreshedConfig = yield* configLoader.refresh();
+    const refreshedConfig = yield* configLoader.refresh().pipe(Effect.withSpan("refresh-config"));
     yield* Effect.logInfo("✅ Configuration refreshed successfully");
 
     // Step 5: Setup mise global configuration from refreshed config
-    yield* setupMiseGlobalConfiguration(refreshedConfig);
+    yield* setupMiseGlobalConfiguration(refreshedConfig).pipe(Effect.withSpan("setup-mise-global"));
 
     // Step 6: Tool version checks and upgrades
-    yield* upgradeEssentialTools();
+    yield* upgradeEssentialTools().pipe(Effect.withSpan("upgrade-essential-tools"));
 
     // Step 7: Final success message and usage examples
-    yield* showSuccessMessage();
-  }),
+    yield* showSuccessMessage().pipe(Effect.withSpan("show-success-message"));
+  }).pipe(Effect.withSpan("upgrade-command")),
 );
 
 /**
@@ -75,7 +75,8 @@ function selfUpdateCli(pathService: PathService): Effect.Effect<void, DevError, 
     const shell = yield* ShellTag;
 
     // Check if we're in a git repository
-    const isGitRepo = yield* git.isGitRepository(pathService.devDir);
+    const isGitRepo = yield* git.isGitRepository(pathService.devDir).pipe(Effect.withSpan("check-git-repository"));
+    yield* Effect.annotateCurrentSpan("is_git_repo", isGitRepo.toString());
 
     if (!isGitRepo) {
       yield* Effect.logInfo("📝 Not in a git repository, skipping self-update");
@@ -85,12 +86,14 @@ function selfUpdateCli(pathService: PathService): Effect.Effect<void, DevError, 
     // Pull latest changes
     yield* git.pullLatestChanges(pathService.devDir).pipe(
       Effect.tap(() => Effect.logInfo("✅ CLI repository updated successfully")),
-      Effect.catchAll((error) => 
+      Effect.catchAll((error) =>
         Effect.gen(function* () {
-          yield* Effect.logWarning(`⚠️  Failed to pull latest changes: ${error.reason || error.message || "Unknown error"}`);
+          yield* Effect.logWarning(
+            `⚠️  Failed to pull latest changes: ${error.reason || error.message || "Unknown error"}`,
+          );
           yield* Effect.logInfo("📝 Continuing with the rest of the upgrade process...");
-        })
-      )
+        }),
+      ),
     );
 
     // Run bun install to update dependencies
@@ -104,12 +107,14 @@ function selfUpdateCli(pathService: PathService): Effect.Effect<void, DevError, 
         return Effect.succeed(result);
       }),
       Effect.tap(() => Effect.logInfo("✅ Dependencies updated successfully")),
-      Effect.catchAll((error) => 
+      Effect.catchAll((error) =>
         Effect.gen(function* () {
-          yield* Effect.logWarning(`⚠️  Failed to install dependencies: ${error.reason || error.message || "Unknown error"}`);
+          yield* Effect.logWarning(
+            `⚠️  Failed to install dependencies: ${error.reason || error.message || "Unknown error"}`,
+          );
           yield* Effect.logInfo("📝 Continuing with the rest of the upgrade process...");
-        })
-      )
+        }),
+      ),
     );
   });
 }
@@ -198,11 +203,11 @@ function ensureCorrectConfigUrl(pathService: PathService): Effect.Effect<void, D
       }
     } else {
       // If local config doesn't exist, create minimal config with correct URL
-      localConfig = {
+      // Use schema parsing to apply all defaults
+      localConfig = configSchema.parse({
         configUrl: projectConfig.configUrl,
         defaultOrg: projectConfig.defaultOrg || "default",
-        telemetry: { enabled: true },
-      };
+      });
     }
 
     // Step 3: Update configUrl if it's different
@@ -288,9 +293,16 @@ function checkTool(
   toolManager: ToolManagement[keyof ToolManagement],
 ): Effect.Effect<void, DevError, any> {
   return Effect.gen(function* () {
-    const { isValid, currentVersion } = yield* toolManager
-      .checkVersion()
-      .pipe(Effect.mapError((error) => unknownError(`${toolName} version check failed: ${error}`)));
+    yield* Effect.annotateCurrentSpan("tool_name", toolName);
+    const { isValid, currentVersion } = yield* toolManager.checkVersion().pipe(
+      Effect.mapError((error) => unknownError(`${toolName} version check failed: ${error}`)),
+      Effect.withSpan(`check-${toolName.toLowerCase()}-version`),
+    );
+
+    yield* Effect.annotateCurrentSpan("version_valid", isValid.toString());
+    if (currentVersion) {
+      yield* Effect.annotateCurrentSpan("current_version", currentVersion);
+    }
 
     if (isValid && currentVersion) {
       yield* Effect.logInfo(`✅ ${toolName} is up to date (${currentVersion})`);

@@ -2,7 +2,8 @@ import { it } from "@effect/vitest";
 import { Effect, Exit, Layer } from "effect";
 import { describe, expect } from "vitest";
 
-import type { Config, GitProviderType } from "./models";
+import type { Config } from "./config-schema";
+import type { GitProviderType } from "./models";
 import { PathServiceTag, type PathService } from "./path-service";
 import { RepositoryLive } from "./repository-service";
 

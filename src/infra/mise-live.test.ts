@@ -1,6 +1,8 @@
 import { Effect } from "effect";
 import { describe, expect, it } from "vitest";
 
+import type { ConfigLoader } from "../domain/config-loader-port";
+import { configSchema } from "../domain/config-schema";
 import { makeMiseLive } from "./mise-live";
 
 // Mock implementations
@@ -67,30 +69,34 @@ const mockFileSystem = {
   resolvePath: (path: string) => (path.startsWith("~") ? path.replace("~", "/home/user") : path),
 };
 
-const mockConfigLoader = {
+const mockConfigLoader: ConfigLoader = {
   load: () =>
-    Effect.succeed({
-      configUrl: "https://example.com/config.json",
-      defaultOrg: "test-org",
-      telemetry: { enabled: false },
-      miseGlobalConfig: {
-        settings: {
-          experimental: true,
+    Effect.succeed(
+      configSchema.parse({
+        configUrl: "https://example.com/config.json",
+        defaultOrg: "test-org",
+        telemetry: { mode: "disabled" },
+        miseGlobalConfig: {
+          settings: {
+            experimental: true,
+          },
         },
-      },
-    }),
+      }),
+    ),
   save: () => Effect.succeed(undefined),
   refresh: () =>
-    Effect.succeed({
-      configUrl: "https://example.com/config.json",
-      defaultOrg: "test-org",
-      telemetry: { enabled: false },
-      miseGlobalConfig: {
-        settings: {
-          experimental: true,
+    Effect.succeed(
+      configSchema.parse({
+        configUrl: "https://example.com/config.json",
+        defaultOrg: "test-org",
+        telemetry: { mode: "disabled" },
+        miseGlobalConfig: {
+          settings: {
+            experimental: true,
+          },
         },
-      },
-    }),
+      }),
+    ),
 };
 
 describe("mise-live", () => {

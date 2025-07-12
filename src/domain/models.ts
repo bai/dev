@@ -19,26 +19,10 @@ export interface MiseConfig {
 export type GitProviderType = "github" | "gitlab";
 export type LogLevel = "debug" | "info" | "warning" | "error" | "fatal";
 
-export type TelemetryMode = "console" | "google" | "disabled";
+export type TelemetryMode = "console" | "remote" | "disabled";
 
-export interface TelemetryConfig {
-  readonly enabled: boolean;
-  readonly mode?: TelemetryMode;
-  readonly projectId?: string;
-}
-
-export interface Config {
-  readonly version?: number;
-  readonly configUrl: string;
-  readonly defaultOrg: string;
-  readonly defaultProvider?: GitProviderType;
-  readonly baseSearchPath?: string;
-  readonly logLevel?: LogLevel;
-  readonly telemetry: TelemetryConfig;
-  readonly orgToProvider?: Record<string, GitProviderType>;
-  readonly miseGlobalConfig?: MiseConfig;
-  readonly miseRepoConfig?: MiseConfig;
-}
+// Note: Config type is now generated from Zod schema in config-schema.ts
+// This ensures the type matches what Zod produces with defaults applied
 
 // Core domain models
 

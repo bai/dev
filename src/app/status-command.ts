@@ -34,16 +34,17 @@ export const displayHelp = (): Effect.Effect<void, never, never> =>
 // Create the status command using @effect/cli
 export const statusCommand = Command.make("status", {}, () =>
   Effect.gen(function* () {
-    yield* showEnvironmentInfo;
+    yield* showEnvironmentInfo.pipe(Effect.withSpan("show-environment-info"));
 
-    const statusItems = yield* getHealthCheckResults;
+    const statusItems = yield* getHealthCheckResults.pipe(Effect.withSpan("get-health-check-results"));
+    yield* Effect.annotateCurrentSpan("status_items_count", statusItems.length.toString());
 
-    yield* displayHealthCheckResults(statusItems);
+    yield* displayHealthCheckResults(statusItems).pipe(Effect.withSpan("display-health-check-results"));
 
-    yield* showSummary(statusItems);
+    yield* showSummary(statusItems).pipe(Effect.withSpan("show-summary"));
 
-    yield* checkForFailures(statusItems);
-  }),
+    yield* checkForFailures(statusItems).pipe(Effect.withSpan("check-failures"));
+  }).pipe(Effect.withSpan("status-command")),
 );
 
 // Helper functions for better organization and testability
@@ -150,7 +151,10 @@ const getHealthCheckResults: Effect.Effect<readonly StatusItem[], never, HealthC
     const healthCheckService = yield* HealthCheckTag;
     const configLoader = yield* ConfigLoaderTag;
 
-    const config = yield* configLoader.load().pipe(Effect.catchAll(() => Effect.succeed(undefined)));
+    const config = yield* configLoader.load().pipe(
+      Effect.catchAll(() => Effect.succeed(undefined)),
+      Effect.withSpan("load-config"),
+    );
 
     // Run health checks directly and bypass cached results
     const results = yield* healthCheckService.runHealthChecks().pipe(

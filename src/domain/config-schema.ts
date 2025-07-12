@@ -1,6 +1,6 @@
 import { z } from "zod/v4";
 
-import type { Config, GitProviderType, LogLevel, TelemetryMode } from "./models";
+import type { GitProviderType, LogLevel, TelemetryMode } from "./models";
 
 // Log level schema
 const logLevelSchema: z.ZodType<LogLevel> = z.enum(["debug", "info", "warning", "error", "fatal"]);
@@ -33,43 +33,33 @@ const miseConfigSchema = z.object({
 
 const gitProviderSchema: z.ZodType<GitProviderType> = z.enum(["github", "gitlab"]);
 
-const telemetryModeSchema: z.ZodType<TelemetryMode> = z.enum(["console", "google", "disabled"]);
+const telemetryModeSchema: z.ZodType<TelemetryMode> = z.enum(["console", "remote", "disabled"]);
 
 const telemetryConfigSchema = z.object({
-  enabled: z.boolean(),
-  mode: telemetryModeSchema.optional(),
-  projectId: z.string().optional(),
+  mode: telemetryModeSchema.optional().default("remote"),
 });
 
 export const configSchema = z.object({
   version: z.number().optional(),
-  configUrl: z.url(),
-  defaultOrg: z.string(),
+  configUrl: z.url().default("https://raw.githubusercontent.com/bai/dev/refs/heads/main/config.json"),
+  defaultOrg: z.string().default("flywheelsoftware"),
   defaultProvider: gitProviderSchema.optional().default("github"),
-  baseSearchPath: z.string().optional().describe("Base directory for searching repositories"),
+  baseSearchPath: z.string().optional().default("~/src").describe("Base directory for searching repositories"),
   logLevel: logLevelSchema.optional().default("info"),
-  telemetry: telemetryConfigSchema,
+  telemetry: telemetryConfigSchema.default({ mode: "remote" }),
   orgToProvider: z
     .record(z.string(), gitProviderSchema)
     .optional()
+    .default({})
     .describe("Map of organizations to their preferred git provider"),
   miseGlobalConfig: miseConfigSchema.optional().describe("Mise global configuration settings"),
   miseRepoConfig: miseConfigSchema.optional().describe("Mise repository configuration settings"),
 });
 
-// Default configuration
-export const defaultConfig: Config = {
-  configUrl: "https://gist.githubusercontent.com/bai/d5a4a92350e67af8aba1b9db33d5f077/raw/config.json",
-  defaultOrg: "flywheelsoftware",
-  logLevel: "info",
-  telemetry: {
-    enabled: true,
-  },
-  orgToProvider: {
-    flywheelsoftware: "gitlab",
-  },
-};
 
-// Re-export Config type and schemas for other modules
-export type { Config } from "./models";
+// Re-export schemas for other modules
 export { miseConfigSchema, logLevelSchema };
+
+// Use Zod's inferred type as the source of truth
+// This ensures the type matches what Zod actually produces (with defaults applied)
+export type Config = z.infer<typeof configSchema>;

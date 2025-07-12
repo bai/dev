@@ -3,7 +3,7 @@ import path from "path";
 
 import { Context, Layer } from "effect";
 
-import type { Config } from "./models";
+import type { Config } from "./config-schema";
 
 // Pure constants - no side effects
 export const DEFAULT_HOME_DIR = os.homedir();

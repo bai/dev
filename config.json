@@ -8,9 +8,7 @@
     "flywheelsoftware": "gitlab"
   },
   "telemetry": {
-    "enabled": true,
-    "mode": "console",
-    "projectId": "devcli-465111"
+    "mode": "remote"
   },
   "miseGlobalConfig": {
     "tools": {

@@ -1,7 +1,7 @@
 import { Effect, Layer } from "effect";
 
 import { ConfigLoaderTag, type ConfigLoader } from "../domain/config-loader-port";
-import { configSchema, defaultConfig, type Config } from "../domain/config-schema";
+import { configSchema, type Config } from "../domain/config-schema";
 import {
   configError,
   type ConfigError,
@@ -19,7 +19,9 @@ export const makeConfigLoaderLive = (fileSystem: FileSystem, network: Network, c
     fileSystem.exists(configPath).pipe(
       Effect.flatMap((exists) => {
         if (!exists) {
-          return save(defaultConfig).pipe(Effect.map(() => defaultConfig));
+          // Create a new config with all defaults from the schema
+          const newConfig = configSchema.parse({});
+          return save(newConfig).pipe(Effect.map(() => newConfig));
         }
         return fileSystem.readFile(configPath).pipe(
           Effect.flatMap((content) =>

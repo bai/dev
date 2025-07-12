@@ -4,7 +4,7 @@ import { type ConfigError, type UnknownError } from "../domain/errors";
 import type { GitTag } from "../domain/git-port";
 import type { PathServiceTag } from "../domain/path-service";
 import { RunStoreTag } from "../domain/run-store-port";
-import { VersionTag } from "./version-service";
+import { VersionTag } from "../domain/version-port";
 
 /**
  * Command tracker for recording CLI runs

@@ -1,5 +1,10 @@
 import { Data } from "effect";
 
+import type { TracingError } from "./tracing-port";
+
+// Re-export TracingError for convenience
+export { TracingError } from "./tracing-port";
+
 // Tagged error classes for Effect.ts
 export class ConfigError extends Data.TaggedError("ConfigError")<{
   readonly reason: string;
@@ -70,6 +75,7 @@ export type DevError =
   | HealthCheckError
   | ShellExecutionError
   | ShellTimeoutError
+  | TracingError
   | UnknownError;
 
 // Exit code mapping
@@ -97,6 +103,8 @@ export const exitCode = (error: DevError): number => {
       return 9;
     case "ShellTimeoutError":
       return 10;
+    case "TracingError":
+      return 11;
     default:
       // This should never happen due to exhaustive typing, but satisfies linter
       return 1;
