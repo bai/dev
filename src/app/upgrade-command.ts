@@ -180,9 +180,9 @@ function ensureCorrectConfigUrl(pathService: PathService): Effect.Effect<void, D
     // Step 3: Update configUrl if it's different
     if (localConfig.configUrl !== projectConfig.configUrl) {
       yield* Effect.logDebug(`📝 Updating configUrl from ${localConfig.configUrl} to ${projectConfig.configUrl}`);
-      (localConfig as any).configUrl = projectConfig.configUrl;
+      const updatedConfig = { ...localConfig, configUrl: projectConfig.configUrl };
 
-      const updatedConfigContent = JSON.stringify(localConfig, null, 2);
+      const updatedConfigContent = JSON.stringify(updatedConfig, null, 2);
       yield* fileSystem
         .writeFile(localConfigPath, updatedConfigContent)
         .pipe(Effect.mapError((error) => unknownError(`Failed to update local config: ${error}`)));

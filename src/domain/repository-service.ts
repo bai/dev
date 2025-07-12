@@ -43,7 +43,7 @@ const parseRepoUrlToPath = (repoUrl: string): Effect.Effect<string, ConfigError,
 
     const url = yield* Effect.tryPromise({
       try: () => Promise.resolve(new URL(cleaned)),
-      catch: (error: any) => configError(`Invalid repository URL: ${repoUrl} - ${error.message}`),
+      catch: (error: unknown) => configError(`Invalid repository URL: ${repoUrl} - ${String(error)}`),
     });
 
     // url.hostname should not include port, but use url.host and strip port to be safe

@@ -2,7 +2,7 @@
 
 export interface MiseConfig {
   readonly min_version?: string;
-  readonly env?: Record<string, any> & {
+  readonly env?: Record<string, string> & {
     readonly _?: {
       readonly path?: string[];
       readonly file?: string[];

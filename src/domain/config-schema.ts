@@ -9,7 +9,7 @@ const logLevelSchema: z.ZodType<LogLevel> = z.enum(["debug", "info", "warning", 
 const miseConfigSchema = z.object({
   min_version: z.string().optional(),
   env: z
-    .record(z.string(), z.any())
+    .record(z.string(), z.string())
     .and(
       z.object({
         _: z
