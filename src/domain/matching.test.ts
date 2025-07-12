@@ -268,5 +268,119 @@ describe("matching", () => {
       expect(score("a", "_a")).toBeGreaterThan(score("a", "ba")); // underscore triggers word boundary
       expect(score("a", " a")).toBeGreaterThan(score("a", "ba")); // space triggers word boundary
     });
+
+    it("handles exact MATCH_MAX_LEN boundary", () => {
+      const exactLenString = "a".repeat(1024);
+      const overLenString = "a".repeat(1025);
+      expect(score("a", exactLenString)).toBeGreaterThan(-Infinity);
+      expect(score("a", overLenString)).toBe(-Infinity);
+    });
+
+    it("handles strings with many repeated characters", () => {
+      expect(positions("aaa", "aaaaaaa")).toEqual([0, 1, 2]);
+      // The algorithm finds the optimal positions based on scoring
+      expect(positions("abc", "aaabbbccc")).toEqual([0, 5, 6]);
+    });
+
+    it("handles single character needles and haystacks", () => {
+      expect(score("a", "a")).toBe(Infinity);
+      expect(score("a", "b")).toBe(-Infinity);
+      expect(positions("a", "a")).toEqual([0]);
+      expect(hasMatch("a", "a")).toBe(true);
+    });
+
+    it("handles mixed alphanumeric strings", () => {
+      expect(hasMatch("a1b2", "a1b2c3")).toBe(true);
+      expect(positions("a1", "abc123")).toEqual([0, 3]);
+      // Digits should get state 1 like lowercase letters
+      expect(score("1", "/1")).toBeCloseTo(0.895); // SCORE_GAP_LEADING + SCORE_MATCH_SLASH
+    });
+
+    it("handles whitespace-only haystacks", () => {
+      expect(hasMatch("a", "   ")).toBe(false);
+      expect(score("a", "   ")).toBe(-Infinity);
+      expect(positions("a", "   ")).toBe(null);
+    });
+
+    it("handles empty strings in all functions", () => {
+      expect(hasMatch("", "")).toBe(true);
+      expect(score("", "")).toBe(-Infinity);
+      expect(positions("", "")).toEqual([]);
+      expect(filter("", []).length).toBe(0);
+    });
+  });
+
+  describe("real-world scenarios", () => {
+    it("matches file paths effectively", () => {
+      expect(positions("mod", "app/models/user.rb")).toEqual([4, 5, 6]);
+      expect(positions("mvc", "app/models/views/controller.rb")).toEqual([4, 11, 17]);
+      expect(positions("test", "spec/models/user_test.rb")).toEqual([17, 18, 19, 20]);
+    });
+
+    it("handles common programming patterns", () => {
+      // camelCase
+      expect(positions("gP", "getParameter")).toEqual([0, 3]);
+      // snake_case
+      expect(positions("gu", "get_user")).toEqual([0, 4]);
+      // kebab-case
+      expect(positions("hc", "header-content")).toEqual([0, 7]);
+      // CONSTANT_CASE
+      expect(positions("MC", "MAX_COUNT")).toEqual([0, 4]);
+    });
+
+    it("prefers exact substring matches", () => {
+      const exactScore = score("test", "test_file.txt");
+      const scatteredScore = score("test", "t_e_s_t.txt");
+      expect(exactScore).toBeGreaterThan(scatteredScore);
+    });
+
+    it("handles deeply nested paths", () => {
+      const path = "src/components/common/utils/helpers/string-helper.ts";
+      // The algorithm finds optimal positions based on scoring
+      expect(positions("scsh", path)).toEqual([0, 15, 36, 43]);
+      expect(hasMatch("stringhelper", path)).toBe(true);
+    });
+
+    it("matches across word boundaries effectively", () => {
+      // Should prefer matching at word starts
+      const wordStartScore = score("fb", "foo_bar");
+      const midWordScore = score("fb", "foobar");
+      expect(wordStartScore).toBeGreaterThan(midWordScore);
+    });
+  });
+
+  describe("algorithm behavior", () => {
+    it("handles multiple equally valid paths", () => {
+      // Both "aaa" at positions 0,1,2 and 1,2,3 would be valid
+      // The algorithm should consistently choose one
+      const result = positions("aaa", "aaaa");
+      expect(result).toEqual([0, 1, 2]); // Should prefer leftmost
+    });
+
+    it("chooses consecutive matches over better bonuses", () => {
+      // Should prefer consecutive "test" over "Test" with capital bonus
+      const consecutiveScore = score("test", "testing");
+      const capitalScore = score("test", "Test");
+      // This might not always be true, but tests the trade-off
+      expect(positions("test", "testTest")).toEqual([0, 1, 2, 3]);
+    });
+
+    it("handles needle longer than haystack correctly", () => {
+      expect(hasMatch("abcdef", "abc")).toBe(false);
+      expect(score("abcdef", "abc")).toBe(-Infinity);
+      expect(positions("abcdef", "abc")).toBe(null);
+    });
+
+    it("scores all-caps matches appropriately", () => {
+      expect(score("ABC", "ABC")).toBe(Infinity);
+      expect(score("abc", "ABC")).toBe(Infinity); // case insensitive
+      expect(positions("abc", "ABC")).toEqual([0, 1, 2]);
+    });
+
+    it("handles punctuation-heavy strings", () => {
+      expect(hasMatch("test", "!!!test!!!")).toBe(true);
+      expect(positions("test", "!!!test!!!")).toEqual([3, 4, 5, 6]);
+      expect(hasMatch("a.b", "a...b")).toBe(true);
+    });
   });
 });

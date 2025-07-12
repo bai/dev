@@ -176,7 +176,12 @@ export function score(needle: string, haystack: string): number {
   const { needleLen, haystackLen } = match;
 
   if (needleLen === haystackLen) {
-    return SCORE_MAX;
+    // Check if it's actually an exact match (case-insensitive)
+    if (match.lowerNeedle === match.lowerHaystack) {
+      return SCORE_MAX;
+    }
+    // If same length but not matching, no match is possible
+    return SCORE_MIN;
   }
 
   // D and M matrices for dynamic programming
