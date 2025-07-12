@@ -196,7 +196,7 @@ export const makeGcloudToolsLive = (shell: Shell, filesystem: FileSystem): Gclou
 
       return {
         toolName: "gcloud",
-        version: `Google Cloud SDK ${currentVersion}`,
+        version: currentVersion,
         status: "ok",
         checkedAt,
       };

@@ -163,7 +163,7 @@ export const makeGitToolsLive = (shell: Shell): GitTools => ({
 
       return {
         toolName: "git",
-        version: `git version ${currentVersion}`,
+        version: currentVersion,
         status: "ok",
         checkedAt,
       };
