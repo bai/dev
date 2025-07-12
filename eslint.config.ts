@@ -69,7 +69,7 @@ export default tseslint.config(
         "error",
         {
           prefer: "type-imports",
-          fixStyle: "separate-type-imports",
+          fixStyle: "inline-type-imports",
         },
       ],
       "@typescript-eslint/require-await": "off",

@@ -1,8 +1,32 @@
 import { Args, Command } from "@effect/cli";
 import { Effect } from "effect";
 
+import { CommandRegistryTag } from "../domain/command-registry-port";
 import { FileSystemTag } from "../domain/file-system-port";
 import { MiseTag } from "../domain/mise-port";
+
+/**
+ * Display help for the run command
+ */
+export const displayHelp = (): Effect.Effect<void, never, never> =>
+  Effect.gen(function* () {
+    yield* Effect.logInfo("\nrun");
+    yield* Effect.logInfo("━".repeat(50));
+    yield* Effect.logInfo("Execute project tasks and scripts using mise\n");
+
+    yield* Effect.logInfo("USAGE");
+    yield* Effect.logInfo("  dev run [task] [args...]\n");
+
+    yield* Effect.logInfo("EXAMPLES");
+    yield* Effect.logInfo("  dev run                    # List available tasks");
+    yield* Effect.logInfo("  dev run start              # Run the 'start' task");
+    yield* Effect.logInfo("  dev run test --watch       # Run 'test' with arguments");
+    yield* Effect.logInfo("  dev run build --production # Run 'build' with flags\n");
+
+    yield* Effect.logInfo("ARGUMENTS");
+    yield* Effect.logInfo("  task                      # Optional task name");
+    yield* Effect.logInfo("  args...                   # Additional arguments for the task\n");
+  });
 
 // Define the task argument as optional
 const task = Args.text({ name: "task" }).pipe(Args.optional);
@@ -46,3 +70,15 @@ export const runCommand = Command.make("run", { task, taskArgs }, ({ task, taskA
     yield* Effect.logInfo(`✅ Task '${fullCommand}' completed successfully`);
   }),
 );
+
+/**
+ * Register the run command with the command registry
+ */
+export const registerRunCommand: Effect.Effect<void, never, CommandRegistryTag> = Effect.gen(function* () {
+  const registry = yield* CommandRegistryTag;
+  yield* registry.register({
+    name: "run",
+    command: runCommand as Command.Command<string, never, any, any>,
+    displayHelp,
+  });
+});

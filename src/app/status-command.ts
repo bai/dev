@@ -1,6 +1,7 @@
 import { Command } from "@effect/cli";
 import { Effect } from "effect";
 
+import { CommandRegistryTag } from "../domain/command-registry-port";
 import { ConfigLoaderTag } from "../domain/config-loader-port";
 import { statusCheckError } from "../domain/errors";
 import { HealthCheckTag, type HealthCheckResult } from "../domain/health-check-port";
@@ -15,6 +16,22 @@ interface StatusItem {
 }
 
 // No options needed - always show comprehensive current status
+
+/**
+ * Display help for the status command
+ */
+export const displayHelp = (): Effect.Effect<void, never, never> =>
+  Effect.gen(function* () {
+    yield* Effect.logInfo("\nstatus");
+    yield* Effect.logInfo("━".repeat(50));
+    yield* Effect.logInfo("Check the health and status of your development environment\n");
+
+    yield* Effect.logInfo("USAGE");
+    yield* Effect.logInfo("  dev status\n");
+
+    yield* Effect.logInfo("EXAMPLES");
+    yield* Effect.logInfo("  dev status                 # Show comprehensive environment status\n");
+  });
 
 // Create the status command using @effect/cli
 export const statusCommand = Command.make("status", {}, () =>
@@ -264,3 +281,15 @@ const getToolPath = (toolName: string): Effect.Effect<string | null, never, Shel
 
     return systemPath;
   });
+
+/**
+ * Register the status command with the command registry
+ */
+export const registerStatusCommand: Effect.Effect<void, never, CommandRegistryTag> = Effect.gen(function* () {
+  const registry = yield* CommandRegistryTag;
+  yield* registry.register({
+    name: "status",
+    command: statusCommand as Command.Command<string, never, any, any>,
+    displayHelp,
+  });
+});

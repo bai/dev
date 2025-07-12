@@ -1,6 +1,7 @@
 import { Args, Command } from "@effect/cli";
 import { Effect } from "effect";
 
+import { CommandRegistryTag } from "../domain/command-registry-port";
 import { unknownError } from "../domain/errors";
 import { FileSystemTag } from "../domain/file-system-port";
 import { GitTag } from "../domain/git-port";
@@ -11,6 +12,27 @@ import { ShellIntegrationTag } from "./shell-integration-service";
 
 // Define the repository argument as required
 const repo = Args.text({ name: "repo" });
+
+/**
+ * Display help for the clone command
+ */
+export const displayHelp = (): Effect.Effect<void, never, never> =>
+  Effect.gen(function* () {
+    yield* Effect.logInfo("\nclone");
+    yield* Effect.logInfo("━".repeat(50));
+    yield* Effect.logInfo("Clone repositories from various providers (GitHub, GitLab, etc.)\n");
+
+    yield* Effect.logInfo("USAGE");
+    yield* Effect.logInfo("  dev clone <repo>\n");
+
+    yield* Effect.logInfo("EXAMPLES");
+    yield* Effect.logInfo("  dev clone user/repo        # Clone from GitHub");
+    yield* Effect.logInfo("  dev clone repo-name        # Clone from configured default provider");
+    yield* Effect.logInfo("  dev clone https://...      # Clone from full URL\n");
+
+    yield* Effect.logInfo("ARGUMENTS");
+    yield* Effect.logInfo("  repo                      # Required repository identifier\n");
+  });
 
 // Create the clone command using @effect/cli
 export const cloneCommand = Command.make("clone", { repo }, ({ repo }) =>
@@ -74,3 +96,15 @@ export const cloneCommand = Command.make("clone", { repo }, ({ repo }) =>
     }),
   ),
 );
+
+/**
+ * Register the clone command with the command registry
+ */
+export const registerCloneCommand: Effect.Effect<void, never, CommandRegistryTag> = Effect.gen(function* () {
+  const registry = yield* CommandRegistryTag;
+  yield* registry.register({
+    name: "clone",
+    command: cloneCommand as Command.Command<string, never, any, any>,
+    displayHelp,
+  });
+});

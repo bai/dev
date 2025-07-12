@@ -1,6 +1,7 @@
 import { Args, Command } from "@effect/cli";
 import { Effect } from "effect";
 
+import { CommandRegistryTag } from "../domain/command-registry-port";
 import { DirectoryTag } from "../domain/directory-port";
 import { unknownError, type DevError } from "../domain/errors";
 import { InteractiveSelectorTag } from "../domain/interactive-selector-port";
@@ -9,6 +10,27 @@ import { ShellIntegrationTag } from "./shell-integration-service";
 
 // Define the folder name argument as optional
 const folderName = Args.text({ name: "folder_name" }).pipe(Args.optional);
+
+/**
+ * Display help for the cd command
+ */
+export const displayHelp = (): Effect.Effect<void, never, never> =>
+  Effect.gen(function* () {
+    yield* Effect.logInfo("\ncd");
+    yield* Effect.logInfo("━".repeat(50));
+    yield* Effect.logInfo("Navigate to directories using fuzzy search capabilities\n");
+
+    yield* Effect.logInfo("USAGE");
+    yield* Effect.logInfo("  dev cd [folder_name]\n");
+
+    yield* Effect.logInfo("EXAMPLES");
+    yield* Effect.logInfo("  dev cd                     # Interactive directory selection");
+    yield* Effect.logInfo("  dev cd myproject           # Direct navigation by name");
+    yield* Effect.logInfo("  dev cd ~/Documents         # Navigate to specific path\n");
+
+    yield* Effect.logInfo("ARGUMENTS");
+    yield* Effect.logInfo("  folder_name               # Optional directory name or path\n");
+  });
 
 // Create the cd command using @effect/cli
 export const cdCommand = Command.make("cd", { folderName }, ({ folderName }) =>
@@ -98,3 +120,15 @@ export function handleInteractiveCd(): Effect.Effect<void, DevError, any> {
     }
   }).pipe(Effect.withSpan("handle-interactive-cd"));
 }
+
+/**
+ * Register the cd command with the command registry
+ */
+export const registerCdCommand: Effect.Effect<void, never, CommandRegistryTag> = Effect.gen(function* () {
+  const registry = yield* CommandRegistryTag;
+  yield* registry.register({
+    name: "cd",
+    command: cdCommand as Command.Command<string, never, any, any>,
+    displayHelp,
+  });
+});

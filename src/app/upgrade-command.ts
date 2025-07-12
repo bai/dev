@@ -1,6 +1,7 @@
 import { Command } from "@effect/cli";
 import { Effect } from "effect";
 
+import { CommandRegistryTag } from "../domain/command-registry-port";
 import { ConfigLoaderTag } from "../domain/config-loader-port";
 import { type Config } from "../domain/config-schema";
 import { unknownError, type DevError } from "../domain/errors";
@@ -12,6 +13,22 @@ import { ShellTag } from "../domain/shell-port";
 import { ToolManagementTag, type ToolManagement } from "../domain/tool-management-port";
 
 // No options needed for upgrade command
+
+/**
+ * Display help for the upgrade command
+ */
+export const displayHelp = (): Effect.Effect<void, never, never> =>
+  Effect.gen(function* () {
+    yield* Effect.logInfo("\nupgrade");
+    yield* Effect.logInfo("━".repeat(50));
+    yield* Effect.logInfo("Upgrade the dev CLI tool and all essential development tools\n");
+
+    yield* Effect.logInfo("USAGE");
+    yield* Effect.logInfo("  dev upgrade\n");
+
+    yield* Effect.logInfo("EXAMPLES");
+    yield* Effect.logInfo("  dev upgrade                # Update CLI and all essential tools\n");
+  });
 
 // Create the upgrade command using @effect/cli
 export const upgradeCommand = Command.make("upgrade", {}, () =>
@@ -296,3 +313,15 @@ function showSuccessMessage(): Effect.Effect<void, DevError, any> {
     yield* Effect.logInfo("");
   });
 }
+
+/**
+ * Register the upgrade command with the command registry
+ */
+export const registerUpgradeCommand: Effect.Effect<void, never, CommandRegistryTag> = Effect.gen(function* () {
+  const registry = yield* CommandRegistryTag;
+  yield* registry.register({
+    name: "upgrade",
+    command: upgradeCommand as Command.Command<string, never, any, any>,
+    displayHelp,
+  });
+});

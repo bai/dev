@@ -15,6 +15,7 @@ import { createPathServiceLiveLayer } from "./domain/path-service";
 import { RepositoryServiceLiveLayer } from "./domain/repository-service";
 import { ToolHealthRegistryTag } from "./domain/tool-health-registry-port";
 import { BunToolsLiveLayer } from "./infra/bun-tools-live";
+import { CommandRegistryLiveLayer } from "./infra/command-registry-live";
 import { ConfigLoaderLiveLayer } from "./infra/config-loader-live";
 import { DatabaseLiveLayer } from "./infra/database-live";
 import { DirectoryLiveLayer } from "./infra/directory-live";
@@ -176,6 +177,7 @@ export const buildAppLayer = (config: Config) => {
     Layer.provide(VersionLiveLayer, infraLayer),
     Layer.provide(UpdateCheckerLiveLayer, infraLayer),
     Layer.provide(CommandTrackerLiveLayer, infraLayer),
+    CommandRegistryLiveLayer,
   );
 
   // Combine everything

@@ -61,7 +61,6 @@ const makeTracingLive = (configLoader: typeof ConfigLoaderTag.Service, shell: ty
           Effect.catchAll((error) => Effect.fail(new TracingError({ reason: `Failed to load config: ${error._tag}` }))),
         );
       const telemetryConfig = appConfig.telemetry;
-      // TODO: Get version from a domain service or environment variable
       const version = process.env.CLI_VERSION || "0.0.1";
 
       // Determine span processor based on configuration

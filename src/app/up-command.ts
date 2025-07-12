@@ -1,8 +1,26 @@
 import { Command } from "@effect/cli";
 import { Effect } from "effect";
 
+import { CommandRegistryTag } from "../domain/command-registry-port";
 import { FileSystemTag } from "../domain/file-system-port";
 import { MiseTag } from "../domain/mise-port";
+
+/**
+ * Display help for the up command
+ */
+export const displayHelp = (): Effect.Effect<void, never, never> =>
+  Effect.gen(function* () {
+    yield* Effect.logInfo("\nup");
+    yield* Effect.logInfo("━".repeat(50));
+    yield* Effect.logInfo("Install and update development tools using mise\n");
+
+    yield* Effect.logInfo("USAGE");
+    yield* Effect.logInfo("  dev up\n");
+
+    yield* Effect.logInfo("EXAMPLES");
+    yield* Effect.logInfo("  dev up                     # Install all tools from .mise.toml");
+    yield* Effect.logInfo("  dev up                     # Update existing tools to required versions\n");
+  });
 
 // Create the up command using @effect/cli (no arguments needed)
 export const upCommand = Command.make("up", {}, () =>
@@ -34,3 +52,15 @@ export const upCommand = Command.make("up", {}, () =>
     yield* Effect.logInfo("✅ Development environment setup complete!");
   }),
 );
+
+/**
+ * Register the up command with the command registry
+ */
+export const registerUpCommand: Effect.Effect<void, never, CommandRegistryTag> = Effect.gen(function* () {
+  const registry = yield* CommandRegistryTag;
+  yield* registry.register({
+    name: "up",
+    command: upCommand as Command.Command<string, never, any, any>,
+    displayHelp,
+  });
+});
