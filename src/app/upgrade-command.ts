@@ -83,8 +83,15 @@ function selfUpdateCli(pathService: PathService): Effect.Effect<void, DevError, 
     }
 
     // Pull latest changes
-    yield* git.pullLatestChanges(pathService.devDir);
-    yield* Effect.logInfo("✅ CLI repository updated successfully");
+    yield* git.pullLatestChanges(pathService.devDir).pipe(
+      Effect.tap(() => Effect.logInfo("✅ CLI repository updated successfully")),
+      Effect.catchAll((error) => 
+        Effect.gen(function* () {
+          yield* Effect.logWarning(`⚠️  Failed to pull latest changes: ${error.reason || error.message || "Unknown error"}`);
+          yield* Effect.logInfo("📝 Continuing with the rest of the upgrade process...");
+        })
+      )
+    );
 
     // Run bun install to update dependencies
     yield* Effect.logInfo("📦 Installing/updating dependencies...");
@@ -96,8 +103,14 @@ function selfUpdateCli(pathService: PathService): Effect.Effect<void, DevError, 
         }
         return Effect.succeed(result);
       }),
+      Effect.tap(() => Effect.logInfo("✅ Dependencies updated successfully")),
+      Effect.catchAll((error) => 
+        Effect.gen(function* () {
+          yield* Effect.logWarning(`⚠️  Failed to install dependencies: ${error.reason || error.message || "Unknown error"}`);
+          yield* Effect.logInfo("📝 Continuing with the rest of the upgrade process...");
+        })
+      )
     );
-    yield* Effect.logInfo("✅ Dependencies updated successfully");
   });
 }
 
