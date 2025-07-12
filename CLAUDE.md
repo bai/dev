@@ -55,12 +55,7 @@ This is a CLI tool built with Effect-TS that provides directory navigation, repo
 
 #### Core Architecture Patterns
 
-**Two-Stage Dynamic Wiring**: The application uses a two-stage setup process:
-
-1. **Stage 1**: Load configuration via `loadConfiguration()` (self-contained with bootstrap dependencies)
-2. **Stage 2**: Build dynamic layers using runtime configuration values via `buildAppLiveLayer()`
-
-This eliminates hardcoded values and allows for dynamic configuration at runtime.
+**Dynamic Configuration Loading**: The application loads configuration at startup and uses those values to build all layers dynamically via `buildAppLiveLayer()`. This eliminates hardcoded values and enables runtime configuration.
 
 **Effect-TS Patterns**:
 

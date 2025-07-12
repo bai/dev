@@ -1,4 +1,4 @@
-import { Effect, Layer } from "effect";
+import { Effect } from "effect";
 import { describe, expect, it } from "vitest";
 
 import { makeMiseLive } from "./mise-live";

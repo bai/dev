@@ -1,12 +1,31 @@
 import { Command } from "@effect/cli";
+import { NodeSdk } from "@effect/opentelemetry";
 import { BunRuntime } from "@effect/platform-bun";
+import { BatchSpanProcessor, ConsoleSpanExporter, NoopSpanProcessor } from "@opentelemetry/sdk-trace-base";
 import { Effect } from "effect";
 
+import { cdCommand } from "./app/cd-command";
+import { cloneCommand } from "./app/clone-command";
 import { CommandTrackerTag } from "./app/command-tracking-service";
+import { runCommand } from "./app/run-command";
+import { statusCommand } from "./app/status-command";
+import { upCommand } from "./app/up-command";
+import { upgradeCommand } from "./app/upgrade-command";
 import { VersionTag } from "./app/version-service";
-import { TracingLive } from "./config/tracing";
+import { setupApplication } from "./app-layer";
 import { exitCode, extractErrorMessage, type DevError } from "./domain/errors";
-import { getMainCommand, setupApplicationWithConfig } from "./wiring";
+
+// Create main command with all subcommands
+const mainCommand = Command.make("dev", {}, () => Effect.logInfo("Use --help to see available commands")).pipe(
+  Command.withSubcommands([
+    cdCommand,
+    cloneCommand,
+    upCommand,
+    runCommand,
+    statusCommand,
+    upgradeCommand,
+  ]),
+);
 
 /**
  * CLI application runner that executes Effect CLI commands with proper error handling
@@ -69,7 +88,6 @@ const program = Effect.scoped(
     yield* Effect.addFinalizer(() =>
       Effect.gen(function* () {
         yield* Effect.logDebug("🔧 Cleaning up resources...");
-        // Log interruption if it was caused by signal
         if (process.exitCode === 130) {
           yield* Effect.logDebug("💡 Shutdown initiated by user interrupt (Ctrl+C)");
           yield* Effect.annotateCurrentSpan("shutdown_reason", "user_interrupt");
@@ -78,26 +96,21 @@ const program = Effect.scoped(
       }).pipe(Effect.withSpan("cleanup")),
     );
 
-    // Log application start
-    yield* Effect.logDebug("🚀 Starting dev CLI with Effect CLI...");
+    // Setup application
+    yield* Effect.logDebug("🚀 Starting dev CLI...");
+    const { appLayer } = yield* setupApplication().pipe(Effect.withSpan("setup-application"));
 
-    // Setup application layers
-    const { appLayer } = yield* setupApplicationWithConfig().pipe(Effect.withSpan("setup-application"));
-
-    // Get the main command
-    const mainCommand = getMainCommand();
-
-    // Run the CLI with version from VersionService - provide appLayer first
+    // Run CLI with services from appLayer
     yield* Effect.gen(function* () {
-      // Get command tracker and add finalizer for graceful shutdown
+      // Get services
       const commandTracker = yield* CommandTrackerTag;
-      yield* Effect.addFinalizer(() => commandTracker.gracefulShutdown().pipe(Effect.catchAll(() => Effect.void)));
-
-      // Get version from VersionService (now within appLayer context)
       const versionService = yield* VersionTag;
       const version = yield* versionService.getVersion;
 
-      // Annotate span with CLI information
+      // Add cleanup for command tracker
+      yield* Effect.addFinalizer(() => commandTracker.gracefulShutdown().pipe(Effect.catchAll(() => Effect.void)));
+
+      // Track CLI metadata
       yield* Effect.annotateCurrentSpan("cli_name", "dev");
       yield* Effect.annotateCurrentSpan("cli_version", version);
 
@@ -106,12 +119,12 @@ const program = Effect.scoped(
         Effect.catchAll((error) =>
           Effect.gen(function* () {
             yield* Effect.logWarning(`Failed to record command run: ${error._tag}`);
-            return "unknown-run-id"; // Continue execution even if tracking fails
+            return "unknown-run-id";
           }),
         ),
       );
 
-      // Run the CLI with metadata and track completion
+      // Execute CLI
       const cliExecution = runCli(mainCommand as any, {
         name: "dev",
         version: version,
@@ -120,7 +133,6 @@ const program = Effect.scoped(
 
       yield* cliExecution.pipe(
         Effect.tap(() =>
-          // Record successful completion
           commandTracker
             .completeCommandRun(runId, typeof process.exitCode === "number" ? process.exitCode : 0)
             .pipe(
@@ -128,7 +140,6 @@ const program = Effect.scoped(
             ),
         ),
         Effect.tapError(() =>
-          // Record error completion
           commandTracker
             .completeCommandRun(runId, typeof process.exitCode === "number" ? process.exitCode : 1)
             .pipe(
@@ -138,7 +149,7 @@ const program = Effect.scoped(
       );
     }).pipe(Effect.provide(appLayer), Effect.withSpan("cli-execution"));
 
-    yield* Effect.logDebug("✅ CLI execution completed successfully");
+    yield* Effect.logDebug("✅ CLI execution completed");
   }).pipe(Effect.withSpan("dev-cli-main")),
 ).pipe(
   Effect.catchAll((error) =>
@@ -169,6 +180,18 @@ const program = Effect.scoped(
     }),
   ),
 ) as Effect.Effect<void, never, never>;
+
+// Tracing configuration
+const TracingLive = NodeSdk.layer(() => ({
+  resource: {
+    serviceName: "dev-cli",
+    serviceVersion: "0.0.1",
+  },
+  spanProcessor:
+    process.env.NODE_ENV === "development"
+      ? new BatchSpanProcessor(new ConsoleSpanExporter())
+      : new NoopSpanProcessor(),
+}));
 
 // Run the program with BunRuntime and tracing
 BunRuntime.runMain(program.pipe(Effect.provide(TracingLive)));
