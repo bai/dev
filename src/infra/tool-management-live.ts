@@ -1,6 +1,5 @@
 import { Effect, Layer } from "effect";
 
-import type { ExternalToolError, UnknownError } from "../domain/errors";
 import { ToolManagementTag, type ToolManagement, type ToolManager } from "../domain/tool-management-port";
 import { BunToolsTag, type BunTools } from "./bun-tools-live";
 import { FzfToolsTag, type FzfTools } from "./fzf-tools-live";
