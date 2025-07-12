@@ -210,6 +210,9 @@ export function positions(needle: string, haystack: string): number[] | null {
   const match = setupMatchStruct(needle, haystack);
   if (!match) return null;
 
+  // First check if there's actually a match
+  if (!hasMatch(needle, haystack)) return null;
+
   const { needleLen, haystackLen } = match;
 
   if (needleLen === haystackLen) {
@@ -237,19 +240,36 @@ export function positions(needle: string, haystack: string): number[] | null {
   }
 
   // Backtrack to find positions
-  const result: number[] = [];
-  let i = needleLen - 1;
-  let j = haystackLen - 1;
+  const result: number[] = new Array(needleLen);
+  let matchRequired = false;
 
-  while (i >= 0 && j >= 0) {
-    if (match.lowerNeedle.charAt(i) === match.lowerHaystack.charAt(j)) {
-      result.unshift(j);
-      i--;
+  // Start from the end and work backwards
+  for (let i = needleLen - 1, j = haystackLen - 1; i >= 0; i--) {
+    // Find the rightmost match for this needle position
+    for (; j >= 0; j--) {
+      const dScore = D[i]?.[j];
+      const mScore = M[i]?.[j];
+
+      if (dScore !== undefined && mScore !== undefined && dScore !== SCORE_MIN) {
+        // Check if this position is valid for backtracking
+        if (matchRequired || dScore === mScore) {
+          // Check if the next match should be consecutive
+          matchRequired = i > 0 && j > 0 && M[i]?.[j] === (D[i - 1]?.[j - 1] ?? SCORE_MIN) + SCORE_MATCH_CONSECUTIVE;
+
+          result[i] = j;
+          j--; // Move to the next position for the previous needle character
+          break;
+        }
+      }
     }
-    j--;
+
+    // If we couldn't find a match position, backtracking failed
+    if (result[i] === undefined) {
+      return null;
+    }
   }
 
-  return result.length === needleLen ? result : null;
+  return result;
 }
 
 export interface Choice {
