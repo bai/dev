@@ -12,7 +12,7 @@ import { statusCommand } from "./app/status-command";
 import { upCommand } from "./app/up-command";
 import { upgradeCommand } from "./app/upgrade-command";
 import { VersionTag } from "./app/version-service";
-import { setupApplication } from "./app-layer";
+import { setupApplication } from "./config/app-layer";
 import { exitCode, extractErrorMessage, type DevError } from "./domain/errors";
 
 // Create main command with all subcommands

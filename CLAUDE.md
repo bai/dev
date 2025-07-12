@@ -69,7 +69,7 @@ This is a CLI tool built with Effect-TS that provides directory navigation, repo
 - **Domain layer** (`src/domain/`): Core business logic, ports (interfaces), and models
 - **Infrastructure layer** (`src/infra/`): Concrete implementations of domain ports
 - **Application layer** (`src/app/`): Commands and application services
-- **Configuration layer** (`src/config/`): Dynamic configuration loading and layer building
+- **Configuration layer** (`src/config/`): Configuration schema, loading, and application wiring
 
 #### Key Components
 
@@ -96,7 +96,7 @@ This is a CLI tool built with Effect-TS that provides directory navigation, repo
 **Configuration Management**:
 
 - Dynamic configuration loading from remote URLs
-- Two-stage dependency injection system
+- Simplified dependency injection via Effect layers
 - Support for mise configuration (global and per-repo)
 
 #### File Structure Patterns
@@ -105,7 +105,7 @@ This is a CLI tool built with Effect-TS that provides directory navigation, repo
 - **Services**: `src/app/` - Service files with `-service.ts` suffix
 - **Ports**: `src/domain/` - Interface files with `-port.ts` suffix
 - **Infrastructure**: `src/infra/` - Implementation files with technology prefix and `-live.ts` suffix
-- **Wiring**: `src/wiring.ts` - Main composition root
+- **Configuration**: `src/config/` - Contains `app-layer.ts` (composition root), `loader.ts`, and `schema.ts`
 
 #### Key Dependencies
 
@@ -122,7 +122,7 @@ This is a CLI tool built with Effect-TS that provides directory navigation, repo
 2. New features should follow the Effect-TS patterns established
 3. Database changes require running `bun run db:generate` for migrations
 4. Health checks should be implemented for any new tools or dependencies
-5. Commands should be added to the main command in `src/wiring.ts`
+5. Commands should be added to the main command in `src/index.ts`
 
 ### Testing Strategy
 

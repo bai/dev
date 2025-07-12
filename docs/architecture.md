@@ -129,16 +129,12 @@ src/
 │   ├── *-tools-live.ts  # Tool implementations (e.g., bun-tools-live.ts, git-tools-live.ts)
 │   └── tool-management-live.ts
 │
-├── config/        # ⚙️ Config schema, loader & migrations
-│   ├── bootstrap.ts
-│   ├── dynamic-layers.ts
-│   ├── loader.ts
-│   ├── migrations.ts
-│   ├── schema.ts
-│   └── tracing.ts
+├── config/        # ⚙️ Configuration & application wiring
+│   ├── app-layer.ts   # Composition root - application setup and layer composition
+│   ├── loader.ts      # Configuration loader service
+│   └── schema.ts      # Configuration schema and validation
 │
-├── wiring.ts      # 🏗️ Composition root
-└── index.ts       # 🚀 Entry point
+└── index.ts       # 🚀 Entry point with main command definition
 ```
 
 ### 4.1 Layer Isolation Rules
@@ -148,7 +144,7 @@ src/
 | **Domain**    | Effect, other domain modules    | App, Infra, CLI         |
 | **App**       | Domain, Effect                  | Infra, CLI               |
 | **Infra**     | Domain, Effect, external libs   | App, CLI                 |
-| **CLI**       | App, Domain, Effect             | Infra                    |
+| **Config**    | Domain, Infra, App, Effect      | —                        |
 | **Root**      | Every layer                     | —                        |
 
 ### 4.2 Layer Definitions
@@ -390,7 +386,7 @@ Integration tests wire multiple layers together with real SQLite; E2E drives the
 1. **Define / reuse domain models & ports**.
 2. **Implement functional adapter(s)** if new infrastructure is needed.
 3. **Write the command** using @effect/cli Command.make with Effect generators.
-4. **Wire** everything in `wiring.ts` by adding to the subcommands array.
+4. **Wire** everything in `index.ts` by adding to the subcommands array.
 
 ### Adding a New Infrastructure Adapter (Example: Redis Cache)
 

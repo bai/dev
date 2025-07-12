@@ -88,9 +88,9 @@ export default tseslint.config(
   // - Domain: Can only import from Effect and other domain modules
   // - App: Can import from Domain and Effect (NOT from Infra or CLI)
   // - Infra: Can import from Domain, Effect, and external libs (NOT from App or CLI)
-  // - Config: Can only import from Effect (NOT from App, Infra, or CLI)
-  //   Exception: bootstrap.ts and dynamic-layers.ts are part of the composition root
-  // - Root (wiring.ts, index.ts): Can import from any layer
+  // - Config: Contains app-layer.ts (composition root) which can import from all layers
+  //   Other config files (loader.ts, schema.ts) should only import from domain
+  // - Root (index.ts): Can import from any layer
   {
     files: ["src/domain/**/*.ts"],
     rules: {
@@ -100,7 +100,7 @@ export default tseslint.config(
           zones: [
             {
               target: "./src/domain",
-              from: ["./src/app", "./src/infra", "./src/config", "./src/wiring.ts", "./src/index.ts"],
+              from: ["./src/app", "./src/infra", "./src/config", "./src/index.ts"],
               message: "Domain layer must not import from App, Infra, Config, or CLI layers",
             },
           ],
@@ -117,7 +117,7 @@ export default tseslint.config(
           zones: [
             {
               target: "./src/app",
-              from: ["./src/infra", "./src/wiring.ts", "./src/index.ts"],
+              from: ["./src/infra", "./src/index.ts"],
               message: "App layer must not import from Infra or CLI layers",
             },
           ],
@@ -134,7 +134,7 @@ export default tseslint.config(
           zones: [
             {
               target: "./src/infra",
-              from: ["./src/app", "./src/wiring.ts", "./src/index.ts"],
+              from: ["./src/app", "./src/index.ts"],
               message: "Infra layer must not import from App or CLI layers",
             },
           ],
@@ -144,7 +144,7 @@ export default tseslint.config(
   },
   {
     files: ["src/config/**/*.ts"],
-    ignores: ["src/config/bootstrap.ts", "src/config/dynamic-layers.ts"], // These are part of composition root
+    ignores: ["src/config/app-layer.ts"], // app-layer.ts is the composition root
     rules: {
       "import/no-restricted-paths": [
         "error",
@@ -152,8 +152,8 @@ export default tseslint.config(
           zones: [
             {
               target: "./src/config",
-              from: ["./src/app", "./src/infra", "./src/wiring.ts", "./src/index.ts"],
-              message: "Config layer must not import from App, Infra, or CLI layers",
+              from: ["./src/app", "./src/infra", "./src/index.ts"],
+              message: "Config files (except app-layer.ts) must not import from App, Infra, or CLI layers",
             },
           ],
         },
