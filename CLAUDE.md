@@ -24,6 +24,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Notes
 
+You absolutely must follow the rules in this file when working with code in this repository. You must adhere to best practices of idiomatic Effect-TS code and rules mentioned in the Always-Apply Rules section.
+
 ### Development Commands
 
 ```bash

@@ -74,4 +74,4 @@ export const makeFileSystemLive = (): FileSystem => ({
 });
 
 // Effect Layer for dependency injection with proper resource management
-export const FileSystemLiveLayer = Layer.effect(FileSystemTag, Effect.succeed(makeFileSystemLive()));
+export const FileSystemLiveLayer = Layer.succeed(FileSystemTag, makeFileSystemLive());
