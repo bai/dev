@@ -1,10 +1,16 @@
 import { Effect, Layer } from "effect";
 
-import { configError, type ConfigError, type FileSystemError, type NetworkError, type UnknownError } from "../domain/errors";
-import { FileSystemTag, type FileSystem } from "../domain/file-system-port";
-import { NetworkTag, type Network } from "../domain/network-port";
 import { ConfigLoaderTag, type ConfigLoader } from "../domain/config-loader-port";
 import { configSchema, defaultConfig, type Config } from "../domain/config-schema";
+import {
+  configError,
+  type ConfigError,
+  type FileSystemError,
+  type NetworkError,
+  type UnknownError,
+} from "../domain/errors";
+import { FileSystemTag, type FileSystem } from "../domain/file-system-port";
+import { NetworkTag, type Network } from "../domain/network-port";
 
 // Factory function that creates ConfigLoader with dependencies
 export const makeConfigLoaderLive = (fileSystem: FileSystem, network: Network, configPath: string): ConfigLoader => {

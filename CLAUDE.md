@@ -55,7 +55,12 @@ This is a CLI tool built with Effect-TS that provides directory navigation, repo
 
 #### Core Architecture Patterns
 
-**Dynamic Configuration Loading**: The application loads configuration at startup and uses those values to build all layers dynamically via `buildAppLiveLayer()`. This eliminates hardcoded values and enables runtime configuration.
+**Two-Stage Dynamic Wiring**: The application uses a two-stage setup process:
+
+1. **Stage 1**: Load configuration via `loadConfiguration()` (self-contained with bootstrap dependencies)
+2. **Stage 2**: Build dynamic layers using runtime configuration values via `buildAppLayer()`
+
+This eliminates hardcoded values and allows for dynamic configuration at runtime.
 
 **Effect-TS Patterns**:
 
@@ -69,7 +74,7 @@ This is a CLI tool built with Effect-TS that provides directory navigation, repo
 - **Domain layer** (`src/domain/`): Core business logic, ports (interfaces), and models
 - **Infrastructure layer** (`src/infra/`): Concrete implementations of domain ports
 - **Application layer** (`src/app/`): Commands and application services
-- **Configuration layer** (`src/config/`): Configuration schema, loading, and application wiring
+- **Composition root** (`src/wiring.ts`): Dynamic configuration loading and layer building
 
 #### Key Components
 
@@ -96,7 +101,7 @@ This is a CLI tool built with Effect-TS that provides directory navigation, repo
 **Configuration Management**:
 
 - Dynamic configuration loading from remote URLs
-- Simplified dependency injection via Effect layers
+- Two-stage dependency injection system
 - Support for mise configuration (global and per-repo)
 
 #### File Structure Patterns
@@ -105,7 +110,7 @@ This is a CLI tool built with Effect-TS that provides directory navigation, repo
 - **Services**: `src/app/` - Service files with `-service.ts` suffix
 - **Ports**: `src/domain/` - Interface files with `-port.ts` suffix
 - **Infrastructure**: `src/infra/` - Implementation files with technology prefix and `-live.ts` suffix
-- **Configuration**: `src/config/` - Contains `app-layer.ts` (composition root), `loader.ts`, and `schema.ts`
+- **Wiring**: `src/wiring.ts` - Main composition root
 
 #### Key Dependencies
 

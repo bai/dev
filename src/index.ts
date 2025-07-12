@@ -12,8 +12,8 @@ import { statusCommand } from "./app/status-command";
 import { upCommand } from "./app/up-command";
 import { upgradeCommand } from "./app/upgrade-command";
 import { VersionTag } from "./app/version-service";
-import { setupApplication } from "./config/app-layer";
 import { exitCode, extractErrorMessage, type DevError } from "./domain/errors";
+import { setupApplication } from "./wiring";
 
 // Create main command with all subcommands
 const mainCommand = Command.make("dev", {}, () => Effect.logInfo("Use --help to see available commands")).pipe(

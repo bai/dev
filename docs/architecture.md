@@ -105,6 +105,8 @@ src/
 │   ├── errors.ts
 │   ├── matching.ts
 │   ├── drizzle-types.ts
+│   ├── config-schema.ts    # Configuration schema and types
+│   ├── config-loader-port.ts # Configuration loader interface
 │   ├── *-port.ts      # Domain interfaces (e.g., git-port.ts, database-port.ts)
 │   └── *-service.ts   # Domain services (e.g., repository-service.ts, health-check-service.ts)
 │
@@ -113,6 +115,7 @@ src/
 │   └── *-service.ts   # Application services (e.g., command-tracking-service.ts, version-service.ts)
 │
 ├── infra/         # 🔌 Adapters (flat structure with -live suffix)
+│   ├── config-loader-live.ts  # Configuration loader implementation
 │   ├── database-live.ts
 │   ├── run-store-live.ts
 │   ├── directory-live.ts
@@ -129,11 +132,7 @@ src/
 │   ├── *-tools-live.ts  # Tool implementations (e.g., bun-tools-live.ts, git-tools-live.ts)
 │   └── tool-management-live.ts
 │
-├── config/        # ⚙️ Configuration & application wiring
-│   ├── app-layer.ts   # Composition root - application setup and layer composition
-│   ├── loader.ts      # Configuration loader service
-│   └── schema.ts      # Configuration schema and validation
-│
+├── wiring.ts      # ⚙️ Composition root - configuration loading and layer composition
 └── index.ts       # 🚀 Entry point with main command definition
 ```
 
@@ -144,7 +143,6 @@ src/
 | **Domain**    | Effect, other domain modules    | App, Infra, CLI         |
 | **App**       | Domain, Effect                  | Infra, CLI               |
 | **Infra**     | Domain, Effect, external libs   | App, CLI                 |
-| **Config**    | Domain, Infra, App, Effect      | —                        |
 | **Root**      | Every layer                     | —                        |
 
 ### 4.2 Layer Definitions
@@ -152,7 +150,7 @@ src/
 | Layer         | Services Included                                                      |
 | ------------- | ---------------------------------------------------------------------- |
 | **InfraLive** | FileSystem, RepoProvider, Mise, Shell, Keychain, Network, **RunStore** |
-| **AppLive**   | Config **+ InfraLive**                                  |
+| **AppLive**   | Commands, Services **+ InfraLive**                                     |
 | **CliLive**   | Console, Telemetry *(optional)* **+ AppLive**                          |
 
 Tests compose only the layers they need (e.g. swap `FileSystemLive` for an in-memory fake).

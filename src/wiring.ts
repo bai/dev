@@ -3,37 +3,37 @@ import path from "path";
 
 import { Effect, Layer } from "effect";
 
-import { CommandTrackerLiveLayer } from "../app/command-tracking-service";
-import { ShellIntegrationLiveLayer } from "../app/shell-integration-service";
-import { UpdateCheckerLiveLayer } from "../app/update-check-service";
-import { VersionLiveLayer } from "../app/version-service";
-import { DirectoryTag } from "../domain/directory-port";
-import { HealthCheckServiceTag, makeHealthCheckService } from "../domain/health-check-service";
-import { createPathServiceLiveLayer } from "../domain/path-service";
-import { RepositoryServiceLiveLayer } from "../domain/repository-service";
-import { ToolHealthRegistryTag } from "../domain/tool-health-registry-port";
-import { BunToolsLiveLayer } from "../infra/bun-tools-live";
-import { DatabaseLiveLayer } from "../infra/database-live";
-import { DirectoryLiveLayer } from "../infra/directory-live";
-import { FileSystemLiveLayer } from "../infra/file-system-live";
-import { InteractiveSelectorLiveLayer } from "../infra/fzf-selector-live";
-import { FzfToolsLiveLayer } from "../infra/fzf-tools-live";
-import { GcloudToolsLiveLayer } from "../infra/gcloud-tools-live";
-import { GitLiveLayer } from "../infra/git-live";
-import { GitToolsLiveLayer } from "../infra/git-tools-live";
-import { HealthCheckLiveLayer } from "../infra/health-check-live";
-import { KeychainLiveLayer } from "../infra/keychain-live";
-import { MiseLiveLayer } from "../infra/mise-live";
-import { MiseToolsLiveLayer } from "../infra/mise-tools-live";
-import { MultiRepoProviderLiveLayer } from "../infra/multi-repo-provider-live";
-import { NetworkLiveLayer } from "../infra/network-live";
-import { RunStoreLiveLayer } from "../infra/run-store-live";
-import { ShellLiveLayer } from "../infra/shell-live";
-import { ToolHealthRegistryLiveLayer } from "../infra/tool-health-registry-live";
-import { ToolManagementLiveLayer } from "../infra/tool-management-live";
-import { ConfigLoaderTag } from "../domain/config-loader-port";
-import { type Config } from "../domain/config-schema";
-import { ConfigLoaderLiveLayer } from "../infra/config-loader-live";
+import { CommandTrackerLiveLayer } from "./app/command-tracking-service";
+import { ShellIntegrationLiveLayer } from "./app/shell-integration-service";
+import { UpdateCheckerLiveLayer } from "./app/update-check-service";
+import { VersionLiveLayer } from "./app/version-service";
+import { ConfigLoaderTag } from "./domain/config-loader-port";
+import { type Config } from "./domain/config-schema";
+import { DirectoryTag } from "./domain/directory-port";
+import { HealthCheckServiceTag, makeHealthCheckService } from "./domain/health-check-service";
+import { createPathServiceLiveLayer } from "./domain/path-service";
+import { RepositoryServiceLiveLayer } from "./domain/repository-service";
+import { ToolHealthRegistryTag } from "./domain/tool-health-registry-port";
+import { BunToolsLiveLayer } from "./infra/bun-tools-live";
+import { ConfigLoaderLiveLayer } from "./infra/config-loader-live";
+import { DatabaseLiveLayer } from "./infra/database-live";
+import { DirectoryLiveLayer } from "./infra/directory-live";
+import { FileSystemLiveLayer } from "./infra/file-system-live";
+import { InteractiveSelectorLiveLayer } from "./infra/fzf-selector-live";
+import { FzfToolsLiveLayer } from "./infra/fzf-tools-live";
+import { GcloudToolsLiveLayer } from "./infra/gcloud-tools-live";
+import { GitLiveLayer } from "./infra/git-live";
+import { GitToolsLiveLayer } from "./infra/git-tools-live";
+import { HealthCheckLiveLayer } from "./infra/health-check-live";
+import { KeychainLiveLayer } from "./infra/keychain-live";
+import { MiseLiveLayer } from "./infra/mise-live";
+import { MiseToolsLiveLayer } from "./infra/mise-tools-live";
+import { MultiRepoProviderLiveLayer } from "./infra/multi-repo-provider-live";
+import { NetworkLiveLayer } from "./infra/network-live";
+import { RunStoreLiveLayer } from "./infra/run-store-live";
+import { ShellLiveLayer } from "./infra/shell-live";
+import { ToolHealthRegistryLiveLayer } from "./infra/tool-health-registry-live";
+import { ToolManagementLiveLayer } from "./infra/tool-management-live";
 
 /**
  * Expands tilde in file paths
@@ -57,7 +57,7 @@ export const loadConfiguration = () =>
 
     const configPath = path.join(os.homedir(), ".config", "dev", "config.json");
     const baseSearchPath = path.join(os.homedir(), "src");
-    
+
     // Minimal bootstrap layer for config loading
     const bootstrapLayer = Layer.mergeAll(
       FileSystemLiveLayer,
@@ -68,8 +68,8 @@ export const loadConfiguration = () =>
         Layer.mergeAll(
           FileSystemLiveLayer,
           createPathServiceLiveLayer(baseSearchPath),
-          Layer.provide(NetworkLiveLayer, FileSystemLiveLayer)
-        )
+          Layer.provide(NetworkLiveLayer, FileSystemLiveLayer),
+        ),
       ),
     );
 
@@ -92,30 +92,26 @@ export const buildAppLayer = (config: Config) => {
   const baseSearchPath = expandTildePath(config.baseSearchPath ?? path.join(os.homedir(), "src"));
   const defaultProvider = config.defaultProvider ?? "github";
   const orgToProvider = config.orgToProvider ?? {};
-  
+
   // Stage 1: Base foundation services (no dependencies)
-  const baseServices = Layer.mergeAll(
-    FileSystemLiveLayer,
-    ShellLiveLayer,
-    createPathServiceLiveLayer(baseSearchPath),
-  );
-  
+  const baseServices = Layer.mergeAll(FileSystemLiveLayer, ShellLiveLayer, createPathServiceLiveLayer(baseSearchPath));
+
   // Stage 2: Services that depend on base services
   const networkLayer = Layer.provide(NetworkLiveLayer, baseServices);
   const gitLayer = Layer.provide(GitLiveLayer, baseServices);
   const directoryLayer = Layer.provide(DirectoryLiveLayer, baseServices);
   const databaseLayer = Layer.provide(DatabaseLiveLayer, baseServices);
   const repositoryServiceLayer = Layer.provide(RepositoryServiceLiveLayer, baseServices);
-  
+
   // Config loader needs filesystem and network
   const configLoaderLayer = Layer.provide(
     ConfigLoaderLiveLayer(configPath),
-    Layer.mergeAll(baseServices, networkLayer)
+    Layer.mergeAll(baseServices, networkLayer),
   );
-  
+
   // Stage 3: Tool services (depend on base + config)
   const toolDependencies = Layer.mergeAll(baseServices, configLoaderLayer);
-  
+
   const toolLayers = Layer.mergeAll(
     Layer.provide(MiseLiveLayer, toolDependencies),
     Layer.provide(KeychainLiveLayer, baseServices),
@@ -126,26 +122,26 @@ export const buildAppLayer = (config: Config) => {
     Layer.provide(GcloudToolsLiveLayer, baseServices),
     InteractiveSelectorLiveLayer,
   );
-  
+
   // Tool management and health registry
   const toolManagementLayer = Layer.provide(ToolManagementLiveLayer, toolLayers);
   const toolHealthRegistryLayer = Layer.provide(ToolHealthRegistryLiveLayer, toolLayers);
-  
+
   // Repository provider
   const repoProviderLayer = Layer.provide(
     MultiRepoProviderLiveLayer(defaultOrg, defaultProvider, orgToProvider),
-    networkLayer
+    networkLayer,
   );
-  
+
   // Health check service
   const healthCheckServiceLayer = Layer.effect(
     HealthCheckServiceTag,
     Effect.gen(function* () {
       const toolHealthRegistry = yield* ToolHealthRegistryTag;
       return makeHealthCheckService(toolHealthRegistry);
-    })
+    }),
   ).pipe(Layer.provide(toolHealthRegistryLayer));
-  
+
   // Stage 4: Application services
   const infraLayer = Layer.mergeAll(
     baseServices,
@@ -161,14 +157,14 @@ export const buildAppLayer = (config: Config) => {
     repoProviderLayer,
     healthCheckServiceLayer,
   );
-  
+
   // Database-dependent services
   const runStoreLayer = Layer.provide(RunStoreLiveLayer, Layer.mergeAll(databaseLayer, baseServices));
   const healthCheckLayer = Layer.provide(
-    HealthCheckLiveLayer, 
-    Layer.mergeAll(databaseLayer, configLoaderLayer, baseServices, healthCheckServiceLayer)
+    HealthCheckLiveLayer,
+    Layer.mergeAll(databaseLayer, configLoaderLayer, baseServices, healthCheckServiceLayer),
   );
-  
+
   // Final application services
   const appServices = Layer.mergeAll(
     Layer.provide(ShellIntegrationLiveLayer, infraLayer),
@@ -176,14 +172,9 @@ export const buildAppLayer = (config: Config) => {
     Layer.provide(UpdateCheckerLiveLayer, infraLayer),
     Layer.provide(CommandTrackerLiveLayer, infraLayer),
   );
-  
+
   // Combine everything
-  return Layer.mergeAll(
-    infraLayer,
-    runStoreLayer,
-    healthCheckLayer,
-    appServices
-  );
+  return Layer.mergeAll(infraLayer, runStoreLayer, healthCheckLayer, appServices);
 };
 
 /**
