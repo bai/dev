@@ -1,8 +1,8 @@
 import { Command } from "@effect/cli";
 import { Effect } from "effect";
 
-import { ConfigLoaderTag } from "../config/loader";
-import { type Config } from "../config/schema";
+import { ConfigLoaderTag } from "../domain/config-loader-port";
+import { type Config } from "../domain/config-schema";
 import { unknownError, type DevError } from "../domain/errors";
 import { FileSystemTag } from "../domain/file-system-port";
 import { GitTag } from "../domain/git-port";

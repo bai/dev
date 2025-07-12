@@ -1,6 +1,6 @@
 import { z } from "zod/v4";
 
-import type { Config, GitProviderType, LogLevel } from "../domain/models";
+import type { Config, GitProviderType, LogLevel } from "./models";
 
 // Log level schema
 const logLevelSchema: z.ZodType<LogLevel> = z.enum(["debug", "info", "warning", "error", "fatal"]);
@@ -51,9 +51,6 @@ export const configSchema = z.object({
   miseRepoConfig: miseConfigSchema.optional().describe("Mise repository configuration settings"),
 });
 
-// Export Config type that was moved to domain
-export type { Config } from "../domain/models";
-
 // Default configuration
 export const defaultConfig: Config = {
   configUrl: "https://gist.githubusercontent.com/bai/d5a4a92350e67af8aba1b9db33d5f077/raw/config.json",
@@ -67,5 +64,6 @@ export const defaultConfig: Config = {
   },
 };
 
-// Re-export schema for other modules
+// Re-export Config type and schemas for other modules
+export type { Config } from "./models";
 export { miseConfigSchema, logLevelSchema };

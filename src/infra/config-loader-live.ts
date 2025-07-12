@@ -1,21 +1,10 @@
-import { Context, Effect, Layer } from "effect";
+import { Effect, Layer } from "effect";
 
-import {
-  configError,
-  type ConfigError,
-  type FileSystemError,
-  type NetworkError,
-  type UnknownError,
-} from "../domain/errors";
+import { configError, type ConfigError, type FileSystemError, type NetworkError, type UnknownError } from "../domain/errors";
 import { FileSystemTag, type FileSystem } from "../domain/file-system-port";
 import { NetworkTag, type Network } from "../domain/network-port";
-import { configSchema, defaultConfig, type Config } from "./schema";
-
-export interface ConfigLoader {
-  load(): Effect.Effect<Config, ConfigError | FileSystemError | UnknownError>;
-  save(config: Config): Effect.Effect<void, FileSystemError | UnknownError>;
-  refresh(): Effect.Effect<Config, ConfigError | FileSystemError | NetworkError | UnknownError>;
-}
+import { ConfigLoaderTag, type ConfigLoader } from "../domain/config-loader-port";
+import { configSchema, defaultConfig, type Config } from "../domain/config-schema";
 
 // Factory function that creates ConfigLoader with dependencies
 export const makeConfigLoaderLive = (fileSystem: FileSystem, network: Network, configPath: string): ConfigLoader => {
@@ -80,9 +69,6 @@ export const makeConfigLoaderLive = (fileSystem: FileSystem, network: Network, c
     refresh,
   };
 };
-
-// Service tag for Effect Context system
-export class ConfigLoaderTag extends Context.Tag("ConfigLoader")<ConfigLoaderTag, ConfigLoader>() {}
 
 // Effect Layer for dependency injection using factory function
 export const ConfigLoaderLiveLayer = (configPath: string) =>

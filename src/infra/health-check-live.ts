@@ -2,7 +2,7 @@ import { sql } from "drizzle-orm";
 import { Clock, Effect, Layer } from "effect";
 
 import { toolHealthChecks } from "../../drizzle/schema";
-import { ConfigLoaderTag, type ConfigLoader } from "../config/loader";
+import { ConfigLoaderTag, type ConfigLoader } from "../domain/config-loader-port";
 import { DatabaseTag, type Database } from "../domain/database-port";
 import { healthCheckError, type HealthCheckError } from "../domain/errors";
 import {

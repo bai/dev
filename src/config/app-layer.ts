@@ -31,8 +31,9 @@ import { RunStoreLiveLayer } from "../infra/run-store-live";
 import { ShellLiveLayer } from "../infra/shell-live";
 import { ToolHealthRegistryLiveLayer } from "../infra/tool-health-registry-live";
 import { ToolManagementLiveLayer } from "../infra/tool-management-live";
-import { ConfigLoaderLiveLayer, ConfigLoaderTag } from "./loader";
-import { type Config } from "./schema";
+import { ConfigLoaderTag } from "../domain/config-loader-port";
+import { type Config } from "../domain/config-schema";
+import { ConfigLoaderLiveLayer } from "../infra/config-loader-live";
 
 /**
  * Expands tilde in file paths

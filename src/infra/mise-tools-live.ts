@@ -3,7 +3,7 @@ import path from "path";
 import { stringify } from "@iarna/toml";
 import { Clock, Context, Effect, Layer } from "effect";
 
-import { ConfigLoaderTag, type ConfigLoader } from "../config/loader";
+import { ConfigLoaderTag, type ConfigLoader } from "../domain/config-loader-port";
 import {
   externalToolError,
   healthCheckError,

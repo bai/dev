@@ -1,7 +1,7 @@
 import { Command } from "@effect/cli";
 import { Effect } from "effect";
 
-import { ConfigLoaderTag } from "../config/loader";
+import { ConfigLoaderTag } from "../domain/config-loader-port";
 import { statusCheckError } from "../domain/errors";
 import { HealthCheckTag, type HealthCheckResult } from "../domain/health-check-port";
 import type { EnvironmentInfo, GitInfo } from "../domain/models";

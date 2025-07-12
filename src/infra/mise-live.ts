@@ -3,7 +3,7 @@ import path from "path";
 import { stringify } from "@iarna/toml";
 import { Effect, Layer } from "effect";
 
-import { ConfigLoaderTag, type ConfigLoader } from "../config/loader";
+import { ConfigLoaderTag, type ConfigLoader } from "../domain/config-loader-port";
 import { shellExecutionError, unknownError, type ShellExecutionError, type UnknownError } from "../domain/errors";
 import { FileSystemTag, type FileSystem } from "../domain/file-system-port";
 import { MiseTag, type Mise, type MiseInfo } from "../domain/mise-port";
