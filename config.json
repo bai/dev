@@ -40,6 +40,7 @@
     "settings": {
       "trusted_config_paths": [
         "~/.dev",
+        "~/src/gitlab.com/bai",
         "~/src/gitlab.com/flywheelsoftware",
         "~/src/github.com/Flywheel-Technologies"
       ],
