@@ -2,10 +2,10 @@ import { it } from "@effect/vitest";
 import { Effect, Exit, Layer } from "effect";
 import { describe, expect } from "vitest";
 
+import type { Config } from "../domain/config-schema";
 import { unknownError } from "../domain/errors";
 import { FileSystemTag, type FileSystem } from "../domain/file-system-port";
 import { GitTag, type Git } from "../domain/git-port";
-import type { Config } from "../domain/config-schema";
 import type { GitProvider, Repository } from "../domain/models";
 import { PathServiceTag, type PathService } from "../domain/path-service";
 import { RepoProviderTag, type RepoProvider } from "../domain/repo-provider-port";

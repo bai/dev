@@ -56,7 +56,6 @@ export const configSchema = z.object({
   miseRepoConfig: miseConfigSchema.optional().describe("Mise repository configuration settings"),
 });
 
-
 // Re-export schemas for other modules
 export { miseConfigSchema, logLevelSchema };
 
