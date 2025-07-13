@@ -34,17 +34,17 @@ export const displayHelp = (): Effect.Effect<void, never, never> =>
 // Create the status command using @effect/cli
 export const statusCommand = Command.make("status", {}, () =>
   Effect.gen(function* () {
-    yield* showEnvironmentInfo.pipe(Effect.withSpan("show-environment-info"));
+    yield* showEnvironmentInfo.pipe(Effect.withSpan("ui.show_environment"));
 
-    const statusItems = yield* getHealthCheckResults.pipe(Effect.withSpan("get-health-check-results"));
-    yield* Effect.annotateCurrentSpan("status_items_count", statusItems.length.toString());
+    const statusItems = yield* getHealthCheckResults.pipe(Effect.withSpan("health.get_check_results"));
+    yield* Effect.annotateCurrentSpan("health.check.count", statusItems.length.toString());
 
-    yield* displayHealthCheckResults(statusItems).pipe(Effect.withSpan("display-health-check-results"));
+    yield* displayHealthCheckResults(statusItems).pipe(Effect.withSpan("ui.display_health_results"));
 
-    yield* showSummary(statusItems).pipe(Effect.withSpan("show-summary"));
+    yield* showSummary(statusItems).pipe(Effect.withSpan("ui.show_summary"));
 
-    yield* checkForFailures(statusItems).pipe(Effect.withSpan("check-failures"));
-  }).pipe(Effect.withSpan("status-command")),
+    yield* checkForFailures(statusItems).pipe(Effect.withSpan("health.check_failures"));
+  }).pipe(Effect.withSpan("status.execute")),
 );
 
 // Helper functions for better organization and testability
@@ -153,7 +153,7 @@ const getHealthCheckResults: Effect.Effect<readonly StatusItem[], never, HealthC
 
     const config = yield* configLoader.load().pipe(
       Effect.catchAll(() => Effect.succeed(undefined)),
-      Effect.withSpan("load-config"),
+      Effect.withSpan("config.load"),
     );
 
     // Run health checks directly and bypass cached results

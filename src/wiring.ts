@@ -209,7 +209,7 @@ export const setupApplication = () =>
       yield* directoryService.ensureBaseDirectoryExists();
       const baseSearchPath = expandTildePath(config.baseSearchPath ?? path.join(os.homedir(), "src"));
       yield* Effect.logDebug(`✅ Base directory ready at: ${baseSearchPath}`);
-    }).pipe(Effect.provide(appLayer), Effect.withSpan("ensure-base-directory"));
+    }).pipe(Effect.provide(appLayer), Effect.withSpan("directory.ensure_base"));
 
     return { config, appLayer };
   });

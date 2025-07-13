@@ -36,7 +36,7 @@ export const displayHelp = (): Effect.Effect<void, never, never> =>
 export const cloneCommand = Command.make("clone", { repo }, ({ repo }) =>
   Effect.scoped(
     Effect.gen(function* () {
-      yield* Effect.annotateCurrentSpan("repo", repo);
+      yield* Effect.annotateCurrentSpan("vcs.repository.name", repo);
       // Add cleanup finalizer for failed clone operations
       yield* Effect.addFinalizer(() => Effect.logDebug("Clone command finalizer called - cleanup complete"));
 
@@ -65,26 +65,26 @@ export const cloneCommand = Command.make("clone", { repo }, ({ repo }) =>
       yield* Effect.logInfo(`Resolving repository: ${org ? `${org}/${repoNameFinal}` : repoNameFinal}`);
 
       // Resolve repository details
-      yield* Effect.annotateCurrentSpan("org", org || "default");
-      yield* Effect.annotateCurrentSpan("repo_name", repoNameFinal);
+      yield* Effect.annotateCurrentSpan("vcs.repository.owner", org || "default");
+      yield* Effect.annotateCurrentSpan("vcs.repository.name", repoNameFinal);
       const repository = yield* repoProvider
         .resolveRepository(repoNameFinal, org)
-        .pipe(Effect.withSpan("resolve-repository"));
+        .pipe(Effect.withSpan("repository.resolve"));
 
       // Use RepositoryService to determine the proper nested destination path
       const destinationPath = yield* repositoryService
         .parseRepoUrlToPath(repository.cloneUrl)
-        .pipe(Effect.withSpan("parse-repo-url"));
+        .pipe(Effect.withSpan("repository.parse_url"));
 
       // Calculate relative path from base directory for cd command
       const relativePath = destinationPath.replace(pathService.baseSearchPath + "/", "");
-      yield* Effect.annotateCurrentSpan("relative_path", relativePath);
+      yield* Effect.annotateCurrentSpan("file.path.relative", relativePath);
 
       // Check if destination already exists
-      const exists = yield* fileSystem.exists(destinationPath).pipe(Effect.withSpan("check-destination-exists"));
+      const exists = yield* fileSystem.exists(destinationPath).pipe(Effect.withSpan("filesystem.check_exists"));
       if (exists) {
         yield* Effect.logInfo(`Directory ${relativePath} already exists, changing to it...`);
-        yield* shellIntegration.changeDirectory(relativePath).pipe(Effect.withSpan("change-to-existing-directory"));
+        yield* shellIntegration.changeDirectory(relativePath).pipe(Effect.withSpan("directory.change"));
         yield* Effect.logInfo(`Successfully changed to existing directory ${relativePath}`);
         return;
       }
@@ -92,16 +92,16 @@ export const cloneCommand = Command.make("clone", { repo }, ({ repo }) =>
       yield* Effect.logInfo(`Cloning ${repository.organization}/${repository.name} to ${relativePath}...`);
 
       // Clone the repository
-      yield* Effect.annotateCurrentSpan("clone_url", repository.cloneUrl);
-      yield* Effect.annotateCurrentSpan("destination_path", destinationPath);
-      yield* git.cloneRepositoryToPath(repository, destinationPath).pipe(Effect.withSpan("git-clone"));
+      yield* Effect.annotateCurrentSpan("vcs.repository.url", repository.cloneUrl);
+      yield* Effect.annotateCurrentSpan("file.path", destinationPath);
+      yield* git.cloneRepositoryToPath(repository, destinationPath).pipe(Effect.withSpan("git.clone"));
 
       yield* Effect.logInfo(`Successfully cloned ${repository.organization}/${repository.name} to ${relativePath}`);
 
       // Change directory to the cloned repository
-      yield* shellIntegration.changeDirectory(relativePath).pipe(Effect.withSpan("change-to-cloned-directory"));
+      yield* shellIntegration.changeDirectory(relativePath).pipe(Effect.withSpan("directory.change"));
       yield* Effect.logInfo(`Changed to directory ${relativePath}`);
-    }).pipe(Effect.withSpan("clone-command")),
+    }).pipe(Effect.withSpan("clone.execute")),
   ),
 );
 

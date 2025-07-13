@@ -37,30 +37,30 @@ export const upgradeCommand = Command.make("upgrade", {}, () =>
     yield* Effect.logInfo("🔄 Upgrading dev CLI tool...");
 
     // Step 1: Self-update the CLI repository
-    yield* selfUpdateCli(pathService).pipe(Effect.withSpan("self-update-cli"));
+    yield* selfUpdateCli(pathService).pipe(Effect.withSpan("cli.self_update"));
 
     // Step 2: Ensure necessary directories exist
-    yield* ensureDirectoriesExist(pathService).pipe(Effect.withSpan("ensure-directories"));
+    yield* ensureDirectoriesExist(pathService).pipe(Effect.withSpan("directory.ensure"));
 
     // Step 3: Update shell integration
-    yield* ensureShellIntegration(pathService).pipe(Effect.withSpan("ensure-shell-integration"));
+    yield* ensureShellIntegration(pathService).pipe(Effect.withSpan("shell.ensure_integration"));
 
     // Step 4: Ensure local config has correct remote URL, then refresh from remote
     yield* Effect.logInfo("🔄 Updating local config with correct remote URL...");
-    yield* ensureCorrectConfigUrl(pathService).pipe(Effect.withSpan("ensure-config-url"));
+    yield* ensureCorrectConfigUrl(pathService).pipe(Effect.withSpan("config.ensure_url"));
     yield* Effect.logInfo("🔄 Refreshing dev configuration from remote...");
-    const refreshedConfig = yield* configLoader.refresh().pipe(Effect.withSpan("refresh-config"));
+    const refreshedConfig = yield* configLoader.refresh().pipe(Effect.withSpan("config.refresh"));
     yield* Effect.logInfo("✅ Configuration refreshed successfully");
 
     // Step 5: Setup mise global configuration from refreshed config
-    yield* setupMiseGlobalConfiguration(refreshedConfig).pipe(Effect.withSpan("setup-mise-global"));
+    yield* setupMiseGlobalConfiguration(refreshedConfig).pipe(Effect.withSpan("mise.setup_global"));
 
     // Step 6: Tool version checks and upgrades
-    yield* upgradeEssentialTools().pipe(Effect.withSpan("upgrade-essential-tools"));
+    yield* upgradeEssentialTools().pipe(Effect.withSpan("tools.upgrade_essential"));
 
     // Step 7: Final success message and usage examples
-    yield* showSuccessMessage().pipe(Effect.withSpan("show-success-message"));
-  }).pipe(Effect.withSpan("upgrade-command")),
+    yield* showSuccessMessage().pipe(Effect.withSpan("ui.show_success"));
+  }).pipe(Effect.withSpan("upgrade.execute")),
 );
 
 /**
@@ -75,8 +75,8 @@ function selfUpdateCli(pathService: PathService): Effect.Effect<void, DevError, 
     const shell = yield* ShellTag;
 
     // Check if we're in a git repository
-    const isGitRepo = yield* git.isGitRepository(pathService.devDir).pipe(Effect.withSpan("check-git-repository"));
-    yield* Effect.annotateCurrentSpan("is_git_repo", isGitRepo.toString());
+    const isGitRepo = yield* git.isGitRepository(pathService.devDir).pipe(Effect.withSpan("git.check_repository"));
+    yield* Effect.annotateCurrentSpan("git.repository.exists", isGitRepo.toString());
 
     if (!isGitRepo) {
       yield* Effect.logInfo("📝 Not in a git repository, skipping self-update");
@@ -293,15 +293,15 @@ function checkTool(
   toolManager: ToolManagement[keyof ToolManagement],
 ): Effect.Effect<void, DevError, any> {
   return Effect.gen(function* () {
-    yield* Effect.annotateCurrentSpan("tool_name", toolName);
+    yield* Effect.annotateCurrentSpan("tool.name", toolName);
     const { isValid, currentVersion } = yield* toolManager.checkVersion().pipe(
       Effect.mapError((error) => unknownError(`${toolName} version check failed: ${error}`)),
-      Effect.withSpan(`check-${toolName.toLowerCase()}-version`),
+      Effect.withSpan(`tools.check_${toolName.toLowerCase()}_version`),
     );
 
-    yield* Effect.annotateCurrentSpan("version_valid", isValid.toString());
+    yield* Effect.annotateCurrentSpan("tool.version.valid", isValid.toString());
     if (currentVersion) {
-      yield* Effect.annotateCurrentSpan("current_version", currentVersion);
+      yield* Effect.annotateCurrentSpan("tool.version.current", currentVersion);
     }
 
     if (isValid && currentVersion) {

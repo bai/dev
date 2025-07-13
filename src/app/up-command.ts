@@ -29,27 +29,27 @@ export const upCommand = Command.make("up", {}, () =>
     yield* Effect.logInfo("Setting up development environment...");
 
     // Check mise installation - attempt to get installation info
-    const miseInfo = yield* Effect.either(mise.checkInstallation()).pipe(Effect.withSpan("check-mise-installation"));
+    const miseInfo = yield* Effect.either(mise.checkInstallation()).pipe(Effect.withSpan("mise.check_installation"));
 
     if (miseInfo._tag === "Left") {
       yield* Effect.logWarning("⚠️ Mise is not installed. Installing...");
-      yield* mise.install().pipe(Effect.withSpan("install-mise"));
+      yield* mise.install().pipe(Effect.withSpan("mise.install"));
       yield* Effect.logInfo("✅ Mise installed successfully");
     } else {
       yield* Effect.logInfo(`Mise version: ${miseInfo.right.version}`);
     }
 
     // Get current working directory
-    const cwd = yield* fileSystem.getCwd().pipe(Effect.withSpan("get-cwd"));
+    const cwd = yield* fileSystem.getCwd().pipe(Effect.withSpan("filesystem.get_cwd"));
     yield* Effect.annotateCurrentSpan("cwd", cwd);
 
     // Install tools for the current directory
     yield* Effect.logInfo("Installing development tools...");
 
-    yield* mise.installTools(cwd).pipe(Effect.withSpan("install-tools"));
+    yield* mise.installTools(cwd).pipe(Effect.withSpan("mise.install_tools"));
 
     yield* Effect.logInfo("✅ Development environment setup complete!");
-  }).pipe(Effect.withSpan("up-command")),
+  }).pipe(Effect.withSpan("up.execute")),
 );
 
 /**

@@ -182,7 +182,7 @@ const program = Effect.scoped(
         yield* Effect.logDebug("🔧 Cleaning up resources...");
         if (process.exitCode === 130) {
           yield* Effect.logDebug("💡 Shutdown initiated by user interrupt (Ctrl+C)");
-          yield* Effect.annotateCurrentSpan("shutdown_reason", "user_interrupt");
+          yield* Effect.annotateCurrentSpan("application.shutdown.reason", "user_interrupt");
         }
         yield* Effect.logDebug("✅ Cleanup complete");
       }).pipe(Effect.withSpan("cleanup")),
@@ -190,7 +190,7 @@ const program = Effect.scoped(
 
     // Setup application
     yield* Effect.logDebug("🚀 Starting dev CLI...");
-    const { appLayer } = yield* setupApplication().pipe(Effect.withSpan("setup-application"));
+    const { appLayer } = yield* setupApplication().pipe(Effect.withSpan("application.setup"));
 
     // Run CLI with services from appLayer
     yield* Effect.gen(function* () {
@@ -206,9 +206,7 @@ const program = Effect.scoped(
       // Add cleanup for command tracker
       yield* Effect.addFinalizer(() => commandTracker.gracefulShutdown().pipe(Effect.catchAll(() => Effect.void)));
 
-      // Track CLI metadata
-      yield* Effect.annotateCurrentSpan("cli_name", "dev");
-      yield* Effect.annotateCurrentSpan("cli_version", version);
+      // CLI metadata is already tracked at resource level in tracing configuration
 
       // Record command run
       const runId = yield* commandTracker.recordCommandRun().pipe(
@@ -225,7 +223,7 @@ const program = Effect.scoped(
         name: "dev",
         version: version,
         description: "A CLI tool for quick navigation and environment management",
-      }).pipe(Effect.withSpan("run-cli"));
+      }).pipe(Effect.withSpan("cli.run"));
 
       yield* cliExecution.pipe(
         Effect.tap(() =>
@@ -243,10 +241,10 @@ const program = Effect.scoped(
             ),
         ),
       );
-    }).pipe(Effect.provide(appLayer), Effect.withSpan("cli-execution"));
+    }).pipe(Effect.provide(appLayer), Effect.withSpan("cli.execute"));
 
     yield* Effect.logDebug("✅ CLI execution completed");
-  }).pipe(Effect.withSpan("dev-cli-main")),
+  }).pipe(Effect.withSpan("cli.main")),
 ).pipe(
   Effect.catchAll((error) =>
     Effect.gen(function* () {

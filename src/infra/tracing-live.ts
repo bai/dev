@@ -110,7 +110,7 @@ const makeTracingLive = (
       // Get version from the version service
       const version = yield* versionService.getVersion.pipe(
         Effect.catchAll(() => Effect.succeed("0.0.1")),
-        Effect.withSpan("get-cli-version"),
+        Effect.withSpan("version.get_cli"),
       );
 
       // Determine span processor based on telemetry mode
@@ -148,7 +148,7 @@ const makeTracingLive = (
 
       const resource = resources.resourceFromAttributes(resourceAttributes);
 
-      // Return immutable configuration
+      // Return immutable configuration using the properly created resource
       const sdkConfig: NodeSdk.Configuration = {
         resource: {
           serviceName: "dev-cli",
