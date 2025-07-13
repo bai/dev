@@ -68,7 +68,15 @@ export function handleDirectCd(folderName: string): Effect.Effect<void, DevError
         yield* Effect.annotateCurrentSpan("target_path", targetPath);
         // Use ShellIntegrationService
         const shellIntegration = yield* ShellIntegrationTag;
-        yield* shellIntegration.changeDirectory(targetPath).pipe(Effect.withSpan("change-directory"));
+        yield* shellIntegration.changeDirectory(targetPath).pipe(
+          Effect.tap(() =>
+            Effect.all([
+              Effect.annotateCurrentSpan("change_directory.search_term", folderName),
+              Effect.annotateCurrentSpan("change_directory.picked_option", targetPath),
+            ]),
+          ),
+          Effect.withSpan("change-directory"),
+        );
         return; // Successfully changed directory
       }
     }
@@ -99,7 +107,15 @@ export function handleInteractiveCd(): Effect.Effect<void, DevError, any> {
       yield* Effect.annotateCurrentSpan("selected_path", selectedPath);
       // Use ShellIntegrationService
       const shellIntegration = yield* ShellIntegrationTag;
-      yield* shellIntegration.changeDirectory(selectedPath).pipe(Effect.withSpan("change-directory"));
+      yield* shellIntegration.changeDirectory(selectedPath).pipe(
+        Effect.tap(() =>
+          Effect.all([
+            Effect.annotateCurrentSpan("change_directory.search_term", "interactive"),
+            Effect.annotateCurrentSpan("change_directory.picked_option", selectedPath),
+          ]),
+        ),
+        Effect.withSpan("change-directory"),
+      );
     }
   }).pipe(Effect.withSpan("handle-interactive-cd"));
 }
