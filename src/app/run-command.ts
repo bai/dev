@@ -69,16 +69,9 @@ export const runCommand = Command.make("run", { task, taskArgs }, ({ task, taskA
 
     yield* Effect.logInfo(`Running task: ${fullCommand}`);
 
-    // Annotate with structured data for better tracing
     yield* Effect.annotateCurrentSpan("task.command", taskName);
     yield* Effect.annotateCurrentSpan("task.args.count", args.length.toString());
-
-    // Annotate each argument individually
-    for (let i = 0; i < args.length; i++) {
-      yield* Effect.annotateCurrentSpan(`task.args.${i}`, args[i]);
-    }
-
-    // Also include the full command for convenience
+    yield* Effect.annotateCurrentSpan("task.args", args);
     yield* Effect.annotateCurrentSpan("task.command.full", fullCommand);
 
     yield* mise.runTask(taskName, args, cwd).pipe(Effect.withSpan("mise.run_task"));
