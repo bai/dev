@@ -40,7 +40,7 @@ export const runCommand = Command.make("run", { task, taskArgs }, ({ task, taskA
     const taskName = task._tag === "Some" ? task.value : undefined;
     yield* Effect.annotateCurrentSpan("operation.type", taskName ? "run" : "list");
     if (taskName) {
-      yield* Effect.annotateCurrentSpan("task.name", taskName);
+      yield* Effect.annotateCurrentSpan("task.command", taskName);
     }
 
     const cwd = yield* fileSystem.getCwd().pipe(Effect.withSpan("filesystem.get_cwd"));
@@ -69,7 +69,6 @@ export const runCommand = Command.make("run", { task, taskArgs }, ({ task, taskA
 
     yield* Effect.logInfo(`Running task: ${fullCommand}`);
 
-    yield* Effect.annotateCurrentSpan("task.command", taskName);
     yield* Effect.annotateCurrentSpan("task.args.count", args.length.toString());
     yield* Effect.annotateCurrentSpan("task.args", args);
     yield* Effect.annotateCurrentSpan("task.command.full", fullCommand);
