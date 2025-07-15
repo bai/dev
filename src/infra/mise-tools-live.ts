@@ -146,14 +146,12 @@ export const makeMiseToolsLive = (shell: Shell, filesystem: FileSystem, configLo
     Effect.gen(function* () {
       const { isValid, currentVersion } = yield* checkVersion();
 
-      if (isValid) {
-        return;
-      }
-
-      if (currentVersion) {
-        yield* Effect.logWarning(`⚠️  Mise version ${currentVersion} is older than required ${MISE_MIN_VERSION}`);
-      } else {
-        yield* Effect.logWarning(`⚠️  Unable to determine mise version`);
+      if (!isValid) {
+        if (currentVersion) {
+          yield* Effect.logWarning(`⚠️  Mise version ${currentVersion} is older than required ${MISE_MIN_VERSION}`);
+        } else {
+          yield* Effect.logWarning(`⚠️  Unable to determine mise version`);
+        }
       }
 
       yield* Effect.logInfo(`🚀 Starting mise upgrade...`);
