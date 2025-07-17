@@ -50,7 +50,7 @@
     "prettier-plugin-multiline-arrays": "4.0.3",
     "typescript": "5.8.3",
     "typescript-eslint": "8.37.0",
-    "vite": "7.0.4",
+    "vite": "7.0.5",
     "vitest": "3.2.4"
   },
   "engines": {
