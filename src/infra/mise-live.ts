@@ -20,7 +20,7 @@ export const makeMiseLive = (shell: Shell, fileSystem: FileSystem, configLoader:
           return Effect.fail(shellExecutionError("mise", ["--version"], "Mise is not installed"));
         }
 
-        const version = result.stdout.split(" ")[1] || "unknown";
+        const version = result.stdout.split(" ")[0] || "unknown";
 
         // Get runtime versions
         return shell.exec("mise", ["current"]).pipe(

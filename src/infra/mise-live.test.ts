@@ -15,7 +15,7 @@ const mockShell = {
     if (command === "mise" && args[0] === "--version") {
       return Effect.succeed({
         exitCode: 0,
-        stdout: "mise 2024.1.0",
+        stdout: "2024.1.0 macos-arm64 (2024-01-01)",
         stderr: "",
       });
     }
