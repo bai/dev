@@ -8,7 +8,7 @@
     "flywheelsoftware": "gitlab"
   },
   "telemetry": {
-    "mode": "remote"
+    "mode": "disabled"
   },
   "miseGlobalConfig": {
     "tools": {
