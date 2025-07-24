@@ -31,7 +31,7 @@
     "drizzle-orm": "0.44.3",
     "effect": "3.17.1",
     "yaml": "2.8.0",
-    "zod": "4.0.5"
+    "zod": "4.0.8"
   },
   "devDependencies": {
     "@effect/vitest": "0.25.0",
@@ -45,7 +45,7 @@
     "eslint-import-resolver-typescript": "4.4.4",
     "eslint-plugin-import": "2.32.0",
     "eslint-plugin-unused-imports": "4.1.4",
-    "jiti": "2.4.2",
+    "jiti": "2.5.0",
     "prettier": "3.6.2",
     "prettier-plugin-multiline-arrays": "4.0.3",
     "typescript": "5.8.3",
