@@ -30,7 +30,7 @@
     "@opentelemetry/semantic-conventions": "1.36.0",
     "drizzle-orm": "0.44.4",
     "effect": "3.17.6",
-    "yaml": "2.8.0",
+    "yaml": "2.8.1",
     "zod": "4.0.14"
   },
   "devDependencies": {
