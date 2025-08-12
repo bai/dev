@@ -70,7 +70,7 @@ export const runCommand = Command.make("run", { task, taskArgs }, ({ task, taskA
     yield* Effect.logInfo(`Running task: ${fullCommand}`);
 
     yield* Effect.annotateCurrentSpan("task.args.count", args.length.toString());
-    yield* Effect.annotateCurrentSpan("task.args", args);
+    yield* Effect.annotateCurrentSpan("task.args", JSON.stringify(args));
     yield* Effect.annotateCurrentSpan("task.command.full", fullCommand);
 
     yield* mise.runTask(taskName, args, cwd).pipe(Effect.withSpan("mise.run_task"));

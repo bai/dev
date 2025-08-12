@@ -66,7 +66,7 @@ export const upgradeCommand = Command.make("upgrade", {}, () =>
 /**
  * Self-update the CLI repository
  */
-function selfUpdateCli(pathService: PathService): Effect.Effect<void, DevError, any> {
+function selfUpdateCli(pathService: PathService): Effect.Effect<void, DevError, FileSystemTag | GitTag | ShellTag> {
   return Effect.gen(function* () {
     yield* Effect.logInfo("🔄 Self-updating CLI repository...");
 
@@ -122,7 +122,7 @@ function selfUpdateCli(pathService: PathService): Effect.Effect<void, DevError, 
 /**
  * Ensure necessary directories exist
  */
-function ensureDirectoriesExist(pathService: PathService): Effect.Effect<void, DevError, any> {
+function ensureDirectoriesExist(pathService: PathService): Effect.Effect<void, DevError, FileSystemTag> {
   return Effect.gen(function* () {
     yield* Effect.logInfo("📁 Ensuring necessary directories exist...");
 
@@ -144,7 +144,7 @@ function ensureDirectoriesExist(pathService: PathService): Effect.Effect<void, D
 /**
  * Update shell integration
  */
-function ensureShellIntegration(pathService: PathService): Effect.Effect<void, DevError, any> {
+function ensureShellIntegration(pathService: PathService): Effect.Effect<void, DevError, FileSystemTag> {
   return Effect.gen(function* () {
     yield* Effect.logInfo("🐚 Ensuring shell integration...");
 
@@ -162,7 +162,7 @@ function ensureShellIntegration(pathService: PathService): Effect.Effect<void, D
  * Ensure local config has the correct configUrl from project config
  * This updates only the configUrl field so that configLoader.refresh() works correctly
  */
-function ensureCorrectConfigUrl(pathService: PathService): Effect.Effect<void, DevError, any> {
+function ensureCorrectConfigUrl(pathService: PathService): Effect.Effect<void, DevError, FileSystemTag> {
   return Effect.gen(function* () {
     const fileSystem = yield* FileSystemTag;
 
@@ -230,7 +230,7 @@ function ensureCorrectConfigUrl(pathService: PathService): Effect.Effect<void, D
 /**
  * Setup mise global configuration from refreshed config
  */
-function setupMiseGlobalConfiguration(config: Config): Effect.Effect<void, DevError, any> {
+function setupMiseGlobalConfiguration(config: Config): Effect.Effect<void, DevError, MiseTag> {
   return Effect.gen(function* () {
     yield* Effect.logInfo("🔧 Setting up mise global configuration...");
 
@@ -256,7 +256,7 @@ function setupMiseGlobalConfiguration(config: Config): Effect.Effect<void, DevEr
 /**
  * Upgrade essential tools
  */
-function upgradeEssentialTools(): Effect.Effect<void, DevError, any> {
+function upgradeEssentialTools(): Effect.Effect<void, DevError, ToolManagementTag> {
   return Effect.gen(function* () {
     yield* Effect.logInfo("🛠️ Checking essential tools...");
 
@@ -288,10 +288,7 @@ function upgradeEssentialTools(): Effect.Effect<void, DevError, any> {
 /**
  * Generic function to check and upgrade a tool
  */
-function checkTool(
-  toolName: string,
-  toolManager: ToolManagement[keyof ToolManagement],
-): Effect.Effect<void, DevError, any> {
+function checkTool(toolName: string, toolManager: ToolManagement[keyof ToolManagement]): Effect.Effect<void, DevError> {
   return Effect.gen(function* () {
     yield* Effect.annotateCurrentSpan("tool.name", toolName);
     const { isValid, currentVersion } = yield* toolManager.checkVersion().pipe(

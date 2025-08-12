@@ -2,19 +2,15 @@ import { Effect, Layer } from "effect";
 
 import { DirectoryTag, type Directory } from "../domain/directory-port";
 import { type FileSystemError, type UnknownError } from "../domain/errors";
-import { FileSystemTag } from "../domain/file-system-port";
-import { PathServiceTag } from "../domain/path-service";
+import { FileSystemTag, type FileSystem } from "../domain/file-system-port";
+import { PathServiceTag, type PathService } from "../domain/path-service";
 
-// Individual effect functions
-const ensureBaseDirectoryExists = (): Effect.Effect<
-  void,
-  FileSystemError | UnknownError,
-  FileSystemTag | PathServiceTag
-> =>
+// Individual effect functions (dependencies captured at layer construction)
+const ensureBaseDirectoryExists = (
+  pathService: PathService,
+  fileSystem: FileSystem,
+): Effect.Effect<void, FileSystemError | UnknownError, never> =>
   Effect.gen(function* () {
-    const pathService = yield* PathServiceTag;
-    const fileSystem = yield* FileSystemTag;
-
     const baseDir = pathService.baseSearchPath;
     const exists = yield* fileSystem.exists(baseDir);
 
@@ -23,11 +19,11 @@ const ensureBaseDirectoryExists = (): Effect.Effect<
     }
   });
 
-const findDirs = (): Effect.Effect<string[], FileSystemError | UnknownError, FileSystemTag | PathServiceTag> =>
+const findDirs = (
+  pathService: PathService,
+  fileSystem: FileSystem,
+): Effect.Effect<string[], FileSystemError | UnknownError, never> =>
   Effect.gen(function* () {
-    const pathService = yield* PathServiceTag;
-    const fileSystem = yield* FileSystemTag;
-
     const baseDir = pathService.baseSearchPath;
 
     // Ensure base directory exists
@@ -43,10 +39,17 @@ const findDirs = (): Effect.Effect<string[], FileSystemError | UnknownError, Fil
   });
 
 // Factory function to create Directory implementation
-export const makeDirectoryLive = (): Directory => ({
-  ensureBaseDirectoryExists,
-  findDirs,
+export const makeDirectoryLive = (pathService: PathService, fileSystem: FileSystem): Directory => ({
+  ensureBaseDirectoryExists: () => ensureBaseDirectoryExists(pathService, fileSystem),
+  findDirs: () => findDirs(pathService, fileSystem),
 });
 
 // Layer that provides DirectoryService with proper dependency injection
-export const DirectoryLiveLayer = Layer.succeed(DirectoryTag, makeDirectoryLive());
+export const DirectoryLiveLayer = Layer.effect(
+  DirectoryTag,
+  Effect.gen(function* () {
+    const pathService = yield* PathServiceTag;
+    const fileSystem = yield* FileSystemTag;
+    return makeDirectoryLive(pathService, fileSystem);
+  }),
+);

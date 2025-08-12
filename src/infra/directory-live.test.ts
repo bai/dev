@@ -11,7 +11,29 @@ import { DirectoryLiveLayer, makeDirectoryLive } from "./directory-live";
 describe("directory-live", () => {
   describe("makeDirectoryLive", () => {
     it("creates a Directory implementation", () => {
-      const directory = makeDirectoryLive();
+      const mockFileSystem: FileSystem = {
+        exists: () => Effect.succeed(true),
+        mkdir: () => Effect.succeed(undefined),
+        readFile: () => Effect.fail(fileSystemError("Not implemented")),
+        writeFile: () => Effect.fail(fileSystemError("Not implemented")),
+        findDirectoriesGlob: () => Effect.succeed([]),
+        getCwd: () => Effect.succeed("/current"),
+        resolvePath: (p: string) => p,
+      };
+
+      const mockPathService: PathService = {
+        homeDir: "/home/user",
+        baseSearchPath: "/home/user/dev",
+        devDir: "/home/user/.dev",
+        configDir: "/home/user/.config/dev",
+        configPath: "/home/user/.config/dev/config.json",
+        dataDir: "/home/user/.local/share/dev",
+        dbPath: "/home/user/.local/share/dev/dev.db",
+        cacheDir: "/home/user/.cache/dev",
+        getBasePath: () => "/home/user/dev",
+      };
+
+      const directory = makeDirectoryLive(mockPathService, mockFileSystem);
 
       expect(directory).toHaveProperty("ensureBaseDirectoryExists");
       expect(directory).toHaveProperty("findDirs");
@@ -50,7 +72,7 @@ describe("directory-live", () => {
           Layer.succeed(PathServiceTag, mockPathService),
         );
 
-        const directory = makeDirectoryLive();
+        const directory = makeDirectoryLive(mockPathService, mockFileSystem);
         const result = yield* directory.ensureBaseDirectoryExists().pipe(Effect.provide(testLayer));
 
         expect(result).toBeUndefined();
@@ -92,7 +114,7 @@ describe("directory-live", () => {
           Layer.succeed(PathServiceTag, mockPathService),
         );
 
-        const directory = makeDirectoryLive();
+        const directory = makeDirectoryLive(mockPathService, mockFileSystem);
         const result = yield* directory.ensureBaseDirectoryExists().pipe(Effect.provide(testLayer));
 
         expect(result).toBeUndefined();
@@ -129,7 +151,7 @@ describe("directory-live", () => {
           Layer.succeed(PathServiceTag, mockPathService),
         );
 
-        const directory = makeDirectoryLive();
+        const directory = makeDirectoryLive(mockPathService, mockFileSystem);
 
         const result = yield* Effect.flip(directory.ensureBaseDirectoryExists().pipe(Effect.provide(testLayer)));
 
@@ -168,7 +190,7 @@ describe("directory-live", () => {
           Layer.succeed(PathServiceTag, mockPathService),
         );
 
-        const directory = makeDirectoryLive();
+        const directory = makeDirectoryLive(mockPathService, mockFileSystem);
         const result = yield* directory.findDirs().pipe(Effect.provide(testLayer));
 
         expect(result).toEqual([]);
@@ -209,7 +231,7 @@ describe("directory-live", () => {
           Layer.succeed(PathServiceTag, mockPathService),
         );
 
-        const directory = makeDirectoryLive();
+        const directory = makeDirectoryLive(mockPathService, mockFileSystem);
         const result = yield* directory.findDirs().pipe(Effect.provide(testLayer));
 
         expect(result).toEqual(expectedDirs);
@@ -253,7 +275,7 @@ describe("directory-live", () => {
           Layer.succeed(PathServiceTag, mockPathService),
         );
 
-        const directory = makeDirectoryLive();
+        const directory = makeDirectoryLive(mockPathService, mockFileSystem);
         yield* directory.findDirs().pipe(Effect.provide(testLayer));
 
         expect(capturedBaseDir).toBe("/home/user/dev");
@@ -290,7 +312,7 @@ describe("directory-live", () => {
           Layer.succeed(PathServiceTag, mockPathService),
         );
 
-        const directory = makeDirectoryLive();
+        const directory = makeDirectoryLive(mockPathService, mockFileSystem);
 
         const result = yield* Effect.flip(directory.findDirs().pipe(Effect.provide(testLayer)));
 
@@ -327,7 +349,7 @@ describe("directory-live", () => {
           Layer.succeed(PathServiceTag, mockPathService),
         );
 
-        const directory = makeDirectoryLive();
+        const directory = makeDirectoryLive(mockPathService, mockFileSystem);
 
         const result = yield* Effect.flip(directory.findDirs().pipe(Effect.provide(testLayer)));
 
@@ -361,11 +383,11 @@ describe("directory-live", () => {
           getBasePath: () => "/home/user/dev",
         };
 
-        const testLayer = Layer.mergeAll(
+        const depsLayer = Layer.mergeAll(
           Layer.succeed(FileSystemTag, mockFileSystem),
           Layer.succeed(PathServiceTag, mockPathService),
-          DirectoryLiveLayer,
         );
+        const testLayer = DirectoryLiveLayer.pipe(Layer.provide(depsLayer));
 
         const program = Effect.gen(function* () {
           const directory = yield* DirectoryTag;
@@ -414,7 +436,7 @@ describe("directory-live", () => {
           Layer.succeed(PathServiceTag, mockPathService),
         );
 
-        const directory = makeDirectoryLive();
+        const directory = makeDirectoryLive(mockPathService, mockFileSystem);
         const result = yield* directory.findDirs().pipe(Effect.provide(testLayer));
 
         expect(result).toEqual(mockDirs);
@@ -450,7 +472,7 @@ describe("directory-live", () => {
           Layer.succeed(PathServiceTag, mockPathService),
         );
 
-        const directory = makeDirectoryLive();
+        const directory = makeDirectoryLive(mockPathService, mockFileSystem);
         const result = yield* directory.findDirs().pipe(Effect.provide(testLayer));
 
         expect(result).toEqual([]);
