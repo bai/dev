@@ -1,7 +1,7 @@
 import { Command } from "@effect/cli";
 import { NodeSdk } from "@effect/opentelemetry";
 import { BunRuntime } from "@effect/platform-bun";
-import { Effect } from "effect";
+import { Effect, Layer } from "effect";
 
 import { registerCdCommand } from "./app/cd-command";
 import { registerCloneCommand } from "./app/clone-command";
@@ -188,11 +188,7 @@ const program = Effect.scoped(
       }).pipe(Effect.withSpan("cleanup")),
     );
 
-    // Setup application
-    yield* Effect.logDebug("🚀 Starting dev CLI...");
-    const { appLayer } = yield* setupApplication().pipe(Effect.withSpan("application.setup"));
-
-    // Run CLI with services from appLayer
+    // Run CLI with services provided from the outside
     yield* Effect.gen(function* () {
       // Get services
       const commandTracker = yield* CommandTrackerTag;
@@ -205,8 +201,6 @@ const program = Effect.scoped(
 
       // Add cleanup for command tracker
       yield* Effect.addFinalizer(() => commandTracker.gracefulShutdown().pipe(Effect.catchAll(() => Effect.void)));
-
-      // CLI metadata is already tracked at resource level in tracing configuration
 
       // Record command run
       const runId = yield* commandTracker.recordCommandRun().pipe(
@@ -241,7 +235,7 @@ const program = Effect.scoped(
             ),
         ),
       );
-    }).pipe(Effect.provide(appLayer), Effect.withSpan("cli.execute"));
+    }).pipe(Effect.withSpan("cli.execute"));
 
     yield* Effect.logDebug("✅ CLI execution completed");
   }).pipe(Effect.withSpan("cli.main")),
@@ -302,7 +296,7 @@ const mainProgram = Effect.gen(function* () {
   const TracingLive = NodeSdk.layer(() => sdkConfig);
 
   // Run the program with tracing
-  yield* program.pipe(Effect.provide(TracingLive));
+  yield* program.pipe(Effect.provide(Layer.mergeAll(TracingLive, appLayer)));
 }).pipe(Effect.scoped);
 
 // Run the program with BunRuntime

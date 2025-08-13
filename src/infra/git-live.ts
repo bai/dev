@@ -50,7 +50,7 @@ export const makeGitLive = (shell: Shell): Git => ({
         if (result.exitCode !== 0) {
           return Effect.fail(gitError(`Failed to get current commit SHA: ${result.stderr}`));
         }
-        return Effect.succeed(result.stdout);
+        return Effect.succeed(result.stdout.trim());
       }),
     ),
 
@@ -60,7 +60,7 @@ export const makeGitLive = (shell: Shell): Git => ({
         if (result.exitCode !== 0) {
           return Effect.fail(gitError(`Failed to get remote URL: ${result.stderr}`));
         }
-        return Effect.succeed(result.stdout);
+        return Effect.succeed(result.stdout.trim());
       }),
     ),
 });

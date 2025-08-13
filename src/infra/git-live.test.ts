@@ -175,7 +175,7 @@ describe("git-live", () => {
         });
 
         const result = yield* git.getCurrentCommitSha("/tmp/test-repo");
-        expect(result).toBe("abc123def456\n");
+        expect(result).toBe("abc123def456");
       }),
     );
 
@@ -188,7 +188,7 @@ describe("git-live", () => {
         });
 
         const result = yield* git.getCurrentCommitSha();
-        expect(result).toBe("xyz789\n");
+        expect(result).toBe("xyz789");
       }),
     );
 
@@ -216,7 +216,7 @@ describe("git-live", () => {
         });
 
         const result = yield* git.getRemoteOriginUrl("/tmp/test-repo");
-        expect(result).toBe("https://github.com/test-org/test-repo.git\n");
+        expect(result).toBe("https://github.com/test-org/test-repo.git");
       }),
     );
 

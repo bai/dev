@@ -4,10 +4,8 @@ import { Effect } from "effect";
 import { CommandRegistryTag } from "../domain/command-registry-port";
 import { DirectoryTag } from "../domain/directory-port";
 import { unknownError, type DevError } from "../domain/errors";
-import { FileSystemTag } from "../domain/file-system-port";
 import { InteractiveSelectorTag } from "../domain/interactive-selector-port";
 import { filter } from "../domain/matching";
-import { PathServiceTag } from "../domain/path-service";
 import { ShellIntegrationTag } from "./shell-integration-service";
 
 // Define the folder name argument as optional
