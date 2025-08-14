@@ -23,7 +23,7 @@
       "go": "latest",
       "golangci-lint": "latest",
       "jq": "latest",
-      "node": ["lts", "latest"],
+      "node": ["latest", "lts"],
       "python": ["3.12", "latest"],
       "ruby": "latest",
       "terraform": "latest",
@@ -35,7 +35,8 @@
         "~/.dev",
         "~/src/gitlab.com/bai",
         "~/src/gitlab.com/flywheelsoftware",
-        "~/src/github.com/growthloop"
+        "~/src/github.com/growthloop",
+        "~/src/github.com/GrowthLoop"
       ],
       "experimental": true,
       "idiomatic_version_file_enable_tools": []
