@@ -17,8 +17,8 @@
     "db:generate": "drizzle-kit generate"
   },
   "dependencies": {
-    "@effect/cli": "0.69.1",
-    "@effect/opentelemetry": "0.56.3",
+    "@effect/cli": "0.69.2",
+    "@effect/opentelemetry": "0.56.4",
     "@effect/platform-bun": "0.79.0",
     "@iarna/toml": "2.2.5",
     "@opentelemetry/exporter-trace-otlp-http": "0.203.0",
@@ -29,7 +29,7 @@
     "@opentelemetry/sdk-trace-web": "2.0.1",
     "@opentelemetry/semantic-conventions": "1.36.0",
     "drizzle-orm": "0.44.4",
-    "effect": "3.17.7",
+    "effect": "3.17.8",
     "yaml": "2.8.1",
     "zod": "4.0.17"
   },
