@@ -31,7 +31,7 @@
     "drizzle-orm": "0.44.5",
     "effect": "3.17.13",
     "yaml": "2.8.1",
-    "zod": "4.1.7"
+    "zod": "4.1.8"
   },
   "devDependencies": {
     "@effect/vitest": "0.25.1",
