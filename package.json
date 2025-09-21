@@ -29,9 +29,9 @@
     "@opentelemetry/sdk-trace-web": "2.1.0",
     "@opentelemetry/semantic-conventions": "1.37.0",
     "drizzle-orm": "0.44.5",
-    "effect": "3.17.13",
+    "effect": "3.17.14",
     "yaml": "2.8.1",
-    "zod": "4.1.9"
+    "zod": "4.1.11"
   },
   "devDependencies": {
     "@effect/vitest": "0.25.1",
