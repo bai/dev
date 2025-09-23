@@ -17,9 +17,9 @@
     "db:generate": "drizzle-kit generate"
   },
   "dependencies": {
-    "@effect/cli": "0.69.2",
-    "@effect/opentelemetry": "0.56.6",
-    "@effect/platform-bun": "0.79.1",
+    "@effect/cli": "0.70.0",
+    "@effect/opentelemetry": "0.57.0",
+    "@effect/platform-bun": "0.80.0",
     "@iarna/toml": "2.2.5",
     "@opentelemetry/exporter-trace-otlp-http": "0.205.0",
     "@opentelemetry/resources": "2.1.0",
@@ -45,11 +45,11 @@
     "eslint-import-resolver-typescript": "4.4.4",
     "eslint-plugin-import": "2.32.0",
     "eslint-plugin-unused-imports": "4.2.0",
-    "jiti": "2.5.1",
+    "jiti": "2.6.0",
     "prettier": "3.6.2",
     "prettier-plugin-multiline-arrays": "4.0.3",
     "typescript": "5.9.2",
-    "typescript-eslint": "8.44.0",
+    "typescript-eslint": "8.44.1",
     "vite": "7.1.7",
     "vitest": "3.2.4"
   },
