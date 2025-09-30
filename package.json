@@ -17,9 +17,9 @@
     "db:generate": "drizzle-kit generate"
   },
   "dependencies": {
-    "@effect/cli": "0.70.0",
-    "@effect/opentelemetry": "0.57.0",
-    "@effect/platform-bun": "0.80.0",
+    "@effect/cli": "0.71.0",
+    "@effect/opentelemetry": "0.58.0",
+    "@effect/platform-bun": "0.81.0",
     "@iarna/toml": "2.2.5",
     "@opentelemetry/exporter-trace-otlp-http": "0.205.0",
     "@opentelemetry/resources": "2.1.0",
@@ -29,12 +29,12 @@
     "@opentelemetry/sdk-trace-web": "2.1.0",
     "@opentelemetry/semantic-conventions": "1.37.0",
     "drizzle-orm": "0.44.5",
-    "effect": "3.17.14",
+    "effect": "3.18.0",
     "yaml": "2.8.1",
     "zod": "4.1.11"
   },
   "devDependencies": {
-    "@effect/vitest": "0.25.1",
+    "@effect/vitest": "0.26.0",
     "@eslint/js": "9.36.0",
     "@ianvs/prettier-plugin-sort-imports": "4.7.0",
     "@types/bun": "1.2.23",
@@ -48,7 +48,7 @@
     "prettier": "3.6.2",
     "prettier-plugin-multiline-arrays": "4.0.3",
     "typescript": "5.9.2",
-    "typescript-eslint": "8.44.1",
+    "typescript-eslint": "8.45.0",
     "vite": "7.1.7",
     "vitest": "3.2.4"
   },
