@@ -1,7 +1,5 @@
 #!/usr/bin/env zsh
 
-set -eu
-
 # Parse command line arguments
 CONFIG_URL=""
 for arg in "$@"; do
