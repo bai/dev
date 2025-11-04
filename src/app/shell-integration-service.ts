@@ -21,10 +21,9 @@ const getCdFilePath = (pathService: { dataDir: string }): string => path.join(pa
 const makeShellIntegration = (pathService: PathService, fileSystem: FileSystem): ShellIntegration => ({
   changeDirectory: (targetPath: string) =>
     Effect.gen(function* () {
-      let absolutePath: string;
       const cleanedTargetPath = targetPath.replace(/\/$/, ""); // Remove trailing slash
 
-      absolutePath = path.isAbsolute(cleanedTargetPath)
+      const absolutePath = path.isAbsolute(cleanedTargetPath)
         ? cleanedTargetPath
         : path.join(pathService.baseSearchPath, cleanedTargetPath);
 
