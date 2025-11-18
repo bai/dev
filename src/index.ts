@@ -8,6 +8,7 @@ import { registerCloneCommand } from "./app/clone-command";
 import { CommandTrackerTag } from "./app/command-tracking-service";
 import { registerRunCommand } from "./app/run-command";
 import { registerStatusCommand } from "./app/status-command";
+import { registerSyncCommand } from "./app/sync-command";
 import { registerUpCommand } from "./app/up-command";
 import { registerUpgradeCommand } from "./app/upgrade-command";
 import { CommandRegistryTag, type CommandRegistry } from "./domain/command-registry-port";
@@ -30,6 +31,7 @@ const displayMainHelp = (): Effect.Effect<void, never, never> =>
     yield* Effect.logInfo("  dev cd myproject           # Navigate to a project directory");
     yield* Effect.logInfo("  dev clone user/repo        # Clone a repository");
     yield* Effect.logInfo("  dev up                     # Install and update development tools");
+    yield* Effect.logInfo("  dev sync                   # Sync all repositories");
     yield* Effect.logInfo("  dev status                 # Check environment health");
     yield* Effect.logInfo("  dev run start              # Execute project tasks\n");
 
@@ -39,6 +41,7 @@ const displayMainHelp = (): Effect.Effect<void, never, never> =>
     yield* Effect.logInfo("  up           Install and update development tools using mise");
     yield* Effect.logInfo("  run          Execute project tasks and scripts using mise");
     yield* Effect.logInfo("  status       Check the health of your development environment");
+    yield* Effect.logInfo("  sync         Update all repositories in your workspace");
     yield* Effect.logInfo("  upgrade      Upgrade the dev CLI tool and essential tools\n");
 
     yield* Effect.logInfo("Use 'dev <command> --help' for command-specific help.\n");
@@ -53,6 +56,7 @@ const registerAllCommands: Effect.Effect<void, never, CommandRegistryTag> = Effe
   yield* registerUpCommand;
   yield* registerRunCommand;
   yield* registerStatusCommand;
+  yield* registerSyncCommand;
   yield* registerUpgradeCommand;
 });
 
