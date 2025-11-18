@@ -1,6 +1,7 @@
+import path from "path";
+
 import { Command } from "@effect/cli";
 import { Effect } from "effect";
-import path from "path";
 
 import { CommandRegistryTag } from "../domain/command-registry-port";
 import { DirectoryTag } from "../domain/directory-port";
@@ -58,11 +59,9 @@ export const syncCommand = Command.make("sync", {}, () =>
           const isGit = yield* git.isGitRepository(absolutePath).pipe(Effect.catchAll(() => Effect.succeed(false)));
 
           if (!isGit) {
-             yield* Effect.logDebug(`Skipping ${dir} (not a git repository)`);
-             return;
+            yield* Effect.logDebug(`Skipping ${dir} (not a git repository)`);
+            return;
           }
-
-          yield* Effect.logInfo(`Syncing ${dir}...`);
 
           // Pull changes
           yield* git.pullLatestChanges(absolutePath).pipe(
@@ -73,10 +72,10 @@ export const syncCommand = Command.make("sync", {}, () =>
             Effect.catchAll((error) => {
               failureCount++;
               return Effect.logError(`❌ Failed to sync ${dir}: ${error.message || "Unknown error"}`);
-            })
+            }),
           );
         }).pipe(Effect.withSpan("sync.repo", { attributes: { repo: dir } })),
-      { concurrency: 5 } // reasonable concurrency limit
+      { concurrency: 5 }, // reasonable concurrency limit
     ).pipe(Effect.withSpan("sync.process_all"));
 
     yield* Effect.logInfo("\nSync complete!");
