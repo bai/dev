@@ -17,7 +17,7 @@ import { FileSystemTag, type FileSystem } from "../domain/file-system-port";
 import { type HealthCheckResult } from "../domain/health-check-port";
 import { ShellTag, type Shell } from "../domain/shell-port";
 
-export const MISE_MIN_VERSION = "2025.7.1";
+export const MISE_MIN_VERSION = "2025.11.7";
 
 const homeDir = process.env.HOME || process.env.USERPROFILE || "";
 

@@ -10,7 +10,7 @@ import {
 import { type HealthCheckResult } from "../domain/health-check-port";
 import { ShellTag, type Shell } from "../domain/shell-port";
 
-export const BUN_MIN_VERSION = "1.3.1";
+export const BUN_MIN_VERSION = "1.3.3";
 
 /**
  * Bun tools for version checking and management
