@@ -18,7 +18,7 @@
   },
   "dependencies": {
     "@effect/cli": "0.72.1",
-    "@effect/cluster": "0.53.5",
+    "@effect/cluster": "0.53.6",
     "@effect/opentelemetry": "0.59.1",
     "@effect/platform-bun": "0.84.0",
     "@iarna/toml": "2.2.5",
@@ -30,10 +30,10 @@
     "@opentelemetry/sdk-trace-web": "2.2.0",
     "@opentelemetry/semantic-conventions": "1.38.0",
     "drizzle-orm": "0.44.7",
-    "effect": "3.19.6",
+    "effect": "3.19.7",
     "oxfmt": "0.15.0",
     "oxlint": "1.30.0",
-    "oxlint-tsgolint": "0.8.2",
+    "oxlint-tsgolint": "0.8.3",
     "yaml": "2.8.1",
     "zod": "4.1.13"
   },
