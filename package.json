@@ -18,9 +18,9 @@
   },
   "dependencies": {
     "@effect/cli": "0.72.1",
-    "@effect/cluster": "0.54.0",
+    "@effect/cluster": "0.55.0",
     "@effect/opentelemetry": "0.59.1",
-    "@effect/platform-bun": "0.85.0",
+    "@effect/platform-bun": "0.86.0",
     "@iarna/toml": "2.2.5",
     "@opentelemetry/exporter-trace-otlp-http": "0.208.0",
     "@opentelemetry/resources": "2.2.0",
