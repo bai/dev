@@ -33,7 +33,7 @@
     "effect": "3.19.9",
     "oxfmt": "0.16.0",
     "oxlint": "1.31.0",
-    "oxlint-tsgolint": "0.8.3",
+    "oxlint-tsgolint": "0.8.4",
     "yaml": "2.8.2",
     "zod": "4.1.13"
   },
@@ -50,10 +50,9 @@
     "eslint-plugin-unused-imports": "4.3.0",
     "jiti": "2.6.1",
     "prettier": "3.7.4",
-    "prettier-plugin-multiline-arrays": "4.0.5",
     "typescript": "5.9.3",
     "typescript-eslint": "8.48.1",
-    "vite": "7.2.6",
+    "vite": "7.2.7",
     "vitest": "4.0.15"
   },
   "engines": {

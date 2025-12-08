@@ -37,7 +37,7 @@ const config = {
   ],
   importOrderParserPlugins: ["typescript", "jsx", "decorators-legacy"],
   importOrderTypeScriptVersion: "5.8.0",
-  plugins: ["@ianvs/prettier-plugin-sort-imports", "prettier-plugin-multiline-arrays"],
+  plugins: ["@ianvs/prettier-plugin-sort-imports"],
 };
 
 export default config;
