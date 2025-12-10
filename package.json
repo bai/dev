@@ -29,11 +29,11 @@
     "@opentelemetry/sdk-trace-node": "2.2.0",
     "@opentelemetry/sdk-trace-web": "2.2.0",
     "@opentelemetry/semantic-conventions": "1.38.0",
-    "drizzle-orm": "0.45.0",
+    "drizzle-orm": "0.45.1",
     "effect": "3.19.10",
     "oxfmt": "0.17.0",
     "oxlint": "1.32.0",
-    "oxlint-tsgolint": "0.8.4",
+    "oxlint-tsgolint": "0.8.5",
     "yaml": "2.8.2",
     "zod": "4.1.13"
   },
