@@ -30,7 +30,7 @@
     "@opentelemetry/sdk-trace-web": "2.2.0",
     "@opentelemetry/semantic-conventions": "1.38.0",
     "drizzle-orm": "0.45.1",
-    "effect": "3.19.10",
+    "effect": "3.19.11",
     "oxfmt": "0.17.0",
     "oxlint": "1.32.0",
     "oxlint-tsgolint": "0.8.5",
