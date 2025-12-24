@@ -16,7 +16,9 @@ export HOMEBREW_NO_ANALYTICS=1
 export HOMEBREW_NO_ENV_HINTS=1
 
 function dev() {
-  local cd_target_file="$HOME/.local/share/dev/cd_target"
+  # Use shell's PID to make filename unique per shell, avoiding race conditions
+  # when multiple processes call dev cd concurrently (e.g., in Overmind)
+  local cd_target_file="$HOME/.local/share/dev/cd_target.$$"
 
   # Ensure the file doesn't exist before running
   rm -f "$cd_target_file"

@@ -15,7 +15,8 @@ export interface ShellIntegration {
 }
 
 // Helper function to get the cd target file path
-const getCdFilePath = (pathService: { dataDir: string }): string => path.join(pathService.dataDir, "cd_target");
+// Use parent process ID to make file unique per shell, avoiding race conditions when multiple processes start concurrently
+const getCdFilePath = (pathService: { dataDir: string }): string => path.join(pathService.dataDir, `cd_target.${process.ppid}`);
 
 // Factory for a self-contained implementation (captures dependencies at layer construction)
 const makeShellIntegration = (pathService: PathService, fileSystem: FileSystem): ShellIntegration => ({
