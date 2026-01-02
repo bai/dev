@@ -346,6 +346,90 @@ describe("clone-command", () => {
     );
   });
 
+  describe("URL cloning", () => {
+    it.effect("clones repository from full HTTPS URL", () =>
+      Effect.gen(function* () {
+        const fileSystem = new MockFileSystem();
+        const git = new MockGit();
+        const shellIntegration = new MockShellIntegration();
+
+        const testLayer = Layer.mergeAll(
+          Layer.succeed(FileSystemTag, fileSystem),
+          Layer.succeed(GitTag, git),
+          Layer.succeed(RepoProviderTag, new MockRepoProvider()),
+          Layer.succeed(PathServiceTag, new MockPathService()),
+          Layer.succeed(RepositoryServiceTag, new MockRepositoryService()),
+          Layer.succeed(ShellIntegrationTag, shellIntegration),
+        );
+
+        const args = { repo: "https://github.com/bai/dev.git" };
+        const command = cloneCommand.handler(args);
+
+        yield* command.pipe(Effect.provide(testLayer));
+
+        expect(git.clonedRepos).toHaveLength(1);
+        expect(git.clonedRepos[0]?.repository.name).toBe("dev");
+        expect(git.clonedRepos[0]?.repository.organization).toBe("bai");
+        expect(git.clonedRepos[0]?.repository.cloneUrl).toBe("https://github.com/bai/dev.git");
+        expect(git.clonedRepos[0]?.repository.provider.name).toBe("github");
+      }),
+    );
+
+    it.effect("clones repository from full GitLab HTTPS URL", () =>
+      Effect.gen(function* () {
+        const fileSystem = new MockFileSystem();
+        const git = new MockGit();
+        const shellIntegration = new MockShellIntegration();
+
+        const testLayer = Layer.mergeAll(
+          Layer.succeed(FileSystemTag, fileSystem),
+          Layer.succeed(GitTag, git),
+          Layer.succeed(RepoProviderTag, new MockRepoProvider()),
+          Layer.succeed(PathServiceTag, new MockPathService()),
+          Layer.succeed(RepositoryServiceTag, new MockRepositoryService()),
+          Layer.succeed(ShellIntegrationTag, shellIntegration),
+        );
+
+        const args = { repo: "https://gitlab.com/myorg/myrepo.git" };
+        const command = cloneCommand.handler(args);
+
+        yield* command.pipe(Effect.provide(testLayer));
+
+        expect(git.clonedRepos).toHaveLength(1);
+        expect(git.clonedRepos[0]?.repository.name).toBe("myrepo");
+        expect(git.clonedRepos[0]?.repository.organization).toBe("myorg");
+        expect(git.clonedRepos[0]?.repository.provider.name).toBe("gitlab");
+      }),
+    );
+
+    it.effect("clones repository from SSH URL", () =>
+      Effect.gen(function* () {
+        const fileSystem = new MockFileSystem();
+        const git = new MockGit();
+        const shellIntegration = new MockShellIntegration();
+
+        const testLayer = Layer.mergeAll(
+          Layer.succeed(FileSystemTag, fileSystem),
+          Layer.succeed(GitTag, git),
+          Layer.succeed(RepoProviderTag, new MockRepoProvider()),
+          Layer.succeed(PathServiceTag, new MockPathService()),
+          Layer.succeed(RepositoryServiceTag, new MockRepositoryService()),
+          Layer.succeed(ShellIntegrationTag, shellIntegration),
+        );
+
+        const args = { repo: "git@github.com:myorg/myrepo.git" };
+        const command = cloneCommand.handler(args);
+
+        yield* command.pipe(Effect.provide(testLayer));
+
+        expect(git.clonedRepos).toHaveLength(1);
+        expect(git.clonedRepos[0]?.repository.name).toBe("myrepo");
+        expect(git.clonedRepos[0]?.repository.organization).toBe("myorg");
+        expect(git.clonedRepos[0]?.repository.provider.name).toBe("github");
+      }),
+    );
+  });
+
   describe("path handling", () => {
     it.effect("calculates relative path correctly", () =>
       Effect.gen(function* () {
