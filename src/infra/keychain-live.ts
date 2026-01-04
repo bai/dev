@@ -51,36 +51,20 @@ export const makeKeychainLive = (shell: Shell): Keychain => ({
       ),
 
   removeCredential: (service: string, account: string): Effect.Effect<void, AuthError | ShellExecutionError> =>
-    shell
-      .exec("security", [
-        "delete-generic-password",
-        "-s",
-        service,
-        "-a",
-        account,
-      ])
-      .pipe(
-        Effect.flatMap((result) => {
-          if (result.exitCode !== 0) {
-            return Effect.fail(authError(`Failed to remove credential: ${result.stderr}`));
-          }
-          return Effect.void;
-        }),
-      ),
+    shell.exec("security", ["delete-generic-password", "-s", service, "-a", account]).pipe(
+      Effect.flatMap((result) => {
+        if (result.exitCode !== 0) {
+          return Effect.fail(authError(`Failed to remove credential: ${result.stderr}`));
+        }
+        return Effect.void;
+      }),
+    ),
 
   hasCredential: (service: string, account: string): Effect.Effect<boolean> =>
-    shell
-      .exec("security", [
-        "find-generic-password",
-        "-s",
-        service,
-        "-a",
-        account,
-      ])
-      .pipe(
-        Effect.map((result) => result.exitCode === 0),
-        Effect.catchAll(() => Effect.succeed(false)),
-      ),
+    shell.exec("security", ["find-generic-password", "-s", service, "-a", account]).pipe(
+      Effect.map((result) => result.exitCode === 0),
+      Effect.catchAll(() => Effect.succeed(false)),
+    ),
 });
 
 // Effect Layer for dependency injection

@@ -199,10 +199,7 @@ describe("directory-live", () => {
 
     it.effect("returns directories when base directory exists", () =>
       Effect.gen(function* () {
-        const expectedDirs = [
-          "/home/user/dev/github.com/org/repo/",
-          "/home/user/dev/gitlab.com/org/project/",
-        ];
+        const expectedDirs = ["/home/user/dev/github.com/org/repo/", "/home/user/dev/gitlab.com/org/project/"];
 
         const mockFileSystem: FileSystem = {
           exists: () => Effect.succeed(true),

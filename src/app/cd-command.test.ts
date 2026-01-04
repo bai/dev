@@ -286,15 +286,7 @@ describe("cd-command", () => {
         const shellIntegration = new MockShellIntegration();
 
         const testLayer = Layer.mergeAll(
-          Layer.succeed(
-            DirectoryTag,
-            new MockDirectoryService([
-              "test",
-              "tests",
-              "testing",
-              "test-utils",
-            ]),
-          ),
+          Layer.succeed(DirectoryTag, new MockDirectoryService(["test", "tests", "testing", "test-utils"])),
           Layer.succeed(InteractiveSelectorTag, new MockInteractiveSelector(null)),
           Layer.succeed(ShellIntegrationTag, shellIntegration),
         );

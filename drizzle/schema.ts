@@ -25,7 +25,5 @@ export const toolHealthChecks = sqliteTable(
     notes: text(),
     checked_at: integer({ mode: "timestamp" }).notNull(),
   },
-  (table) => [
-    index("idx_tool_latest").on(table.tool_name, desc(table.checked_at)),
-  ],
+  (table) => [index("idx_tool_latest").on(table.tool_name, desc(table.checked_at))],
 );

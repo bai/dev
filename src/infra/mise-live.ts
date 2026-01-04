@@ -53,27 +53,20 @@ export const makeMiseLive = (shell: Shell, fileSystem: FileSystem, configLoader:
     ),
 
   install: (): Effect.Effect<void, ShellExecutionError> =>
-    shell
-      .exec("curl", [
-        "-sSfL",
-        "https://mise.run",
-        "|",
-        "sh",
-      ])
-      .pipe(
-        Effect.flatMap((result) => {
-          if (result.exitCode !== 0) {
-            return Effect.fail(
-              shellExecutionError(
-                "curl",
-                ["-sSfL", "https://mise.run", "|", "sh"],
-                `Failed to install mise: ${result.stderr}`,
-              ),
-            );
-          }
-          return Effect.void;
-        }),
-      ),
+    shell.exec("curl", ["-sSfL", "https://mise.run", "|", "sh"]).pipe(
+      Effect.flatMap((result) => {
+        if (result.exitCode !== 0) {
+          return Effect.fail(
+            shellExecutionError(
+              "curl",
+              ["-sSfL", "https://mise.run", "|", "sh"],
+              `Failed to install mise: ${result.stderr}`,
+            ),
+          );
+        }
+        return Effect.void;
+      }),
+    ),
 
   installTools: (cwd?: string): Effect.Effect<void, ShellExecutionError> =>
     shell.exec("mise", ["install"], { cwd }).pipe(
