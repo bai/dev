@@ -31,8 +31,8 @@
     "@opentelemetry/semantic-conventions": "1.38.0",
     "drizzle-orm": "0.45.1",
     "effect": "3.19.14",
-    "oxfmt": "0.22.0",
-    "oxlint": "1.37.0",
+    "oxfmt": "0.23.0",
+    "oxlint": "1.38.0",
     "oxlint-tsgolint": "0.10.1",
     "yaml": "2.8.2",
     "zod": "4.3.5"
@@ -52,7 +52,7 @@
     "prettier": "3.7.4",
     "typescript": "5.9.3",
     "typescript-eslint": "8.52.0",
-    "vite": "7.3.0",
+    "vite": "7.3.1",
     "vitest": "4.0.16"
   },
   "engines": {
