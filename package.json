@@ -31,8 +31,8 @@
     "@opentelemetry/semantic-conventions": "1.38.0",
     "drizzle-orm": "0.45.1",
     "effect": "3.19.14",
-    "oxfmt": "0.23.0",
-    "oxlint": "1.38.0",
+    "oxfmt": "0.24.0",
+    "oxlint": "1.39.0",
     "oxlint-tsgolint": "0.11.0",
     "yaml": "2.8.2",
     "zod": "4.3.5"
