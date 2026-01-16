@@ -33,7 +33,7 @@
     "effect": "3.19.14",
     "oxfmt": "0.24.0",
     "oxlint": "1.39.0",
-    "oxlint-tsgolint": "0.11.0",
+    "oxlint-tsgolint": "0.11.1",
     "yaml": "2.8.2",
     "zod": "4.3.5"
   },
