@@ -28,7 +28,7 @@
     "@opentelemetry/sdk-trace-base": "2.4.0",
     "@opentelemetry/sdk-trace-node": "2.4.0",
     "@opentelemetry/sdk-trace-web": "2.4.0",
-    "@opentelemetry/semantic-conventions": "1.38.0",
+    "@opentelemetry/semantic-conventions": "1.39.0",
     "drizzle-orm": "0.45.1",
     "effect": "3.19.14",
     "oxfmt": "0.24.0",
