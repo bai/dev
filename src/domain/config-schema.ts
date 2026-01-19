@@ -39,11 +39,18 @@ const telemetryConfigSchema = z.object({
   mode: telemetryModeSchema.optional().default("remote"),
 });
 
-const serviceNameSchema = z.enum(["postgres17", "postgres18", "valkey"]);
+// Per-service config (empty for now, reserved for future customization)
+const serviceConfigSchema = z.object({}).passthrough();
 
-const servicesConfigSchema = z.object({
-  enabled: z.array(serviceNameSchema).optional().default(["postgres18", "valkey"]),
-});
+// Services config: keys are enabled services, values are per-service config
+const servicesConfigSchema = z
+  .object({
+    postgres17: serviceConfigSchema.optional(),
+    postgres18: serviceConfigSchema.optional(),
+    valkey: serviceConfigSchema.optional(),
+  })
+  .optional()
+  .default({});
 
 export const configSchema = z.object({
   version: z.number().optional(),
@@ -60,7 +67,7 @@ export const configSchema = z.object({
     .describe("Map of organizations to their preferred git provider"),
   miseGlobalConfig: miseConfigSchema.optional().describe("Mise global configuration settings"),
   miseRepoConfig: miseConfigSchema.optional().describe("Mise repository configuration settings"),
-  services: servicesConfigSchema.default({ enabled: ["postgres18", "valkey"] }),
+  services: servicesConfigSchema,
 });
 
 // Re-export schemas for other modules

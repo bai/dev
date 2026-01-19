@@ -10,6 +10,7 @@ import { VersionLiveLayer } from "./app/version-service";
 import { ConfigLoaderTag } from "./domain/config-loader-port";
 import { type Config } from "./domain/config-schema";
 import { DirectoryTag } from "./domain/directory-port";
+import type { ServiceName } from "./domain/docker-services-port";
 import { HealthCheckServiceTag, makeHealthCheckService } from "./domain/health-check-service";
 import { createPathServiceLiveLayer } from "./domain/path-service";
 import { RepositoryServiceLiveLayer } from "./domain/repository-service";
@@ -95,7 +96,9 @@ export const buildAppLayer = (config: Config) => {
   const baseSearchPath = expandTildePath(config.baseSearchPath);
   const defaultProvider = config.defaultProvider;
   const orgToProvider = config.orgToProvider;
-  const enabledServices = config.services.enabled;
+  const enabledServices = config.services
+    ? (Object.keys(config.services).filter((k) => config.services[k as ServiceName] !== undefined) as ServiceName[])
+    : [];
 
   // Stage 1: Base foundation services (no dependencies)
   const baseServices = Layer.mergeAll(FileSystemLiveLayer, ShellLiveLayer, createPathServiceLiveLayer(baseSearchPath));
