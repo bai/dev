@@ -19,6 +19,7 @@ import { CommandRegistryLiveLayer } from "./infra/command-registry-live";
 import { ConfigLoaderLiveLayer } from "./infra/config-loader-live";
 import { DatabaseLiveLayer } from "./infra/database-live";
 import { DirectoryLiveLayer } from "./infra/directory-live";
+import { DockerServicesLiveLayer, DockerServicesToolsLiveLayer } from "./infra/docker-services-live";
 import { FileSystemLiveLayer } from "./infra/file-system-live";
 import { InteractiveSelectorLiveLayer } from "./infra/fzf-selector-live";
 import { FzfToolsLiveLayer } from "./infra/fzf-tools-live";
@@ -94,6 +95,7 @@ export const buildAppLayer = (config: Config) => {
   const baseSearchPath = expandTildePath(config.baseSearchPath);
   const defaultProvider = config.defaultProvider;
   const orgToProvider = config.orgToProvider;
+  const enabledServices = config.services.enabled;
 
   // Stage 1: Base foundation services (no dependencies)
   const baseServices = Layer.mergeAll(FileSystemLiveLayer, ShellLiveLayer, createPathServiceLiveLayer(baseSearchPath));
@@ -111,6 +113,10 @@ export const buildAppLayer = (config: Config) => {
     Layer.mergeAll(baseServices, networkLayer),
   );
 
+  // Docker services layer (depends on base services)
+  const dockerServicesLayer = Layer.provide(DockerServicesLiveLayer(enabledServices), baseServices);
+  const dockerServicesToolsLayer = Layer.provide(DockerServicesToolsLiveLayer(enabledServices), baseServices);
+
   // Stage 3: Tool services (depend on base + config)
   const toolDependencies = Layer.mergeAll(baseServices, configLoaderLayer);
 
@@ -122,6 +128,7 @@ export const buildAppLayer = (config: Config) => {
     Layer.provide(GitToolsLiveLayer, baseServices),
     Layer.provide(MiseToolsLiveLayer, toolDependencies),
     Layer.provide(GcloudToolsLiveLayer, baseServices),
+    dockerServicesToolsLayer,
     InteractiveSelectorLiveLayer,
   );
 
@@ -164,6 +171,7 @@ export const buildAppLayer = (config: Config) => {
     toolHealthRegistryLayer,
     repoProviderLayer,
     healthCheckServiceLayer,
+    dockerServicesLayer,
     versionLayer,
     tracingLayer,
   );

@@ -4,10 +4,15 @@ import { healthCheckError, type HealthCheckError } from "../domain/errors";
 import { type HealthCheckResult } from "../domain/health-check-port";
 import { ToolHealthRegistryTag, type ToolHealthRegistry } from "../domain/tool-health-registry-port";
 import { BunToolsTag, type BunTools } from "./bun-tools-live";
+import { DockerServicesToolsTag } from "./docker-services-live";
 import { FzfToolsTag, type FzfTools } from "./fzf-tools-live";
 import { GcloudToolsTag, type GcloudTools } from "./gcloud-tools-live";
 import { GitToolsTag, type GitTools } from "./git-tools-live";
 import { MiseToolsTag, type MiseTools } from "./mise-tools-live";
+
+interface DockerServicesTools {
+  performHealthCheck: () => Effect.Effect<HealthCheckResult, never>;
+}
 
 /**
  * Factory function to create ToolHealthRegistryPort implementation
@@ -18,6 +23,7 @@ export const makeToolHealthRegistryLive = (
   miseTools: MiseTools,
   fzfTools: FzfTools,
   gcloudTools: GcloudTools,
+  dockerServicesTools: DockerServicesTools,
 ): ToolHealthRegistry => {
   // Map of tool names to their health check functions
   const toolCheckers = new Map<string, () => Effect.Effect<HealthCheckResult, HealthCheckError>>([
@@ -26,6 +32,7 @@ export const makeToolHealthRegistryLive = (
     ["mise", () => miseTools.performHealthCheck()],
     ["fzf", () => fzfTools.performHealthCheck()],
     ["gcloud", () => gcloudTools.performHealthCheck()],
+    ["docker-services", () => dockerServicesTools.performHealthCheck()],
   ]);
 
   return {
@@ -70,7 +77,8 @@ export const ToolHealthRegistryLiveLayer = Layer.effect(
     const miseTools = yield* MiseToolsTag;
     const fzfTools = yield* FzfToolsTag;
     const gcloudTools = yield* GcloudToolsTag;
+    const dockerServicesTools = yield* DockerServicesToolsTag;
 
-    return makeToolHealthRegistryLive(bunTools, gitTools, miseTools, fzfTools, gcloudTools);
+    return makeToolHealthRegistryLive(bunTools, gitTools, miseTools, fzfTools, gcloudTools, dockerServicesTools);
   }),
 );

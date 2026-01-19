@@ -3,6 +3,7 @@ import { Effect } from "effect";
 
 import { CommandRegistryTag } from "../domain/command-registry-port";
 import { ConfigLoaderTag } from "../domain/config-loader-port";
+import { DockerServicesTag, type ServiceStatus } from "../domain/docker-services-port";
 import { statusCheckError } from "../domain/errors";
 import { HealthCheckTag, type HealthCheckResult } from "../domain/health-check-port";
 import type { EnvironmentInfo, GitInfo } from "../domain/models";
@@ -40,6 +41,8 @@ export const statusCommand = Command.make("status", {}, () =>
     yield* Effect.annotateCurrentSpan("health.check.count", statusItems.length.toString());
 
     yield* displayHealthCheckResults(statusItems).pipe(Effect.withSpan("ui.display_health_results"));
+
+    yield* showDockerServicesStatus.pipe(Effect.withSpan("ui.show_docker_services"));
 
     yield* showSummary(statusItems).pipe(Effect.withSpan("ui.show_summary"));
 
@@ -191,6 +194,72 @@ const displayHealthCheckResults = (statusItems: readonly StatusItem[]): Effect.E
 
     yield* Effect.logInfo("");
   });
+
+/**
+ * Get connection string for a service
+ */
+const getServiceConnectionString = (status: ServiceStatus): string | undefined => {
+  if (status.state !== "running" || !status.port) return undefined;
+
+  switch (status.name) {
+    case "postgres17":
+    case "postgres18":
+      return `postgresql://dev:dev@localhost:${status.port}/dev`;
+    case "valkey":
+      return `redis://localhost:${status.port}`;
+    default:
+      return undefined;
+  }
+};
+
+/**
+ * Show Docker services status
+ */
+const showDockerServicesStatus: Effect.Effect<void, never, DockerServicesTag> = Effect.gen(function* () {
+  const dockerServices = yield* DockerServicesTag;
+
+  const isAvailable = yield* dockerServices.isDockerAvailable();
+  if (!isAvailable) {
+    yield* Effect.logInfo("🐳 Docker Services: Docker not available");
+    yield* Effect.logInfo("");
+    return;
+  }
+
+  const statuses = yield* dockerServices
+    .status()
+    .pipe(Effect.catchAll(() => Effect.succeed([] as readonly ServiceStatus[])));
+
+  if (statuses.length === 0) {
+    yield* Effect.logInfo("🐳 Docker Services: No services configured");
+    yield* Effect.logInfo("");
+    return;
+  }
+
+  yield* Effect.logInfo("🐳 Docker Services:");
+  yield* Effect.logInfo("");
+
+  for (const status of statuses) {
+    const stateIcon = status.state === "running" ? "●" : "○";
+    const healthDisplay =
+      status.health === "healthy"
+        ? " (healthy)"
+        : status.health === "unhealthy"
+          ? " (unhealthy)"
+          : status.health === "starting"
+            ? " (starting)"
+            : "";
+    const portDisplay = status.port ? `:${status.port}` : "";
+
+    yield* Effect.logInfo(`  ${stateIcon} ${status.name}${portDisplay} - ${status.state}${healthDisplay}`);
+
+    const connStr = getServiceConnectionString(status);
+    if (connStr) {
+      yield* Effect.logInfo(`    → ${connStr}`);
+    }
+  }
+
+  yield* Effect.logInfo("");
+});
 
 /**
  * Display a group of tools

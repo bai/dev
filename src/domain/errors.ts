@@ -63,6 +63,13 @@ export class ShellTimeoutError extends Data.TaggedError("ShellTimeoutError")<{
   readonly cwd?: string;
 }> {}
 
+export class DockerServiceError extends Data.TaggedError("DockerServiceError")<{
+  readonly reason: string;
+  readonly service?: string;
+  readonly exitCode?: number;
+  readonly stderr?: string;
+}> {}
+
 // Union type for all domain errors
 export type DevError =
   | ConfigError
@@ -75,6 +82,7 @@ export type DevError =
   | HealthCheckError
   | ShellExecutionError
   | ShellTimeoutError
+  | DockerServiceError
   | TracingError
   | UnknownError;
 
@@ -103,8 +111,10 @@ export const exitCode = (error: DevError): number => {
       return 9;
     case "ShellTimeoutError":
       return 10;
-    case "TracingError":
+    case "DockerServiceError":
       return 11;
+    case "TracingError":
+      return 12;
     default:
       // This should never happen due to exhaustive typing, but satisfies linter
       return 1;
@@ -131,6 +141,10 @@ export const shellExecutionError = (
 ) => new ShellExecutionError({ command, args, reason, ...options });
 export const shellTimeoutError = (command: string, args: readonly string[], timeoutMs: number, cwd?: string) =>
   new ShellTimeoutError({ command, args, timeoutMs, cwd });
+export const dockerServiceError = (
+  reason: string,
+  options?: { service?: string; exitCode?: number; stderr?: string },
+) => new DockerServiceError({ reason, ...options });
 
 // Type guards (using Effect's built-in error matching)
 export const isConfigError = (e: DevError): e is ConfigError => e._tag === "ConfigError";
@@ -144,6 +158,7 @@ export const isStatusCheckError = (e: DevError): e is StatusCheckError => e._tag
 export const isHealthCheckError = (e: DevError): e is HealthCheckError => e._tag === "HealthCheckError";
 export const isShellExecutionError = (e: DevError): e is ShellExecutionError => e._tag === "ShellExecutionError";
 export const isShellTimeoutError = (e: DevError): e is ShellTimeoutError => e._tag === "ShellTimeoutError";
+export const isDockerServiceError = (e: DevError): e is DockerServiceError => e._tag === "DockerServiceError";
 
 /**
  * Extracts a human-readable error message from various error types
