@@ -17,7 +17,9 @@ describe("config-loader-live", () => {
 
   // Mock network that's not used in these tests
   const mockNetwork: Network = {
-    get: () => Effect.succeed({ status: 200, statusText: "OK", body: "{}" }),
+    get: () => Effect.succeed({ status: 200, statusText: "OK", body: "{}", headers: {} }),
+    downloadFile: () => Effect.void,
+    checkConnectivity: () => Effect.succeed(true),
   };
 
   beforeEach(async () => {

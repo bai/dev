@@ -14,7 +14,8 @@
     "prettier:fix": "prettier '**/*.{cjs,mjs,ts,tsx,md,json}' --ignore-path ./.gitignore --ignore-path ./.prettierignore --ignore-unknown --no-error-on-unmatched-pattern --write",
     "test": "bun --bun vitest --bail=1 --no-watch",
     "test:bench": "bun --bun vitest bench --bail=1 --no-watch",
-    "db:generate": "drizzle-kit generate"
+    "db:generate": "drizzle-kit generate",
+    "schema:generate": "bun scripts/generate-schema.ts config.schema.json"
   },
   "dependencies": {
     "@effect/cli": "0.73.0",

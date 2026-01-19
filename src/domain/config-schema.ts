@@ -53,6 +53,7 @@ const servicesConfigSchema = z
   .default({});
 
 export const configSchema = z.object({
+  $schema: z.string().optional().describe("JSON schema reference for configuration validation"),
   version: z.number().optional(),
   configUrl: z.url().default("https://raw.githubusercontent.com/bai/dev/refs/heads/main/config.json"),
   defaultOrg: z.string().default("flywheelsoftware"),

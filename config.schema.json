@@ -1,0 +1,301 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "description": "JSON Schema reference for IDE validation",
+      "type": "string"
+    },
+    "version": {
+      "type": "number"
+    },
+    "configUrl": {
+      "default": "https://raw.githubusercontent.com/bai/dev/refs/heads/main/config.json",
+      "type": "string",
+      "format": "uri",
+      "examples": [
+        "https://raw.githubusercontent.com/bai/dev/refs/heads/main/config.json"
+      ],
+      "description": "default: `https://raw.githubusercontent.com/bai/dev/refs/heads/main/config.json`"
+    },
+    "defaultOrg": {
+      "default": "flywheelsoftware",
+      "type": "string",
+      "examples": [
+        "flywheelsoftware"
+      ],
+      "description": "default: `flywheelsoftware`"
+    },
+    "defaultProvider": {
+      "default": "github",
+      "type": "string",
+      "enum": [
+        "github",
+        "gitlab"
+      ],
+      "examples": [
+        "github"
+      ],
+      "description": "default: `github`"
+    },
+    "baseSearchPath": {
+      "default": "~/src",
+      "description": "Base directory for searching repositories\n\ndefault: `~/src`",
+      "type": "string",
+      "examples": [
+        "~/src"
+      ]
+    },
+    "logLevel": {
+      "default": "info",
+      "type": "string",
+      "enum": [
+        "debug",
+        "info",
+        "warning",
+        "error",
+        "fatal"
+      ],
+      "examples": [
+        "info"
+      ],
+      "description": "default: `info`"
+    },
+    "telemetry": {
+      "default": {
+        "mode": "remote"
+      },
+      "type": "object",
+      "properties": {
+        "mode": {
+          "default": "remote",
+          "type": "string",
+          "enum": [
+            "console",
+            "remote",
+            "disabled"
+          ],
+          "examples": [
+            "remote"
+          ],
+          "description": "default: `remote`"
+        }
+      },
+      "additionalProperties": false
+    },
+    "orgToProvider": {
+      "default": {},
+      "description": "Map of organizations to their preferred git provider",
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {
+        "type": "string",
+        "enum": [
+          "github",
+          "gitlab"
+        ]
+      }
+    },
+    "miseGlobalConfig": {
+      "description": "Mise global configuration settings",
+      "type": "object",
+      "properties": {
+        "min_version": {
+          "type": "string"
+        },
+        "env": {
+          "allOf": [
+            {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            {
+              "type": "object",
+              "properties": {
+                "_": {
+                  "type": "object",
+                  "properties": {
+                    "path": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "file": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            }
+          ]
+        },
+        "tools": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            ]
+          }
+        },
+        "settings": {
+          "type": "object",
+          "properties": {
+            "idiomatic_version_file_enable_tools": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "trusted_config_paths": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "experimental": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "miseRepoConfig": {
+      "description": "Mise repository configuration settings",
+      "type": "object",
+      "properties": {
+        "min_version": {
+          "type": "string"
+        },
+        "env": {
+          "allOf": [
+            {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            {
+              "type": "object",
+              "properties": {
+                "_": {
+                  "type": "object",
+                  "properties": {
+                    "path": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "file": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            }
+          ]
+        },
+        "tools": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            ]
+          }
+        },
+        "settings": {
+          "type": "object",
+          "properties": {
+            "idiomatic_version_file_enable_tools": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "trusted_config_paths": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "experimental": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "services": {
+      "default": {},
+      "type": "object",
+      "properties": {
+        "postgres17": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": {}
+        },
+        "postgres18": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": {}
+        },
+        "valkey": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": {}
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false,
+  "allowComments": true,
+  "allowTrailingCommas": true
+}
