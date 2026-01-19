@@ -1,5 +1,4 @@
 #!/usr/bin/env bun
-
 import * as z from "zod";
 
 import { configSchema } from "../src/domain/config-schema";
@@ -22,7 +21,10 @@ const result = z.toJSONSchema(configSchema, {
         schema.examples = [schema.default];
       }
 
-      schema.description = [schema.description || "", `default: \`${schema.default}\``].filter(Boolean).join("\n\n").trim();
+      schema.description = [schema.description || "", `default: \`${schema.default}\``]
+        .filter(Boolean)
+        .join("\n\n")
+        .trim();
     }
   },
 }) as Record<string, unknown> & {

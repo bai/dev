@@ -7,67 +7,98 @@ const logLevelSchema: z.ZodType<LogLevel> = z.enum(["debug", "info", "warning", 
 
 // Mise configuration schema (matching domain types)
 const miseConfigSchema = z.object({
-  min_version: z.string().optional(),
+  min_version: z.string().optional().describe("Minimum required mise version"),
   env: z
     .record(z.string(), z.string())
     .and(
       z.object({
         _: z
           .object({
-            path: z.array(z.string()).optional(),
-            file: z.array(z.string()).optional(),
+            path: z.array(z.string()).optional().describe("Additional PATH entries"),
+            file: z.array(z.string()).optional().describe("Environment files to load"),
           })
-          .optional(),
+          .optional()
+          .describe("Special environment configuration"),
       }),
     )
-    .optional(),
-  tools: z.record(z.string(), z.string().or(z.array(z.string()))).optional(),
+    .optional()
+    .describe("Environment variables to set"),
+  tools: z
+    .record(z.string(), z.string().or(z.array(z.string())))
+    .optional()
+    .describe("Tool versions to install (e.g., node: 'lts', python: ['3.11', '3.12'])"),
   settings: z
     .object({
-      idiomatic_version_file_enable_tools: z.array(z.string()).optional(),
-      trusted_config_paths: z.array(z.string()).optional(),
-      experimental: z.boolean().optional(),
+      idiomatic_version_file_enable_tools: z
+        .array(z.string())
+        .optional()
+        .describe("Tools that use idiomatic version files (.nvmrc, .python-version)"),
+      trusted_config_paths: z.array(z.string()).optional().describe("Paths to trust for mise configuration"),
+      experimental: z.boolean().optional().describe("Enable experimental mise features"),
     })
-    .optional(),
+    .optional()
+    .describe("Mise settings"),
 });
 
 const gitProviderSchema: z.ZodType<GitProviderType> = z.enum(["github", "gitlab"]);
 
 const telemetryModeSchema: z.ZodType<TelemetryMode> = z.enum(["console", "remote", "disabled"]);
 
-const telemetryConfigSchema = z.object({
-  mode: telemetryModeSchema.optional().default("remote"),
-});
+const telemetryConfigSchema = z
+  .object({
+    mode: telemetryModeSchema
+      .optional()
+      .default("remote")
+      .describe("Telemetry mode: 'console' for local output, 'remote' for cloud, 'disabled' to turn off"),
+  })
+  .describe("Telemetry and observability settings");
 
 // Per-service config (empty for now, reserved for future customization)
-const serviceConfigSchema = z.object({}).passthrough();
+const serviceConfigSchema = z
+  .object({})
+  .passthrough()
+  .describe("Service-specific configuration (reserved for future use)");
 
 // Services config: keys are enabled services, values are per-service config
 const servicesConfigSchema = z
   .object({
-    postgres17: serviceConfigSchema.optional(),
-    postgres18: serviceConfigSchema.optional(),
-    valkey: serviceConfigSchema.optional(),
+    postgres17: serviceConfigSchema.optional().describe("PostgreSQL 17 database service"),
+    postgres18: serviceConfigSchema.optional().describe("PostgreSQL 18 database service"),
+    valkey: serviceConfigSchema.optional().describe("Valkey (Redis-compatible) cache service"),
   })
   .optional()
-  .default({});
+  .default({})
+  .describe("Docker services to enable. Include a service key to enable it");
 
 export const configSchema = z.object({
-  $schema: z.string().optional().describe("JSON schema reference for configuration validation"),
-  version: z.number().optional(),
-  configUrl: z.url().default("https://raw.githubusercontent.com/bai/dev/refs/heads/main/config.json"),
-  defaultOrg: z.string().default("flywheelsoftware"),
-  defaultProvider: gitProviderSchema.optional().default("github"),
-  baseSearchPath: z.string().optional().default("~/src").describe("Base directory for searching repositories"),
-  logLevel: logLevelSchema.optional().default("info"),
+  $schema: z.string().optional().describe("JSON Schema reference for IDE validation and autocomplete"),
+  version: z.number().optional().describe("Configuration schema version for future migrations"),
+  configUrl: z
+    .url()
+    .default("https://raw.githubusercontent.com/bai/dev/refs/heads/main/config.json")
+    .describe("Remote URL to fetch shared configuration from"),
+  defaultOrg: z.string().default("flywheelsoftware").describe("Default organization for repository operations"),
+  defaultProvider: gitProviderSchema
+    .optional()
+    .default("github")
+    .describe("Default git provider when not specified (github or gitlab)"),
+  baseSearchPath: z
+    .string()
+    .optional()
+    .default("~/src")
+    .describe("Base directory for searching and cloning repositories"),
+  logLevel: logLevelSchema
+    .optional()
+    .default("info")
+    .describe("Logging verbosity: debug, info, warning, error, or fatal"),
   telemetry: telemetryConfigSchema.default({ mode: "remote" }),
   orgToProvider: z
     .record(z.string(), gitProviderSchema)
     .optional()
     .default({})
-    .describe("Map of organizations to their preferred git provider"),
-  miseGlobalConfig: miseConfigSchema.optional().describe("Mise global configuration settings"),
-  miseRepoConfig: miseConfigSchema.optional().describe("Mise repository configuration settings"),
+    .describe("Map organization names to their git provider (e.g., { 'mycompany': 'gitlab' })"),
+  miseGlobalConfig: miseConfigSchema.optional().describe("Mise configuration applied globally (~/.config/mise)"),
+  miseRepoConfig: miseConfigSchema.optional().describe("Mise configuration applied per-repository (.mise.toml)"),
   services: servicesConfigSchema,
 });
 

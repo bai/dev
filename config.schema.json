@@ -3,63 +3,45 @@
   "type": "object",
   "properties": {
     "$schema": {
-      "description": "JSON Schema reference for IDE validation",
+      "description": "JSON Schema reference for IDE validation and autocomplete",
       "type": "string"
     },
     "version": {
+      "description": "Configuration schema version for future migrations",
       "type": "number"
     },
     "configUrl": {
       "default": "https://raw.githubusercontent.com/bai/dev/refs/heads/main/config.json",
+      "description": "Remote URL to fetch shared configuration from\n\ndefault: `https://raw.githubusercontent.com/bai/dev/refs/heads/main/config.json`",
       "type": "string",
       "format": "uri",
-      "examples": [
-        "https://raw.githubusercontent.com/bai/dev/refs/heads/main/config.json"
-      ],
-      "description": "default: `https://raw.githubusercontent.com/bai/dev/refs/heads/main/config.json`"
+      "examples": ["https://raw.githubusercontent.com/bai/dev/refs/heads/main/config.json"]
     },
     "defaultOrg": {
       "default": "flywheelsoftware",
+      "description": "Default organization for repository operations\n\ndefault: `flywheelsoftware`",
       "type": "string",
-      "examples": [
-        "flywheelsoftware"
-      ],
-      "description": "default: `flywheelsoftware`"
+      "examples": ["flywheelsoftware"]
     },
     "defaultProvider": {
       "default": "github",
+      "description": "Default git provider when not specified (github or gitlab)\n\ndefault: `github`",
       "type": "string",
-      "enum": [
-        "github",
-        "gitlab"
-      ],
-      "examples": [
-        "github"
-      ],
-      "description": "default: `github`"
+      "enum": ["github", "gitlab"],
+      "examples": ["github"]
     },
     "baseSearchPath": {
       "default": "~/src",
-      "description": "Base directory for searching repositories\n\ndefault: `~/src`",
+      "description": "Base directory for searching and cloning repositories\n\ndefault: `~/src`",
       "type": "string",
-      "examples": [
-        "~/src"
-      ]
+      "examples": ["~/src"]
     },
     "logLevel": {
       "default": "info",
+      "description": "Logging verbosity: debug, info, warning, error, or fatal\n\ndefault: `info`",
       "type": "string",
-      "enum": [
-        "debug",
-        "info",
-        "warning",
-        "error",
-        "fatal"
-      ],
-      "examples": [
-        "info"
-      ],
-      "description": "default: `info`"
+      "enum": ["debug", "info", "warning", "error", "fatal"],
+      "examples": ["info"]
     },
     "telemetry": {
       "default": {
@@ -69,43 +51,37 @@
       "properties": {
         "mode": {
           "default": "remote",
+          "description": "Telemetry mode: 'console' for local output, 'remote' for cloud, 'disabled' to turn off\n\ndefault: `remote`",
           "type": "string",
-          "enum": [
-            "console",
-            "remote",
-            "disabled"
-          ],
-          "examples": [
-            "remote"
-          ],
-          "description": "default: `remote`"
+          "enum": ["console", "remote", "disabled"],
+          "examples": ["remote"]
         }
       },
+      "description": "Telemetry and observability settings",
       "additionalProperties": false
     },
     "orgToProvider": {
       "default": {},
-      "description": "Map of organizations to their preferred git provider",
+      "description": "Map organization names to their git provider (e.g., { 'mycompany': 'gitlab' })",
       "type": "object",
       "propertyNames": {
         "type": "string"
       },
       "additionalProperties": {
         "type": "string",
-        "enum": [
-          "github",
-          "gitlab"
-        ]
+        "enum": ["github", "gitlab"]
       }
     },
     "miseGlobalConfig": {
-      "description": "Mise global configuration settings",
+      "description": "Mise configuration applied globally (~/.config/mise)",
       "type": "object",
       "properties": {
         "min_version": {
+          "description": "Minimum required mise version",
           "type": "string"
         },
         "env": {
+          "description": "Environment variables to set",
           "allOf": [
             {
               "type": "object",
@@ -120,15 +96,18 @@
               "type": "object",
               "properties": {
                 "_": {
+                  "description": "Special environment configuration",
                   "type": "object",
                   "properties": {
                     "path": {
+                      "description": "Additional PATH entries",
                       "type": "array",
                       "items": {
                         "type": "string"
                       }
                     },
                     "file": {
+                      "description": "Environment files to load",
                       "type": "array",
                       "items": {
                         "type": "string"
@@ -143,6 +122,7 @@
           ]
         },
         "tools": {
+          "description": "Tool versions to install (e.g., node: 'lts', python: ['3.11', '3.12'])",
           "type": "object",
           "propertyNames": {
             "type": "string"
@@ -162,21 +142,25 @@
           }
         },
         "settings": {
+          "description": "Mise settings",
           "type": "object",
           "properties": {
             "idiomatic_version_file_enable_tools": {
+              "description": "Tools that use idiomatic version files (.nvmrc, .python-version)",
               "type": "array",
               "items": {
                 "type": "string"
               }
             },
             "trusted_config_paths": {
+              "description": "Paths to trust for mise configuration",
               "type": "array",
               "items": {
                 "type": "string"
               }
             },
             "experimental": {
+              "description": "Enable experimental mise features",
               "type": "boolean"
             }
           },
@@ -186,13 +170,15 @@
       "additionalProperties": false
     },
     "miseRepoConfig": {
-      "description": "Mise repository configuration settings",
+      "description": "Mise configuration applied per-repository (.mise.toml)",
       "type": "object",
       "properties": {
         "min_version": {
+          "description": "Minimum required mise version",
           "type": "string"
         },
         "env": {
+          "description": "Environment variables to set",
           "allOf": [
             {
               "type": "object",
@@ -207,15 +193,18 @@
               "type": "object",
               "properties": {
                 "_": {
+                  "description": "Special environment configuration",
                   "type": "object",
                   "properties": {
                     "path": {
+                      "description": "Additional PATH entries",
                       "type": "array",
                       "items": {
                         "type": "string"
                       }
                     },
                     "file": {
+                      "description": "Environment files to load",
                       "type": "array",
                       "items": {
                         "type": "string"
@@ -230,6 +219,7 @@
           ]
         },
         "tools": {
+          "description": "Tool versions to install (e.g., node: 'lts', python: ['3.11', '3.12'])",
           "type": "object",
           "propertyNames": {
             "type": "string"
@@ -249,21 +239,25 @@
           }
         },
         "settings": {
+          "description": "Mise settings",
           "type": "object",
           "properties": {
             "idiomatic_version_file_enable_tools": {
+              "description": "Tools that use idiomatic version files (.nvmrc, .python-version)",
               "type": "array",
               "items": {
                 "type": "string"
               }
             },
             "trusted_config_paths": {
+              "description": "Paths to trust for mise configuration",
               "type": "array",
               "items": {
                 "type": "string"
               }
             },
             "experimental": {
+              "description": "Enable experimental mise features",
               "type": "boolean"
             }
           },
@@ -274,19 +268,23 @@
     },
     "services": {
       "default": {},
+      "description": "Docker services to enable. Include a service key to enable it",
       "type": "object",
       "properties": {
         "postgres17": {
+          "description": "PostgreSQL 17 database service",
           "type": "object",
           "properties": {},
           "additionalProperties": {}
         },
         "postgres18": {
+          "description": "PostgreSQL 18 database service",
           "type": "object",
           "properties": {},
           "additionalProperties": {}
         },
         "valkey": {
+          "description": "Valkey (Redis-compatible) cache service",
           "type": "object",
           "properties": {},
           "additionalProperties": {}

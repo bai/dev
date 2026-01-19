@@ -7,8 +7,8 @@ import { Effect } from "effect";
 import { afterEach, beforeEach, describe, expect } from "vitest";
 
 import type { Network } from "../domain/network-port";
-import { makeFileSystemLive } from "./file-system-live";
 import { makeConfigLoaderLive } from "./config-loader-live";
+import { makeFileSystemLive } from "./file-system-live";
 
 describe("config-loader-live", () => {
   const fileSystem = makeFileSystemLive();
