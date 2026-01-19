@@ -27,7 +27,7 @@ export const makeConfigLoaderLive = (fileSystem: FileSystem, network: Network, c
           Effect.flatMap((content) =>
             Effect.try({
               try: () => {
-                const rawConfig = JSON.parse(content);
+                const rawConfig = Bun.JSONC.parse(content);
                 return configSchema.parse(rawConfig);
               },
               catch: (error) => configError(`Invalid config file: ${error}`),
@@ -59,7 +59,7 @@ export const makeConfigLoaderLive = (fileSystem: FileSystem, network: Network, c
 
             return Effect.try({
               try: () => {
-                const remoteConfig = JSON.parse(response.body);
+                const remoteConfig = Bun.JSONC.parse(response.body);
                 return configSchema.parse(remoteConfig);
               },
               catch: (error) => configError(`Invalid remote config: ${error}`),

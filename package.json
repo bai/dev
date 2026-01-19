@@ -12,8 +12,8 @@
     "lint:fix": "eslint . --ext .ts,.tsx --fix",
     "prettier": "prettier '**/*.{cjs,mjs,ts,tsx,md,json}' --ignore-path ./.gitignore --ignore-path ./.prettierignore --ignore-unknown --no-error-on-unmatched-pattern --check",
     "prettier:fix": "prettier '**/*.{cjs,mjs,ts,tsx,md,json}' --ignore-path ./.gitignore --ignore-path ./.prettierignore --ignore-unknown --no-error-on-unmatched-pattern --write",
-    "test": "vitest --no-file-parallelism --bail=1 --no-watch",
-    "test:bench": "vitest bench --no-file-parallelism --bail=1 --no-watch",
+    "test": "bun --bun vitest --bail=1 --no-watch",
+    "test:bench": "bun --bun vitest bench --bail=1 --no-watch",
     "db:generate": "drizzle-kit generate"
   },
   "dependencies": {
