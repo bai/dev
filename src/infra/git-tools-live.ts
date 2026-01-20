@@ -79,7 +79,7 @@ export const makeGitToolsLive = (shell: Shell): GitTools => ({
 
   performUpgrade: (): Effect.Effect<boolean, ShellExecutionError> =>
     Effect.gen(function* () {
-      yield* Effect.logInfo("⏳ Updating git via mise...");
+      yield* Effect.logInfo("🔄 Updating git via mise...");
 
       const result = yield* shell.exec("mise", ["install", "git@latest"]);
 

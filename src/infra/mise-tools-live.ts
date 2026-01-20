@@ -89,7 +89,7 @@ export const makeMiseToolsLive = (shell: Shell, filesystem: FileSystem, configLo
 
   const performUpgrade = (): Effect.Effect<boolean, ShellExecutionError> =>
     Effect.gen(function* () {
-      yield* Effect.logInfo("⏳ Updating mise to latest version...");
+      yield* Effect.logInfo("🔄 Updating mise to latest version...");
 
       const result = yield* shell.exec("mise", ["self-update"]);
 
@@ -146,12 +146,17 @@ export const makeMiseToolsLive = (shell: Shell, filesystem: FileSystem, configLo
     Effect.gen(function* () {
       const { isValid, currentVersion } = yield* checkVersion();
 
-      if (!isValid) {
-        if (currentVersion) {
-          yield* Effect.logWarning(`⚠️  Mise version ${currentVersion} is older than required ${MISE_MIN_VERSION}`);
-        } else {
-          yield* Effect.logWarning(`⚠️  Unable to determine mise version`);
-        }
+      // If version is already valid, skip upgrade
+      if (isValid && currentVersion) {
+        yield* Effect.logInfo(`✅ Mise ${currentVersion} already meets requirement (>=${MISE_MIN_VERSION})`);
+        yield* setupGlobalConfig();
+        return;
+      }
+
+      if (currentVersion) {
+        yield* Effect.logWarning(`⚠️  Mise version ${currentVersion} is older than required ${MISE_MIN_VERSION}`);
+      } else {
+        yield* Effect.logWarning(`⚠️  Unable to determine mise version`);
       }
 
       yield* Effect.logInfo(`🚀 Starting mise upgrade...`);

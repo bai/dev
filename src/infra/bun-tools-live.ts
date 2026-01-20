@@ -78,7 +78,7 @@ export const makeBunToolsLive = (shell: Shell): BunTools => ({
 
   performUpgrade: (): Effect.Effect<boolean, ShellExecutionError> =>
     Effect.gen(function* () {
-      yield* Effect.logInfo("⏳ Updating bun...");
+      yield* Effect.logInfo("🔄 Updating bun...");
 
       const result = yield* shell.exec("bun", ["upgrade"]);
 

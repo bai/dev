@@ -302,10 +302,8 @@ function checkTool(toolName: string, toolManager: ToolManagement[keyof ToolManag
     }
 
     if (isValid && currentVersion) {
-      yield* Effect.logInfo(`📦 Upgrading ${toolName} from ${currentVersion}...`);
-      yield* toolManager
-        .ensureVersionOrUpgrade()
-        .pipe(Effect.mapError((error) => unknownError(`${toolName} upgrade failed: ${error}`)));
+      // Version is valid, no upgrade needed
+      yield* Effect.logInfo(`✅ ${toolName} ${currentVersion} is up to date`);
     } else if (currentVersion) {
       yield* Effect.logInfo(`📦 Upgrading ${toolName} from ${currentVersion}...`);
       yield* toolManager

@@ -78,7 +78,7 @@ export const makeFzfToolsLive = (shell: Shell): FzfTools => ({
 
   performUpgrade: (): Effect.Effect<boolean, ShellExecutionError> =>
     Effect.gen(function* () {
-      yield* Effect.logInfo("⏳ Updating fzf via mise...");
+      yield* Effect.logInfo("🔄 Updating fzf via mise...");
 
       const result = yield* shell.exec("mise", ["install", "fzf@latest"]);
 

@@ -89,7 +89,7 @@ export const makeGcloudToolsLive = (shell: Shell, filesystem: FileSystem): Gclou
 
   const performUpgrade = (): Effect.Effect<boolean, ShellExecutionError> =>
     Effect.gen(function* () {
-      yield* Effect.logInfo("⏳ Updating gcloud via mise...");
+      yield* Effect.logInfo("🔄 Updating gcloud via mise...");
 
       const result = yield* shell.exec("mise", ["install", "gcloud@latest"]);
 
