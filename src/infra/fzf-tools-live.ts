@@ -10,7 +10,7 @@ import {
 import { type HealthCheckResult } from "../domain/health-check-port";
 import { ShellTag, type Shell } from "../domain/shell-port";
 
-export const FZF_MIN_VERSION = "0.35.0";
+export const FZF_MIN_VERSION = "0.67.0";
 
 /**
  * Fzf tools for version checking and management
@@ -156,6 +156,17 @@ export const makeFzfToolsLive = (shell: Shell): FzfTools => ({
           toolName: "fzf",
           status: "fail",
           notes: "Fzf not found or unable to determine version",
+          checkedAt,
+        };
+      }
+
+      const isCompliant = compareVersions(currentVersion, FZF_MIN_VERSION) >= 0;
+      if (!isCompliant) {
+        return {
+          toolName: "fzf",
+          version: currentVersion,
+          status: "warning",
+          notes: `requires >=${FZF_MIN_VERSION}`,
           checkedAt,
         };
       }

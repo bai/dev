@@ -10,7 +10,7 @@ import {
 import { type HealthCheckResult } from "../domain/health-check-port";
 import { ShellTag, type Shell } from "../domain/shell-port";
 
-export const GIT_MIN_VERSION = "2.50.0";
+export const GIT_MIN_VERSION = "2.52.0";
 
 /**
  * Git tools for version checking and management
@@ -157,6 +157,17 @@ export const makeGitToolsLive = (shell: Shell): GitTools => ({
           toolName: "git",
           status: "fail",
           notes: "Git not found or unable to determine version",
+          checkedAt,
+        };
+      }
+
+      const isCompliant = compareVersions(currentVersion, GIT_MIN_VERSION) >= 0;
+      if (!isCompliant) {
+        return {
+          toolName: "git",
+          version: currentVersion,
+          status: "warning",
+          notes: `requires >=${GIT_MIN_VERSION}`,
           checkedAt,
         };
       }

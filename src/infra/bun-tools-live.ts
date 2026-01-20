@@ -10,7 +10,7 @@ import {
 import { type HealthCheckResult } from "../domain/health-check-port";
 import { ShellTag, type Shell } from "../domain/shell-port";
 
-export const BUN_MIN_VERSION = "1.3.3";
+export const BUN_MIN_VERSION = "1.3.6";
 
 /**
  * Bun tools for version checking and management
@@ -157,6 +157,17 @@ export const makeBunToolsLive = (shell: Shell): BunTools => ({
           toolName: "bun",
           status: "fail",
           notes: "Bun not found or unable to determine version",
+          checkedAt,
+        };
+      }
+
+      const isCompliant = compareVersions(currentVersion, BUN_MIN_VERSION) >= 0;
+      if (!isCompliant) {
+        return {
+          toolName: "bun",
+          version: currentVersion,
+          status: "warning",
+          notes: `requires >=${BUN_MIN_VERSION}`,
           checkedAt,
         };
       }

@@ -15,7 +15,7 @@ import { FileSystemTag, type FileSystem } from "../domain/file-system-port";
 import { type HealthCheckResult } from "../domain/health-check-port";
 import { ShellTag, type Shell } from "../domain/shell-port";
 
-export const GCLOUD_MIN_VERSION = "450.0.0";
+export const GCLOUD_MIN_VERSION = "552.0.0";
 
 /**
  * Google Cloud tools for version checking and management
@@ -190,6 +190,17 @@ export const makeGcloudToolsLive = (shell: Shell, filesystem: FileSystem): Gclou
           toolName: "gcloud",
           status: "fail",
           notes: "Gcloud not found or unable to determine version",
+          checkedAt,
+        };
+      }
+
+      const isCompliant = compareVersions(currentVersion, GCLOUD_MIN_VERSION) >= 0;
+      if (!isCompliant) {
+        return {
+          toolName: "gcloud",
+          version: currentVersion,
+          status: "warning",
+          notes: `requires >=${GCLOUD_MIN_VERSION}`,
           checkedAt,
         };
       }

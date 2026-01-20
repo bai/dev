@@ -165,9 +165,15 @@ export const makeDockerServicesLive = (
   return {
     up: (services?: readonly ServiceName[]): Effect.Effect<void, DockerServiceError | ShellExecutionError> =>
       Effect.gen(function* () {
+        const serviceList = services ?? enabledServices;
+
+        if (serviceList.length === 0) {
+          yield* Effect.logInfo("No services configured");
+          return;
+        }
+
         yield* ensureComposeFile();
 
-        const serviceList = services ?? enabledServices;
         const args = ["up", "-d", ...serviceList];
 
         yield* Effect.logInfo(`Starting services: ${serviceList.join(", ")}`);
@@ -216,9 +222,15 @@ export const makeDockerServicesLive = (
 
     restart: (services?: readonly ServiceName[]): Effect.Effect<void, DockerServiceError | ShellExecutionError> =>
       Effect.gen(function* () {
+        const serviceList = services ?? enabledServices;
+
+        if (serviceList.length === 0) {
+          yield* Effect.logInfo("No services configured");
+          return;
+        }
+
         yield* ensureComposeFile();
 
-        const serviceList = services ?? enabledServices;
         const args = ["restart", ...serviceList];
 
         yield* Effect.logInfo(`Restarting services: ${serviceList.join(", ")}`);

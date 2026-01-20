@@ -20,7 +20,8 @@ import { CommandRegistryLiveLayer } from "./infra/command-registry-live";
 import { ConfigLoaderLiveLayer } from "./infra/config-loader-live";
 import { DatabaseLiveLayer } from "./infra/database-live";
 import { DirectoryLiveLayer } from "./infra/directory-live";
-import { DockerServicesLiveLayer, DockerServicesToolsLiveLayer } from "./infra/docker-services-live";
+import { DockerServicesLiveLayer } from "./infra/docker-services-live";
+import { DockerToolsLiveLayer } from "./infra/docker-tools-live";
 import { FileSystemLiveLayer } from "./infra/file-system-live";
 import { InteractiveSelectorLiveLayer } from "./infra/fzf-selector-live";
 import { FzfToolsLiveLayer } from "./infra/fzf-tools-live";
@@ -118,7 +119,6 @@ export const buildAppLayer = (config: Config) => {
 
   // Docker services layer (depends on base services)
   const dockerServicesLayer = Layer.provide(DockerServicesLiveLayer(enabledServices), baseServices);
-  const dockerServicesToolsLayer = Layer.provide(DockerServicesToolsLiveLayer(enabledServices), baseServices);
 
   // Stage 3: Tool services (depend on base + config)
   const toolDependencies = Layer.mergeAll(baseServices, configLoaderLayer);
@@ -128,10 +128,10 @@ export const buildAppLayer = (config: Config) => {
     Layer.provide(KeychainLiveLayer, baseServices),
     Layer.provide(FzfToolsLiveLayer, baseServices),
     Layer.provide(BunToolsLiveLayer, baseServices),
+    Layer.provide(DockerToolsLiveLayer, baseServices),
     Layer.provide(GitToolsLiveLayer, baseServices),
     Layer.provide(MiseToolsLiveLayer, toolDependencies),
     Layer.provide(GcloudToolsLiveLayer, baseServices),
-    dockerServicesToolsLayer,
     InteractiveSelectorLiveLayer,
   );
 

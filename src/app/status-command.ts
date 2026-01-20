@@ -278,14 +278,13 @@ const displayToolGroup = (title: string, items: readonly StatusItem[]): Effect.E
  */
 const displayToolItem = (item: StatusItem): Effect.Effect<void, never, ShellTag> =>
   Effect.gen(function* () {
-    const icon = item.status === "ok" ? "✔" : item.status === "warning" ? "⚠" : "✗";
+    const icon = item.status === "ok" ? "✅" : item.status === "warning" ? "⚠️ " : "❌";
     const versionText = item.version ? ` ${item.version}` : "";
-    const statusText = item.status === "warning" || item.status === "fail" ? ` (${item.status})` : "";
 
     const toolPath = yield* getToolPath(item.tool);
     const pathText = toolPath ? ` - ${toolPath}` : "";
 
-    yield* Effect.logInfo(`  ${icon} ${item.tool}${versionText}${statusText}${pathText}`);
+    yield* Effect.logInfo(`  ${icon} ${item.tool}${versionText}${pathText}`);
 
     if (item.notes && (item.status === "warning" || item.status === "fail")) {
       yield* Effect.logInfo(`     Note: ${item.notes}`);
@@ -304,7 +303,7 @@ const showSummary = (statusItems: readonly StatusItem[]): Effect.Effect<void, ne
     if (failCount > 0) {
       yield* Effect.logError(`❌ ${failCount} failing, ${warnCount} warnings, ${okCount} OK`);
     } else if (warnCount > 0) {
-      yield* Effect.logWarning(`⚠️ ${warnCount} warnings, ${okCount} OK`);
+      yield* Effect.logWarning(`⚠️  ${warnCount} warnings, ${okCount} OK`);
     } else {
       yield* Effect.logInfo("All green. Have a great day! 🎉");
     }

@@ -17,7 +17,7 @@ import { FileSystemTag, type FileSystem } from "../domain/file-system-port";
 import { type HealthCheckResult } from "../domain/health-check-port";
 import { ShellTag, type Shell } from "../domain/shell-port";
 
-export const MISE_MIN_VERSION = "2025.11.7";
+export const MISE_MIN_VERSION = "2026.1.5";
 
 const homeDir = process.env.HOME || process.env.USERPROFILE || "";
 
@@ -204,6 +204,17 @@ export const makeMiseToolsLive = (shell: Shell, filesystem: FileSystem, configLo
           toolName: "mise",
           status: "fail",
           notes: "Mise not found or unable to determine version",
+          checkedAt,
+        };
+      }
+
+      const isCompliant = compareVersions(currentVersion, MISE_MIN_VERSION) >= 0;
+      if (!isCompliant) {
+        return {
+          toolName: "mise",
+          version: currentVersion,
+          status: "warning",
+          notes: `requires >=${MISE_MIN_VERSION}`,
           checkedAt,
         };
       }

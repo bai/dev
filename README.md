@@ -21,6 +21,12 @@
 - `dev status` - Comprehensive environment status and health validation
 - `dev run <task>` - Execute project tasks using mise
 
+### 🐳 **Docker Services**
+
+- `dev services up` - Start shared development services (PostgreSQL, Valkey)
+- `dev services down` - Stop services
+- `dev services logs` - View service logs
+
 ### 🛠️ **Maintenance**
 
 - `dev upgrade` - Update the dev CLI tool itself
@@ -94,6 +100,14 @@ dev up
 dev run <task>              # Run specific task
 dev run build --watch       # Run with arguments
 
+```
+
+### Docker Services
+
+```bash
+dev services up              # Start all services
+dev services down            # Stop all services
+dev services logs -f         # Follow logs
 ```
 
 ### Maintenance
