@@ -146,13 +146,11 @@ export const makeGcloudToolsLive = (shell: Shell, filesystem: FileSystem): Gclou
       if (!updateSuccess) {
         yield* Effect.logError(`❌ Failed to update gcloud to required version`);
         yield* Effect.logError(`💡 Try manually installing gcloud via mise: mise install gcloud@latest`);
-        return yield* Effect.fail(
-          externalToolError("Failed to update gcloud", {
-            tool: "gcloud",
-            exitCode: 1,
-            stderr: `Required version: ${GCLOUD_MIN_VERSION}, Current: ${currentVersion}`,
-          }),
-        );
+        return yield* externalToolError("Failed to update gcloud", {
+          tool: "gcloud",
+          exitCode: 1,
+          stderr: `Required version: ${GCLOUD_MIN_VERSION}, Current: ${currentVersion}`,
+        });
       }
 
       yield* setupConfig();
@@ -163,13 +161,11 @@ export const makeGcloudToolsLive = (shell: Shell, filesystem: FileSystem): Gclou
         if (versionAfterUpgrade) {
           yield* Effect.logError(`   Current: ${versionAfterUpgrade}, Required: ${GCLOUD_MIN_VERSION}`);
         }
-        return yield* Effect.fail(
-          externalToolError("Gcloud upgrade failed", {
-            tool: "gcloud",
-            exitCode: 1,
-            stderr: `Required: ${GCLOUD_MIN_VERSION}, Got: ${versionAfterUpgrade}`,
-          }),
-        );
+        return yield* externalToolError("Gcloud upgrade failed", {
+          tool: "gcloud",
+          exitCode: 1,
+          stderr: `Required: ${GCLOUD_MIN_VERSION}, Got: ${versionAfterUpgrade}`,
+        });
       }
 
       if (versionAfterUpgrade) {

@@ -112,13 +112,11 @@ export const makeFzfToolsLive = (shell: Shell): FzfTools => ({
       if (!updateSuccess) {
         yield* Effect.logError(`❌ Failed to update fzf to required version`);
         yield* Effect.logError(`💡 Try manually installing fzf via mise: mise install fzf@latest`);
-        return yield* Effect.fail(
-          externalToolError("Failed to update fzf", {
-            tool: "fzf",
-            exitCode: 1,
-            stderr: `Required version: ${FZF_MIN_VERSION}, Current: ${currentVersion}`,
-          }),
-        );
+        return yield* externalToolError("Failed to update fzf", {
+          tool: "fzf",
+          exitCode: 1,
+          stderr: `Required version: ${FZF_MIN_VERSION}, Current: ${currentVersion}`,
+        });
       }
 
       // Verify upgrade
@@ -128,13 +126,11 @@ export const makeFzfToolsLive = (shell: Shell): FzfTools => ({
         if (versionAfterUpgrade) {
           yield* Effect.logError(`   Current: ${versionAfterUpgrade}, Required: ${FZF_MIN_VERSION}`);
         }
-        return yield* Effect.fail(
-          externalToolError("Fzf upgrade failed", {
-            tool: "fzf",
-            exitCode: 1,
-            stderr: `Required: ${FZF_MIN_VERSION}, Got: ${versionAfterUpgrade}`,
-          }),
-        );
+        return yield* externalToolError("Fzf upgrade failed", {
+          tool: "fzf",
+          exitCode: 1,
+          stderr: `Required: ${FZF_MIN_VERSION}, Got: ${versionAfterUpgrade}`,
+        });
       }
 
       if (versionAfterUpgrade) {

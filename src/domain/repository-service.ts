@@ -56,7 +56,7 @@ const parseRepoUrlToPath = (repoUrl: string): Effect.Effect<string, ConfigError,
       return path.join(pathService.baseSearchPath, domain, orgName, repoName);
     }
 
-    return yield* Effect.fail(configError(`URL path does not contain organization and repository: ${repoUrl}`));
+    return yield* configError(`URL path does not contain organization and repository: ${repoUrl}`);
   });
 
 const expandToFullGitUrl = (

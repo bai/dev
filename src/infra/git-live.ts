@@ -21,7 +21,7 @@ export const makeGitLive = (shell: Shell): Git => ({
         const result = yield* shell.exec("git", ["clone", repository.cloneUrl, destinationPath]);
 
         if (result.exitCode !== 0) {
-          return yield* Effect.fail(gitError(`Failed to clone repository: ${result.stderr}`));
+          return yield* gitError(`Failed to clone repository: ${result.stderr}`);
         }
 
         return yield* Effect.void;

@@ -113,13 +113,11 @@ export const makeGitToolsLive = (shell: Shell): GitTools => ({
       if (!updateSuccess) {
         yield* Effect.logInfo(`❌ Failed to update git to required version`);
         yield* Effect.logInfo(`💡 Try manually installing git via mise: mise install git@latest`);
-        return yield* Effect.fail(
-          externalToolError("Failed to update git", {
-            tool: "git",
-            exitCode: 1,
-            stderr: `Required version: ${GIT_MIN_VERSION}, Current: ${currentVersion}`,
-          }),
-        );
+        return yield* externalToolError("Failed to update git", {
+          tool: "git",
+          exitCode: 1,
+          stderr: `Required version: ${GIT_MIN_VERSION}, Current: ${currentVersion}`,
+        });
       }
 
       // Verify upgrade
@@ -129,13 +127,11 @@ export const makeGitToolsLive = (shell: Shell): GitTools => ({
         if (versionAfterUpgrade) {
           yield* Effect.logInfo(`   Current: ${versionAfterUpgrade}, Required: ${GIT_MIN_VERSION}`);
         }
-        return yield* Effect.fail(
-          externalToolError("Git upgrade failed", {
-            tool: "git",
-            exitCode: 1,
-            stderr: `Required: ${GIT_MIN_VERSION}, Got: ${versionAfterUpgrade}`,
-          }),
-        );
+        return yield* externalToolError("Git upgrade failed", {
+          tool: "git",
+          exitCode: 1,
+          stderr: `Required: ${GIT_MIN_VERSION}, Got: ${versionAfterUpgrade}`,
+        });
       }
 
       if (versionAfterUpgrade) {

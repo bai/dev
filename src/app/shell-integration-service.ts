@@ -32,7 +32,7 @@ const makeShellIntegration = (pathService: PathService, fileSystem: FileSystem):
       // Validate path exists before attempting to cd
       const exists = yield* fileSystem.exists(absolutePath);
       if (!exists) {
-        return yield* Effect.fail(configError(`Directory does not exist: ${absolutePath}`));
+        return yield* configError(`Directory does not exist: ${absolutePath}`);
       }
 
       // Ensure the data directory exists

@@ -323,9 +323,7 @@ const checkForFailures = (
       const failCount = failedItems.length;
       const warnCount = statusItems.filter((item) => item.status === "warning").length;
 
-      yield* Effect.fail(
-        statusCheckError(`Found ${failCount} failing tool(s) and ${warnCount} warning(s)`, failedComponents),
-      );
+      yield* statusCheckError(`Found ${failCount} failing tool(s) and ${warnCount} warning(s)`, failedComponents);
     }
   });
 

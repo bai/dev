@@ -171,9 +171,7 @@ function ensureCorrectConfigUrl(pathService: PathService): Effect.Effect<void, D
     const projectConfigExists = yield* fileSystem.exists(projectConfigPath);
 
     if (!projectConfigExists) {
-      return yield* Effect.fail(
-        unknownError("Project config.json not found. Cannot determine source of truth config URL."),
-      );
+      return yield* unknownError("Project config.json not found. Cannot determine source of truth config URL.");
     }
 
     const projectConfigContent = yield* fileSystem.readFile(projectConfigPath);
@@ -182,11 +180,11 @@ function ensureCorrectConfigUrl(pathService: PathService): Effect.Effect<void, D
     try {
       projectConfig = JSON.parse(projectConfigContent);
     } catch (error) {
-      return yield* Effect.fail(unknownError(`Invalid project config.json: ${error}`));
+      return yield* unknownError(`Invalid project config.json: ${error}`);
     }
 
     if (!projectConfig.configUrl) {
-      return yield* Effect.fail(unknownError("No configUrl found in project config.json"));
+      return yield* unknownError("No configUrl found in project config.json");
     }
 
     // Step 2: Read the current local config
@@ -199,7 +197,7 @@ function ensureCorrectConfigUrl(pathService: PathService): Effect.Effect<void, D
       try {
         localConfig = JSON.parse(localConfigContent);
       } catch (error) {
-        return yield* Effect.fail(unknownError(`Invalid local config.json: ${error}`));
+        return yield* unknownError(`Invalid local config.json: ${error}`);
       }
     } else {
       // If local config doesn't exist, create minimal config with correct URL

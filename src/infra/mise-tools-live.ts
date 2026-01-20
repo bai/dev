@@ -165,13 +165,11 @@ export const makeMiseToolsLive = (shell: Shell, filesystem: FileSystem, configLo
       if (!updateSuccess) {
         yield* Effect.logError(`❌ Failed to update mise to required version`);
         yield* Effect.logError(`💡 Try manually updating mise: mise self-update`);
-        return yield* Effect.fail(
-          externalToolError("Failed to update mise", {
-            tool: "mise",
-            exitCode: 1,
-            stderr: `Required version: ${MISE_MIN_VERSION}, Current: ${currentVersion}`,
-          }),
-        );
+        return yield* externalToolError("Failed to update mise", {
+          tool: "mise",
+          exitCode: 1,
+          stderr: `Required version: ${MISE_MIN_VERSION}, Current: ${currentVersion}`,
+        });
       }
 
       yield* setupGlobalConfig();
@@ -182,13 +180,11 @@ export const makeMiseToolsLive = (shell: Shell, filesystem: FileSystem, configLo
         if (versionAfterUpgrade) {
           yield* Effect.logError(`   Current: ${versionAfterUpgrade}, Required: ${MISE_MIN_VERSION}`);
         }
-        return yield* Effect.fail(
-          externalToolError("Mise upgrade failed", {
-            tool: "mise",
-            exitCode: 1,
-            stderr: `Required: ${MISE_MIN_VERSION}, Got: ${versionAfterUpgrade}`,
-          }),
-        );
+        return yield* externalToolError("Mise upgrade failed", {
+          tool: "mise",
+          exitCode: 1,
+          stderr: `Required: ${MISE_MIN_VERSION}, Got: ${versionAfterUpgrade}`,
+        });
       }
 
       if (versionAfterUpgrade) {

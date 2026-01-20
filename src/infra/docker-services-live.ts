@@ -180,12 +180,10 @@ export const makeDockerServicesLive = (
 
         const result = yield* runCompose(args);
         if (result.exitCode !== 0) {
-          return yield* Effect.fail(
-            dockerServiceError("Failed to start services", {
-              exitCode: result.exitCode,
-              stderr: result.stderr,
-            }),
-          );
+          return yield* dockerServiceError("Failed to start services", {
+            exitCode: result.exitCode,
+            stderr: result.stderr,
+          });
         }
 
         yield* Effect.logInfo("Services started successfully");
@@ -209,12 +207,10 @@ export const makeDockerServicesLive = (
 
         const result = yield* runCompose(args);
         if (result.exitCode !== 0) {
-          return yield* Effect.fail(
-            dockerServiceError("Failed to stop services", {
-              exitCode: result.exitCode,
-              stderr: result.stderr,
-            }),
-          );
+          return yield* dockerServiceError("Failed to stop services", {
+            exitCode: result.exitCode,
+            stderr: result.stderr,
+          });
         }
 
         yield* Effect.logInfo("Services stopped successfully");
@@ -237,12 +233,10 @@ export const makeDockerServicesLive = (
 
         const result = yield* runCompose(args);
         if (result.exitCode !== 0) {
-          return yield* Effect.fail(
-            dockerServiceError("Failed to restart services", {
-              exitCode: result.exitCode,
-              stderr: result.stderr,
-            }),
-          );
+          return yield* dockerServiceError("Failed to restart services", {
+            exitCode: result.exitCode,
+            stderr: result.stderr,
+          });
         }
 
         yield* Effect.logInfo("Services restarted successfully");
@@ -264,12 +258,10 @@ export const makeDockerServicesLive = (
 
         const result = yield* runCompose(["ps", "--format", "json", "-a"]);
         if (result.exitCode !== 0) {
-          return yield* Effect.fail(
-            dockerServiceError("Failed to get service status", {
-              exitCode: result.exitCode,
-              stderr: result.stderr,
-            }),
-          );
+          return yield* dockerServiceError("Failed to get service status", {
+            exitCode: result.exitCode,
+            stderr: result.stderr,
+          });
         }
 
         const runningServices = new Map<string, DockerPsJson>();
@@ -315,7 +307,7 @@ export const makeDockerServicesLive = (
         const composeFilePath = getComposeFilePath();
         const exists = yield* fs.exists(composeFilePath);
         if (!exists) {
-          return yield* Effect.fail(dockerServiceError("No services configured (compose file not found)"));
+          return yield* dockerServiceError("No services configured (compose file not found)");
         }
 
         const args: string[] = ["logs"];
@@ -332,11 +324,9 @@ export const makeDockerServicesLive = (
         const exitCode = yield* runComposeInteractive(args);
         if (exitCode !== 0 && exitCode !== 130) {
           // 130 is SIGINT (Ctrl+C)
-          return yield* Effect.fail(
-            dockerServiceError("Failed to get logs", {
-              exitCode,
-            }),
-          );
+          return yield* dockerServiceError("Failed to get logs", {
+            exitCode,
+          });
         }
       }),
 
@@ -356,24 +346,20 @@ export const makeDockerServicesLive = (
         yield* Effect.logInfo("Stopping containers and removing volumes...");
         const downResult = yield* runCompose(["down", "-v"]);
         if (downResult.exitCode !== 0) {
-          return yield* Effect.fail(
-            dockerServiceError("Failed to stop services and remove volumes", {
-              exitCode: downResult.exitCode,
-              stderr: downResult.stderr,
-            }),
-          );
+          return yield* dockerServiceError("Failed to stop services and remove volumes", {
+            exitCode: downResult.exitCode,
+            stderr: downResult.stderr,
+          });
         }
 
         // Remove the compose file so it regenerates fresh
         yield* Effect.logInfo("Removing compose file...");
         const rmResult = yield* shell.exec("rm", ["-f", composeFilePath]);
         if (rmResult.exitCode !== 0) {
-          return yield* Effect.fail(
-            dockerServiceError("Failed to remove compose file", {
-              exitCode: rmResult.exitCode,
-              stderr: rmResult.stderr,
-            }),
-          );
+          return yield* dockerServiceError("Failed to remove compose file", {
+            exitCode: rmResult.exitCode,
+            stderr: rmResult.stderr,
+          });
         }
 
         yield* Effect.logInfo("Services reset successfully. Run 'dev services up' to start fresh.");

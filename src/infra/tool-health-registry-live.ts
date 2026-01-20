@@ -39,7 +39,7 @@ export const makeToolHealthRegistryLive = (
         const checker = toolCheckers.get(toolName);
 
         if (!checker) {
-          return yield* Effect.fail(healthCheckError(`Unknown tool: ${toolName}`, toolName));
+          return yield* healthCheckError(`Unknown tool: ${toolName}`, toolName);
         }
 
         return yield* checker();

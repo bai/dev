@@ -114,13 +114,11 @@ export const makeBunToolsLive = (shell: Shell): BunTools => ({
       const updateSuccess = yield* bunTools.performUpgrade();
       if (!updateSuccess) {
         yield* Effect.logError(`❌ Failed to update bun to required version`);
-        return yield* Effect.fail(
-          externalToolError("Failed to update bun", {
-            tool: "bun",
-            exitCode: 1,
-            stderr: `Required version: ${BUN_MIN_VERSION}, Current: ${currentVersion}`,
-          }),
-        );
+        return yield* externalToolError("Failed to update bun", {
+          tool: "bun",
+          exitCode: 1,
+          stderr: `Required version: ${BUN_MIN_VERSION}, Current: ${currentVersion}`,
+        });
       }
 
       const { isValid: isValidAfterUpgrade, currentVersion: versionAfterUpgrade } = yield* bunTools.checkVersion();
@@ -129,13 +127,11 @@ export const makeBunToolsLive = (shell: Shell): BunTools => ({
         if (versionAfterUpgrade) {
           yield* Effect.logError(`   Current: ${versionAfterUpgrade}, Required: ${BUN_MIN_VERSION}`);
         }
-        return yield* Effect.fail(
-          externalToolError("Bun upgrade failed", {
-            tool: "bun",
-            exitCode: 1,
-            stderr: `Required: ${BUN_MIN_VERSION}, Got: ${versionAfterUpgrade}`,
-          }),
-        );
+        return yield* externalToolError("Bun upgrade failed", {
+          tool: "bun",
+          exitCode: 1,
+          stderr: `Required: ${BUN_MIN_VERSION}, Got: ${versionAfterUpgrade}`,
+        });
       }
 
       if (versionAfterUpgrade) {

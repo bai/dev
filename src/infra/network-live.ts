@@ -42,7 +42,7 @@ export const makeNetworkLive = (fileSystem: FileSystem): Network => ({
       });
 
       if (!response.ok) {
-        return yield* Effect.fail(networkError(`HTTP ${response.status}: ${response.statusText}`));
+        return yield* networkError(`HTTP ${response.status}: ${response.statusText}`);
       }
 
       const content = yield* Effect.tryPromise({

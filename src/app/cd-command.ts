@@ -47,7 +47,7 @@ export const cdCommand = Command.make("cd", { folderName }, ({ folderName }) =>
 export function handleDirectCd(folderName: string): Effect.Effect<void, DevError, DirectoryTag | ShellIntegrationTag> {
   return Effect.gen(function* () {
     if (!folderName || folderName.trim() === "") {
-      return yield* Effect.fail(unknownError("Folder name for 'cd' command cannot be empty."));
+      return yield* unknownError("Folder name for 'cd' command cannot be empty.");
     }
 
     // Use DirectoryService to get directories
@@ -75,7 +75,7 @@ export function handleDirectCd(folderName: string): Effect.Effect<void, DevError
 
     // Nothing found or no directories
     yield* Effect.logError(`Folder '${folderName}' not found`);
-    return yield* Effect.fail(unknownError(`Folder '${folderName}' not found`));
+    return yield* unknownError(`Folder '${folderName}' not found`);
   }).pipe(Effect.withSpan("cd.handle_direct"));
 }
 

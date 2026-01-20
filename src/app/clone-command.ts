@@ -107,7 +107,7 @@ export const cloneCommand = Command.make("clone", { repo }, ({ repo }) =>
       const shellIntegration = yield* ShellIntegrationTag;
 
       if (!repo) {
-        return yield* Effect.fail(unknownError("Repository name is required"));
+        return yield* unknownError("Repository name is required");
       }
 
       // Check if input is a full URL - if so, parse it directly
@@ -125,7 +125,7 @@ export const cloneCommand = Command.make("clone", { repo }, ({ repo }) =>
         const repoNameFinal = repoName || orgOrRepo;
 
         if (!repoNameFinal) {
-          return yield* Effect.fail(unknownError("Invalid repository name format"));
+          return yield* unknownError("Invalid repository name format");
         }
 
         yield* Effect.logInfo(`Resolving repository: ${org ? `${org}/${repoNameFinal}` : repoNameFinal}`);
