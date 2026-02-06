@@ -19,7 +19,7 @@
   },
   "dependencies": {
     "@effect/cli": "0.73.2",
-    "@effect/cluster": "0.56.1",
+    "@effect/cluster": "0.56.2",
     "@effect/opentelemetry": "0.61.0",
     "@effect/platform-bun": "0.87.1",
     "@iarna/toml": "2.2.5",
