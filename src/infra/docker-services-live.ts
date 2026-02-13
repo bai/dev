@@ -3,12 +3,7 @@ import path from "path";
 
 import { Clock, Context, Effect, Layer } from "effect";
 
-import {
-  DockerServicesTag,
-  type DockerServices,
-  type ServiceName,
-  type ServiceStatus,
-} from "../domain/docker-services-port";
+import { DockerServicesTag, type DockerServices, type ServiceName, type ServiceStatus } from "../domain/docker-services-port";
 import { dockerServiceError, type DockerServiceError, type ShellExecutionError } from "../domain/errors";
 import { FileSystemTag, type FileSystem } from "../domain/file-system-port";
 import type { HealthCheckResult } from "../domain/health-check-port";
@@ -26,7 +21,7 @@ const COMPOSE_FILE_CONTENT = `name: dev-services
 
 services:
   postgres17:
-    image: docker.io/library/postgres:17.7
+    image: docker.io/library/postgres:17.8
     container_name: dev-postgres17
     ports:
       - "55432:5432"
@@ -44,7 +39,7 @@ services:
     restart: unless-stopped
 
   postgres18:
-    image: docker.io/library/postgres:18.1
+    image: docker.io/library/postgres:18.2
     container_name: dev-postgres18
     ports:
       - "55433:5432"
@@ -113,9 +108,7 @@ export const makeDockerServicesLive = (
         return;
       }
 
-      yield* fs
-        .mkdir(composeDir, true)
-        .pipe(Effect.mapError(() => dockerServiceError("Failed to create docker compose directory")));
+      yield* fs.mkdir(composeDir, true).pipe(Effect.mapError(() => dockerServiceError("Failed to create docker compose directory")));
 
       yield* fs
         .writeFile(composeFilePath, COMPOSE_FILE_CONTENT)
@@ -124,9 +117,7 @@ export const makeDockerServicesLive = (
       yield* Effect.logDebug(`Created docker-compose.yml at ${composeFilePath}`);
     });
 
-  const runCompose = (
-    args: readonly string[],
-  ): Effect.Effect<{ exitCode: number; stdout: string; stderr: string }, ShellExecutionError> =>
+  const runCompose = (args: readonly string[]): Effect.Effect<{ exitCode: number; stdout: string; stderr: string }, ShellExecutionError> =>
     Effect.gen(function* () {
       const composeFilePath = getComposeFilePath();
       const fullArgs = ["-f", composeFilePath, ...args];
@@ -201,9 +192,7 @@ export const makeDockerServicesLive = (
         const serviceList = services ?? [];
         const args = serviceList.length > 0 ? ["stop", ...serviceList] : ["down"];
 
-        yield* Effect.logInfo(
-          serviceList.length > 0 ? `Stopping services: ${serviceList.join(", ")}` : "Stopping all services",
-        );
+        yield* Effect.logInfo(serviceList.length > 0 ? `Stopping services: ${serviceList.join(", ")}` : "Stopping all services");
 
         const result = yield* runCompose(args);
         if (result.exitCode !== 0) {
