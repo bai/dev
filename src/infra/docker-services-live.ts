@@ -21,7 +21,7 @@ const COMPOSE_FILE_CONTENT = `name: dev-services
 
 services:
   postgres17:
-    image: docker.io/library/postgres:17.8
+    image: docker.io/library/postgres:17.9
     container_name: dev-postgres17
     ports:
       - "55432:5432"
@@ -39,7 +39,7 @@ services:
     restart: unless-stopped
 
   postgres18:
-    image: docker.io/library/postgres:18.2
+    image: docker.io/library/postgres:18.3
     container_name: dev-postgres18
     ports:
       - "55433:5432"
