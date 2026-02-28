@@ -115,7 +115,7 @@ const createMainCommand = (
  * CLI application runner that executes Effect CLI commands with proper error handling
  * @param registry - The command registry to build commands from
  * @param metadata - CLI metadata including name, version, and description
- * @returns Effect that never fails (errors are caught and logged)
+ * @returns Effect that may fail with command/runtime errors
  */
 const runCli = (
   registry: CommandRegistry,
@@ -124,7 +124,7 @@ const runCli = (
     version: string;
     description?: string;
   },
-): Effect.Effect<void, never, unknown> => {
+): Effect.Effect<void, unknown, unknown> => {
   return Effect.scoped(
     Effect.gen(function* () {
       // Add shutdown finalizer for graceful cleanup
@@ -165,17 +165,7 @@ const runCli = (
       yield* cli(process.argv);
 
       yield* Effect.logDebug("✅ CLI execution completed successfully");
-    }).pipe(
-      Effect.catchAll((error) =>
-        Effect.gen(function* () {
-          const errorMessage = extractErrorMessage(error);
-          yield* Effect.logError(`❌ CLI error: ${errorMessage}`);
-          yield* Effect.sync(() => {
-            process.exitCode = 1;
-          });
-        }),
-      ),
-    ),
+    }),
   );
 };
 
