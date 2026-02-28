@@ -1,13 +1,19 @@
-import { Effect } from "effect";
-import { describe, expect, it } from "vitest";
+import { it } from "@effect/vitest";
+import { Effect, Exit } from "effect";
+import { beforeEach, describe, expect } from "vitest";
 
 import type { ConfigLoader } from "../domain/config-loader-port";
 import { configSchema } from "../domain/config-schema";
+import type { FileSystem } from "../domain/file-system-port";
+import type { Shell } from "../domain/shell-port";
 import { makeMiseLive } from "./mise-live";
 
 // Mock implementations
-const mockShell = {
-  exec: (command: string, args: readonly string[] = [], options?: { cwd?: string }) => {
+const mockShell: Shell & {
+  lastCall: { command: string; args: readonly string[]; options?: { cwd?: string } } | undefined;
+  lastInteractiveCall: { command: string; args: readonly string[]; options?: { cwd?: string } } | undefined;
+} = {
+  exec: (command: string, args: string[] = [], options?: { cwd?: string }) => {
     // Store the call for assertions
     mockShell.lastCall = { command, args, options };
 
@@ -43,7 +49,7 @@ const mockShell = {
     });
   },
 
-  execInteractive: (command: string, args: readonly string[] = [], options?: { cwd?: string }) => {
+  execInteractive: (command: string, args: string[] = [], options?: { cwd?: string }) => {
     // Store the call for assertions
     mockShell.lastInteractiveCall = { command, args, options };
 
@@ -60,14 +66,14 @@ const mockShell = {
 };
 
 const mockFileSystem = {
-  exists: () => Effect.succeed(true),
-  mkdir: () => Effect.succeed(undefined),
-  writeFile: () => Effect.succeed(undefined),
-  readFile: () => Effect.succeed("test content"),
+  exists: (_path) => Effect.succeed(true),
+  mkdir: (_path, _recursive) => Effect.succeed(undefined),
+  writeFile: (_path, _content) => Effect.succeed(undefined),
+  readFile: (_path) => Effect.succeed("test content"),
   getCwd: () => Effect.succeed("/test/directory"),
-  findDirectoriesGlob: () => Effect.succeed([]),
+  findDirectoriesGlob: (_basePath, _pattern) => Effect.succeed([]),
   resolvePath: (path: string) => (path.startsWith("~") ? path.replace("~", "/home/user") : path),
-};
+} satisfies FileSystem;
 
 const mockConfigLoader: ConfigLoader = {
   load: () =>
@@ -102,111 +108,137 @@ const mockConfigLoader: ConfigLoader = {
 describe("mise-live", () => {
   const mise = makeMiseLive(mockShell, mockFileSystem, mockConfigLoader);
 
-  it("runs a task without arguments", async () => {
-    await mise.runTask("lint").pipe(Effect.runPromise);
-
-    expect(mockShell.lastInteractiveCall).toEqual({
-      command: "mise",
-      args: ["run", "lint"],
-      options: { cwd: undefined },
-    });
+  beforeEach(() => {
+    mockShell.lastCall = undefined;
+    mockShell.lastInteractiveCall = undefined;
   });
 
-  it("runs a task with single argument", async () => {
-    await mise.runTask("test", ["--watch"]).pipe(Effect.runPromise);
+  it.effect("runs a task without arguments", () =>
+    Effect.gen(function* () {
+      yield* mise.runTask("lint");
 
-    expect(mockShell.lastInteractiveCall).toEqual({
-      command: "mise",
-      args: ["run", "test", "--watch"],
-      options: { cwd: undefined },
-    });
-  });
+      expect(mockShell.lastInteractiveCall).toEqual({
+        command: "mise",
+        args: ["run", "lint"],
+        options: { cwd: undefined },
+      });
+    }),
+  );
 
-  it("runs a task with multiple arguments", async () => {
-    await mise.runTask("secrets", ["decrypt", "--env", "prod"], "/custom/path").pipe(Effect.runPromise);
+  it.effect("runs a task with single argument", () =>
+    Effect.gen(function* () {
+      yield* mise.runTask("test", ["--watch"]);
 
-    expect(mockShell.lastInteractiveCall).toEqual({
-      command: "mise",
-      args: ["run", "secrets", "decrypt", "--env", "prod"],
-      options: { cwd: "/custom/path" },
-    });
-  });
+      expect(mockShell.lastInteractiveCall).toEqual({
+        command: "mise",
+        args: ["run", "test", "--watch"],
+        options: { cwd: undefined },
+      });
+    }),
+  );
 
-  it("runs a task with empty args array", async () => {
-    await mise.runTask("build", []).pipe(Effect.runPromise);
+  it.effect("runs a task with multiple arguments", () =>
+    Effect.gen(function* () {
+      yield* mise.runTask("secrets", ["decrypt", "--env", "prod"], "/custom/path");
 
-    expect(mockShell.lastInteractiveCall).toEqual({
-      command: "mise",
-      args: ["run", "build"],
-      options: { cwd: undefined },
-    });
-  });
+      expect(mockShell.lastInteractiveCall).toEqual({
+        command: "mise",
+        args: ["run", "secrets", "decrypt", "--env", "prod"],
+        options: { cwd: "/custom/path" },
+      });
+    }),
+  );
 
-  it("handles task execution failure", async () => {
-    const failingShell = {
-      ...mockShell,
-      execInteractive: () => Effect.succeed(1), // Non-zero exit code
-    };
+  it.effect("runs a task with empty args array", () =>
+    Effect.gen(function* () {
+      yield* mise.runTask("build", []);
 
-    const failingMise = makeMiseLive(failingShell, mockFileSystem, mockConfigLoader);
+      expect(mockShell.lastInteractiveCall).toEqual({
+        command: "mise",
+        args: ["run", "build"],
+        options: { cwd: undefined },
+      });
+    }),
+  );
 
-    const result = failingMise.runTask("failing-task").pipe(Effect.runPromise);
+  it.effect("handles task execution failure", () =>
+    Effect.gen(function* () {
+      const failingShell: Shell = {
+        ...mockShell,
+        execInteractive: () => Effect.succeed(1), // Non-zero exit code
+      };
 
-    await expect(result).rejects.toThrow();
-  });
+      const failingMise = makeMiseLive(failingShell, mockFileSystem, mockConfigLoader);
+      const result = yield* Effect.exit(failingMise.runTask("failing-task"));
 
-  it("checks installation and parses version correctly", async () => {
-    const result = await mise.checkInstallation().pipe(Effect.runPromise);
+      expect(Exit.isFailure(result)).toBe(true);
+    }),
+  );
 
-    expect(result).toEqual({
-      version: "2024.1.0",
-      runtimeVersions: {
-        node: "20.10.0",
-        bun: "1.2.17",
-      },
-    });
-  });
+  it.effect("checks installation and parses version correctly", () =>
+    Effect.gen(function* () {
+      const result = yield* mise.checkInstallation();
 
-  it("gets tasks list correctly", async () => {
-    const result = await mise.getTasks().pipe(Effect.runPromise);
+      expect(result).toEqual({
+        version: "2024.1.0",
+        runtimeVersions: {
+          node: "20.10.0",
+          bun: "1.2.17",
+        },
+      });
+    }),
+  );
 
-    expect(result).toEqual(["lint", "test", "build", "secrets"]);
-  });
+  it.effect("gets tasks list correctly", () =>
+    Effect.gen(function* () {
+      const result = yield* mise.getTasks();
 
-  it("installs tools with correct arguments", async () => {
-    await mise.installTools("/custom/path").pipe(Effect.runPromise);
+      expect(result).toEqual(["lint", "test", "build", "secrets"]);
+    }),
+  );
 
-    expect(mockShell.lastCall).toEqual({
-      command: "mise",
-      args: ["install"],
-      options: { cwd: "/custom/path" },
-    });
-  });
+  it.effect("installs tools with correct arguments", () =>
+    Effect.gen(function* () {
+      yield* mise.installTools("/custom/path");
 
-  it("handles missing cwd parameter correctly", async () => {
-    await mise.runTask("test", ["--help"]).pipe(Effect.runPromise);
+      expect(mockShell.lastCall).toEqual({
+        command: "mise",
+        args: ["install"],
+        options: { cwd: "/custom/path" },
+      });
+    }),
+  );
 
-    expect(mockShell.lastInteractiveCall?.options?.cwd).toBeUndefined();
-  });
+  it.effect("handles missing cwd parameter correctly", () =>
+    Effect.gen(function* () {
+      yield* mise.runTask("test", ["--help"]);
 
-  it("preserves argument order when running tasks", async () => {
-    const args = ["subcommand", "--flag1", "value1", "--flag2", "value2"];
-    await mise.runTask("complex-task", args).pipe(Effect.runPromise);
+      expect(mockShell.lastInteractiveCall?.options?.cwd).toBeUndefined();
+    }),
+  );
 
-    expect(mockShell.lastInteractiveCall?.args).toEqual([
-      "run",
-      "complex-task",
-      "subcommand",
-      "--flag1",
-      "value1",
-      "--flag2",
-      "value2",
-    ]);
-  });
+  it.effect("preserves argument order when running tasks", () =>
+    Effect.gen(function* () {
+      const args = ["subcommand", "--flag1", "value1", "--flag2", "value2"];
+      yield* mise.runTask("complex-task", args);
 
-  it("handles undefined args parameter", async () => {
-    await mise.runTask("simple-task", undefined).pipe(Effect.runPromise);
+      expect(mockShell.lastInteractiveCall?.args).toEqual([
+        "run",
+        "complex-task",
+        "subcommand",
+        "--flag1",
+        "value1",
+        "--flag2",
+        "value2",
+      ]);
+    }),
+  );
 
-    expect(mockShell.lastInteractiveCall?.args).toEqual(["run", "simple-task"]);
-  });
+  it.effect("handles undefined args parameter", () =>
+    Effect.gen(function* () {
+      yield* mise.runTask("simple-task", undefined);
+
+      expect(mockShell.lastInteractiveCall?.args).toEqual(["run", "simple-task"]);
+    }),
+  );
 });
