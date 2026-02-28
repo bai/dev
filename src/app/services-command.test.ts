@@ -1,7 +1,9 @@
+import { Command } from "@effect/cli";
 import { it } from "@effect/vitest";
-import { Effect, Layer, Option } from "effect";
+import { Effect, Layer } from "effect";
 import { describe, expect } from "vitest";
 
+import { CommandRegistryTag } from "../domain/command-registry-port";
 import {
   DockerServicesTag,
   type DockerServices,
@@ -9,32 +11,61 @@ import {
   type ServiceStatus,
 } from "../domain/docker-services-port";
 import type { HealthCheckResult } from "../domain/health-check-port";
-import { handleDown, handleLogs, handleReset, handleRestart, handleUp, withDocker } from "./services-service";
+import { CommandRegistryLiveLayer } from "../infra/command-registry-live";
+import { registerServicesCommand, servicesCommand } from "./services-command";
 
 class MockDockerServices implements DockerServices {
   public availabilityChecks = 0;
-  public upCalls: Array<readonly ServiceName[] | undefined> = [];
-  public downCalls: Array<readonly ServiceName[] | undefined> = [];
-  public restartCalls: Array<readonly ServiceName[] | undefined> = [];
-  public logsCalls: Array<{ readonly service?: ServiceName; readonly options?: { follow?: boolean; tail?: number } }> =
-    [];
-  public resetCalls = 0;
+  public upCalls: Array<{ readonly services?: readonly ServiceName[]; readonly spanName: string }> = [];
+  public downCalls: Array<{ readonly services?: readonly ServiceName[]; readonly spanName: string }> = [];
+  public restartCalls: Array<{ readonly services?: readonly ServiceName[]; readonly spanName: string }> = [];
+  public logsCalls: Array<{
+    readonly service?: ServiceName;
+    readonly options?: { follow?: boolean; tail?: number };
+    readonly spanName: string;
+  }> = [];
+  public resetCalls: string[] = [];
 
   constructor(private readonly available: boolean) {}
 
+  private currentSpanName(): Effect.Effect<string, never, never> {
+    return Effect.currentSpan.pipe(
+      Effect.map((span) => span.name),
+      Effect.catchAll(() => Effect.succeed("missing-span")),
+    );
+  }
+
   up(services?: readonly ServiceName[]): Effect.Effect<void, never, never> {
-    this.upCalls.push(services);
-    return Effect.void;
+    return this.currentSpanName().pipe(
+      Effect.tap((spanName) =>
+        Effect.sync(() => {
+          this.upCalls.push({ services, spanName });
+        }),
+      ),
+      Effect.asVoid,
+    );
   }
 
   down(services?: readonly ServiceName[]): Effect.Effect<void, never, never> {
-    this.downCalls.push(services);
-    return Effect.void;
+    return this.currentSpanName().pipe(
+      Effect.tap((spanName) =>
+        Effect.sync(() => {
+          this.downCalls.push({ services, spanName });
+        }),
+      ),
+      Effect.asVoid,
+    );
   }
 
   restart(services?: readonly ServiceName[]): Effect.Effect<void, never, never> {
-    this.restartCalls.push(services);
-    return Effect.void;
+    return this.currentSpanName().pipe(
+      Effect.tap((spanName) =>
+        Effect.sync(() => {
+          this.restartCalls.push({ services, spanName });
+        }),
+      ),
+      Effect.asVoid,
+    );
   }
 
   status(): Effect.Effect<readonly ServiceStatus[], never, never> {
@@ -42,13 +73,25 @@ class MockDockerServices implements DockerServices {
   }
 
   logs(service?: ServiceName, options?: { follow?: boolean; tail?: number }): Effect.Effect<void, never, never> {
-    this.logsCalls.push({ service, options });
-    return Effect.void;
+    return this.currentSpanName().pipe(
+      Effect.tap((spanName) =>
+        Effect.sync(() => {
+          this.logsCalls.push({ service, options, spanName });
+        }),
+      ),
+      Effect.asVoid,
+    );
   }
 
   reset(): Effect.Effect<void, never, never> {
-    this.resetCalls += 1;
-    return Effect.void;
+    return this.currentSpanName().pipe(
+      Effect.tap((spanName) =>
+        Effect.sync(() => {
+          this.resetCalls.push(spanName);
+        }),
+      ),
+      Effect.asVoid,
+    );
   }
 
   isDockerAvailable(): Effect.Effect<boolean, never, never> {
@@ -65,99 +108,84 @@ class MockDockerServices implements DockerServices {
   }
 }
 
+const runServicesCommand = (args: readonly string[], dockerServices: DockerServices) =>
+  Command.run(servicesCommand, { name: "dev", version: "0.0.0" })(["node", "dev", ...args]).pipe(
+    Effect.provide(Layer.succeed(DockerServicesTag, dockerServices)),
+  ) as Effect.Effect<void, unknown, never>;
+
 describe("services-command", () => {
-  it.effect("withDocker short-circuits when docker is unavailable", () =>
+  it.effect("registers services command in command registry", () =>
     Effect.gen(function* () {
-      const dockerServices = new MockDockerServices(false);
-      let executed = false;
-      const testLayer = Layer.succeed(DockerServicesTag, dockerServices);
+      yield* registerServicesCommand;
 
-      const error = yield* Effect.flip(
-        withDocker((_docker) =>
-          Effect.sync(() => {
-            executed = true;
-          }),
-        ).pipe(Effect.provide(testLayer)),
-      );
+      const registry = yield* CommandRegistryTag;
+      const registered = yield* registry.getByName("services");
+      const helpHandlers = yield* registry.getHelpHandlers();
 
-      expect(executed).toBe(false);
-      expect(error._tag).toBe("DockerServiceError");
-      expect(dockerServices.availabilityChecks).toBe(1);
-    }),
+      expect(registered).toBeDefined();
+      expect(registered?.command).toBe(servicesCommand);
+      expect(helpHandlers["services"]).toBeDefined();
+    }).pipe(Effect.provide(CommandRegistryLiveLayer)),
   );
 
-  it.effect("withDocker executes handler when docker is available", () =>
+  it.effect("routes up subcommand to docker up with services.up span", () =>
     Effect.gen(function* () {
       const dockerServices = new MockDockerServices(true);
-      const testLayer = Layer.succeed(DockerServicesTag, dockerServices);
 
-      const result = yield* withDocker((_docker) => Effect.succeed("ok")).pipe(Effect.provide(testLayer));
+      yield* runServicesCommand(["up", "postgres17"], dockerServices);
 
-      expect(result).toBe("ok");
       expect(dockerServices.availabilityChecks).toBe(1);
-    }),
-  );
-
-  it.effect("all service handlers short-circuit when docker is unavailable", () =>
-    Effect.gen(function* () {
-      const dockerServices = new MockDockerServices(false);
-      const testLayer = Layer.succeed(DockerServicesTag, dockerServices);
-
-      const upError = yield* Effect.flip(handleUp({ services: ["postgres17"] }).pipe(Effect.provide(testLayer)));
-      const downError = yield* Effect.flip(handleDown({ services: ["postgres17"] }).pipe(Effect.provide(testLayer)));
-      const restartError = yield* Effect.flip(
-        handleRestart({ services: ["postgres17"] }).pipe(Effect.provide(testLayer)),
-      );
-      const logsError = yield* Effect.flip(
-        handleLogs({ service: ["postgres17"], follow: false, tail: Option.none() }).pipe(Effect.provide(testLayer)),
-      );
-      const resetError = yield* Effect.flip(handleReset().pipe(Effect.provide(testLayer)));
-
-      expect(dockerServices.availabilityChecks).toBe(5);
-      expect(upError._tag).toBe("DockerServiceError");
-      expect(downError._tag).toBe("DockerServiceError");
-      expect(restartError._tag).toBe("DockerServiceError");
-      expect(logsError._tag).toBe("DockerServiceError");
-      expect(resetError._tag).toBe("DockerServiceError");
-      expect(dockerServices.upCalls).toHaveLength(0);
-      expect(dockerServices.downCalls).toHaveLength(0);
-      expect(dockerServices.restartCalls).toHaveLength(0);
-      expect(dockerServices.logsCalls).toHaveLength(0);
-      expect(dockerServices.resetCalls).toBe(0);
-    }),
-  );
-
-  it.effect("logs handler passes validated service and tail options", () =>
-    Effect.gen(function* () {
-      const dockerServices = new MockDockerServices(true);
-      const testLayer = Layer.succeed(DockerServicesTag, dockerServices);
-
-      yield* handleLogs({
-        service: ["invalid-service", "valkey"],
-        follow: true,
-        tail: Option.some(50),
-      }).pipe(Effect.provide(testLayer));
-
-      expect(dockerServices.logsCalls).toEqual([
+      expect(dockerServices.upCalls).toEqual([
         {
-          service: "valkey",
-          options: {
-            follow: true,
-            tail: 50,
-          },
+          services: ["postgres17"],
+          spanName: "services.up",
         },
       ]);
     }),
   );
 
-  it.effect("up handler defaults to all services when names are invalid", () =>
+  it.effect("routes logs subcommand to docker logs with parsed options and services.logs span", () =>
     Effect.gen(function* () {
       const dockerServices = new MockDockerServices(true);
-      const testLayer = Layer.succeed(DockerServicesTag, dockerServices);
 
-      yield* handleUp({ services: ["invalid-service"] }).pipe(Effect.provide(testLayer));
+      yield* runServicesCommand(["logs", "valkey", "--follow", "--tail", "25"], dockerServices);
 
-      expect(dockerServices.upCalls).toEqual([undefined]);
+      expect(dockerServices.availabilityChecks).toBe(1);
+      expect(dockerServices.logsCalls).toEqual([
+        {
+          service: "valkey",
+          options: {
+            follow: true,
+            tail: 25,
+          },
+          spanName: "services.logs",
+        },
+      ]);
+    }),
+  );
+
+  it.effect("routes reset subcommand with services.reset span", () =>
+    Effect.gen(function* () {
+      const dockerServices = new MockDockerServices(true);
+
+      yield* runServicesCommand(["reset"], dockerServices);
+
+      expect(dockerServices.availabilityChecks).toBe(1);
+      expect(dockerServices.resetCalls).toEqual(["services.reset"]);
+    }),
+  );
+
+  it.effect("fails command execution when docker is unavailable", () =>
+    Effect.gen(function* () {
+      const dockerServices = new MockDockerServices(false);
+
+      const error = yield* Effect.flip(runServicesCommand(["up", "postgres17"], dockerServices));
+
+      expect(error).toMatchObject({
+        _tag: "DockerServiceError",
+      });
+      expect(dockerServices.availabilityChecks).toBe(1);
+      expect(dockerServices.upCalls).toHaveLength(0);
     }),
   );
 });
