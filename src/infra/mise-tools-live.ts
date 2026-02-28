@@ -97,10 +97,7 @@ export const makeMiseToolsLive = (shell: Shell, filesystem: FileSystem, configLo
       Effect.catchAll(() => Effect.succeed({ currentVersion: null, latestVersion: null })),
     );
 
-  const checkVersion = (): Effect.Effect<
-    { isValid: boolean; currentVersion: string | null },
-    ShellExecutionError
-  > =>
+  const checkVersion = (): Effect.Effect<{ isValid: boolean; currentVersion: string | null }, ShellExecutionError> =>
     getVersionInfo().pipe(
       Effect.map(({ currentVersion, latestVersion }) => {
         if (!currentVersion) {

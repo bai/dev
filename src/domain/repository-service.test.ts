@@ -238,7 +238,7 @@ describe("repository-service", () => {
     it.effect("uses org-to-provider mapping for explicit org", () =>
       Effect.gen(function* () {
         const orgToProvider: Record<string, GitProviderType> = {
-          "gitlab-org": "gitlab",
+          "GitLab-Org": "gitlab",
           "github-org": "github",
         };
 
@@ -251,7 +251,7 @@ describe("repository-service", () => {
     it.effect("uses org-to-provider mapping for default org when no explicit org", () =>
       Effect.gen(function* () {
         const orgToProvider: Record<string, GitProviderType> = {
-          "default-org": "gitlab",
+          "Default-Org": "gitlab",
         };
 
         const result = yield* RepositoryLive.expandToFullGitUrl("myrepo", "default-org", orgToProvider);
@@ -296,14 +296,50 @@ describe("repository-service", () => {
     it.effect("uses github for unmapped org even when defaultOrg maps to gitlab", () =>
       Effect.gen(function* () {
         const orgToProvider: Record<string, GitProviderType> = {
-          flywheelsoftware: "gitlab", // defaultOrg maps to gitlab
+          AcmeSoftware: "gitlab", // defaultOrg maps to gitlab (case-insensitive)
         };
 
         // When cloning bai/config (bai is not in orgToProvider)
-        const result = yield* RepositoryLive.expandToFullGitUrl("bai/config", "flywheelsoftware", orgToProvider);
+        const result = yield* RepositoryLive.expandToFullGitUrl("bai/config", "acmesoftware", orgToProvider);
 
         // Should use GitHub, not GitLab
         expect(result).toBe("https://github.com/bai/config");
+      }),
+    );
+
+    it.effect("treats explicit organization mapping as case-insensitive", () =>
+      Effect.gen(function* () {
+        const orgToProvider: Record<string, GitProviderType> = {
+          AcmeSoftware: "gitlab",
+        };
+
+        const result = yield* RepositoryLive.expandToFullGitUrl("acmesoftware/myrepo", "default-org", orgToProvider);
+
+        expect(result).toBe("https://gitlab.com/acmesoftware/myrepo");
+      }),
+    );
+
+    it.effect("matches mixed-case explicit org against lowercase mapping without rewriting org casing", () =>
+      Effect.gen(function* () {
+        const orgToProvider: Record<string, GitProviderType> = {
+          acmesoftware: "gitlab",
+        };
+
+        const result = yield* RepositoryLive.expandToFullGitUrl("AcMeSoftware/myrepo", "default-org", orgToProvider);
+
+        expect(result).toBe("https://gitlab.com/AcMeSoftware/myrepo");
+      }),
+    );
+
+    it.effect("matches mixed-case default org against lowercase mapping without rewriting org casing", () =>
+      Effect.gen(function* () {
+        const orgToProvider: Record<string, GitProviderType> = {
+          acmesoftware: "gitlab",
+        };
+
+        const result = yield* RepositoryLive.expandToFullGitUrl("myrepo", "AcmeSoftware", orgToProvider);
+
+        expect(result).toBe("https://gitlab.com/AcmeSoftware/myrepo");
       }),
     );
   });

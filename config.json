@@ -1,12 +1,12 @@
 {
   "$schema": "https://raw.githubusercontent.com/bai/dev/refs/heads/main/config.schema.json",
   "configUrl": "https://gist.githubusercontent.com/bai/d5a4a92350e67af8aba1b9db33d5f077/raw/config.json",
-  "defaultOrg": "flywheelsoftware",
+  "defaultOrg": "acmesoftware",
   "logLevel": "debug",
   "defaultProvider": "github",
   "baseSearchPath": "~/src",
   "orgToProvider": {
-    "flywheelsoftware": "gitlab"
+    "acmesoftware": "gitlab"
   },
   "telemetry": {
     "mode": "disabled"
@@ -35,9 +35,9 @@
       "trusted_config_paths": [
         "~/.dev",
         "~/src/gitlab.com/bai",
-        "~/src/gitlab.com/flywheelsoftware",
-        "~/src/github.com/growthloop",
-        "~/src/github.com/GrowthLoop"
+        "~/src/gitlab.com/acmesoftware",
+        "~/src/github.com/acmesoftware",
+        "~/src/github.com/AcmeSoftware"
       ],
       "experimental": true,
       "idiomatic_version_file_enable_tools": []

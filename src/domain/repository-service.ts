@@ -6,6 +6,16 @@ import { configError, type ConfigError } from "./errors";
 import type { GitProviderType } from "./models";
 import { PathServiceTag } from "./path-service";
 
+const normalizeOrganizationName = (organization: string): string => organization.toLowerCase();
+
+const normalizeOrgToProviderMap = (
+  orgToProvider: Record<string, GitProviderType>,
+): Record<string, GitProviderType> =>
+  Object.entries(orgToProvider).reduce<Record<string, GitProviderType>>((accumulator, [organization, provider]) => {
+    accumulator[normalizeOrganizationName(organization)] = provider;
+    return accumulator;
+  }, {});
+
 /**
  * Repository service for handling repository URL parsing and expansion
  * This is domain logic for repository URL handling
@@ -73,7 +83,7 @@ const expandToFullGitUrl = (
 
     let orgName = defaultOrg;
     let repoName = repoInput;
-    let provider = "github"; // default provider
+    let provider: GitProviderType = "github"; // default provider
     let isExplicitOrg = false;
 
     // Check if input has org/repo format
@@ -87,14 +97,17 @@ const expandToFullGitUrl = (
     }
 
     // Determine provider based on forced option, org mapping, or default
-    const orgToProviderMap = orgToProvider || {};
+    const orgToProviderMap = normalizeOrgToProviderMap(orgToProvider ?? {});
+    const mappedProvider = orgToProviderMap[normalizeOrganizationName(orgName)];
+    const mappedDefaultOrgProvider = orgToProviderMap[normalizeOrganizationName(defaultOrg)];
+
     if (forceProvider) {
       provider = forceProvider;
-    } else if (orgName in orgToProviderMap) {
-      provider = orgToProviderMap[orgName] === "gitlab" ? "gitlab" : "github";
-    } else if (!isExplicitOrg && defaultOrg in orgToProviderMap) {
+    } else if (mappedProvider !== undefined) {
+      provider = mappedProvider;
+    } else if (!isExplicitOrg && mappedDefaultOrgProvider !== undefined) {
       // Only use default org's provider if no explicit org was specified
-      provider = orgToProviderMap[defaultOrg] === "gitlab" ? "gitlab" : "github";
+      provider = mappedDefaultOrgProvider;
     }
 
     // Construct the full URL

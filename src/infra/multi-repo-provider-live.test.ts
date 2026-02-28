@@ -53,9 +53,9 @@ describe("multi-repo-provider-live", () => {
 
   describe("makeMultiRepoProvider", () => {
     it("creates a MultiRepoProvider with correct configuration", () => {
-      const provider = makeMultiRepoProvider(mockNetwork, "flywheelsoftware", "github", { flywheelsoftware: "gitlab" });
+      const provider = makeMultiRepoProvider(mockNetwork, "acmesoftware", "github", { acmesoftware: "gitlab" });
 
-      expect(provider.getDefaultOrg()).toBe("flywheelsoftware");
+      expect(provider.getDefaultOrg()).toBe("acmesoftware");
     });
 
     it("returns default provider info when no mapping for default org", () => {
@@ -67,7 +67,7 @@ describe("multi-repo-provider-live", () => {
     });
 
     it("returns mapped provider info for default org", () => {
-      const provider = makeMultiRepoProvider(mockNetwork, "flywheelsoftware", "github", { flywheelsoftware: "gitlab" });
+      const provider = makeMultiRepoProvider(mockNetwork, "acmesoftware", "github", { acmesoftware: "gitlab" });
 
       const providerInfo = provider.getProvider();
       expect(providerInfo.name).toBe("gitlab");
@@ -78,35 +78,35 @@ describe("multi-repo-provider-live", () => {
   describe("resolveRepository", () => {
     it.effect("resolves repository with no org using default org and its mapping", () =>
       Effect.gen(function* () {
-        const provider = makeMultiRepoProvider(mockNetwork, "flywheelsoftware", "github", {
-          flywheelsoftware: "gitlab",
+        const provider = makeMultiRepoProvider(mockNetwork, "acmesoftware", "github", {
+          acmesoftware: "gitlab",
         });
 
         const repository = yield* provider.resolveRepository("test-repo");
 
         expect(repository.name).toBe("test-repo");
-        expect(repository.organization).toBe("flywheelsoftware");
+        expect(repository.organization).toBe("acmesoftware");
         expect(repository.provider.name).toBe("gitlab");
-        expect(repository.cloneUrl).toBe("https://gitlab.com/flywheelsoftware/test-repo.git");
+        expect(repository.cloneUrl).toBe("https://gitlab.com/acmesoftware/test-repo.git");
       }),
     );
 
     it.effect("resolves repository with explicit org that has mapping", () =>
       Effect.gen(function* () {
-        const provider = makeMultiRepoProvider(mockNetwork, "defaultorg", "github", { flywheelsoftware: "gitlab" });
+        const provider = makeMultiRepoProvider(mockNetwork, "defaultorg", "github", { acmesoftware: "gitlab" });
 
-        const repository = yield* provider.resolveRepository("test-repo", "flywheelsoftware");
+        const repository = yield* provider.resolveRepository("test-repo", "acmesoftware");
 
         expect(repository.name).toBe("test-repo");
-        expect(repository.organization).toBe("flywheelsoftware");
+        expect(repository.organization).toBe("acmesoftware");
         expect(repository.provider.name).toBe("gitlab");
-        expect(repository.cloneUrl).toBe("https://gitlab.com/flywheelsoftware/test-repo.git");
+        expect(repository.cloneUrl).toBe("https://gitlab.com/acmesoftware/test-repo.git");
       }),
     );
 
     it.effect("resolves repository with explicit org that has no mapping", () =>
       Effect.gen(function* () {
-        const provider = makeMultiRepoProvider(mockNetwork, "defaultorg", "github", { flywheelsoftware: "gitlab" });
+        const provider = makeMultiRepoProvider(mockNetwork, "defaultorg", "github", { acmesoftware: "gitlab" });
 
         const repository = yield* provider.resolveRepository("test-repo", "octocat");
 
@@ -146,7 +146,7 @@ describe("multi-repo-provider-live", () => {
 
   describe("provider selection logic", () => {
     it("selects GitHub provider when org not in mapping and default is github", () => {
-      const provider = makeMultiRepoProvider(mockNetwork, "defaultorg", "github", { flywheelsoftware: "gitlab" });
+      const provider = makeMultiRepoProvider(mockNetwork, "defaultorg", "github", { acmesoftware: "gitlab" });
 
       // Test internal provider selection by checking the result
       const result = provider.getProvider();
@@ -154,21 +154,21 @@ describe("multi-repo-provider-live", () => {
     });
 
     it("selects GitLab provider when org not in mapping and default is gitlab", () => {
-      const provider = makeMultiRepoProvider(mockNetwork, "defaultorg", "gitlab", { flywheelsoftware: "github" });
+      const provider = makeMultiRepoProvider(mockNetwork, "defaultorg", "gitlab", { acmesoftware: "github" });
 
       const result = provider.getProvider();
       expect(result.name).toBe("gitlab");
     });
 
     it("selects GitLab provider when default org is mapped to gitlab", () => {
-      const provider = makeMultiRepoProvider(mockNetwork, "flywheelsoftware", "github", { flywheelsoftware: "gitlab" });
+      const provider = makeMultiRepoProvider(mockNetwork, "acmesoftware", "github", { AcmeSoftware: "gitlab" });
 
       const result = provider.getProvider();
       expect(result.name).toBe("gitlab");
     });
 
     it("selects GitHub provider when default org is mapped to github", () => {
-      const provider = makeMultiRepoProvider(mockNetwork, "flywheelsoftware", "gitlab", { flywheelsoftware: "github" });
+      const provider = makeMultiRepoProvider(mockNetwork, "acmesoftware", "gitlab", { AcmeSoftware: "github" });
 
       const result = provider.getProvider();
       expect(result.name).toBe("github");
@@ -179,14 +179,14 @@ describe("multi-repo-provider-live", () => {
     it.effect("provides MultiRepoProvider through Effect layer", () => {
       const networkLayer = Layer.succeed(NetworkTag, mockNetwork);
       const providerLayer = Layer.provide(
-        MultiRepoProviderLiveLayer("flywheelsoftware", "github", { flywheelsoftware: "gitlab" }),
+        MultiRepoProviderLiveLayer("acmesoftware", "github", { acmesoftware: "gitlab" }),
         networkLayer,
       );
 
       return Effect.gen(function* () {
         const provider = yield* RepoProviderTag;
 
-        expect(provider.getDefaultOrg()).toBe("flywheelsoftware");
+        expect(provider.getDefaultOrg()).toBe("acmesoftware");
 
         const providerInfo = provider.getProvider();
         expect(providerInfo.name).toBe("gitlab");
@@ -196,7 +196,7 @@ describe("multi-repo-provider-live", () => {
     it.effect("resolves repository through layer-provided instance", () => {
       const networkLayer = Layer.succeed(NetworkTag, mockNetwork);
       const providerLayer = Layer.provide(
-        MultiRepoProviderLiveLayer("flywheelsoftware", "github", { flywheelsoftware: "gitlab" }),
+        MultiRepoProviderLiveLayer("acmesoftware", "github", { acmesoftware: "gitlab" }),
         networkLayer,
       );
 
@@ -205,9 +205,9 @@ describe("multi-repo-provider-live", () => {
         const repository = yield* provider.resolveRepository("test-repo");
 
         expect(repository.name).toBe("test-repo");
-        expect(repository.organization).toBe("flywheelsoftware");
+        expect(repository.organization).toBe("acmesoftware");
         expect(repository.provider.name).toBe("gitlab");
-        expect(repository.cloneUrl).toBe("https://gitlab.com/flywheelsoftware/test-repo.git");
+        expect(repository.cloneUrl).toBe("https://gitlab.com/acmesoftware/test-repo.git");
       }).pipe(Effect.provide(providerLayer));
     });
   });
@@ -227,16 +227,16 @@ describe("multi-repo-provider-live", () => {
     it.effect("handles complex orgToProvider mapping", () =>
       Effect.gen(function* () {
         const orgToProvider: Record<string, GitProviderType> = {
-          "flywheelsoftware": "gitlab",
+          "acmesoftware": "gitlab",
           "octocat": "github",
           "gitlab-org": "gitlab",
           "microsoft": "github",
         };
 
-        const provider = makeMultiRepoProvider(mockNetwork, "flywheelsoftware", "github", orgToProvider);
+        const provider = makeMultiRepoProvider(mockNetwork, "acmesoftware", "github", orgToProvider);
 
         // Test different orgs
-        const repo1 = yield* provider.resolveRepository("test1", "flywheelsoftware");
+        const repo1 = yield* provider.resolveRepository("test1", "acmesoftware");
         expect(repo1.provider.name).toBe("gitlab");
 
         const repo2 = yield* provider.resolveRepository("test2", "octocat");
@@ -254,12 +254,46 @@ describe("multi-repo-provider-live", () => {
       }),
     );
 
-    it("handles case sensitivity in org names", () => {
-      const provider = makeMultiRepoProvider(mockNetwork, "FlywheelSoftware", "github", { flywheelsoftware: "gitlab" });
+    it("handles organization mappings case-insensitively for default org", () => {
+      const provider = makeMultiRepoProvider(mockNetwork, "acmesoftware", "github", { AcmeSoftware: "gitlab" });
 
-      // Should not match due to case difference
       const providerInfo = provider.getProvider();
-      expect(providerInfo.name).toBe("github"); // Should use default, not mapping
+      expect(providerInfo.name).toBe("gitlab");
     });
+
+    it.effect("handles organization mappings case-insensitively for explicit org", () =>
+      Effect.gen(function* () {
+        const provider = makeMultiRepoProvider(mockNetwork, "defaultorg", "github", { AcmeSoftware: "gitlab" });
+
+        const repository = yield* provider.resolveRepository("test-repo", "acmesoftware");
+
+        expect(repository.organization).toBe("acmesoftware");
+        expect(repository.provider.name).toBe("gitlab");
+      }),
+    );
+
+    it.effect("matches mixed-case default org against lowercase mapping", () =>
+      Effect.gen(function* () {
+        const provider = makeMultiRepoProvider(mockNetwork, "AcmeSoftware", "github", { acmesoftware: "gitlab" });
+
+        const repository = yield* provider.resolveRepository("test-repo");
+
+        expect(repository.organization).toBe("AcmeSoftware");
+        expect(repository.provider.name).toBe("gitlab");
+        expect(repository.cloneUrl).toBe("https://gitlab.com/AcmeSoftware/test-repo.git");
+      }),
+    );
+
+    it.effect("matches mixed-case explicit org against lowercase mapping", () =>
+      Effect.gen(function* () {
+        const provider = makeMultiRepoProvider(mockNetwork, "defaultorg", "github", { acmesoftware: "gitlab" });
+
+        const repository = yield* provider.resolveRepository("test-repo", "AcMeSoftware");
+
+        expect(repository.organization).toBe("AcMeSoftware");
+        expect(repository.provider.name).toBe("gitlab");
+        expect(repository.cloneUrl).toBe("https://gitlab.com/AcMeSoftware/test-repo.git");
+      }),
+    );
   });
 });

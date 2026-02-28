@@ -6,6 +6,16 @@ import { RepoProviderTag, type RepoProvider } from "../domain/repo-provider-port
 import { makeGitHubProvider } from "./github-provider-live";
 import { makeGitLabProvider } from "./gitlab-provider-live";
 
+const normalizeOrganizationName = (organization: string): string => organization.toLowerCase();
+
+const normalizeOrgToProviderMap = (
+  orgToProvider: Record<string, GitProviderType>,
+): Record<string, GitProviderType> =>
+  Object.entries(orgToProvider).reduce<Record<string, GitProviderType>>((accumulator, [organization, provider]) => {
+    accumulator[normalizeOrganizationName(organization)] = provider;
+    return accumulator;
+  }, {});
+
 /**
  * Factory function that creates a multi-provider that can select the appropriate provider based on organization
  */
@@ -18,12 +28,16 @@ export const makeMultiRepoProvider = (
   // Create provider instances using the factory functions
   const githubProvider = makeGitHubProvider(network, defaultOrg);
   const gitlabProvider = makeGitLabProvider(network, defaultOrg);
+  const normalizedOrgToProvider = normalizeOrgToProviderMap(orgToProvider);
+
+  const getProviderTypeForOrg = (org: string): GitProviderType =>
+    normalizedOrgToProvider[normalizeOrganizationName(org)] ?? defaultProvider;
 
   /**
    * Select the appropriate provider based on organization
    */
   const selectProvider = (org: string): RepoProvider => {
-    const providerType = orgToProvider[org] || defaultProvider;
+    const providerType = getProviderTypeForOrg(org);
     return providerType === "gitlab" ? gitlabProvider : githubProvider;
   };
 
@@ -36,7 +50,7 @@ export const makeMultiRepoProvider = (
    * Get the provider for the default org
    */
   const getProvider = () => {
-    const defaultOrgProvider = orgToProvider[defaultOrg] || defaultProvider;
+    const defaultOrgProvider = getProviderTypeForOrg(defaultOrg);
     return defaultOrgProvider === "gitlab" ? gitlabProvider.getProvider() : githubProvider.getProvider();
   };
 
@@ -44,7 +58,7 @@ export const makeMultiRepoProvider = (
    * Resolve repository using the appropriate provider for the org
    */
   const resolveRepository = (name: string, org?: string) => {
-    const targetOrg = org || defaultOrg;
+    const targetOrg = org ?? defaultOrg;
     const provider = selectProvider(targetOrg);
     return provider.resolveRepository(name, targetOrg);
   };

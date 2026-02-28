@@ -77,7 +77,7 @@ export const configSchema = z.object({
     .url()
     .default("https://raw.githubusercontent.com/bai/dev/refs/heads/main/config.json")
     .describe("Remote URL to fetch shared configuration from"),
-  defaultOrg: z.string().default("flywheelsoftware").describe("Default organization for repository operations"),
+  defaultOrg: z.string().default("acmesoftware").describe("Default organization for repository operations"),
   defaultProvider: gitProviderSchema
     .optional()
     .default("github")
@@ -96,7 +96,9 @@ export const configSchema = z.object({
     .record(z.string(), gitProviderSchema)
     .optional()
     .default({})
-    .describe("Map organization names to their git provider (e.g., { 'mycompany': 'gitlab' })"),
+    .describe(
+      "Map organization names to their git provider (e.g., { 'mycompany': 'gitlab' }); organization keys are matched case-insensitively",
+    ),
   miseGlobalConfig: miseConfigSchema.optional().describe("Mise configuration applied globally (~/.config/mise)"),
   miseRepoConfig: miseConfigSchema.optional().describe("Mise configuration applied per-repository (.mise.toml)"),
   services: servicesConfigSchema,

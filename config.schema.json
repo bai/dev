@@ -62,7 +62,7 @@
     },
     "orgToProvider": {
       "default": {},
-      "description": "Map organization names to their git provider (e.g., { 'mycompany': 'gitlab' })",
+      "description": "Map organization names to their git provider (e.g., { 'mycompany': 'gitlab' }); organization keys are matched case-insensitively",
       "type": "object",
       "propertyNames": {
         "type": "string"
