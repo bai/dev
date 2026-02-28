@@ -162,7 +162,7 @@ function ensureShellIntegration(pathService: PathService): Effect.Effect<void, D
  * Ensure local config has the correct configUrl from project config
  * This updates only the configUrl field so that configLoader.refresh() works correctly
  */
-function ensureCorrectConfigUrl(pathService: PathService): Effect.Effect<void, DevError, FileSystemTag> {
+export function ensureCorrectConfigUrl(pathService: PathService): Effect.Effect<void, DevError, FileSystemTag> {
   return Effect.gen(function* () {
     const fileSystem = yield* FileSystemTag;
 
@@ -178,7 +178,7 @@ function ensureCorrectConfigUrl(pathService: PathService): Effect.Effect<void, D
     let projectConfig: Config;
 
     try {
-      projectConfig = JSON.parse(projectConfigContent);
+      projectConfig = Bun.JSONC.parse(projectConfigContent) as Config;
     } catch (error) {
       return yield* unknownError(`Invalid project config.json: ${error}`);
     }
@@ -195,7 +195,7 @@ function ensureCorrectConfigUrl(pathService: PathService): Effect.Effect<void, D
     if (localConfigExists) {
       const localConfigContent = yield* fileSystem.readFile(localConfigPath);
       try {
-        localConfig = JSON.parse(localConfigContent);
+        localConfig = Bun.JSONC.parse(localConfigContent) as Config;
       } catch (error) {
         return yield* unknownError(`Invalid local config.json: ${error}`);
       }
