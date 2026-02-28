@@ -295,5 +295,18 @@ describe("multi-repo-provider-live", () => {
         expect(repository.cloneUrl).toBe("https://gitlab.com/AcMeSoftware/test-repo.git");
       }),
     );
+
+    it.effect("preserves repository name casing while resolving provider", () =>
+      Effect.gen(function* () {
+        const provider = makeMultiRepoProvider(mockNetwork, "defaultorg", "github", { acmesoftware: "gitlab" });
+
+        const repository = yield* provider.resolveRepository("MyRepo", "AcMeSoftware");
+
+        expect(repository.name).toBe("MyRepo");
+        expect(repository.organization).toBe("AcMeSoftware");
+        expect(repository.provider.name).toBe("gitlab");
+        expect(repository.cloneUrl).toBe("https://gitlab.com/AcMeSoftware/MyRepo.git");
+      }),
+    );
   });
 });

@@ -168,6 +168,19 @@ describe("repository-service", () => {
       }),
     );
 
+    it.effect("preserves repository name casing in filesystem path", () =>
+      Effect.gen(function* () {
+        const pathService = new MockPathService();
+        const testLayer = Layer.succeed(PathServiceTag, pathService);
+
+        const result = yield* RepositoryLive.parseRepoUrlToPath("https://github.com/myorg/MyRepo.git").pipe(
+          Effect.provide(testLayer),
+        );
+
+        expect(result).toBe("/home/user/dev/github.com/myorg/MyRepo");
+      }),
+    );
+
     it.effect("uses custom base path from PathService", () =>
       Effect.gen(function* () {
         class CustomPathService extends MockPathService {
@@ -290,6 +303,14 @@ describe("repository-service", () => {
         const result = yield* RepositoryLive.expandToFullGitUrl("my-org/my-repo_2.0", "default-org");
 
         expect(result).toBe("https://github.com/my-org/my-repo_2.0");
+      }),
+    );
+
+    it.effect("preserves repository name casing when expanding URLs", () =>
+      Effect.gen(function* () {
+        const result = yield* RepositoryLive.expandToFullGitUrl("myorg/MyRepo", "default-org");
+
+        expect(result).toBe("https://github.com/myorg/MyRepo");
       }),
     );
 
