@@ -73,10 +73,7 @@ const storeHealthCheckResults = (
     );
 
 // Factory function that creates HealthCheckService with dependencies
-export const makeHealthCheckLive = (
-  database: Database,
-  healthCheckService: HealthCheckService,
-): HealthCheck => {
+export const makeHealthCheckLive = (database: Database, healthCheckService: HealthCheckService): HealthCheck => {
   // Individual functions implementing the service methods
   const runHealthChecks = (): Effect.Effect<readonly HealthCheckResult[], HealthCheckError> =>
     Effect.gen(function* () {

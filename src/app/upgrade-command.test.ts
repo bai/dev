@@ -15,7 +15,10 @@ describe("upgrade-command", () => {
   describe("ensureCorrectConfigUrl", () => {
     it.effect("parses JSONC in project and local config files", () =>
       Effect.gen(function* () {
-        const tempDir = path.join(os.tmpdir(), `upgrade-command-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+        const tempDir = path.join(
+          os.tmpdir(),
+          `upgrade-command-test-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        );
         yield* Effect.promise(() => fs.mkdir(tempDir, { recursive: true }));
 
         const devDir = path.join(tempDir, ".dev");
