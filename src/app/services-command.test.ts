@@ -9,7 +9,7 @@ import {
   type ServiceStatus,
 } from "../domain/docker-services-port";
 import type { HealthCheckResult } from "../domain/health-check-port";
-import { servicesCommandTestables } from "./services-command";
+import { handleDown, handleLogs, handleReset, handleRestart, handleUp, withDocker } from "./services-service";
 
 class MockDockerServices implements DockerServices {
   public availabilityChecks = 0;
@@ -72,15 +72,16 @@ describe("services-command", () => {
       let executed = false;
       const testLayer = Layer.succeed(DockerServicesTag, dockerServices);
 
-      yield* servicesCommandTestables
-        .withDocker((_docker) =>
+      const error = yield* Effect.flip(
+        withDocker((_docker) =>
           Effect.sync(() => {
             executed = true;
           }),
-        )
-        .pipe(Effect.provide(testLayer));
+        ).pipe(Effect.provide(testLayer)),
+      );
 
       expect(executed).toBe(false);
+      expect(error._tag).toBe("DockerServiceError");
       expect(dockerServices.availabilityChecks).toBe(1);
     }),
   );
@@ -90,9 +91,7 @@ describe("services-command", () => {
       const dockerServices = new MockDockerServices(true);
       const testLayer = Layer.succeed(DockerServicesTag, dockerServices);
 
-      const result = yield* servicesCommandTestables
-        .withDocker((_docker) => Effect.succeed("ok"))
-        .pipe(Effect.provide(testLayer));
+      const result = yield* withDocker((_docker) => Effect.succeed("ok")).pipe(Effect.provide(testLayer));
 
       expect(result).toBe("ok");
       expect(dockerServices.availabilityChecks).toBe(1);
@@ -104,15 +103,22 @@ describe("services-command", () => {
       const dockerServices = new MockDockerServices(false);
       const testLayer = Layer.succeed(DockerServicesTag, dockerServices);
 
-      yield* servicesCommandTestables.upHandler({ services: ["postgres17"] }).pipe(Effect.provide(testLayer));
-      yield* servicesCommandTestables.downHandler({ services: ["postgres17"] }).pipe(Effect.provide(testLayer));
-      yield* servicesCommandTestables.restartHandler({ services: ["postgres17"] }).pipe(Effect.provide(testLayer));
-      yield* servicesCommandTestables
-        .logsHandler({ service: ["postgres17"], follow: false, tail: Option.none() })
-        .pipe(Effect.provide(testLayer));
-      yield* servicesCommandTestables.resetHandler().pipe(Effect.provide(testLayer));
+      const upError = yield* Effect.flip(handleUp({ services: ["postgres17"] }).pipe(Effect.provide(testLayer)));
+      const downError = yield* Effect.flip(handleDown({ services: ["postgres17"] }).pipe(Effect.provide(testLayer)));
+      const restartError = yield* Effect.flip(
+        handleRestart({ services: ["postgres17"] }).pipe(Effect.provide(testLayer)),
+      );
+      const logsError = yield* Effect.flip(
+        handleLogs({ service: ["postgres17"], follow: false, tail: Option.none() }).pipe(Effect.provide(testLayer)),
+      );
+      const resetError = yield* Effect.flip(handleReset().pipe(Effect.provide(testLayer)));
 
       expect(dockerServices.availabilityChecks).toBe(5);
+      expect(upError._tag).toBe("DockerServiceError");
+      expect(downError._tag).toBe("DockerServiceError");
+      expect(restartError._tag).toBe("DockerServiceError");
+      expect(logsError._tag).toBe("DockerServiceError");
+      expect(resetError._tag).toBe("DockerServiceError");
       expect(dockerServices.upCalls).toHaveLength(0);
       expect(dockerServices.downCalls).toHaveLength(0);
       expect(dockerServices.restartCalls).toHaveLength(0);
@@ -126,13 +132,11 @@ describe("services-command", () => {
       const dockerServices = new MockDockerServices(true);
       const testLayer = Layer.succeed(DockerServicesTag, dockerServices);
 
-      yield* servicesCommandTestables
-        .logsHandler({
-          service: ["invalid-service", "valkey"],
-          follow: true,
-          tail: Option.some(50),
-        })
-        .pipe(Effect.provide(testLayer));
+      yield* handleLogs({
+        service: ["invalid-service", "valkey"],
+        follow: true,
+        tail: Option.some(50),
+      }).pipe(Effect.provide(testLayer));
 
       expect(dockerServices.logsCalls).toEqual([
         {
@@ -151,7 +155,7 @@ describe("services-command", () => {
       const dockerServices = new MockDockerServices(true);
       const testLayer = Layer.succeed(DockerServicesTag, dockerServices);
 
-      yield* servicesCommandTestables.upHandler({ services: ["invalid-service"] }).pipe(Effect.provide(testLayer));
+      yield* handleUp({ services: ["invalid-service"] }).pipe(Effect.provide(testLayer));
 
       expect(dockerServices.upCalls).toEqual([undefined]);
     }),

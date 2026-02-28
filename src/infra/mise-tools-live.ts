@@ -15,11 +15,10 @@ import {
 } from "../domain/errors";
 import { FileSystemTag, type FileSystem } from "../domain/file-system-port";
 import { type HealthCheckResult } from "../domain/health-check-port";
+import { PathServiceTag, type PathService } from "../domain/path-service";
 import { ShellTag, type Shell } from "../domain/shell-port";
 
 export const MISE_MIN_VERSION = "2026.1.5";
-
-const homeDir = process.env.HOME || process.env.USERPROFILE || "";
 
 /**
  * Mise tools for version checking and management
@@ -35,7 +34,12 @@ export interface MiseTools {
 }
 
 // Factory function that creates MiseTools with dependencies
-export const makeMiseToolsLive = (shell: Shell, filesystem: FileSystem, configLoader: ConfigLoader): MiseTools => {
+export const makeMiseToolsLive = (
+  shell: Shell,
+  filesystem: FileSystem,
+  configLoader: ConfigLoader,
+  pathService: PathService,
+): MiseTools => {
   // Helper function for version comparison
   const compareVersions = (version1: string, version2: string): number => {
     const v1Parts = version1.split(".").map(Number);
@@ -140,7 +144,7 @@ export const makeMiseToolsLive = (shell: Shell, filesystem: FileSystem, configLo
     Effect.gen(function* () {
       yield* Effect.logDebug("🔧 Setting up mise global configuration...");
 
-      const miseConfigDir = path.join(homeDir, ".config", "mise");
+      const miseConfigDir = path.join(pathService.homeDir, ".config", "mise");
       const miseConfigFile = path.join(miseConfigDir, "config.toml");
 
       // Create config directory if it doesn't exist
@@ -306,6 +310,7 @@ export const MiseToolsLiveLayer = Layer.effect(
     const shell = yield* ShellTag;
     const filesystem = yield* FileSystemTag;
     const configLoader = yield* ConfigLoaderTag;
-    return makeMiseToolsLive(shell, filesystem, configLoader);
+    const pathService = yield* PathServiceTag;
+    return makeMiseToolsLive(shell, filesystem, configLoader, pathService);
   }),
 );

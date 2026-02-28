@@ -1,6 +1,6 @@
 import { it } from "@effect/vitest";
 import { Effect, Exit, Layer } from "effect";
-import { describe, expect } from "vitest";
+import { describe, expect, it as vitestIt } from "vitest";
 
 import type { Config } from "./config-schema";
 import type { GitProviderType } from "./models";
@@ -472,47 +472,33 @@ describe("repository-service", () => {
   });
 
   describe("isFullUrl", () => {
-    it.effect("returns true for HTTP URLs", () =>
-      Effect.gen(function* () {
-        expect(isFullUrl("http://github.com/myorg/myrepo.git")).toBe(true);
-      }),
-    );
+    vitestIt("returns true for HTTP URLs", () => {
+      expect(isFullUrl("http://github.com/myorg/myrepo.git")).toBe(true);
+    });
 
-    it.effect("returns true for HTTPS URLs", () =>
-      Effect.gen(function* () {
-        expect(isFullUrl("https://github.com/myorg/myrepo.git")).toBe(true);
-      }),
-    );
+    vitestIt("returns true for HTTPS URLs", () => {
+      expect(isFullUrl("https://github.com/myorg/myrepo.git")).toBe(true);
+    });
 
-    it.effect("returns true for git:// URLs", () =>
-      Effect.gen(function* () {
-        expect(isFullUrl("git://github.com/myorg/myrepo.git")).toBe(true);
-      }),
-    );
+    vitestIt("returns true for git:// URLs", () => {
+      expect(isFullUrl("git://github.com/myorg/myrepo.git")).toBe(true);
+    });
 
-    it.effect("returns true for git+ssh:// URLs", () =>
-      Effect.gen(function* () {
-        expect(isFullUrl("git+ssh://git@github.com/myorg/myrepo.git")).toBe(true);
-      }),
-    );
+    vitestIt("returns true for git+ssh:// URLs", () => {
+      expect(isFullUrl("git+ssh://git@github.com/myorg/myrepo.git")).toBe(true);
+    });
 
-    it.effect("returns true for ssh:// URLs", () =>
-      Effect.gen(function* () {
-        expect(isFullUrl("ssh://git@github.com/myorg/myrepo.git")).toBe(true);
-      }),
-    );
+    vitestIt("returns true for ssh:// URLs", () => {
+      expect(isFullUrl("ssh://git@github.com/myorg/myrepo.git")).toBe(true);
+    });
 
-    it.effect("returns true for scp-style SSH URLs", () =>
-      Effect.gen(function* () {
-        expect(isFullUrl("git@github.com:myorg/myrepo.git")).toBe(true);
-      }),
-    );
+    vitestIt("returns true for scp-style SSH URLs", () => {
+      expect(isFullUrl("git@github.com:myorg/myrepo.git")).toBe(true);
+    });
 
-    it.effect("returns false for org/repo inputs", () =>
-      Effect.gen(function* () {
-        expect(isFullUrl("myorg/myrepo")).toBe(false);
-      }),
-    );
+    vitestIt("returns false for org/repo inputs", () => {
+      expect(isFullUrl("myorg/myrepo")).toBe(false);
+    });
   });
 
   describe("edge cases", () => {

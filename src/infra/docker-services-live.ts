@@ -1,9 +1,9 @@
-import os from "os";
 import path from "path";
 
 import { Clock, Context, Effect, Layer } from "effect";
 
 import {
+  DOCKER_SERVICE_NAMES,
   DockerServicesTag,
   type DockerServices,
   type ServiceName,
@@ -11,6 +11,7 @@ import {
 } from "../domain/docker-services-port";
 import { dockerServiceError, type DockerServiceError, type ShellExecutionError } from "../domain/errors";
 import { FileSystemTag, type FileSystem } from "../domain/file-system-port";
+import { PathServiceTag, type PathService } from "../domain/path-service";
 import type { HealthCheckResult } from "../domain/health-check-port";
 import { ShellTag, type Shell } from "../domain/shell-port";
 
@@ -19,8 +20,6 @@ const SERVICE_PORTS: Record<ServiceName, number> = {
   postgres18: 55433,
   valkey: 56379,
 };
-
-const ALL_SERVICES: readonly ServiceName[] = ["postgres17", "postgres18", "valkey"];
 
 const COMPOSE_FILE_CONTENT = `name: dev-services
 
@@ -81,16 +80,6 @@ volumes:
   dev-valkey-data:
 `;
 
-const getComposeFilePath = (): string => {
-  const dataDir = process.env["XDG_DATA_HOME"] ?? path.join(os.homedir(), ".local", "share");
-  return path.join(dataDir, "dev", "docker", "docker-compose.yml");
-};
-
-const getComposeDir = (): string => {
-  const filePath = getComposeFilePath();
-  return path.dirname(filePath);
-};
-
 interface DockerPsJson {
   Name: string;
   State: string;
@@ -101,8 +90,17 @@ interface DockerPsJson {
 export const makeDockerServicesLive = (
   shell: Shell,
   fs: FileSystem,
-  enabledServices: readonly ServiceName[] = ALL_SERVICES,
+  pathService: PathService,
+  enabledServices: readonly ServiceName[] = DOCKER_SERVICE_NAMES,
 ): DockerServices => {
+  const getComposeFilePath = (): string => {
+    return path.join(pathService.dataDir, "docker", "docker-compose.yml");
+  };
+
+  const getComposeDir = (): string => {
+    return path.dirname(getComposeFilePath());
+  };
+
   const ensureComposeFile = (): Effect.Effect<void, DockerServiceError | ShellExecutionError> =>
     Effect.gen(function* () {
       const composeFilePath = getComposeFilePath();
@@ -130,15 +128,42 @@ export const makeDockerServicesLive = (
     Effect.gen(function* () {
       const composeFilePath = getComposeFilePath();
       const fullArgs = ["-f", composeFilePath, ...args];
-      return yield* shell.exec("docker", ["compose", ...fullArgs]);
-    });
+      yield* Effect.annotateCurrentSpan("docker.compose.action", args[0] ?? "unknown");
+      yield* Effect.annotateCurrentSpan("docker.compose.args", args.join(" "));
+      yield* Effect.annotateCurrentSpan("docker.compose.file", composeFilePath);
+      const result = yield* shell.exec("docker", ["compose", ...fullArgs]);
+      yield* Effect.annotateCurrentSpan("docker.compose.exit_code", result.exitCode);
+      return result;
+    }).pipe(Effect.withSpan("docker.compose.exec"));
+
+  const runComposeAndCheck = (
+    args: readonly string[],
+    errorMessage: string,
+  ): Effect.Effect<{ exitCode: number; stdout: string; stderr: string }, DockerServiceError | ShellExecutionError> =>
+    Effect.gen(function* () {
+      yield* Effect.annotateCurrentSpan("docker.compose.error_message", errorMessage);
+      const result = yield* runCompose(args);
+      if (result.exitCode !== 0) {
+        yield* Effect.annotateCurrentSpan("docker.compose.failed", true);
+        return yield* dockerServiceError(errorMessage, {
+          exitCode: result.exitCode,
+          stderr: result.stderr,
+        });
+      }
+      return result;
+    }).pipe(Effect.withSpan("docker.compose.exec_checked"));
 
   const runComposeInteractive = (args: readonly string[]): Effect.Effect<number, ShellExecutionError> =>
     Effect.gen(function* () {
       const composeFilePath = getComposeFilePath();
       const fullArgs = ["-f", composeFilePath, ...args];
-      return yield* shell.execInteractive("docker", ["compose", ...fullArgs]);
-    });
+      yield* Effect.annotateCurrentSpan("docker.compose.action", args[0] ?? "unknown");
+      yield* Effect.annotateCurrentSpan("docker.compose.args", args.join(" "));
+      yield* Effect.annotateCurrentSpan("docker.compose.file", composeFilePath);
+      const exitCode = yield* shell.execInteractive("docker", ["compose", ...fullArgs]);
+      yield* Effect.annotateCurrentSpan("docker.compose.exit_code", exitCode);
+      return exitCode;
+    }).pipe(Effect.withSpan("docker.compose.exec_interactive"));
 
   const parseServiceState = (state: string): ServiceStatus["state"] => {
     const lower = state.toLowerCase();
@@ -178,13 +203,7 @@ export const makeDockerServicesLive = (
 
         yield* Effect.logInfo(`Starting services: ${serviceList.join(", ")}`);
 
-        const result = yield* runCompose(args);
-        if (result.exitCode !== 0) {
-          return yield* dockerServiceError("Failed to start services", {
-            exitCode: result.exitCode,
-            stderr: result.stderr,
-          });
-        }
+        yield* runComposeAndCheck(args, "Failed to start services");
 
         yield* Effect.logInfo("Services started successfully");
       }),
@@ -205,13 +224,7 @@ export const makeDockerServicesLive = (
           serviceList.length > 0 ? `Stopping services: ${serviceList.join(", ")}` : "Stopping all services",
         );
 
-        const result = yield* runCompose(args);
-        if (result.exitCode !== 0) {
-          return yield* dockerServiceError("Failed to stop services", {
-            exitCode: result.exitCode,
-            stderr: result.stderr,
-          });
-        }
+        yield* runComposeAndCheck(args, "Failed to stop services");
 
         yield* Effect.logInfo("Services stopped successfully");
       }),
@@ -231,13 +244,7 @@ export const makeDockerServicesLive = (
 
         yield* Effect.logInfo(`Restarting services: ${serviceList.join(", ")}`);
 
-        const result = yield* runCompose(args);
-        if (result.exitCode !== 0) {
-          return yield* dockerServiceError("Failed to restart services", {
-            exitCode: result.exitCode,
-            stderr: result.stderr,
-          });
-        }
+        yield* runComposeAndCheck(args, "Failed to restart services");
 
         yield* Effect.logInfo("Services restarted successfully");
       }),
@@ -256,13 +263,7 @@ export const makeDockerServicesLive = (
           );
         }
 
-        const result = yield* runCompose(["ps", "--format", "json", "-a"]);
-        if (result.exitCode !== 0) {
-          return yield* dockerServiceError("Failed to get service status", {
-            exitCode: result.exitCode,
-            stderr: result.stderr,
-          });
-        }
+        const result = yield* runComposeAndCheck(["ps", "--format", "json", "-a"], "Failed to get service status");
 
         const runningServices = new Map<string, DockerPsJson>();
 
@@ -344,17 +345,13 @@ export const makeDockerServicesLive = (
 
         // Stop all containers and remove volumes
         yield* Effect.logInfo("Stopping containers and removing volumes...");
-        const downResult = yield* runCompose(["down", "-v"]);
-        if (downResult.exitCode !== 0) {
-          return yield* dockerServiceError("Failed to stop services and remove volumes", {
-            exitCode: downResult.exitCode,
-            stderr: downResult.stderr,
-          });
-        }
+        yield* runComposeAndCheck(["down", "-v"], "Failed to stop services and remove volumes");
 
         // Remove the compose file so it regenerates fresh
         yield* Effect.logInfo("Removing compose file...");
-        const rmResult = yield* shell.exec("rm", ["-f", composeFilePath]);
+        const rmResult = yield* shell
+          .exec("rm", ["-f", composeFilePath])
+          .pipe(Effect.withSpan("filesystem.remove_file"));
         if (rmResult.exitCode !== 0) {
           return yield* dockerServiceError("Failed to remove compose file", {
             exitCode: rmResult.exitCode,
@@ -368,13 +365,18 @@ export const makeDockerServicesLive = (
     isDockerAvailable: (): Effect.Effect<boolean, never> =>
       Effect.gen(function* () {
         const result = yield* shell.exec("docker", ["info"]).pipe(Effect.catchAll(() => Effect.succeed(null)));
-        return result !== null && result.exitCode === 0;
-      }),
+        const isAvailable = result !== null && result.exitCode === 0;
+        yield* Effect.annotateCurrentSpan("docker.available", isAvailable);
+        if (result !== null) {
+          yield* Effect.annotateCurrentSpan("docker.info.exit_code", result.exitCode);
+        }
+        return isAvailable;
+      }).pipe(Effect.withSpan("docker.availability.check")),
 
     performHealthCheck: (): Effect.Effect<HealthCheckResult, never> =>
       Effect.gen(function* () {
         const checkedAt = new Date(yield* Clock.currentTimeMillis);
-        const dockerServices = makeDockerServicesLive(shell, fs, enabledServices);
+        const dockerServices = makeDockerServicesLive(shell, fs, pathService, enabledServices);
 
         const isAvailable = yield* dockerServices.isDockerAvailable();
         if (!isAvailable) {
@@ -444,7 +446,8 @@ export const DockerServicesLiveLayer = (enabledServices?: readonly ServiceName[]
     Effect.gen(function* () {
       const shell = yield* ShellTag;
       const fs = yield* FileSystemTag;
-      return makeDockerServicesLive(shell, fs, enabledServices);
+      const pathService = yield* PathServiceTag;
+      return makeDockerServicesLive(shell, fs, pathService, enabledServices);
     }),
   );
 
@@ -454,7 +457,8 @@ export const DockerServicesToolsLiveLayer = (enabledServices?: readonly ServiceN
     Effect.gen(function* () {
       const shell = yield* ShellTag;
       const fs = yield* FileSystemTag;
-      const dockerServices = makeDockerServicesLive(shell, fs, enabledServices);
+      const pathService = yield* PathServiceTag;
+      const dockerServices = makeDockerServicesLive(shell, fs, pathService, enabledServices);
       return {
         performHealthCheck: () => dockerServices.performHealthCheck(),
       };

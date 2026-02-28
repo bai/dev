@@ -3,7 +3,12 @@ import { Context, type Effect } from "effect";
 import type { DockerServiceError, ShellExecutionError } from "./errors";
 import type { HealthCheckResult } from "./health-check-port";
 
-export type ServiceName = "postgres17" | "postgres18" | "valkey";
+export const DOCKER_SERVICE_NAMES = ["postgres17", "postgres18", "valkey"] as const;
+
+export type ServiceName = (typeof DOCKER_SERVICE_NAMES)[number];
+
+export const isServiceName = (serviceName: string): serviceName is ServiceName =>
+  DOCKER_SERVICE_NAMES.some((name) => name === serviceName);
 
 export interface ServiceStatus {
   readonly name: ServiceName;

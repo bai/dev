@@ -9,7 +9,7 @@ import { GitTag, type Git } from "../domain/git-port";
 import type { GitProvider, Repository } from "../domain/models";
 import { PathServiceTag, type PathService } from "../domain/path-service";
 import { RepoProviderTag, type RepoProvider } from "../domain/repo-provider-port";
-import { RepositoryServiceTag, type RepositoryService } from "../domain/repository-service";
+import { RepositoryLive, RepositoryServiceTag } from "../domain/repository-service";
 import { cloneCommand } from "./clone-command";
 import { ShellIntegrationTag, type ShellIntegration } from "./shell-integration-service";
 
@@ -112,63 +112,6 @@ describe("clone-command", () => {
     }
   }
 
-  class MockRepositoryService implements RepositoryService {
-    parseRepoUrlToPath(repoUrl: string): Effect.Effect<string, never, never> {
-      // Simple mock implementation - extract org/repo from URL
-      const match = repoUrl.match(/([^/]+)\/([^/]+)\.git$/);
-      if (match && match[1] && match[2]) {
-        return Effect.succeed(`/home/user/dev/github.com/${match[1]}/${match[2]}`);
-      }
-      return Effect.succeed("/home/user/dev/github.com/org/repo");
-    }
-
-    parseFullUrlToRepository(repoUrl: string): Effect.Effect<Repository, never, never> {
-      const scpMatch = repoUrl.match(/^([^@:/]+)@([^:]+):([^/]+)\/(.+?)(?:\.git)?$/);
-      if (scpMatch && scpMatch[2] && scpMatch[3] && scpMatch[4]) {
-        const domain = scpMatch[2];
-        const provider: GitProvider = {
-          name: domain.includes("gitlab") ? "gitlab" : "github",
-          baseUrl: `https://${domain}`,
-        };
-
-        return Effect.succeed({
-          name: scpMatch[4].replace(/\.git$/, ""),
-          organization: scpMatch[3],
-          provider,
-          cloneUrl: repoUrl,
-        });
-      }
-
-      const cleaned = repoUrl.replace(/^git\+/, "");
-      const parsed = new URL(cleaned);
-      const domain = parsed.hostname;
-      const pathParts = parsed.pathname.split("/").filter(Boolean);
-      const provider: GitProvider = {
-        name: domain.includes("gitlab") ? "gitlab" : "github",
-        baseUrl: `https://${domain}`,
-      };
-
-      return Effect.succeed({
-        name: (pathParts[1] || "repo").replace(/\.git$/, ""),
-        organization: pathParts[0] || "org",
-        provider,
-        cloneUrl: repoUrl,
-      });
-    }
-
-    expandToFullGitUrl(
-      repoInput: string,
-      defaultOrg: string,
-      _orgToProvider?: Record<string, "github" | "gitlab">,
-      _forceProvider?: "github" | "gitlab",
-    ): Effect.Effect<string, never, never> {
-      if (repoInput.includes("/")) {
-        return Effect.succeed(`https://github.com/${repoInput}`);
-      }
-      return Effect.succeed(`https://github.com/${defaultOrg}/${repoInput}`);
-    }
-  }
-
   class MockShellIntegration implements ShellIntegration {
     public changedDirectories: string[] = [];
 
@@ -190,7 +133,7 @@ describe("clone-command", () => {
           Layer.succeed(GitTag, git),
           Layer.succeed(RepoProviderTag, new MockRepoProvider()),
           Layer.succeed(PathServiceTag, new MockPathService()),
-          Layer.succeed(RepositoryServiceTag, new MockRepositoryService()),
+          Layer.succeed(RepositoryServiceTag, RepositoryLive),
           Layer.succeed(ShellIntegrationTag, shellIntegration),
         );
 
@@ -219,7 +162,7 @@ describe("clone-command", () => {
           Layer.succeed(GitTag, git),
           Layer.succeed(RepoProviderTag, new MockRepoProvider("default-org")),
           Layer.succeed(PathServiceTag, new MockPathService()),
-          Layer.succeed(RepositoryServiceTag, new MockRepositoryService()),
+          Layer.succeed(RepositoryServiceTag, RepositoryLive),
           Layer.succeed(ShellIntegrationTag, shellIntegration),
         );
 
@@ -248,7 +191,7 @@ describe("clone-command", () => {
           Layer.succeed(GitTag, git),
           Layer.succeed(RepoProviderTag, new MockRepoProvider()),
           Layer.succeed(PathServiceTag, new MockPathService()),
-          Layer.succeed(RepositoryServiceTag, new MockRepositoryService()),
+          Layer.succeed(RepositoryServiceTag, RepositoryLive),
           Layer.succeed(ShellIntegrationTag, shellIntegration),
         );
 
@@ -275,7 +218,7 @@ describe("clone-command", () => {
           Layer.succeed(GitTag, git),
           Layer.succeed(RepoProviderTag, new MockRepoProvider()),
           Layer.succeed(PathServiceTag, new MockPathService()),
-          Layer.succeed(RepositoryServiceTag, new MockRepositoryService()),
+          Layer.succeed(RepositoryServiceTag, RepositoryLive),
           Layer.succeed(ShellIntegrationTag, shellIntegration),
         );
 
@@ -311,7 +254,7 @@ describe("clone-command", () => {
           Layer.succeed(GitTag, git),
           Layer.succeed(RepoProviderTag, new FailingRepoProvider()),
           Layer.succeed(PathServiceTag, new MockPathService()),
-          Layer.succeed(RepositoryServiceTag, new MockRepositoryService()),
+          Layer.succeed(RepositoryServiceTag, RepositoryLive),
           Layer.succeed(ShellIntegrationTag, shellIntegration),
         );
 
@@ -339,7 +282,7 @@ describe("clone-command", () => {
           Layer.succeed(GitTag, git),
           Layer.succeed(RepoProviderTag, new MockRepoProvider("github-org", githubProvider)),
           Layer.succeed(PathServiceTag, new MockPathService()),
-          Layer.succeed(RepositoryServiceTag, new MockRepositoryService()),
+          Layer.succeed(RepositoryServiceTag, RepositoryLive),
           Layer.succeed(ShellIntegrationTag, shellIntegration),
         );
 
@@ -365,7 +308,7 @@ describe("clone-command", () => {
           Layer.succeed(GitTag, git),
           Layer.succeed(RepoProviderTag, new MockRepoProvider("gitlab-org", gitlabProvider)),
           Layer.succeed(PathServiceTag, new MockPathService()),
-          Layer.succeed(RepositoryServiceTag, new MockRepositoryService()),
+          Layer.succeed(RepositoryServiceTag, RepositoryLive),
           Layer.succeed(ShellIntegrationTag, shellIntegration),
         );
 
@@ -392,7 +335,7 @@ describe("clone-command", () => {
           Layer.succeed(GitTag, git),
           Layer.succeed(RepoProviderTag, new MockRepoProvider()),
           Layer.succeed(PathServiceTag, new MockPathService()),
-          Layer.succeed(RepositoryServiceTag, new MockRepositoryService()),
+          Layer.succeed(RepositoryServiceTag, RepositoryLive),
           Layer.succeed(ShellIntegrationTag, shellIntegration),
         );
 
@@ -420,7 +363,7 @@ describe("clone-command", () => {
           Layer.succeed(GitTag, git),
           Layer.succeed(RepoProviderTag, new MockRepoProvider()),
           Layer.succeed(PathServiceTag, new MockPathService()),
-          Layer.succeed(RepositoryServiceTag, new MockRepositoryService()),
+          Layer.succeed(RepositoryServiceTag, RepositoryLive),
           Layer.succeed(ShellIntegrationTag, shellIntegration),
         );
 
@@ -448,7 +391,7 @@ describe("clone-command", () => {
           Layer.succeed(GitTag, git),
           Layer.succeed(RepoProviderTag, new MockRepoProvider()),
           Layer.succeed(PathServiceTag, new MockPathService()),
-          Layer.succeed(RepositoryServiceTag, new MockRepositoryService()),
+          Layer.succeed(RepositoryServiceTag, RepositoryLive),
           Layer.succeed(ShellIntegrationTag, shellIntegration),
         );
 
@@ -476,7 +419,7 @@ describe("clone-command", () => {
           Layer.succeed(GitTag, git),
           Layer.succeed(RepoProviderTag, new MockRepoProvider()),
           Layer.succeed(PathServiceTag, new MockPathService()),
-          Layer.succeed(RepositoryServiceTag, new MockRepositoryService()),
+          Layer.succeed(RepositoryServiceTag, RepositoryLive),
           Layer.succeed(ShellIntegrationTag, shellIntegration),
         );
 
@@ -504,7 +447,7 @@ describe("clone-command", () => {
           Layer.succeed(GitTag, git),
           Layer.succeed(RepoProviderTag, new MockRepoProvider()),
           Layer.succeed(PathServiceTag, new MockPathService()),
-          Layer.succeed(RepositoryServiceTag, new MockRepositoryService()),
+          Layer.succeed(RepositoryServiceTag, RepositoryLive),
           Layer.succeed(ShellIntegrationTag, shellIntegration),
         );
 
@@ -532,7 +475,7 @@ describe("clone-command", () => {
           Layer.succeed(GitTag, git),
           Layer.succeed(RepoProviderTag, new MockRepoProvider()),
           Layer.succeed(PathServiceTag, new MockPathService()),
-          Layer.succeed(RepositoryServiceTag, new MockRepositoryService()),
+          Layer.succeed(RepositoryServiceTag, RepositoryLive),
           Layer.succeed(ShellIntegrationTag, shellIntegration),
         );
 
@@ -559,7 +502,7 @@ describe("clone-command", () => {
           Layer.succeed(GitTag, git),
           Layer.succeed(RepoProviderTag, new MockRepoProvider()),
           Layer.succeed(PathServiceTag, new MockPathService()),
-          Layer.succeed(RepositoryServiceTag, new MockRepositoryService()),
+          Layer.succeed(RepositoryServiceTag, RepositoryLive),
           Layer.succeed(ShellIntegrationTag, shellIntegration),
         );
 
@@ -587,22 +530,12 @@ describe("clone-command", () => {
           baseSearchPath = "/Users/developer/projects";
         }
 
-        class CustomRepositoryService extends MockRepositoryService {
-          parseRepoUrlToPath(repoUrl: string): Effect.Effect<string, never, never> {
-            const match = repoUrl.match(/([^/]+)\/([^/]+)\.git$/);
-            if (match && match[1] && match[2]) {
-              return Effect.succeed(`/Users/developer/projects/github.com/${match[1]}/${match[2]}`);
-            }
-            return Effect.succeed("/Users/developer/projects/github.com/org/repo");
-          }
-        }
-
         const testLayer = Layer.mergeAll(
           Layer.succeed(FileSystemTag, fileSystem),
           Layer.succeed(GitTag, git),
           Layer.succeed(RepoProviderTag, new MockRepoProvider()),
           Layer.succeed(PathServiceTag, new CustomPathService()),
-          Layer.succeed(RepositoryServiceTag, new CustomRepositoryService()),
+          Layer.succeed(RepositoryServiceTag, RepositoryLive),
           Layer.succeed(ShellIntegrationTag, shellIntegration),
         );
 
@@ -627,7 +560,7 @@ describe("clone-command", () => {
           Layer.succeed(GitTag, git),
           Layer.succeed(RepoProviderTag, new MockRepoProvider()),
           Layer.succeed(PathServiceTag, new MockPathService()),
-          Layer.succeed(RepositoryServiceTag, new MockRepositoryService()),
+          Layer.succeed(RepositoryServiceTag, RepositoryLive),
           Layer.succeed(ShellIntegrationTag, shellIntegration),
         );
 

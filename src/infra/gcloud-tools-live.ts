@@ -13,6 +13,7 @@ import {
 } from "../domain/errors";
 import { FileSystemTag, type FileSystem } from "../domain/file-system-port";
 import { type HealthCheckResult } from "../domain/health-check-port";
+import { PathServiceTag, type PathService } from "../domain/path-service";
 import { ShellTag, type Shell } from "../domain/shell-port";
 
 export const GCLOUD_MIN_VERSION = "552.0.0";
@@ -31,7 +32,7 @@ export interface GcloudTools {
 }
 
 // Factory function that creates GcloudTools with dependencies
-export const makeGcloudToolsLive = (shell: Shell, filesystem: FileSystem): GcloudTools => {
+export const makeGcloudToolsLive = (shell: Shell, filesystem: FileSystem, pathService: PathService): GcloudTools => {
   // Helper function for version comparison
   const compareVersions = (version1: string, version2: string): number => {
     const v1Parts = version1.split(".").map(Number);
@@ -109,8 +110,7 @@ export const makeGcloudToolsLive = (shell: Shell, filesystem: FileSystem): Gclou
     Effect.gen(function* () {
       yield* Effect.logInfo("☁️  Setting up Google Cloud configuration...");
 
-      const homeDir = process.env.HOME || process.env.USERPROFILE || "";
-      const gcloudConfigDir = path.join(homeDir, ".config", "gcloud");
+      const gcloudConfigDir = path.join(pathService.homeDir, ".config", "gcloud");
 
       // Create config directory if it doesn't exist
       const exists = yield* filesystem.exists(gcloudConfigDir);
@@ -228,6 +228,7 @@ export const GcloudToolsLiveLayer = Layer.effect(
   Effect.gen(function* () {
     const shell = yield* ShellTag;
     const filesystem = yield* FileSystemTag;
-    return makeGcloudToolsLive(shell, filesystem);
+    const pathService = yield* PathServiceTag;
+    return makeGcloudToolsLive(shell, filesystem, pathService);
   }),
 );

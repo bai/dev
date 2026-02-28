@@ -3,8 +3,10 @@ import { Effect, Exit } from "effect";
 import { beforeEach, describe, expect } from "vitest";
 
 import type { ConfigLoader } from "../domain/config-loader-port";
+import type { Config } from "../domain/config-schema";
 import { configSchema } from "../domain/config-schema";
 import type { FileSystem } from "../domain/file-system-port";
+import type { PathService } from "../domain/path-service";
 import type { Shell } from "../domain/shell-port";
 import { makeMiseLive } from "./mise-live";
 
@@ -105,8 +107,20 @@ const mockConfigLoader: ConfigLoader = {
     ),
 };
 
+const mockPathService: PathService = {
+  homeDir: "/home/user",
+  baseSearchPath: "/home/user/src",
+  devDir: "/home/user/.dev",
+  configDir: "/home/user/.config/dev",
+  configPath: "/home/user/.config/dev/config.json",
+  dataDir: "/home/user/.local/share/dev",
+  dbPath: "/home/user/.local/share/dev/dev.db",
+  cacheDir: "/home/user/.cache/dev",
+  getBasePath: (_config: Config): string => "/home/user/src",
+};
+
 describe("mise-live", () => {
-  const mise = makeMiseLive(mockShell, mockFileSystem, mockConfigLoader);
+  const mise = makeMiseLive(mockShell, mockFileSystem, mockConfigLoader, mockPathService);
 
   beforeEach(() => {
     mockShell.lastCall = undefined;
@@ -168,7 +182,7 @@ describe("mise-live", () => {
         execInteractive: () => Effect.succeed(1), // Non-zero exit code
       };
 
-      const failingMise = makeMiseLive(failingShell, mockFileSystem, mockConfigLoader);
+      const failingMise = makeMiseLive(failingShell, mockFileSystem, mockConfigLoader, mockPathService);
       const result = yield* Effect.exit(failingMise.runTask("failing-task"));
 
       expect(Exit.isFailure(result)).toBe(true);

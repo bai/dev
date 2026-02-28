@@ -1,44 +1,21 @@
 import { Args, Command, Options } from "@effect/cli";
-import { Effect, Option } from "effect";
+import { Effect } from "effect";
 
 import { CommandRegistryTag, type RegisteredCommand } from "../domain/command-registry-port";
-import { DockerServicesTag, type DockerServices, type ServiceName } from "../domain/docker-services-port";
+import {
+  handleDown,
+  handleLogs,
+  handleReset,
+  handleRestart,
+  handleUp,
+  type LogsHandlerConfig,
+  type ServicesHandlerConfig,
+} from "./services-service";
 
 const serviceArg = Args.text({ name: "service" }).pipe(Args.repeated);
 
 const followOption = Options.boolean("follow").pipe(Options.withAlias("f"), Options.withDefault(false));
 const tailOption = Options.integer("tail").pipe(Options.withAlias("n"), Options.optional);
-
-const validateServiceNames = (services: readonly string[]): Effect.Effect<readonly ServiceName[], never, never> =>
-  Effect.gen(function* () {
-    const validNames: ServiceName[] = ["postgres17", "postgres18", "valkey"];
-    const result: ServiceName[] = [];
-
-    for (const s of services) {
-      if (validNames.includes(s as ServiceName)) {
-        result.push(s as ServiceName);
-      } else {
-        yield* Effect.logWarning(`Unknown service: ${s}. Valid services: ${validNames.join(", ")}`);
-      }
-    }
-
-    return result;
-  });
-
-const withDocker = <A, E, R>(
-  handler: (dockerServices: DockerServices) => Effect.Effect<A, E, R>,
-): Effect.Effect<A | void, E, R | DockerServicesTag> =>
-  Effect.gen(function* () {
-    const dockerServices = yield* DockerServicesTag;
-    const isAvailable = yield* dockerServices.isDockerAvailable();
-
-    if (!isAvailable) {
-      yield* Effect.logError("Docker is not available. Please ensure Docker is installed and running.");
-      return;
-    }
-
-    return yield* handler(dockerServices);
-  });
 
 export const displayHelp = (): Effect.Effect<void, never, never> =>
   Effect.gen(function* () {
@@ -67,83 +44,28 @@ export const displayHelp = (): Effect.Effect<void, never, never> =>
     yield* Effect.logInfo("  dev services reset                 # Reset all services and data\n");
   });
 
-const upHandler = ({ services }: { readonly services: readonly string[] }) =>
-  withDocker((dockerServices) =>
-    Effect.gen(function* () {
-      const validServices = yield* validateServiceNames(services);
-      const servicesToStart = validServices.length > 0 ? validServices : undefined;
-
-      yield* dockerServices.up(servicesToStart);
-    }),
-  ).pipe(Effect.withSpan("services.up"));
+const upHandler = (config: ServicesHandlerConfig) => handleUp(config).pipe(Effect.withSpan("services.up"));
 
 const upCommand = Command.make("up", { services: serviceArg }, upHandler);
 const startCommand = Command.make("start", { services: serviceArg }, upHandler);
 
-const downHandler = ({ services }: { readonly services: readonly string[] }) =>
-  withDocker((dockerServices) =>
-    Effect.gen(function* () {
-      const validServices = yield* validateServiceNames(services);
-      const servicesToStop = validServices.length > 0 ? validServices : undefined;
-
-      yield* dockerServices.down(servicesToStop);
-    }),
-  ).pipe(Effect.withSpan("services.down"));
+const downHandler = (config: ServicesHandlerConfig) => handleDown(config).pipe(Effect.withSpan("services.down"));
 
 const downCommand = Command.make("down", { services: serviceArg }, downHandler);
 const stopCommand = Command.make("stop", { services: serviceArg }, downHandler);
 
-const restartHandler = ({ services }: { readonly services: readonly string[] }) =>
-  withDocker((dockerServices) =>
-    Effect.gen(function* () {
-      const validServices = yield* validateServiceNames(services);
-      const servicesToRestart = validServices.length > 0 ? validServices : undefined;
-
-      yield* dockerServices.restart(servicesToRestart);
-    }),
-  ).pipe(Effect.withSpan("services.restart"));
+const restartHandler = (config: ServicesHandlerConfig) =>
+  handleRestart(config).pipe(Effect.withSpan("services.restart"));
 
 const restartCommand = Command.make("restart", { services: serviceArg }, restartHandler);
 
-const logsHandler = (config: {
-  readonly service: readonly string[];
-  readonly follow: boolean;
-  readonly tail: Option.Option<number>;
-}) =>
-  withDocker((dockerServices) =>
-    Effect.gen(function* () {
-      const validServices = yield* validateServiceNames(config.service);
-      const serviceName = validServices.length > 0 ? validServices[0] : undefined;
-
-      const tailValue = Option.isSome(config.tail) ? config.tail.value : undefined;
-
-      yield* dockerServices.logs(serviceName, {
-        follow: config.follow,
-        tail: tailValue,
-      });
-    }),
-  ).pipe(Effect.withSpan("services.logs"));
+const logsHandler = (config: LogsHandlerConfig) => handleLogs(config).pipe(Effect.withSpan("services.logs"));
 
 const logsCommand = Command.make("logs", { service: serviceArg, follow: followOption, tail: tailOption }, logsHandler);
 
-const resetHandler = () =>
-  withDocker((dockerServices) =>
-    Effect.gen(function* () {
-      yield* dockerServices.reset();
-    }),
-  ).pipe(Effect.withSpan("services.reset"));
+const resetHandler = () => handleReset().pipe(Effect.withSpan("services.reset"));
 
 const resetCommand = Command.make("reset", {}, resetHandler);
-
-export const servicesCommandTestables = {
-  withDocker,
-  validateServiceNames,
-  upHandler,
-  downHandler,
-  restartHandler,
-  logsHandler,
-  resetHandler,
-} as const;
 
 export const servicesCommand = Command.make("services", {}, () =>
   Effect.gen(function* () {

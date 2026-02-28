@@ -7,12 +7,16 @@ import { ConfigLoaderTag, type ConfigLoader } from "../domain/config-loader-port
 import { shellExecutionError, unknownError, type ShellExecutionError, type UnknownError } from "../domain/errors";
 import { FileSystemTag, type FileSystem } from "../domain/file-system-port";
 import { MiseTag, type Mise, type MiseInfo } from "../domain/mise-port";
+import { PathServiceTag, type PathService } from "../domain/path-service";
 import { ShellTag, type Shell } from "../domain/shell-port";
 
-const homeDir = process.env.HOME || process.env.USERPROFILE || "";
-
 // Factory function to create Mise implementation
-export const makeMiseLive = (shell: Shell, fileSystem: FileSystem, configLoader: ConfigLoader): Mise => ({
+export const makeMiseLive = (
+  shell: Shell,
+  fileSystem: FileSystem,
+  configLoader: ConfigLoader,
+  pathService: PathService,
+): Mise => ({
   checkInstallation: (): Effect.Effect<MiseInfo, ShellExecutionError> =>
     shell.exec("mise", ["--version"]).pipe(
       Effect.flatMap((result) => {
@@ -120,7 +124,7 @@ export const makeMiseLive = (shell: Shell, fileSystem: FileSystem, configLoader:
     Effect.gen(function* () {
       yield* Effect.logDebug("🔧 Setting up mise global configuration...");
 
-      const miseConfigDir = path.join(homeDir, ".config", "mise");
+      const miseConfigDir = path.join(pathService.homeDir, ".config", "mise");
       const miseConfigFile = path.join(miseConfigDir, "config.toml");
 
       // Create config directory if it doesn't exist
@@ -164,6 +168,7 @@ export const MiseLiveLayer = Layer.effect(
     const shell = yield* ShellTag;
     const fileSystem = yield* FileSystemTag;
     const configLoader = yield* ConfigLoaderTag;
-    return makeMiseLive(shell, fileSystem, configLoader);
+    const pathService = yield* PathServiceTag;
+    return makeMiseLive(shell, fileSystem, configLoader, pathService);
   }),
 );
