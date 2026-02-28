@@ -2,29 +2,9 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## 🌍 Always-Apply Rules (Global Context)
-
-@.cursor/rules/010-base.mdc
-@.cursor/rules/020-effect.mdc
-@.cursor/rules/030-naming-conventions.mdc
-@.cursor/rules/040-return-types.mdc
-@.cursor/rules/050-interface-extends.mdc
-@.cursor/rules/070-readonly-properties.mdc
-@.cursor/rules/080-optional-properties.mdc
-@.cursor/rules/090-discriminated-unions.mdc
-@.cursor/rules/100-enums.mdc
-@.cursor/rules/110-default-exports.mdc
-@.cursor/rules/120-any-inside-generic-functions.mdc
-@.cursor/rules/130-no-unchecked-indexed-access.mdc
-@.cursor/rules/140-import-type.mdc
-@.cursor/rules/150-jsdoc-comments.mdc
-@.cursor/rules/490-installing-libraries.mdc
-@.cursor/rules/500-testing.mdc
-@.cursor/rules/600-effect-ts-naming-conventions.mdc
-
 ## Project Notes
 
-You absolutely must follow the rules in this file when working with code in this repository. You must adhere to best practices of idiomatic Effect-TS code and rules mentioned in the Always-Apply Rules section.
+You absolutely must follow the rules in this file when working with code in this repository and adhere to best practices of idiomatic Effect-TS code.
 
 ### Development Commands
 

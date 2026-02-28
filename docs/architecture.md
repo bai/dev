@@ -35,15 +35,15 @@
 
 ## 2 · Technology Stack
 
-| Concern            | Choice                           | Locked Version |
-| ------------------ | -------------------------------- | ------------- |
-| Runtime / Compiler | **Bun**                          | 1.2.17        |
-| Language           | **TypeScript**                   | 5.8.3         |
-| FP Runtime         | **Effect**                       | 3.16.11       |
-| CLI Framework      | **@effect/cli**                  | latest        |
-| Test Runner        | **Vitest**                       | 3.2.4         |
-| Relational Store   | **SQLite 3** via **drizzle-orm** | latest        |
-| Git CLI            | `git` ≥ 2.40                     | —             |
+| Concern            | Choice                          |
+| ------------------ | ------------------------------- |
+| Runtime / Compiler | **Bun**                         |
+| Language           | **TypeScript**                  |
+| FP Runtime         | **Effect**                      |
+| CLI Framework      | **@effect/cli**                 |
+| Test Runner        | **Vitest**                      |
+| Relational Store   | **SQLite** via **drizzle-orm** |
+| Git CLI            | `git`                           |
 
 ---
 
