@@ -2,10 +2,9 @@ import { Command } from "@effect/cli";
 import { Effect } from "effect";
 
 import { CommandRegistryTag } from "../domain/command-registry-port";
-import { ConfigLoaderTag } from "../domain/config-loader-port";
 import { DockerServicesTag, type ServiceStatus } from "../domain/docker-services-port";
 import { statusCheckError } from "../domain/errors";
-import { HealthCheckTag, type HealthCheckResult } from "../domain/health-check-port";
+import { HealthCheckTag } from "../domain/health-check-port";
 import type { EnvironmentInfo, GitInfo } from "../domain/models";
 import { ShellTag } from "../domain/shell-port";
 
@@ -147,41 +146,42 @@ const executeCommand = (
 /**
  * Get health check results and transform them
  */
-const getHealthCheckResults: Effect.Effect<readonly StatusItem[], never, HealthCheckTag | ConfigLoaderTag> = Effect.gen(
-  function* () {
-    yield* Effect.logDebug("Running fresh health checks...");
+const getHealthCheckResults: Effect.Effect<readonly StatusItem[], never, HealthCheckTag> = Effect.gen(function* () {
+  yield* Effect.logDebug("Running fresh health checks...");
 
-    const healthCheckService = yield* HealthCheckTag;
-    const configLoader = yield* ConfigLoaderTag;
+  const healthCheckService = yield* HealthCheckTag;
 
-    const config = yield* configLoader.load().pipe(
-      Effect.catchAll(() => Effect.succeed(undefined)),
-      Effect.withSpan("config.load"),
-    );
-
-    // Run health checks directly and bypass cached results
-    const results = yield* healthCheckService.runHealthChecks().pipe(
-      Effect.catchAll(() => {
-        return Effect.gen(function* () {
-          yield* Effect.logError("Health check failed, using empty results");
-          return [] as const;
-        });
+  // Run health checks directly and bypass cached results.
+  // If execution itself fails, emit a synthetic failing item so summary/exit logic remains accurate.
+  const statusItems = yield* healthCheckService.runHealthChecks().pipe(
+    Effect.map((results) =>
+      results.map(
+        (result): StatusItem => ({
+          tool: result.toolName,
+          version: result.version,
+          status: result.status,
+          notes: result.notes,
+        }),
+      ),
+    ),
+    Effect.catchAll((error) =>
+      Effect.gen(function* () {
+        const reason = error.reason.trim().length > 0 ? error.reason : "Health check execution failed";
+        yield* Effect.logError(`Health check failed: ${reason}`);
+        return [
+          {
+            tool: "health-check-runtime",
+            status: "fail",
+            notes: reason,
+          } satisfies StatusItem,
+        ] as const;
       }),
-    );
+    ),
+  );
 
-    const statusItems = results.map(
-      (result: HealthCheckResult): StatusItem => ({
-        tool: result.toolName,
-        version: result.version,
-        status: result.status,
-        notes: result.notes,
-      }),
-    );
-
-    // Sort by tool name for consistent output
-    return statusItems.sort((a, b) => a.tool.localeCompare(b.tool));
-  },
-);
+  // Sort by tool name for consistent output
+  return [...statusItems].sort((a, b) => a.tool.localeCompare(b.tool));
+});
 
 /**
  * Display health check results
