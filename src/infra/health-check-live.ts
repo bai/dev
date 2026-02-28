@@ -2,7 +2,6 @@ import { sql } from "drizzle-orm";
 import { Clock, Effect, Layer } from "effect";
 
 import { toolHealthChecks } from "../../drizzle/schema";
-import { ConfigLoaderTag, type ConfigLoader } from "../domain/config-loader-port";
 import { DatabaseTag, type Database } from "../domain/database-port";
 import { healthCheckError, type HealthCheckError } from "../domain/errors";
 import {
@@ -12,8 +11,6 @@ import {
   type HealthCheckSummary,
 } from "../domain/health-check-port";
 import { HealthCheckServiceTag, type HealthCheckService } from "../domain/health-check-service";
-import { PathServiceTag, type PathService } from "../domain/path-service";
-import { ShellTag, type Shell } from "../domain/shell-port";
 
 // Health check constants (internal, not user-configurable)
 const HEALTH_CHECK_RETENTION_DAYS = 30;
@@ -78,9 +75,6 @@ const storeHealthCheckResults = (
 // Factory function that creates HealthCheckService with dependencies
 export const makeHealthCheckLive = (
   database: Database,
-  pathService: PathService,
-  configLoader: ConfigLoader,
-  shell: Shell,
   healthCheckService: HealthCheckService,
 ): HealthCheck => {
   // Individual functions implementing the service methods
@@ -183,10 +177,7 @@ export const HealthCheckLiveLayer = Layer.effect(
   HealthCheckTag,
   Effect.gen(function* () {
     const database = yield* DatabaseTag;
-    const pathService = yield* PathServiceTag;
-    const configLoader = yield* ConfigLoaderTag;
-    const shell = yield* ShellTag;
     const healthCheckService = yield* HealthCheckServiceTag;
-    return makeHealthCheckLive(database, pathService, configLoader, shell, healthCheckService);
+    return makeHealthCheckLive(database, healthCheckService);
   }),
 );

@@ -183,7 +183,7 @@ export const buildAppLayer = (config: Config) => {
   const runStoreLayer = Layer.provide(RunStoreLiveLayer, Layer.mergeAll(databaseLayer, baseServices));
   const healthCheckLayer = Layer.provide(
     HealthCheckLiveLayer,
-    Layer.mergeAll(databaseLayer, configLoaderLayer, baseServices, healthCheckServiceLayer),
+    Layer.mergeAll(databaseLayer, healthCheckServiceLayer),
   );
 
   // Final application services
