@@ -1,8 +1,8 @@
 import { Args, Command, Options } from "@effect/cli";
-import { Effect } from "effect";
+import { Effect, Option } from "effect";
 
 import { CommandRegistryTag, type RegisteredCommand } from "../domain/command-registry-port";
-import { DockerServicesTag, type ServiceName } from "../domain/docker-services-port";
+import { DockerServicesTag, type DockerServices, type ServiceName } from "../domain/docker-services-port";
 
 const serviceArg = Args.text({ name: "service" }).pipe(Args.repeated);
 
@@ -23,6 +23,21 @@ const validateServiceNames = (services: readonly string[]): Effect.Effect<readon
     }
 
     return result;
+  });
+
+const withDocker = <A, E, R>(
+  handler: (dockerServices: DockerServices) => Effect.Effect<A, E, R>,
+): Effect.Effect<A | void, E, R | DockerServicesTag> =>
+  Effect.gen(function* () {
+    const dockerServices = yield* DockerServicesTag;
+    const isAvailable = yield* dockerServices.isDockerAvailable();
+
+    if (!isAvailable) {
+      yield* Effect.logError("Docker is not available. Please ensure Docker is installed and running.");
+      return;
+    }
+
+    return yield* handler(dockerServices);
   });
 
 export const displayHelp = (): Effect.Effect<void, never, never> =>
@@ -53,95 +68,82 @@ export const displayHelp = (): Effect.Effect<void, never, never> =>
   });
 
 const upHandler = ({ services }: { readonly services: readonly string[] }) =>
-  Effect.gen(function* () {
-    const dockerServices = yield* DockerServicesTag;
+  withDocker((dockerServices) =>
+    Effect.gen(function* () {
+      const validServices = yield* validateServiceNames(services);
+      const servicesToStart = validServices.length > 0 ? validServices : undefined;
 
-    const isAvailable = yield* dockerServices.isDockerAvailable();
-    if (!isAvailable) {
-      yield* Effect.logError("Docker is not available. Please ensure Docker is installed and running.");
-      return;
-    }
-
-    const validServices = yield* validateServiceNames(services);
-    const servicesToStart = validServices.length > 0 ? validServices : undefined;
-
-    yield* dockerServices.up(servicesToStart);
-  }).pipe(Effect.withSpan("services.up"));
+      yield* dockerServices.up(servicesToStart);
+    }),
+  ).pipe(Effect.withSpan("services.up"));
 
 const upCommand = Command.make("up", { services: serviceArg }, upHandler);
 const startCommand = Command.make("start", { services: serviceArg }, upHandler);
 
 const downHandler = ({ services }: { readonly services: readonly string[] }) =>
-  Effect.gen(function* () {
-    const dockerServices = yield* DockerServicesTag;
+  withDocker((dockerServices) =>
+    Effect.gen(function* () {
+      const validServices = yield* validateServiceNames(services);
+      const servicesToStop = validServices.length > 0 ? validServices : undefined;
 
-    const isAvailable = yield* dockerServices.isDockerAvailable();
-    if (!isAvailable) {
-      yield* Effect.logError("Docker is not available. Please ensure Docker is installed and running.");
-      return;
-    }
-
-    const validServices = yield* validateServiceNames(services);
-    const servicesToStop = validServices.length > 0 ? validServices : undefined;
-
-    yield* dockerServices.down(servicesToStop);
-  }).pipe(Effect.withSpan("services.down"));
+      yield* dockerServices.down(servicesToStop);
+    }),
+  ).pipe(Effect.withSpan("services.down"));
 
 const downCommand = Command.make("down", { services: serviceArg }, downHandler);
 const stopCommand = Command.make("stop", { services: serviceArg }, downHandler);
 
-const restartCommand = Command.make("restart", { services: serviceArg }, ({ services }) =>
-  Effect.gen(function* () {
-    const dockerServices = yield* DockerServicesTag;
+const restartHandler = ({ services }: { readonly services: readonly string[] }) =>
+  withDocker((dockerServices) =>
+    Effect.gen(function* () {
+      const validServices = yield* validateServiceNames(services);
+      const servicesToRestart = validServices.length > 0 ? validServices : undefined;
 
-    const isAvailable = yield* dockerServices.isDockerAvailable();
-    if (!isAvailable) {
-      yield* Effect.logError("Docker is not available. Please ensure Docker is installed and running.");
-      return;
-    }
+      yield* dockerServices.restart(servicesToRestart);
+    }),
+  ).pipe(Effect.withSpan("services.restart"));
 
-    const validServices = yield* validateServiceNames(services);
-    const servicesToRestart = validServices.length > 0 ? validServices : undefined;
+const restartCommand = Command.make("restart", { services: serviceArg }, restartHandler);
 
-    yield* dockerServices.restart(servicesToRestart);
-  }).pipe(Effect.withSpan("services.restart")),
-);
+const logsHandler = (config: {
+  readonly service: readonly string[];
+  readonly follow: boolean;
+  readonly tail: Option.Option<number>;
+}) =>
+  withDocker((dockerServices) =>
+    Effect.gen(function* () {
+      const validServices = yield* validateServiceNames(config.service);
+      const serviceName = validServices.length > 0 ? validServices[0] : undefined;
 
-const logsCommand = Command.make("logs", { service: serviceArg, follow: followOption, tail: tailOption }, (config) =>
-  Effect.gen(function* () {
-    const dockerServices = yield* DockerServicesTag;
+      const tailValue = Option.isSome(config.tail) ? config.tail.value : undefined;
 
-    const isAvailable = yield* dockerServices.isDockerAvailable();
-    if (!isAvailable) {
-      yield* Effect.logError("Docker is not available. Please ensure Docker is installed and running.");
-      return;
-    }
+      yield* dockerServices.logs(serviceName, {
+        follow: config.follow,
+        tail: tailValue,
+      });
+    }),
+  ).pipe(Effect.withSpan("services.logs"));
 
-    const validServices = yield* validateServiceNames(config.service);
-    const serviceName = validServices.length > 0 ? validServices[0] : undefined;
+const logsCommand = Command.make("logs", { service: serviceArg, follow: followOption, tail: tailOption }, logsHandler);
 
-    const tailValue = config.tail._tag === "Some" ? config.tail.value : undefined;
+const resetHandler = () =>
+  withDocker((dockerServices) =>
+    Effect.gen(function* () {
+      yield* dockerServices.reset();
+    }),
+  ).pipe(Effect.withSpan("services.reset"));
 
-    yield* dockerServices.logs(serviceName, {
-      follow: config.follow,
-      tail: tailValue,
-    });
-  }).pipe(Effect.withSpan("services.logs")),
-);
+const resetCommand = Command.make("reset", {}, resetHandler);
 
-const resetCommand = Command.make("reset", {}, () =>
-  Effect.gen(function* () {
-    const dockerServices = yield* DockerServicesTag;
-
-    const isAvailable = yield* dockerServices.isDockerAvailable();
-    if (!isAvailable) {
-      yield* Effect.logError("Docker is not available. Please ensure Docker is installed and running.");
-      return;
-    }
-
-    yield* dockerServices.reset();
-  }).pipe(Effect.withSpan("services.reset")),
-);
+export const servicesCommandTestables = {
+  withDocker,
+  validateServiceNames,
+  upHandler,
+  downHandler,
+  restartHandler,
+  logsHandler,
+  resetHandler,
+} as const;
 
 export const servicesCommand = Command.make("services", {}, () =>
   Effect.gen(function* () {
