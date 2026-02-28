@@ -5,68 +5,10 @@ import { CommandRegistryTag, type RegisteredCommand } from "../domain/command-re
 import { unknownError } from "../domain/errors";
 import { FileSystemTag } from "../domain/file-system-port";
 import { GitTag } from "../domain/git-port";
-import type { GitProvider, Repository } from "../domain/models";
 import { PathServiceTag } from "../domain/path-service";
 import { RepoProviderTag } from "../domain/repo-provider-port";
-import { RepositoryServiceTag } from "../domain/repository-service";
+import { isFullUrl, RepositoryServiceTag } from "../domain/repository-service";
 import { ShellIntegrationTag } from "./shell-integration-service";
-
-/**
- * Checks if a string is a full URL (HTTP/HTTPS/SSH/git protocols)
- */
-const isFullUrl = (str: string): boolean =>
-  str.startsWith("http://") ||
-  str.startsWith("https://") ||
-  str.startsWith("ssh://") ||
-  str.startsWith("git://") ||
-  str.startsWith("git+ssh://") ||
-  str.match(/^[^@:/]+@[^:]+:/) !== null; // scp-style git@host:path
-
-/**
- * Parse a full URL into a Repository object
- */
-const parseFullUrlToRepository = (url: string): Effect.Effect<Repository, never, never> =>
-  Effect.sync(() => {
-    // Handle scp-style SSH URLs (git@github.com:org/repo.git)
-    const scpMatch = url.match(/^([^@:/]+)@([^:]+):([^/]+)\/(.+?)(?:\.git)?$/);
-    if (scpMatch && scpMatch[2] && scpMatch[3] && scpMatch[4]) {
-      const domain = scpMatch[2];
-      const orgName = scpMatch[3];
-      const repoName = scpMatch[4].replace(/\.git$/, "");
-      const providerName = domain.includes("gitlab") ? "gitlab" : "github";
-      const provider: GitProvider = {
-        name: providerName,
-        baseUrl: `https://${domain}`,
-      };
-      return {
-        name: repoName,
-        organization: orgName,
-        provider,
-        cloneUrl: url,
-      };
-    }
-
-    // Handle standard URLs (https://, git://, ssh://, etc.)
-    const cleaned = url.replace(/^git\+/, "");
-    const parsed = new URL(cleaned);
-    const domain = parsed.hostname;
-    const pathParts = parsed.pathname.split("/").filter(Boolean);
-
-    const orgName = pathParts[0] || "";
-    const repoName = (pathParts[1] || "").replace(/\.git$/, "");
-    const providerName = domain.includes("gitlab") ? "gitlab" : "github";
-    const provider: GitProvider = {
-      name: providerName,
-      baseUrl: `https://${domain}`,
-    };
-
-    return {
-      name: repoName,
-      organization: orgName,
-      provider,
-      cloneUrl: url,
-    };
-  });
 
 // Define the repository argument as required
 const repo = Args.text({ name: "repo" });
@@ -114,7 +56,9 @@ export const cloneCommand = Command.make("clone", { repo }, ({ repo }) =>
       let repository;
       if (isFullUrl(repo)) {
         yield* Effect.logInfo(`Cloning from URL: ${repo}`);
-        repository = yield* parseFullUrlToRepository(repo).pipe(Effect.withSpan("repository.parse_url"));
+        repository = yield* repositoryService
+          .parseFullUrlToRepository(repo)
+          .pipe(Effect.withSpan("repository.parse_url"));
         yield* Effect.annotateCurrentSpan("vcs.repository.owner", repository.organization);
         yield* Effect.annotateCurrentSpan("vcs.repository.name", repository.name);
       } else {

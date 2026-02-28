@@ -5,7 +5,7 @@ import { describe, expect } from "vitest";
 import type { Config } from "./config-schema";
 import type { GitProviderType } from "./models";
 import { PathServiceTag, type PathService } from "./path-service";
-import { RepositoryLive } from "./repository-service";
+import { isFullUrl, RepositoryLive } from "./repository-service";
 
 describe("repository-service", () => {
   // Mock PathService implementation
@@ -361,6 +361,156 @@ describe("repository-service", () => {
         const result = yield* RepositoryLive.expandToFullGitUrl("myrepo", "AcmeSoftware", orgToProvider);
 
         expect(result).toBe("https://gitlab.com/AcmeSoftware/myrepo");
+      }),
+    );
+  });
+
+  describe("parseFullUrlToRepository", () => {
+    it.effect("parses full HTTP URL into repository model", () =>
+      Effect.gen(function* () {
+        const result = yield* RepositoryLive.parseFullUrlToRepository("http://github.com/myorg/myrepo.git");
+
+        expect(result).toEqual({
+          name: "myrepo",
+          organization: "myorg",
+          provider: {
+            name: "github",
+            baseUrl: "https://github.com",
+          },
+          cloneUrl: "http://github.com/myorg/myrepo.git",
+        });
+      }),
+    );
+
+    it.effect("parses full HTTPS URL into repository model", () =>
+      Effect.gen(function* () {
+        const result = yield* RepositoryLive.parseFullUrlToRepository("https://github.com/myorg/myrepo.git");
+
+        expect(result).toEqual({
+          name: "myrepo",
+          organization: "myorg",
+          provider: {
+            name: "github",
+            baseUrl: "https://github.com",
+          },
+          cloneUrl: "https://github.com/myorg/myrepo.git",
+        });
+      }),
+    );
+
+    it.effect("parses full git:// URL into repository model", () =>
+      Effect.gen(function* () {
+        const result = yield* RepositoryLive.parseFullUrlToRepository("git://github.com/myorg/myrepo.git");
+
+        expect(result).toEqual({
+          name: "myrepo",
+          organization: "myorg",
+          provider: {
+            name: "github",
+            baseUrl: "https://github.com",
+          },
+          cloneUrl: "git://github.com/myorg/myrepo.git",
+        });
+      }),
+    );
+
+    it.effect("parses full git+ssh:// URL into repository model", () =>
+      Effect.gen(function* () {
+        const result = yield* RepositoryLive.parseFullUrlToRepository("git+ssh://git@github.com/myorg/myrepo.git");
+
+        expect(result).toEqual({
+          name: "myrepo",
+          organization: "myorg",
+          provider: {
+            name: "github",
+            baseUrl: "https://github.com",
+          },
+          cloneUrl: "git+ssh://git@github.com/myorg/myrepo.git",
+        });
+      }),
+    );
+
+    it.effect("parses full ssh:// URL into repository model", () =>
+      Effect.gen(function* () {
+        const result = yield* RepositoryLive.parseFullUrlToRepository("ssh://git@github.com/myorg/myrepo.git");
+
+        expect(result).toEqual({
+          name: "myrepo",
+          organization: "myorg",
+          provider: {
+            name: "github",
+            baseUrl: "https://github.com",
+          },
+          cloneUrl: "ssh://git@github.com/myorg/myrepo.git",
+        });
+      }),
+    );
+
+    it.effect("parses full SSH URL into repository model", () =>
+      Effect.gen(function* () {
+        const result = yield* RepositoryLive.parseFullUrlToRepository("git@gitlab.com:mygroup/myproject.git");
+
+        expect(result).toEqual({
+          name: "myproject",
+          organization: "mygroup",
+          provider: {
+            name: "gitlab",
+            baseUrl: "https://gitlab.com",
+          },
+          cloneUrl: "git@gitlab.com:mygroup/myproject.git",
+        });
+      }),
+    );
+
+    it.effect("fails for invalid URL format", () =>
+      Effect.gen(function* () {
+        const result = yield* Effect.exit(RepositoryLive.parseFullUrlToRepository("not-a-valid-url"));
+
+        expect(Exit.isFailure(result)).toBe(true);
+      }),
+    );
+  });
+
+  describe("isFullUrl", () => {
+    it.effect("returns true for HTTP URLs", () =>
+      Effect.gen(function* () {
+        expect(isFullUrl("http://github.com/myorg/myrepo.git")).toBe(true);
+      }),
+    );
+
+    it.effect("returns true for HTTPS URLs", () =>
+      Effect.gen(function* () {
+        expect(isFullUrl("https://github.com/myorg/myrepo.git")).toBe(true);
+      }),
+    );
+
+    it.effect("returns true for git:// URLs", () =>
+      Effect.gen(function* () {
+        expect(isFullUrl("git://github.com/myorg/myrepo.git")).toBe(true);
+      }),
+    );
+
+    it.effect("returns true for git+ssh:// URLs", () =>
+      Effect.gen(function* () {
+        expect(isFullUrl("git+ssh://git@github.com/myorg/myrepo.git")).toBe(true);
+      }),
+    );
+
+    it.effect("returns true for ssh:// URLs", () =>
+      Effect.gen(function* () {
+        expect(isFullUrl("ssh://git@github.com/myorg/myrepo.git")).toBe(true);
+      }),
+    );
+
+    it.effect("returns true for scp-style SSH URLs", () =>
+      Effect.gen(function* () {
+        expect(isFullUrl("git@github.com:myorg/myrepo.git")).toBe(true);
+      }),
+    );
+
+    it.effect("returns false for org/repo inputs", () =>
+      Effect.gen(function* () {
+        expect(isFullUrl("myorg/myrepo")).toBe(false);
       }),
     );
   });
