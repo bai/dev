@@ -287,16 +287,19 @@ const mainProgram = Effect.gen(function* () {
     return yield* tracing.createSdkConfig();
   }).pipe(
     Effect.provide(appLayer),
-    Effect.catchAll((error) => {
-      console.warn("Failed to initialize tracing configuration, using defaults:", error);
-      return Effect.succeed({
-        resource: {
-          serviceName: "dev-cli",
-          serviceVersion: "0.0.1",
-        },
-        spanProcessor: undefined, // Will use default NoopSpanProcessor
-      });
-    }),
+    Effect.catchAll((error) =>
+      Effect.gen(function* () {
+        const errorMessage = extractErrorMessage(error);
+        yield* Effect.logWarning(`Failed to initialize tracing configuration, using defaults: ${errorMessage}`);
+        return {
+          resource: {
+            serviceName: "dev-cli",
+            serviceVersion: "0.0.1",
+          },
+          spanProcessor: undefined, // Will use default NoopSpanProcessor
+        };
+      }),
+    ),
   );
 
   // Create tracing layer with the configuration
