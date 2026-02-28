@@ -1,7 +1,7 @@
 import { Args, Command } from "@effect/cli";
 import { Effect } from "effect";
 
-import { CommandRegistryTag } from "../domain/command-registry-port";
+import { CommandRegistryTag, type RegisteredCommand } from "../domain/command-registry-port";
 import { DirectoryTag } from "../domain/directory-port";
 import { unknownError, type DevError } from "../domain/errors";
 import { InteractiveSelectorTag } from "../domain/interactive-selector-port";
@@ -115,7 +115,7 @@ export const registerCdCommand: Effect.Effect<void, never, CommandRegistryTag> =
   const registry = yield* CommandRegistryTag;
   yield* registry.register({
     name: "cd",
-    command: cdCommand as Command.Command<string, never, any, any>,
+    command: cdCommand as RegisteredCommand,
     displayHelp,
   });
 });

@@ -1,7 +1,7 @@
 import { Args, Command } from "@effect/cli";
 import { Effect } from "effect";
 
-import { CommandRegistryTag } from "../domain/command-registry-port";
+import { CommandRegistryTag, type RegisteredCommand } from "../domain/command-registry-port";
 import { unknownError } from "../domain/errors";
 import { FileSystemTag } from "../domain/file-system-port";
 import { GitTag } from "../domain/git-port";
@@ -179,7 +179,7 @@ export const registerCloneCommand: Effect.Effect<void, never, CommandRegistryTag
   const registry = yield* CommandRegistryTag;
   yield* registry.register({
     name: "clone",
-    command: cloneCommand as Command.Command<string, never, any, any>,
+    command: cloneCommand as RegisteredCommand,
     displayHelp,
   });
 });

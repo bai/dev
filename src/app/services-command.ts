@@ -1,7 +1,7 @@
 import { Args, Command, Options } from "@effect/cli";
 import { Effect } from "effect";
 
-import { CommandRegistryTag } from "../domain/command-registry-port";
+import { CommandRegistryTag, type RegisteredCommand } from "../domain/command-registry-port";
 import { DockerServicesTag, type ServiceName } from "../domain/docker-services-port";
 
 const serviceArg = Args.text({ name: "service" }).pipe(Args.repeated);
@@ -163,7 +163,7 @@ export const registerServicesCommand: Effect.Effect<void, never, CommandRegistry
   const registry = yield* CommandRegistryTag;
   yield* registry.register({
     name: "services",
-    command: servicesCommand as Command.Command<string, never, any, any>,
+    command: servicesCommand as RegisteredCommand,
     displayHelp,
   });
 });

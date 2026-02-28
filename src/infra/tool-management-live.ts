@@ -11,10 +11,10 @@ import { MiseToolsTag, type MiseTools } from "./mise-tools-live";
  * Adapter that wraps a tool service to match the ToolManager interface
  */
 const adaptToolService = (toolService: {
-  getCurrentVersion: () => Effect.Effect<string | null, any>;
-  checkVersion: () => Effect.Effect<{ isValid: boolean; currentVersion: string | null }, any>;
-  performUpgrade: () => Effect.Effect<boolean, any>;
-  ensureVersionOrUpgrade: () => Effect.Effect<void, any>;
+  getCurrentVersion: ToolManager["getCurrentVersion"];
+  checkVersion: ToolManager["checkVersion"];
+  performUpgrade: ToolManager["performUpgrade"];
+  ensureVersionOrUpgrade: ToolManager["ensureVersionOrUpgrade"];
 }): ToolManager => ({
   getCurrentVersion: toolService.getCurrentVersion,
   checkVersion: toolService.checkVersion,

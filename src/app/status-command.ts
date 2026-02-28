@@ -1,7 +1,7 @@
 import { Command } from "@effect/cli";
 import { Effect } from "effect";
 
-import { CommandRegistryTag } from "../domain/command-registry-port";
+import { CommandRegistryTag, type RegisteredCommand } from "../domain/command-registry-port";
 import { DockerServicesTag, type ServiceStatus } from "../domain/docker-services-port";
 import { statusCheckError } from "../domain/errors";
 import { HealthCheckTag } from "../domain/health-check-port";
@@ -357,7 +357,7 @@ export const registerStatusCommand: Effect.Effect<void, never, CommandRegistryTa
   const registry = yield* CommandRegistryTag;
   yield* registry.register({
     name: "status",
-    command: statusCommand as Command.Command<string, never, any, any>,
+    command: statusCommand as RegisteredCommand,
     displayHelp,
   });
 });

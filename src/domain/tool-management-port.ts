@@ -1,6 +1,6 @@
 import { Context, type Effect } from "effect";
 
-import { type ExternalToolError, type UnknownError } from "./errors";
+import { type ExternalToolError, type ShellExecutionError, type UnknownError } from "./errors";
 
 /**
  * Result of a tool version check
@@ -14,10 +14,10 @@ export interface ToolVersionCheckResult {
  * Individual tool manager interface
  */
 export interface ToolManager {
-  readonly getCurrentVersion: () => Effect.Effect<string | null, UnknownError>;
-  readonly checkVersion: () => Effect.Effect<ToolVersionCheckResult, UnknownError>;
-  readonly performUpgrade: () => Effect.Effect<boolean, UnknownError>;
-  readonly ensureVersionOrUpgrade: () => Effect.Effect<void, ExternalToolError | UnknownError>;
+  readonly getCurrentVersion: () => Effect.Effect<string | null, ShellExecutionError | UnknownError>;
+  readonly checkVersion: () => Effect.Effect<ToolVersionCheckResult, ShellExecutionError | UnknownError>;
+  readonly performUpgrade: () => Effect.Effect<boolean, ShellExecutionError | UnknownError>;
+  readonly ensureVersionOrUpgrade: () => Effect.Effect<void, ExternalToolError | ShellExecutionError | UnknownError>;
 }
 
 /**

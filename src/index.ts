@@ -2,6 +2,7 @@ import { Command } from "@effect/cli";
 import { NodeSdk } from "@effect/opentelemetry";
 import { BunRuntime } from "@effect/platform-bun";
 import { Effect, Layer } from "effect";
+import type { Option } from "effect/Option";
 
 import { registerCdCommand } from "./app/cd-command";
 import { registerCloneCommand } from "./app/clone-command";
@@ -12,7 +13,7 @@ import { registerStatusCommand } from "./app/status-command";
 import { registerSyncCommand } from "./app/sync-command";
 import { registerUpCommand } from "./app/up-command";
 import { registerUpgradeCommand } from "./app/upgrade-command";
-import { CommandRegistryTag, type CommandRegistry } from "./domain/command-registry-port";
+import { CommandRegistryTag, type CommandRegistry, type RegisteredCommand } from "./domain/command-registry-port";
 import { exitCode, extractErrorMessage, type DevError } from "./domain/errors";
 import { TracingTag } from "./domain/tracing-port";
 import { VersionTag } from "./domain/version-port";
@@ -99,15 +100,12 @@ const checkAndDisplayHelp = (
  */
 const createMainCommand = (
   registry: CommandRegistry,
-): Effect.Effect<Command.Command<"dev", any, any, any>, never, never> =>
+): Effect.Effect<Command.Command<"dev", unknown, unknown, { readonly subcommand: Option<unknown> }>, never, never> =>
   Effect.gen(function* () {
     const commands = yield* registry.getCommands();
     // TypeScript requires a non-empty array for withSubcommands
     // We know we have commands registered, so this cast is safe
-    const nonEmptyCommands = commands as unknown as readonly [
-      Command.Command<any, any, any, any>,
-      ...Command.Command<any, any, any, any>[],
-    ];
+    const nonEmptyCommands = commands as unknown as readonly [RegisteredCommand, ...RegisteredCommand[]];
     return Command.make("dev", {}, () => Effect.logInfo("Use --help to see available commands")).pipe(
       Command.withSubcommands(nonEmptyCommands),
     );
@@ -126,7 +124,7 @@ const runCli = (
     version: string;
     description?: string;
   },
-): Effect.Effect<void, never, any> => {
+): Effect.Effect<void, never, unknown> => {
   return Effect.scoped(
     Effect.gen(function* () {
       // Add shutdown finalizer for graceful cleanup

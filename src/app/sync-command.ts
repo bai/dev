@@ -3,7 +3,7 @@ import path from "path";
 import { Command } from "@effect/cli";
 import { Effect } from "effect";
 
-import { CommandRegistryTag } from "../domain/command-registry-port";
+import { CommandRegistryTag, type RegisteredCommand } from "../domain/command-registry-port";
 import { DirectoryTag } from "../domain/directory-port";
 import { GitTag } from "../domain/git-port";
 import { PathServiceTag } from "../domain/path-service";
@@ -93,7 +93,7 @@ export const registerSyncCommand: Effect.Effect<void, never, CommandRegistryTag>
   const registry = yield* CommandRegistryTag;
   yield* registry.register({
     name: "sync",
-    command: syncCommand as Command.Command<string, never, any, any>,
+    command: syncCommand as RegisteredCommand,
     displayHelp,
   });
 });

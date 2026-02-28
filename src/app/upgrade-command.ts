@@ -1,7 +1,7 @@
 import { Command } from "@effect/cli";
 import { Effect } from "effect";
 
-import { CommandRegistryTag } from "../domain/command-registry-port";
+import { CommandRegistryTag, type RegisteredCommand } from "../domain/command-registry-port";
 import { ConfigLoaderTag } from "../domain/config-loader-port";
 import { configSchema, type Config } from "../domain/config-schema";
 import { unknownError, type DevError } from "../domain/errors";
@@ -319,7 +319,7 @@ function checkTool(toolName: string, toolManager: ToolManagement[keyof ToolManag
 /**
  * Show success message and usage examples
  */
-function showSuccessMessage(): Effect.Effect<void, DevError, any> {
+function showSuccessMessage(): Effect.Effect<void, DevError, never> {
   return Effect.gen(function* () {
     yield* Effect.logInfo("🎉 Upgrade completed successfully!");
     yield* Effect.logInfo("");
@@ -340,7 +340,7 @@ export const registerUpgradeCommand: Effect.Effect<void, never, CommandRegistryT
   const registry = yield* CommandRegistryTag;
   yield* registry.register({
     name: "upgrade",
-    command: upgradeCommand as Command.Command<string, never, any, any>,
+    command: upgradeCommand as RegisteredCommand,
     displayHelp,
   });
 });

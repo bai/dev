@@ -1,7 +1,7 @@
 import { Command } from "@effect/cli";
 import { Effect } from "effect";
 
-import { CommandRegistryTag } from "../domain/command-registry-port";
+import { CommandRegistryTag, type RegisteredCommand } from "../domain/command-registry-port";
 import { FileSystemTag } from "../domain/file-system-port";
 import { MiseTag } from "../domain/mise-port";
 
@@ -59,7 +59,7 @@ export const registerUpCommand: Effect.Effect<void, never, CommandRegistryTag> =
   const registry = yield* CommandRegistryTag;
   yield* registry.register({
     name: "up",
-    command: upCommand as Command.Command<string, never, any, any>,
+    command: upCommand as RegisteredCommand,
     displayHelp,
   });
 });
