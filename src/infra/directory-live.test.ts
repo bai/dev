@@ -13,7 +13,7 @@ describe("directory-live", () => {
     it("creates a Directory implementation", () => {
       const mockFileSystem: FileSystem = {
         exists: () => Effect.succeed(true),
-        mkdir: () => Effect.succeed(undefined),
+        mkdir: () => Effect.void,
         readFile: () => fileSystemError("Not implemented"),
         writeFile: () => fileSystemError("Not implemented"),
         findDirectoriesGlob: () => Effect.succeed([]),
@@ -47,7 +47,7 @@ describe("directory-live", () => {
       Effect.gen(function* () {
         const mockFileSystem: FileSystem = {
           exists: () => Effect.succeed(false),
-          mkdir: () => Effect.succeed(undefined),
+          mkdir: () => Effect.void,
           readFile: () => fileSystemError("Not implemented"),
           writeFile: () => fileSystemError("Not implemented"),
           findDirectoriesGlob: () => fileSystemError("Not implemented"),
@@ -165,7 +165,7 @@ describe("directory-live", () => {
       Effect.gen(function* () {
         const mockFileSystem: FileSystem = {
           exists: () => Effect.succeed(false),
-          mkdir: () => Effect.succeed(undefined),
+          mkdir: () => Effect.void,
           readFile: () => fileSystemError("Not implemented"),
           writeFile: () => fileSystemError("Not implemented"),
           findDirectoriesGlob: () => Effect.succeed([]),
@@ -203,7 +203,7 @@ describe("directory-live", () => {
 
         const mockFileSystem: FileSystem = {
           exists: () => Effect.succeed(true),
-          mkdir: () => Effect.succeed(undefined),
+          mkdir: () => Effect.void,
           readFile: () => fileSystemError("Not implemented"),
           writeFile: () => fileSystemError("Not implemented"),
           findDirectoriesGlob: () => Effect.succeed(expectedDirs),
@@ -242,7 +242,7 @@ describe("directory-live", () => {
 
         const mockFileSystem: FileSystem = {
           exists: () => Effect.succeed(true),
-          mkdir: () => Effect.succeed(undefined),
+          mkdir: () => Effect.void,
           readFile: () => fileSystemError("Not implemented"),
           writeFile: () => fileSystemError("Not implemented"),
           findDirectoriesGlob: (baseDir: string, pattern: string) =>
@@ -284,7 +284,7 @@ describe("directory-live", () => {
       Effect.gen(function* () {
         const mockFileSystem: FileSystem = {
           exists: () => Effect.succeed(true),
-          mkdir: () => Effect.succeed(undefined),
+          mkdir: () => Effect.void,
           readFile: () => fileSystemError("Not implemented"),
           writeFile: () => fileSystemError("Not implemented"),
           findDirectoriesGlob: () => fileSystemError("Permission denied", "/home/user/dev"),
@@ -321,7 +321,7 @@ describe("directory-live", () => {
       Effect.gen(function* () {
         const mockFileSystem: FileSystem = {
           exists: () => Effect.succeed(true),
-          mkdir: () => Effect.succeed(undefined),
+          mkdir: () => Effect.void,
           readFile: () => fileSystemError("Not implemented"),
           writeFile: () => fileSystemError("Not implemented"),
           findDirectoriesGlob: () => fileSystemError("Glob search failed"),
@@ -360,7 +360,7 @@ describe("directory-live", () => {
       Effect.gen(function* () {
         const mockFileSystem: FileSystem = {
           exists: () => Effect.succeed(true),
-          mkdir: () => Effect.succeed(undefined),
+          mkdir: () => Effect.void,
           readFile: () => fileSystemError("Not implemented"),
           writeFile: () => fileSystemError("Not implemented"),
           findDirectoriesGlob: () => Effect.succeed([]),
@@ -408,7 +408,7 @@ describe("directory-live", () => {
 
         const mockFileSystem: FileSystem = {
           exists: () => Effect.succeed(true),
-          mkdir: () => Effect.succeed(undefined),
+          mkdir: () => Effect.void,
           readFile: () => fileSystemError("Not implemented"),
           writeFile: () => fileSystemError("Not implemented"),
           findDirectoriesGlob: () => Effect.succeed(mockDirs),
@@ -444,7 +444,7 @@ describe("directory-live", () => {
       Effect.gen(function* () {
         const mockFileSystem: FileSystem = {
           exists: () => Effect.succeed(true),
-          mkdir: () => Effect.succeed(undefined),
+          mkdir: () => Effect.void,
           readFile: () => fileSystemError("Not implemented"),
           writeFile: () => fileSystemError("Not implemented"),
           findDirectoriesGlob: () => Effect.succeed([]),

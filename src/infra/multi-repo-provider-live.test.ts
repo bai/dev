@@ -41,7 +41,7 @@ describe("multi-repo-provider-live", () => {
     }
 
     downloadFile(_url: string, _destinationPath: string): Effect.Effect<void, never> {
-      return Effect.succeed(undefined);
+      return Effect.void;
     }
 
     checkConnectivity(_url: string): Effect.Effect<boolean> {

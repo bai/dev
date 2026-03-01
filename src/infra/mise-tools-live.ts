@@ -73,7 +73,7 @@ export const makeMiseToolsLive = (
         }
         return null;
       }),
-      Effect.catchAll(() => Effect.succeed(null)),
+      Effect.orElseSucceed(() => null),
     );
 
   // Get version info including latest available version from mise version --json
@@ -95,10 +95,10 @@ export const makeMiseToolsLive = (
               latestVersion: json.latest ?? null,
             };
           }),
-          Effect.catchAll(() => Effect.succeed({ currentVersion: null, latestVersion: null })),
+          Effect.orElseSucceed(() => ({ currentVersion: null, latestVersion: null })),
         );
       }),
-      Effect.catchAll(() => Effect.succeed({ currentVersion: null, latestVersion: null })),
+      Effect.orElseSucceed(() => ({ currentVersion: null, latestVersion: null })),
     );
 
   const checkVersion = (): Effect.Effect<{ isValid: boolean; currentVersion: string | null }, ShellExecutionError> =>

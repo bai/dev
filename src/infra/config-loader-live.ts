@@ -64,7 +64,7 @@ export const makeConfigLoaderLive = (fileSystem: FileSystem, network: Network, c
             }).pipe(Effect.flatMap((validatedConfig) => save(validatedConfig).pipe(Effect.map(() => validatedConfig))));
           }),
           // Fall back to current config if remote fetch fails
-          Effect.catchAll(() => Effect.succeed(currentConfig)),
+          Effect.orElseSucceed(() => currentConfig),
         );
       }),
     );

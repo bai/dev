@@ -13,8 +13,8 @@ const mockFileSystem: FileSystem = {
   getCwd: () => Effect.succeed("/test/directory"),
   exists: (_path) => Effect.succeed(true),
   readFile: (_path) => Effect.succeed("test content"),
-  writeFile: (_path, _content) => Effect.succeed(undefined),
-  mkdir: (_path, _recursive) => Effect.succeed(undefined),
+  writeFile: (_path, _content) => Effect.void,
+  mkdir: (_path, _recursive) => Effect.void,
   findDirectoriesGlob: (_basePath, _pattern) => Effect.succeed([]),
   resolvePath: (path: string) => (path.startsWith("~") ? path.replace("~", "/home/user") : path),
 };
@@ -23,15 +23,15 @@ const mockMise: Mise & {
   lastCall: { taskName: string; args?: readonly string[]; cwd?: string } | undefined;
 } = {
   checkInstallation: () => Effect.succeed({ version: "2024.1.0", runtimeVersions: {} }),
-  install: () => Effect.succeed(undefined),
-  installTools: () => Effect.succeed(undefined),
+  install: () => Effect.void,
+  installTools: () => Effect.void,
   runTask: (taskName: string, args?: readonly string[], cwd?: string) => {
     // Store the call for assertions
     mockMise.lastCall = { taskName, args, cwd };
-    return Effect.succeed(undefined);
+    return Effect.void;
   },
   getTasks: () => Effect.succeed(["lint", "test", "build"]),
-  setupGlobalConfig: () => Effect.succeed(undefined),
+  setupGlobalConfig: () => Effect.void,
   lastCall: undefined as { taskName: string; args?: readonly string[]; cwd?: string } | undefined,
 };
 

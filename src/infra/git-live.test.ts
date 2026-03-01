@@ -41,7 +41,7 @@ class MockShell implements Shell {
   }
 
   setProcessCwd(_path: string): Effect.Effect<void> {
-    return Effect.succeed(undefined);
+    return Effect.void;
   }
 }
 

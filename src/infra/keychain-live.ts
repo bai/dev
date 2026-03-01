@@ -63,7 +63,7 @@ export const makeKeychainLive = (shell: Shell): Keychain => ({
   hasCredential: (service: string, account: string): Effect.Effect<boolean> =>
     shell.exec("security", ["find-generic-password", "-s", service, "-a", account]).pipe(
       Effect.map((result) => result.exitCode === 0),
-      Effect.catchAll(() => Effect.succeed(false)),
+      Effect.orElseSucceed(() => false),
     ),
 });
 

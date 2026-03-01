@@ -57,7 +57,7 @@ export const makeFzfToolsLive = (shell: Shell): FzfTools => ({
         }
         return null;
       }),
-      Effect.catchAll(() => Effect.succeed(null)),
+      Effect.orElseSucceed(() => null),
     ),
 
   checkVersion: (): Effect.Effect<{ isValid: boolean; currentVersion: string | null }, ShellExecutionError> =>

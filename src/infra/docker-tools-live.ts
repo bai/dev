@@ -42,7 +42,7 @@ export const makeDockerToolsLive = (shell: Shell): DockerTools => ({
         }
         return null;
       }),
-      Effect.catchAll(() => Effect.succeed(null)),
+      Effect.orElseSucceed(() => null),
     ),
 
   getComposeVersion: (): Effect.Effect<string | null, never> =>
@@ -56,7 +56,7 @@ export const makeDockerToolsLive = (shell: Shell): DockerTools => ({
         }
         return null;
       }),
-      Effect.catchAll(() => Effect.succeed(null)),
+      Effect.orElseSucceed(() => null),
     ),
 
   performHealthCheck: (): Effect.Effect<HealthCheckResult, HealthCheckError> =>

@@ -46,12 +46,10 @@ export const makeMiseLive = (
               runtimeVersions,
             };
           }),
-          Effect.catchAll(() =>
-            Effect.succeed({
-              version,
-              runtimeVersions: {},
-            }),
-          ),
+          Effect.orElseSucceed(() => ({
+            version,
+            runtimeVersions: {},
+          })),
         );
       }),
     ),

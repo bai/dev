@@ -364,7 +364,7 @@ export const makeDockerServicesLive = (
 
     isDockerAvailable: (): Effect.Effect<boolean, never> =>
       Effect.gen(function* () {
-        const result = yield* shell.exec("docker", ["info"]).pipe(Effect.catchAll(() => Effect.succeed(null)));
+        const result = yield* shell.exec("docker", ["info"]).pipe(Effect.orElseSucceed(() => null));
         const isAvailable = result !== null && result.exitCode === 0;
         yield* Effect.annotateCurrentSpan("docker.available", isAvailable);
         if (result !== null) {

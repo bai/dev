@@ -13,7 +13,7 @@ describe("cd-command", () => {
     constructor(private readonly directories: readonly string[]) {}
 
     ensureBaseDirectoryExists(): Effect.Effect<void, never, never> {
-      return Effect.succeed(undefined);
+      return Effect.void;
     }
 
     findDirs(): Effect.Effect<string[], never, never> {
@@ -34,7 +34,7 @@ describe("cd-command", () => {
 
     changeDirectory(path: string): Effect.Effect<void, never, never> {
       this.changedDirectories.push(path);
-      return Effect.succeed(undefined);
+      return Effect.void;
     }
   }
 

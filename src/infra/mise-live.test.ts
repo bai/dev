@@ -59,7 +59,7 @@ const mockShell: Shell & {
     return Effect.succeed(0);
   },
 
-  setProcessCwd: () => Effect.succeed(undefined),
+  setProcessCwd: () => Effect.void,
 
   lastCall: undefined as { command: string; args: readonly string[]; options?: { cwd?: string } } | undefined,
   lastInteractiveCall: undefined as
@@ -69,8 +69,8 @@ const mockShell: Shell & {
 
 const mockFileSystem = {
   exists: (_path) => Effect.succeed(true),
-  mkdir: (_path, _recursive) => Effect.succeed(undefined),
-  writeFile: (_path, _content) => Effect.succeed(undefined),
+  mkdir: (_path, _recursive) => Effect.void,
+  writeFile: (_path, _content) => Effect.void,
   readFile: (_path) => Effect.succeed("test content"),
   getCwd: () => Effect.succeed("/test/directory"),
   findDirectoriesGlob: (_basePath, _pattern) => Effect.succeed([]),
@@ -91,7 +91,7 @@ const mockConfigLoader: ConfigLoader = {
         },
       }),
     ),
-  save: () => Effect.succeed(undefined),
+  save: () => Effect.void,
   refresh: () =>
     Effect.succeed(
       configSchema.parse({

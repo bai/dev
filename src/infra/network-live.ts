@@ -71,7 +71,7 @@ export const makeNetworkLive = (fileSystem: FileSystem): Network => ({
         return response.ok;
       },
       catch: () => false,
-    }).pipe(Effect.catchAll(() => Effect.succeed(false))),
+    }).pipe(Effect.orElseSucceed(() => false)),
 });
 
 // Effect Layer for dependency injection

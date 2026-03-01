@@ -9,9 +9,7 @@ const getCurrentGitCommitSha = Effect.gen(function* () {
   const pathService = yield* PathServiceTag;
   const gitPort = yield* GitTag;
 
-  const result = yield* gitPort
-    .getCurrentCommitSha(pathService.devDir)
-    .pipe(Effect.catchAll(() => Effect.succeed("unknown")));
+  const result = yield* gitPort.getCurrentCommitSha(pathService.devDir).pipe(Effect.orElseSucceed(() => "unknown"));
 
   return result;
 });

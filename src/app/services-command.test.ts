@@ -31,7 +31,7 @@ class MockDockerServices implements DockerServices {
   private currentSpanName(): Effect.Effect<string, never, never> {
     return Effect.currentSpan.pipe(
       Effect.map((span) => span.name),
-      Effect.catchAll(() => Effect.succeed("missing-span")),
+      Effect.orElseSucceed(() => "missing-span"),
     );
   }
 

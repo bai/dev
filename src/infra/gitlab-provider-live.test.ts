@@ -32,7 +32,7 @@ describe("gitlab-provider-live", () => {
     }
 
     downloadFile(_url: string, _destinationPath: string): Effect.Effect<void, never, never> {
-      return Effect.succeed(undefined);
+      return Effect.void;
     }
 
     checkConnectivity(_url: string): Effect.Effect<boolean, never, never> {

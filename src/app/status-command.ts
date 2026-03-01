@@ -136,7 +136,7 @@ const executeCommand = (
 
     const result = yield* shell
       .exec(cmd, args, options)
-      .pipe(Effect.catchAll(() => Effect.succeed({ exitCode: -1, stdout: "", stderr: "" } as const)));
+      .pipe(Effect.orElseSucceed(() => ({ exitCode: -1, stdout: "", stderr: "" }) as const));
 
     return result;
   });
@@ -223,9 +223,7 @@ const showDockerServicesStatus: Effect.Effect<void, never, DockerServicesTag> = 
     return;
   }
 
-  const statuses = yield* dockerServices
-    .status()
-    .pipe(Effect.catchAll(() => Effect.succeed([] as readonly ServiceStatus[])));
+  const statuses = yield* dockerServices.status().pipe(Effect.orElseSucceed(() => [] as readonly ServiceStatus[]));
 
   if (statuses.length === 0) {
     yield* Effect.logInfo("🐳 Docker Services: No services configured");

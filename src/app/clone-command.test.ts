@@ -23,7 +23,7 @@ describe("clone-command", () => {
     }
 
     writeFile(_path: string, _content: string): Effect.Effect<void, never, never> {
-      return Effect.succeed(undefined);
+      return Effect.void;
     }
 
     readFile(_path: string): Effect.Effect<string, never, never> {
@@ -31,7 +31,7 @@ describe("clone-command", () => {
     }
 
     mkdir(_path: string, _recursive?: boolean): Effect.Effect<void, never, never> {
-      return Effect.succeed(undefined);
+      return Effect.void;
     }
 
     findDirectoriesGlob(_basePath: string, _pattern: string): Effect.Effect<string[], never, never> {
@@ -52,11 +52,11 @@ describe("clone-command", () => {
 
     cloneRepositoryToPath(repository: Repository, destinationPath: string): Effect.Effect<void, never, never> {
       this.clonedRepos.push({ repository, destinationPath });
-      return Effect.succeed(undefined);
+      return Effect.void;
     }
 
     pullLatestChanges(_repositoryPath: string): Effect.Effect<void, never, never> {
-      return Effect.succeed(undefined);
+      return Effect.void;
     }
 
     isGitRepository(_path: string): Effect.Effect<boolean, never, never> {
@@ -117,7 +117,7 @@ describe("clone-command", () => {
 
     changeDirectory(path: string): Effect.Effect<void, never, never> {
       this.changedDirectories.push(path);
-      return Effect.succeed(undefined);
+      return Effect.void;
     }
   }
 

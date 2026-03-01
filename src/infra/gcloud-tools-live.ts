@@ -70,7 +70,7 @@ export const makeGcloudToolsLive = (shell: Shell, filesystem: FileSystem, pathSe
         }
         return null;
       }),
-      Effect.catchAll(() => Effect.succeed(null)),
+      Effect.orElseSucceed(() => null),
     );
 
   const checkVersion = (): Effect.Effect<{ isValid: boolean; currentVersion: string | null }, ShellExecutionError> =>

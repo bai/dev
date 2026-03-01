@@ -107,7 +107,7 @@ const makeTracingLive = (
 
       // Get version from the version service
       const version = yield* versionService.getVersion.pipe(
-        Effect.catchAll(() => Effect.succeed("0.0.1")),
+        Effect.orElseSucceed(() => "0.0.1"),
         Effect.withSpan("version.get_cli"),
       );
 

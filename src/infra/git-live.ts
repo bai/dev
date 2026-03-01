@@ -23,8 +23,6 @@ export const makeGitLive = (shell: Shell): Git => ({
         if (result.exitCode !== 0) {
           return yield* gitError(`Failed to clone repository: ${result.stderr}`);
         }
-
-        return yield* Effect.void;
       }),
     ),
 
