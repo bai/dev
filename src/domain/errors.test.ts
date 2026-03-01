@@ -69,13 +69,11 @@ describe("errors", () => {
       expect(extractErrorMessage(undefined)).toBe("undefined");
     });
 
-    it("handles Effect-TS domain errors", () => {
+    it("extracts reason from Effect-TS domain errors", () => {
       const configError = new ConfigError({ reason: "Configuration file not found" });
       const result = extractErrorMessage(configError);
 
-      // ConfigError should be JSON.stringified since it has empty message and _tag
-      expect(result).toContain("ConfigError");
-      expect(result).toContain("Configuration file not found");
+      expect(result).toBe("Configuration file not found");
     });
 
     it("handles objects with non-string message property", () => {

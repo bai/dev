@@ -5,6 +5,7 @@ import { Effect } from "effect";
 
 import { CommandRegistryTag, type RegisteredCommand } from "../domain/command-registry-port";
 import { DirectoryTag } from "../domain/directory-port";
+import { extractErrorMessage } from "../domain/errors";
 import { GitTag } from "../domain/git-port";
 import { PathServiceTag } from "../domain/path-service";
 
@@ -71,7 +72,7 @@ export const syncCommand = Command.make("sync", {}, () =>
             }),
             Effect.catchAll((error) => {
               failureCount++;
-              return Effect.logError(`❌ Failed to sync ${dir}: ${error.message || "Unknown error"}`);
+              return Effect.logError(`❌ Failed to sync ${dir}: ${extractErrorMessage(error)}`);
             }),
           );
         }).pipe(Effect.withSpan("sync.repo", { attributes: { repo: dir } })),

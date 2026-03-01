@@ -167,6 +167,10 @@ export const isDockerServiceError = (e: DevError): e is DockerServiceError => e.
  */
 export const extractErrorMessage = (error: unknown): string => {
   if (error instanceof Error) {
+    if ("reason" in error && typeof error.reason === "string" && error.reason.length > 0) {
+      return error.reason;
+    }
+
     // Check if it's an Effect-TS tagged error with empty message
     if (error.message === "" && error && typeof error === "object" && "_tag" in error) {
       // Handle Effect domain errors that extend Error but have empty message
@@ -180,6 +184,10 @@ export const extractErrorMessage = (error: unknown): string => {
   }
 
   if (error && typeof error === "object") {
+    if ("reason" in error && typeof error.reason === "string" && error.reason.length > 0) {
+      return error.reason;
+    }
+
     if ("message" in error) {
       return String(error.message);
     }
