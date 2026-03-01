@@ -42,7 +42,7 @@
 | FP Runtime         | **Effect**                      |
 | CLI Framework      | **@effect/cli**                 |
 | Test Runner        | **Vitest**                      |
-| Relational Store   | **SQLite** via **drizzle-orm** |
+| Relational Store   | **SQLite** via **drizzle-orm**  |
 | Git CLI            | `git`                           |
 
 ---
@@ -89,7 +89,7 @@ This approach provides:
 
 *All* arrows point **inwards** – inner layers never import from outer ones.
 
-```
+```text
 CLI  →  Application  →  Domain
 Infra →  Domain
 ```
@@ -140,7 +140,7 @@ src/
 
 | Layer         | Can Import From                 | Must **NOT** Import From |
 | ------------- | ------------------------------- | ------------------------ |
-| **Domain**    | Effect, other domain modules    | App, Infra, CLI         |
+| **Domain**    | Effect, other domain modules    | App, Infra, CLI          |
 | **App**       | Domain, Effect                  | Infra, CLI               |
 | **Infra**     | Domain, Effect, external libs   | App, CLI                 |
 | **Root**      | Every layer                     | —                        |
@@ -367,7 +367,7 @@ Use in-memory fakes to avoid I/O.
 
 ### 13.2 Integration & E2E Suites
 
-```
+```text
 tests/
 ├─ integration/
 └─ e2e/

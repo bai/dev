@@ -1,55 +1,36 @@
-# Repository Guidelines
+# AGENTS.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+CLI tool built with Effect-TS that provides directory navigation, repository management, and development environment setup.
 
-## Project Notes
+## Essential Directives
 
-You absolutely must follow the rules in this file when working with code in this repository and adhere to best practices of idiomatic Effect-TS code.
+- **ALWAYS USE PARALLEL TOOLS WHEN APPLICABLE.**
+- **Prefer automation**: execute requested actions without confirmation unless blocked by missing info or safety/irreversibility.
+- **Package Manager**: Bun
+- **Commands**:
+  - `bun run typecheck`
+  - `bun run lint` / `bun run lint:fix`
+  - `bun run format` / `bun run format:fix`
+  - `bun run test` / `bun run test:bench`
+  - `bun run db:generate` (for migrations)
+  - `bun run src/index.ts --help`
 
-### Development Commands
+## Architecture & Structure
 
-```bash
-# Type checking
-bun run typecheck
+This CLI tool follows hexagonal architecture principles with dependency injection via Effect layers.
 
-# Linting
-bun run lint
-bun run lint:fix
+### Core Architecture Patterns
 
-# Code formatting
-bun run prettier
-bun run prettier:fix
-
-# Testing
-bun run test
-bun run test:bench
-
-# Database migrations
-bun run db:generate
-
-# Run locally
-bun run src/index.ts --help
-```
-
-### Architecture Overview
-
-This is a CLI tool built with Effect-TS that provides directory navigation, repository management, and development environment setup. The architecture follows hexagonal architecture principles with dependency injection via Effect layers.
-
-#### Core Architecture Patterns
-
-**Two-Stage Dynamic Wiring**: The application uses a two-stage setup process:
+**Two-Stage Dynamic Wiring**:
 
 1. **Stage 1**: Load configuration via `loadConfiguration()` (self-contained with bootstrap dependencies)
 2. **Stage 2**: Build dynamic layers using runtime configuration values via `buildAppLayer()`
-
-This eliminates hardcoded values and allows for dynamic configuration at runtime.
 
 **Effect-TS Patterns**:
 
 - Uses `Effect.gen` with generators for sequential operations
 - Implements proper resource management with `Effect.addFinalizer`
 - Uses `BunRuntime.runMain` for the application entry point
-- Follows the Effect-TS style guide for imports and code structure
 
 **Domain-Driven Design**:
 
@@ -58,52 +39,21 @@ This eliminates hardcoded values and allows for dynamic configuration at runtime
 - **Application layer** (`src/app/`): Commands and application services
 - **Composition root** (`src/wiring.ts`): Dynamic configuration loading and layer building
 
-#### Key Components
+### Key Components
 
-**Command Structure**: Built using `@effect/cli` with subcommands for:
+- **Command Structure**: Built using `@effect/cli`. Added to the main command in `src/index.ts`.
+- **Health Check System**: Implements synchronous health monitoring (on-demand via `dev status`), stores results in DB, tracks tools (git, fzf, mise, gcloud, bun).
+- **Configuration Management**: Dynamic configuration loading from remote URLs, support for mise configuration (global and per-repo).
 
-- `dev cd` - Directory navigation with fuzzy search
-- `dev clone` - Repository cloning with provider detection
-- `dev up` - Development tool installation via mise
-- `dev status` - Environment health checking
-- `dev run` - Task execution
+### File Structure Patterns
 
-**Database Layer**: Uses Drizzle ORM with SQLite for:
+- **Commands**: `src/app/*-command.ts`
+- **Services**: `src/app/*-service.ts`
+- **Ports**: `src/domain/*-port.ts`
+- **Infrastructure**: `src/infra/*-live.ts`
+- **Wiring**: `src/wiring.ts`
 
-- Command execution tracking (`runs` table)
-- Health check results (`tool_health_checks` table)
-- XDG Base Directory compliant storage
-
-**Health Check System**: Implements synchronous health monitoring with:
-
-- On-demand health checks when `dev status` is called
-- Database storage for historical tracking
-- Tool status tracking (git, fzf, mise, gcloud, bun)
-
-**Configuration Management**:
-
-- Dynamic configuration loading from remote URLs
-- Two-stage dependency injection system
-- Support for mise configuration (global and per-repo)
-
-#### File Structure Patterns
-
-- **Commands**: `src/app/` - Command files with `-command.ts` suffix
-- **Services**: `src/app/` - Service files with `-service.ts` suffix
-- **Ports**: `src/domain/` - Interface files with `-port.ts` suffix
-- **Infrastructure**: `src/infra/` - Implementation files with technology prefix and `-live.ts` suffix
-- **Wiring**: `src/wiring.ts` - Main composition root
-
-#### Key Dependencies
-
-- **Effect-TS**: Core functional programming framework
-- **@effect/cli**: Command-line interface framework
-- **@effect/platform-bun**: Bun runtime integration
-- **Drizzle ORM**: Database access layer
-- **Zod**: Schema validation
-- **Vitest**: Testing framework
-
-#### Development Workflow
+### Development Workflow
 
 1. All changes should maintain the hexagonal architecture boundaries
 2. New features should follow the Effect-TS patterns established
@@ -111,11 +61,125 @@ This eliminates hardcoded values and allows for dynamic configuration at runtime
 4. Health checks should be implemented for any new tools or dependencies
 5. Commands should be added to the main command in `src/index.ts`
 
-### Testing Strategy
+## Style Guide
+
+### General Principles
+
+- Avoid `try`/`catch` where possible (use Effect-TS error handling).
+- Avoid using the `any` type.
+- Use Bun APIs when possible, like `Bun.file()`.
+- Rely on type inference when possible; avoid explicit type annotations or interfaces unless necessary for exports or clarity.
+- Prefer functional array methods (`flatMap`, `filter`, `map`) over `for` loops; use type guards on filter to maintain type inference downstream.
+
+### Naming
+
+Use descriptive, intent-revealing names for variables and functions. Prefer clarity over brevity.
+
+```ts
+// Good
+function prepareJournal(dir: string) {}
+
+// Bad
+function journal(dir: string) {}
+```
+
+Reduce total variable count by inlining when a value is only used once.
+
+```ts
+// Good
+const journal = await Bun.file(path.join(dir, "journal.json")).json();
+
+// Bad
+const journalPath = path.join(dir, "journal.json");
+const journal = await Bun.file(journalPath).json();
+```
+
+### Destructuring
+
+Avoid unnecessary destructuring. Use dot notation to preserve context.
+
+```ts
+// Good
+obj.a;
+obj.b;
+
+// Bad
+const { a, b } = obj;
+```
+
+### Variables
+
+Prefer `const` over `let`. Use ternaries or early returns instead of reassignment.
+
+```ts
+// Good
+const foo = condition ? 1 : 2;
+
+// Bad
+let foo;
+if (condition) foo = 1;
+else foo = 2;
+```
+
+### Control Flow
+
+Prefer early returns to reduce nesting, but use `else` when it clarifies the logic, especially in complex `Effect.gen` generators where branching is necessary.
+
+```ts
+// Good
+function foo() {
+  if (condition) return 1;
+  return 2;
+}
+
+// Acceptable (when branching clarifies intent)
+function process() {
+  if (condition) {
+    // block
+  } else {
+    // block
+  }
+}
+```
+
+## Database Conventions
+
+### Database Layer
+
+Uses Drizzle ORM with SQLite for:
+
+- Command execution tracking (`runs` table)
+- Health check results (`tool_health_checks` table)
+- XDG Base Directory compliant storage
+
+### Schema Definitions
+
+Use `snake_case` for field names so column names don't need to be redefined as strings.
+
+```ts
+// Good
+const table = sqliteTable("session", {
+  id: text().primaryKey(),
+  project_id: text().notNull(),
+  created_at: integer().notNull(),
+});
+
+// Bad
+const table = sqliteTable("session", {
+  id: text("id").primaryKey(),
+  projectID: text("project_id").notNull(),
+  createdAt: integer("created_at").notNull(),
+});
+```
+
+## Testing Strategy
 
 Tests use Vitest with the following conventions:
 
 - Test files are co-located with source files (e.g., `foo.ts` has `foo.test.ts`)
-- No test globals - explicitly import from vitest
+- No test globals - explicitly import from `vitest`
 - Prefer real files over mocking filesystem operations
 - Each test file has a top-level `describe()` matching the source file name
+- **Hexagonal Architecture Testing**:
+  - For pure **Domain** logic, use focused unit tests with fakes/test doubles for infrastructure ports (e.g., passing an in-memory SQLite implementation or a mock service).
+  - Use integration/E2E tests when testing the **Infrastructure** or wiring.
