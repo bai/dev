@@ -66,7 +66,7 @@ describe("status-command", () => {
   it.effect("fails when health-check execution fails (no false all-green)", () =>
     Effect.gen(function* () {
       const failingHealthCheck: HealthCheck = {
-        runHealthChecks: () => Effect.fail(healthCheckError("registry unavailable")),
+        runHealthChecks: () => healthCheckError("registry unavailable"),
         getLatestResults: () => Effect.succeed([]),
         pruneOldRecords: () => Effect.void,
       };

@@ -55,7 +55,7 @@ class MockShell implements Shell {
     const key = this.createKey(command, args);
 
     if (this.execFailures.has(key)) {
-      return Effect.fail(shellExecutionError(command, args, "Command execution failed")) as never;
+      return shellExecutionError(command, args, "Command execution failed") as never;
     }
 
     const response = this.execResponses.get(key);

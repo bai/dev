@@ -77,7 +77,7 @@ const execWithTimeout = (
   exec(command, args, options).pipe(
     Effect.timeout(timeout),
     Effect.catchTag("TimeoutException", () =>
-      Effect.fail(shellTimeoutError(command, args, Duration.toMillis(timeout), options.cwd)),
+      shellTimeoutError(command, args, Duration.toMillis(timeout), options.cwd),
     ),
   );
 
@@ -90,7 +90,7 @@ const execInteractiveWithTimeout = (
   execInteractive(command, args, options).pipe(
     Effect.timeout(timeout),
     Effect.catchTag("TimeoutException", () =>
-      Effect.fail(shellTimeoutError(command, args, Duration.toMillis(timeout), options.cwd)),
+      shellTimeoutError(command, args, Duration.toMillis(timeout), options.cwd),
     ),
   );
 

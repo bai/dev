@@ -102,9 +102,7 @@ const makeTracingLive = (
     Effect.gen(function* () {
       const appConfig = yield* configLoader
         .load()
-        .pipe(
-          Effect.catchAll((error) => Effect.fail(new TracingError({ reason: `Failed to load config: ${error._tag}` }))),
-        );
+        .pipe(Effect.catchAll((error) => new TracingError({ reason: `Failed to load config: ${error._tag}` })));
       const telemetryConfig = appConfig.telemetry;
 
       // Get version from the version service

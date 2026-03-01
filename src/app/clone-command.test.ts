@@ -237,11 +237,7 @@ describe("clone-command", () => {
       Effect.gen(function* () {
         class FailingRepoProvider extends MockRepoProvider {
           resolveRepository(_name: string, _org?: string): Effect.Effect<Repository, never, never> {
-            return Effect.fail(unknownError("Failed to resolve repository")) as unknown as Effect.Effect<
-              Repository,
-              never,
-              never
-            >;
+            return unknownError("Failed to resolve repository") as unknown as Effect.Effect<Repository, never, never>;
           }
         }
 

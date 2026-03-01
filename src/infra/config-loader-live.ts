@@ -52,9 +52,7 @@ export const makeConfigLoaderLive = (fileSystem: FileSystem, network: Network, c
         return network.get(currentConfig.configUrl).pipe(
           Effect.flatMap((response) => {
             if (response.status !== 200) {
-              return Effect.fail(
-                configError(`Failed to fetch remote config: ${response.status} ${response.statusText}`),
-              );
+              return configError(`Failed to fetch remote config: ${response.status} ${response.statusText}`);
             }
 
             return Effect.try({

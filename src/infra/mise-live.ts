@@ -21,7 +21,7 @@ export const makeMiseLive = (
     shell.exec("mise", ["--version"]).pipe(
       Effect.flatMap((result) => {
         if (result.exitCode !== 0) {
-          return Effect.fail(shellExecutionError("mise", ["--version"], "Mise is not installed"));
+          return shellExecutionError("mise", ["--version"], "Mise is not installed");
         }
 
         const version = result.stdout.split(" ")[0] || "unknown";
@@ -60,12 +60,10 @@ export const makeMiseLive = (
     shell.exec("curl", ["-sSfL", "https://mise.run", "|", "sh"]).pipe(
       Effect.flatMap((result) => {
         if (result.exitCode !== 0) {
-          return Effect.fail(
-            shellExecutionError(
-              "curl",
-              ["-sSfL", "https://mise.run", "|", "sh"],
-              `Failed to install mise: ${result.stderr}`,
-            ),
+          return shellExecutionError(
+            "curl",
+            ["-sSfL", "https://mise.run", "|", "sh"],
+            `Failed to install mise: ${result.stderr}`,
           );
         }
         return Effect.void;
@@ -76,9 +74,7 @@ export const makeMiseLive = (
     shell.exec("mise", ["install"], { cwd }).pipe(
       Effect.flatMap((result) => {
         if (result.exitCode !== 0) {
-          return Effect.fail(
-            shellExecutionError("mise", ["install"], `Failed to install tools: ${result.stderr}`, { cwd }),
-          );
+          return shellExecutionError("mise", ["install"], `Failed to install tools: ${result.stderr}`, { cwd });
         }
         return Effect.void;
       }),
@@ -89,11 +85,9 @@ export const makeMiseLive = (
     return shell.execInteractive("mise", miseArgs, { cwd }).pipe(
       Effect.flatMap((exitCode) => {
         if (exitCode !== 0) {
-          return Effect.fail(
-            shellExecutionError("mise", miseArgs, `Task '${taskName}' failed with exit code ${exitCode}`, {
-              cwd,
-            }),
-          );
+          return shellExecutionError("mise", miseArgs, `Task '${taskName}' failed with exit code ${exitCode}`, {
+            cwd,
+          });
         }
         return Effect.void;
       }),
@@ -104,9 +98,7 @@ export const makeMiseLive = (
     shell.exec("mise", ["tasks", "--list"], { cwd }).pipe(
       Effect.flatMap((result) => {
         if (result.exitCode !== 0) {
-          return Effect.fail(
-            shellExecutionError("mise", ["tasks", "--list"], `Failed to get tasks: ${result.stderr}`, { cwd }),
-          );
+          return shellExecutionError("mise", ["tasks", "--list"], `Failed to get tasks: ${result.stderr}`, { cwd });
         }
 
         const tasks = result.stdout

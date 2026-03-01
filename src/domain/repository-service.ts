@@ -70,7 +70,7 @@ const parseRepositoryCoordinatesFromUrl = (
       };
     }
 
-    return yield* Effect.fail(configError(`URL path does not contain organization and repository: ${repoUrl}`));
+    return yield* configError(`URL path does not contain organization and repository: ${repoUrl}`);
   });
 
 // Individual functions implementing the service methods

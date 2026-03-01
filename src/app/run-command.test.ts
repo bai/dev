@@ -137,9 +137,7 @@ describe("run-command", () => {
       const failingMise = {
         ...mockMise,
         runTask: () =>
-          Effect.fail(
-            new ShellExecutionError({ command: "mise", args: ["run", "failing-task"], reason: "Task failed" }),
-          ),
+          new ShellExecutionError({ command: "mise", args: ["run", "failing-task"], reason: "Task failed" }),
       };
 
       const failingMiseLayer = Layer.mergeAll(

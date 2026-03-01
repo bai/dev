@@ -102,7 +102,7 @@ function selfUpdateCli(pathService: PathService): Effect.Effect<void, DevError, 
       Effect.mapError((error) => unknownError(`Failed to install dependencies: ${error.message}`)),
       Effect.flatMap((result) => {
         if (result.exitCode !== 0) {
-          return Effect.fail(unknownError(`bun install failed with exit code ${result.exitCode}: ${result.stderr}`));
+          return unknownError(`bun install failed with exit code ${result.exitCode}: ${result.stderr}`);
         }
         return Effect.succeed(result);
       }),

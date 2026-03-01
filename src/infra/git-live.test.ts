@@ -30,7 +30,7 @@ class MockShell implements Shell {
     }
 
     if (response instanceof Error) {
-      return Effect.fail(shellExecutionError(command, args, response.message)) as never;
+      return shellExecutionError(command, args, response.message) as never;
     }
 
     return Effect.succeed(response);

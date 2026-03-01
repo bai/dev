@@ -52,7 +52,7 @@ export const makeToolHealthRegistryLive = (
           const checker = toolCheckers.get(toolName);
           if (!checker) {
             // This should never happen since we're iterating over keys from the map
-            return Effect.fail(healthCheckError(`Unexpected missing checker for tool: ${toolName}`, toolName));
+            return healthCheckError(`Unexpected missing checker for tool: ${toolName}`, toolName);
           }
           return checker();
         });

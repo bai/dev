@@ -25,7 +25,7 @@ export const makeKeychainLive = (shell: Shell): Keychain => ({
       .pipe(
         Effect.flatMap((result) => {
           if (result.exitCode !== 0) {
-            return Effect.fail(authError(`Failed to store credential: ${result.stderr}`));
+            return authError(`Failed to store credential: ${result.stderr}`);
           }
           return Effect.void;
         }),
@@ -44,7 +44,7 @@ export const makeKeychainLive = (shell: Shell): Keychain => ({
       .pipe(
         Effect.flatMap((result) => {
           if (result.exitCode !== 0) {
-            return Effect.fail(authError(`Credential not found for service '${service}' and account '${account}'`));
+            return authError(`Credential not found for service '${service}' and account '${account}'`);
           }
           return Effect.succeed(result.stdout.trim());
         }),
@@ -54,7 +54,7 @@ export const makeKeychainLive = (shell: Shell): Keychain => ({
     shell.exec("security", ["delete-generic-password", "-s", service, "-a", account]).pipe(
       Effect.flatMap((result) => {
         if (result.exitCode !== 0) {
-          return Effect.fail(authError(`Failed to remove credential: ${result.stderr}`));
+          return authError(`Failed to remove credential: ${result.stderr}`);
         }
         return Effect.void;
       }),

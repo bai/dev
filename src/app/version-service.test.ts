@@ -35,7 +35,7 @@ describe("version-service", () => {
   });
 
   it.effect("falls back to 'unknown' when Git commit lookup fails", () => {
-    const getCurrentCommitSha = vi.fn(() => Effect.fail(gitError("git unavailable")));
+    const getCurrentCommitSha = vi.fn(() => gitError("git unavailable"));
     const gitMock = createGitMock(getCurrentCommitSha);
     const pathService = createPathService("/tmp/src");
 

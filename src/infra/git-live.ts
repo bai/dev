@@ -32,7 +32,7 @@ export const makeGitLive = (shell: Shell): Git => ({
     shell.exec("git", ["pull"], { cwd: repositoryPath }).pipe(
       Effect.flatMap((result) => {
         if (result.exitCode !== 0) {
-          return Effect.fail(gitError(`Failed to pull: ${result.stderr}`));
+          return gitError(`Failed to pull: ${result.stderr}`);
         }
         return Effect.void;
       }),
@@ -48,7 +48,7 @@ export const makeGitLive = (shell: Shell): Git => ({
     shell.exec("git", ["rev-parse", "HEAD"], { cwd: repositoryPath }).pipe(
       Effect.flatMap((result) => {
         if (result.exitCode !== 0) {
-          return Effect.fail(gitError(`Failed to get current commit SHA: ${result.stderr}`));
+          return gitError(`Failed to get current commit SHA: ${result.stderr}`);
         }
         return Effect.succeed(result.stdout.trim());
       }),
@@ -58,7 +58,7 @@ export const makeGitLive = (shell: Shell): Git => ({
     shell.exec("git", ["config", "--get", "remote.origin.url"], { cwd: repositoryPath }).pipe(
       Effect.flatMap((result) => {
         if (result.exitCode !== 0) {
-          return Effect.fail(gitError(`Failed to get remote URL: ${result.stderr}`));
+          return gitError(`Failed to get remote URL: ${result.stderr}`);
         }
         return Effect.succeed(result.stdout.trim());
       }),
