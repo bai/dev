@@ -57,7 +57,7 @@ export const syncCommand = Command.make("sync", {}, () =>
           yield* Effect.logDebug(`Checking ${dir}...`);
 
           // Verify it's a git repository
-          const isGit = yield* git.isGitRepository(absolutePath).pipe(Effect.catchAll(() => Effect.succeed(false)));
+          const isGit = yield* git.isGitRepository(absolutePath);
 
           if (!isGit) {
             yield* Effect.logDebug(`Skipping ${dir} (not a git repository)`);
@@ -70,9 +70,15 @@ export const syncCommand = Command.make("sync", {}, () =>
               successCount++;
               return Effect.logInfo(`✅ Synced ${dir}`);
             }),
-            Effect.catchAll((error) => {
-              failureCount++;
-              return Effect.logError(`❌ Failed to sync ${dir}: ${extractErrorMessage(error)}`);
+            Effect.catchTags({
+              GitError: (error) => {
+                failureCount++;
+                return Effect.logError(`❌ Failed to sync ${dir}: ${extractErrorMessage(error.reason)}`);
+              },
+              ShellExecutionError: (error) => {
+                failureCount++;
+                return Effect.logError(`❌ Failed to sync ${dir}: ${extractErrorMessage(error.reason)}`);
+              },
             }),
           );
         }).pipe(Effect.withSpan("sync.repo", { attributes: { repo: dir } })),

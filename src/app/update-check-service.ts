@@ -37,13 +37,9 @@ const runPeriodicUpgradeCheck = Effect.gen(function* () {
     }
   }
 }).pipe(
-  Effect.catchAll((error) => {
-    return Effect.gen(function* () {
-      yield* Effect.logInfo(
-        `WARN: ⚠️  Warning: ${error._tag === "UnknownError" ? String(error.reason) : "Could not check last run timestamp"}`,
-      );
-      // Proceed even if we can't check the timestamp, to not break main functionality
-    });
+  Effect.catchTags({
+    UnknownError: (error) => Effect.logInfo(`WARN: ⚠️  Warning: ${String(error.reason)}`),
+    ConfigError: () => Effect.logInfo("WARN: ⚠️  Warning: Could not check last run timestamp"),
   }),
 );
 

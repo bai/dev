@@ -67,9 +67,12 @@ const gracefulShutdown = Effect.gen(function* () {
     yield* runStore.completeIncompleteRuns();
     yield* Effect.logDebug("✅ Command tracking shutdown complete");
   }).pipe(
-    Effect.catchAll((error) =>
-      Effect.logDebug(`Command tracking shutdown skipped (database unavailable): ${error._tag}`),
-    ),
+    Effect.catchTags({
+      ConfigError: (error) =>
+        Effect.logDebug(`Command tracking shutdown skipped (database unavailable): ${error.reason}`),
+      UnknownError: (error) =>
+        Effect.logDebug(`Command tracking shutdown skipped (database unavailable): ${String(error.reason)}`),
+    }),
   );
 });
 

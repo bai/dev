@@ -109,7 +109,6 @@ const getGitInfo = (cwd: string): Effect.Effect<GitInfo, never, ShellTag> =>
 const getGitBranch = (cwd: string): Effect.Effect<string | null, never, ShellTag> =>
   executeCommand(["git", "rev-parse", "--abbrev-ref", "HEAD"], { cwd }).pipe(
     Effect.map((result) => (result.exitCode === 0 ? result.stdout.trim() : null)),
-    Effect.catchAll(() => Effect.succeed(null)),
   );
 
 /**
@@ -118,7 +117,6 @@ const getGitBranch = (cwd: string): Effect.Effect<string | null, never, ShellTag
 const getGitRemote = (cwd: string): Effect.Effect<string | null, never, ShellTag> =>
   executeCommand(["git", "remote", "get-url", "origin"], { cwd }).pipe(
     Effect.map((result) => (result.exitCode === 0 ? result.stdout.trim() : null)),
-    Effect.catchAll(() => Effect.succeed(null)),
   );
 
 /**
@@ -164,7 +162,7 @@ const getHealthCheckResults: Effect.Effect<readonly StatusItem[], never, HealthC
         }),
       ),
     ),
-    Effect.catchAll((error) =>
+    Effect.catchTag("HealthCheckError", (error) =>
       Effect.gen(function* () {
         const reason = error.reason.trim().length > 0 ? error.reason : "Health check execution failed";
         yield* Effect.logError(`Health check failed: ${reason}`);

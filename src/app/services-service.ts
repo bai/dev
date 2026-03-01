@@ -44,9 +44,7 @@ export const withDocker = <A, E, R>(
     const isAvailable = yield* dockerServices.isDockerAvailable();
 
     if (!isAvailable) {
-      return yield* Effect.fail(
-        dockerServiceError("Docker is not available. Please ensure Docker is installed and running."),
-      );
+      return yield* dockerServiceError("Docker is not available. Please ensure Docker is installed and running.");
     }
 
     return yield* handler(dockerServices);
