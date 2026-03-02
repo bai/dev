@@ -22,23 +22,17 @@ describe("repository URL parsing performance", () => {
   const testLayer = Layer.succeed(PathServiceTag, mockPathService);
 
   bench("parse SSH URL", () => {
-    const effect = RepositoryLive.parseRepoUrlToPath("git@github.com:facebook/react.git").pipe(
-      Effect.provide(testLayer),
-    );
+    const effect = RepositoryLive.parseRepoUrlToPath("git@github.com:facebook/react.git").pipe(Effect.provide(testLayer));
     Effect.runSync(effect);
   });
 
   bench("parse HTTPS URL", () => {
-    const effect = RepositoryLive.parseRepoUrlToPath("https://github.com/microsoft/vscode.git").pipe(
-      Effect.provide(testLayer),
-    );
+    const effect = RepositoryLive.parseRepoUrlToPath("https://github.com/microsoft/vscode.git").pipe(Effect.provide(testLayer));
     Effect.runSync(effect);
   });
 
   bench("parse SSH URL with port", () => {
-    const effect = RepositoryLive.parseRepoUrlToPath("ssh://git@gitlab.com:2222/company/project.git").pipe(
-      Effect.provide(testLayer),
-    );
+    const effect = RepositoryLive.parseRepoUrlToPath("ssh://git@gitlab.com:2222/company/project.git").pipe(Effect.provide(testLayer));
     Effect.runSync(effect);
   });
 

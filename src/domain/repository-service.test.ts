@@ -30,9 +30,7 @@ describe("repository-service", () => {
         const pathService = new MockPathService();
         const testLayer = Layer.succeed(PathServiceTag, pathService);
 
-        const result = yield* RepositoryLive.parseRepoUrlToPath("git@github.com:myorg/myrepo.git").pipe(
-          Effect.provide(testLayer),
-        );
+        const result = yield* RepositoryLive.parseRepoUrlToPath("git@github.com:myorg/myrepo.git").pipe(Effect.provide(testLayer));
 
         expect(result).toBe("/home/user/dev/github.com/myorg/myrepo");
       }),
@@ -43,9 +41,7 @@ describe("repository-service", () => {
         const pathService = new MockPathService();
         const testLayer = Layer.succeed(PathServiceTag, pathService);
 
-        const result = yield* RepositoryLive.parseRepoUrlToPath("git@github.com:myorg/myrepo").pipe(
-          Effect.provide(testLayer),
-        );
+        const result = yield* RepositoryLive.parseRepoUrlToPath("git@github.com:myorg/myrepo").pipe(Effect.provide(testLayer));
 
         expect(result).toBe("/home/user/dev/github.com/myorg/myrepo");
       }),
@@ -56,9 +52,7 @@ describe("repository-service", () => {
         const pathService = new MockPathService();
         const testLayer = Layer.succeed(PathServiceTag, pathService);
 
-        const result = yield* RepositoryLive.parseRepoUrlToPath("git@gitlab.com:mygroup/myproject.git").pipe(
-          Effect.provide(testLayer),
-        );
+        const result = yield* RepositoryLive.parseRepoUrlToPath("git@gitlab.com:mygroup/myproject.git").pipe(Effect.provide(testLayer));
 
         expect(result).toBe("/home/user/dev/gitlab.com/mygroup/myproject");
       }),
@@ -69,9 +63,7 @@ describe("repository-service", () => {
         const pathService = new MockPathService();
         const testLayer = Layer.succeed(PathServiceTag, pathService);
 
-        const result = yield* RepositoryLive.parseRepoUrlToPath("https://github.com/myorg/myrepo.git").pipe(
-          Effect.provide(testLayer),
-        );
+        const result = yield* RepositoryLive.parseRepoUrlToPath("https://github.com/myorg/myrepo.git").pipe(Effect.provide(testLayer));
 
         expect(result).toBe("/home/user/dev/github.com/myorg/myrepo");
       }),
@@ -82,9 +74,7 @@ describe("repository-service", () => {
         const pathService = new MockPathService();
         const testLayer = Layer.succeed(PathServiceTag, pathService);
 
-        const result = yield* RepositoryLive.parseRepoUrlToPath("https://github.com/myorg/myrepo").pipe(
-          Effect.provide(testLayer),
-        );
+        const result = yield* RepositoryLive.parseRepoUrlToPath("https://github.com/myorg/myrepo").pipe(Effect.provide(testLayer));
 
         expect(result).toBe("/home/user/dev/github.com/myorg/myrepo");
       }),
@@ -108,9 +98,7 @@ describe("repository-service", () => {
         const pathService = new MockPathService();
         const testLayer = Layer.succeed(PathServiceTag, pathService);
 
-        const result = yield* RepositoryLive.parseRepoUrlToPath("ssh://git@github.com/myorg/myrepo.git").pipe(
-          Effect.provide(testLayer),
-        );
+        const result = yield* RepositoryLive.parseRepoUrlToPath("ssh://git@github.com/myorg/myrepo.git").pipe(Effect.provide(testLayer));
 
         expect(result).toBe("/home/user/dev/github.com/myorg/myrepo");
       }),
@@ -134,9 +122,7 @@ describe("repository-service", () => {
         const pathService = new MockPathService();
         const testLayer = Layer.succeed(PathServiceTag, pathService);
 
-        const result = yield* Effect.exit(
-          RepositoryLive.parseRepoUrlToPath("not-a-valid-url").pipe(Effect.provide(testLayer)),
-        );
+        const result = yield* Effect.exit(RepositoryLive.parseRepoUrlToPath("not-a-valid-url").pipe(Effect.provide(testLayer)));
 
         expect(Exit.isFailure(result)).toBe(true);
       }),
@@ -147,9 +133,7 @@ describe("repository-service", () => {
         const pathService = new MockPathService();
         const testLayer = Layer.succeed(PathServiceTag, pathService);
 
-        const result = yield* Effect.exit(
-          RepositoryLive.parseRepoUrlToPath("https://github.com/").pipe(Effect.provide(testLayer)),
-        );
+        const result = yield* Effect.exit(RepositoryLive.parseRepoUrlToPath("https://github.com/").pipe(Effect.provide(testLayer)));
 
         expect(Exit.isFailure(result)).toBe(true);
       }),
@@ -160,9 +144,7 @@ describe("repository-service", () => {
         const pathService = new MockPathService();
         const testLayer = Layer.succeed(PathServiceTag, pathService);
 
-        const result = yield* RepositoryLive.parseRepoUrlToPath("git@github.com:my-org/my_repo-2.0.git").pipe(
-          Effect.provide(testLayer),
-        );
+        const result = yield* RepositoryLive.parseRepoUrlToPath("git@github.com:my-org/my_repo-2.0.git").pipe(Effect.provide(testLayer));
 
         expect(result).toBe("/home/user/dev/github.com/my-org/my_repo-2.0");
       }),
@@ -173,9 +155,7 @@ describe("repository-service", () => {
         const pathService = new MockPathService();
         const testLayer = Layer.succeed(PathServiceTag, pathService);
 
-        const result = yield* RepositoryLive.parseRepoUrlToPath("https://github.com/myorg/MyRepo.git").pipe(
-          Effect.provide(testLayer),
-        );
+        const result = yield* RepositoryLive.parseRepoUrlToPath("https://github.com/myorg/MyRepo.git").pipe(Effect.provide(testLayer));
 
         expect(result).toBe("/home/user/dev/github.com/myorg/MyRepo");
       }),
@@ -190,9 +170,7 @@ describe("repository-service", () => {
         const pathService = new CustomPathService();
         const testLayer = Layer.succeed(PathServiceTag, pathService);
 
-        const result = yield* RepositoryLive.parseRepoUrlToPath("git@github.com:myorg/myrepo.git").pipe(
-          Effect.provide(testLayer),
-        );
+        const result = yield* RepositoryLive.parseRepoUrlToPath("git@github.com:myorg/myrepo.git").pipe(Effect.provide(testLayer));
 
         expect(result).toBe("/custom/projects/github.com/myorg/myrepo");
       }),
@@ -507,9 +485,7 @@ describe("repository-service", () => {
         const pathService = new MockPathService();
         const testLayer = Layer.succeed(PathServiceTag, pathService);
 
-        const result = yield* RepositoryLive.parseRepoUrlToPath("git://github.com/myorg/myrepo.git").pipe(
-          Effect.provide(testLayer),
-        );
+        const result = yield* RepositoryLive.parseRepoUrlToPath("git://github.com/myorg/myrepo.git").pipe(Effect.provide(testLayer));
 
         expect(result).toBe("/home/user/dev/github.com/myorg/myrepo");
       }),
@@ -520,9 +496,7 @@ describe("repository-service", () => {
         const pathService = new MockPathService();
         const testLayer = Layer.succeed(PathServiceTag, pathService);
 
-        const result = yield* RepositoryLive.parseRepoUrlToPath("http://github.com/myorg/myrepo.git").pipe(
-          Effect.provide(testLayer),
-        );
+        const result = yield* RepositoryLive.parseRepoUrlToPath("http://github.com/myorg/myrepo.git").pipe(Effect.provide(testLayer));
 
         expect(result).toBe("/home/user/dev/github.com/myorg/myrepo");
       }),
@@ -559,9 +533,7 @@ describe("repository-service", () => {
         const pathService = new MockPathService();
         const testLayer = Layer.succeed(PathServiceTag, pathService);
 
-        const result = yield* RepositoryLive.parseRepoUrlToPath("git@github.com:foo/my.repo.git").pipe(
-          Effect.provide(testLayer),
-        );
+        const result = yield* RepositoryLive.parseRepoUrlToPath("git@github.com:foo/my.repo.git").pipe(Effect.provide(testLayer));
 
         expect(result).toBe("/home/user/dev/github.com/foo/my.repo");
       }),
@@ -583,9 +555,7 @@ describe("repository-service", () => {
         const pathService = new MockPathService();
         const testLayer = Layer.succeed(PathServiceTag, pathService);
 
-        const result = yield* Effect.exit(
-          RepositoryLive.parseRepoUrlToPath("@github.com:foo/repo.git").pipe(Effect.provide(testLayer)),
-        );
+        const result = yield* Effect.exit(RepositoryLive.parseRepoUrlToPath("@github.com:foo/repo.git").pipe(Effect.provide(testLayer)));
 
         expect(Exit.isFailure(result)).toBe(true);
       }),
@@ -596,9 +566,7 @@ describe("repository-service", () => {
         const pathService = new MockPathService();
         const testLayer = Layer.succeed(PathServiceTag, pathService);
 
-        const result = yield* Effect.exit(
-          RepositoryLive.parseRepoUrlToPath("git@:foo/repo.git").pipe(Effect.provide(testLayer)),
-        );
+        const result = yield* Effect.exit(RepositoryLive.parseRepoUrlToPath("git@:foo/repo.git").pipe(Effect.provide(testLayer)));
 
         expect(Exit.isFailure(result)).toBe(true);
       }),
@@ -609,9 +577,7 @@ describe("repository-service", () => {
         const pathService = new MockPathService();
         const testLayer = Layer.succeed(PathServiceTag, pathService);
 
-        const result = yield* Effect.exit(
-          RepositoryLive.parseRepoUrlToPath("git@github.com:repo.git").pipe(Effect.provide(testLayer)),
-        );
+        const result = yield* Effect.exit(RepositoryLive.parseRepoUrlToPath("git@github.com:repo.git").pipe(Effect.provide(testLayer)));
 
         expect(Exit.isFailure(result)).toBe(true);
       }),
@@ -622,9 +588,7 @@ describe("repository-service", () => {
         const pathService = new MockPathService();
         const testLayer = Layer.succeed(PathServiceTag, pathService);
 
-        const result = yield* Effect.exit(
-          RepositoryLive.parseRepoUrlToPath("git@github.com:foo/").pipe(Effect.provide(testLayer)),
-        );
+        const result = yield* Effect.exit(RepositoryLive.parseRepoUrlToPath("git@github.com:foo/").pipe(Effect.provide(testLayer)));
 
         expect(Exit.isFailure(result)).toBe(true);
       }),
@@ -635,9 +599,7 @@ describe("repository-service", () => {
         const pathService = new MockPathService();
         const testLayer = Layer.succeed(PathServiceTag, pathService);
 
-        const result = yield* Effect.exit(
-          RepositoryLive.parseRepoUrlToPath("https://github.com//").pipe(Effect.provide(testLayer)),
-        );
+        const result = yield* Effect.exit(RepositoryLive.parseRepoUrlToPath("https://github.com//").pipe(Effect.provide(testLayer)));
 
         expect(Exit.isFailure(result)).toBe(true);
       }),
@@ -727,12 +689,7 @@ describe("repository-service", () => {
           "gitlab-org": "gitlab",
         };
 
-        const fullUrl = yield* RepositoryLive.expandToFullGitUrl(
-          "gitlab-org/myrepo",
-          defaultOrg,
-          orgToProvider,
-          "github",
-        );
+        const fullUrl = yield* RepositoryLive.expandToFullGitUrl("gitlab-org/myrepo", defaultOrg, orgToProvider, "github");
         const localPath = yield* RepositoryLive.parseRepoUrlToPath(fullUrl).pipe(Effect.provide(testLayer));
 
         expect(fullUrl).toBe("https://github.com/gitlab-org/myrepo");

@@ -57,9 +57,7 @@ export function handleDirectCd(folderName: string): Effect.Effect<void, DevError
 
     if (directories.length > 0) {
       // Use filter() for fuzzy matching instead of simple includes
-      const fuzzyMatches = yield* Effect.sync(() => filter(folderName, directories)).pipe(
-        Effect.withSpan("search.fuzzy_match"),
-      );
+      const fuzzyMatches = yield* Effect.sync(() => filter(folderName, directories)).pipe(Effect.withSpan("search.fuzzy_match"));
       yield* Effect.annotateCurrentSpan("search.term", folderName);
       yield* Effect.annotateCurrentSpan("search.matches_count", fuzzyMatches.length.toString());
 
@@ -79,11 +77,7 @@ export function handleDirectCd(folderName: string): Effect.Effect<void, DevError
   }).pipe(Effect.withSpan("cd.handle_direct"));
 }
 
-export function handleInteractiveCd(): Effect.Effect<
-  void,
-  DevError,
-  DirectoryTag | InteractiveSelectorTag | ShellIntegrationTag
-> {
+export function handleInteractiveCd(): Effect.Effect<void, DevError, DirectoryTag | InteractiveSelectorTag | ShellIntegrationTag> {
   return Effect.gen(function* () {
     // Use DirectoryService to get directories
     const directoryService = yield* DirectoryTag;

@@ -178,10 +178,7 @@ describe("multi-repo-provider-live", () => {
   describe("MultiRepoProviderLiveLayer", () => {
     it.effect("provides MultiRepoProvider through Effect layer", () => {
       const networkLayer = Layer.succeed(NetworkTag, mockNetwork);
-      const providerLayer = Layer.provide(
-        MultiRepoProviderLiveLayer("acmesoftware", "github", { acmesoftware: "gitlab" }),
-        networkLayer,
-      );
+      const providerLayer = Layer.provide(MultiRepoProviderLiveLayer("acmesoftware", "github", { acmesoftware: "gitlab" }), networkLayer);
 
       return Effect.gen(function* () {
         const provider = yield* RepoProviderTag;
@@ -195,10 +192,7 @@ describe("multi-repo-provider-live", () => {
 
     it.effect("resolves repository through layer-provided instance", () => {
       const networkLayer = Layer.succeed(NetworkTag, mockNetwork);
-      const providerLayer = Layer.provide(
-        MultiRepoProviderLiveLayer("acmesoftware", "github", { acmesoftware: "gitlab" }),
-        networkLayer,
-      );
+      const providerLayer = Layer.provide(MultiRepoProviderLiveLayer("acmesoftware", "github", { acmesoftware: "gitlab" }), networkLayer);
 
       return Effect.gen(function* () {
         const provider = yield* RepoProviderTag;

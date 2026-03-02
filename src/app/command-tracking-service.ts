@@ -11,11 +11,7 @@ import { VersionTag } from "../domain/version-port";
  * This is app-level logic for command execution tracking
  */
 export interface CommandTracker {
-  recordCommandRun(): Effect.Effect<
-    string,
-    ConfigError | UnknownError,
-    RunStoreTag | VersionTag | GitTag | PathServiceTag
-  >;
+  recordCommandRun(): Effect.Effect<string, ConfigError | UnknownError, RunStoreTag | VersionTag | GitTag | PathServiceTag>;
   completeCommandRun(id: string, exitCode: number): Effect.Effect<void, ConfigError | UnknownError, RunStoreTag>;
 
   /**
@@ -68,10 +64,8 @@ const gracefulShutdown = Effect.gen(function* () {
     yield* Effect.logDebug("✅ Command tracking shutdown complete");
   }).pipe(
     Effect.catchTags({
-      ConfigError: (error) =>
-        Effect.logDebug(`Command tracking shutdown skipped (database unavailable): ${error.reason}`),
-      UnknownError: (error) =>
-        Effect.logDebug(`Command tracking shutdown skipped (database unavailable): ${String(error.reason)}`),
+      ConfigError: (error) => Effect.logDebug(`Command tracking shutdown skipped (database unavailable): ${error.reason}`),
+      UnknownError: (error) => Effect.logDebug(`Command tracking shutdown skipped (database unavailable): ${String(error.reason)}`),
     }),
   );
 });

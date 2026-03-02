@@ -17,11 +17,7 @@ export interface Shell {
   /**
    * Execute a command interactively (inherit stdio)
    */
-  execInteractive(
-    command: string,
-    args?: string[],
-    options?: { cwd?: string },
-  ): Effect.Effect<number, ShellExecutionError>;
+  execInteractive(command: string, args?: string[], options?: { cwd?: string }): Effect.Effect<number, ShellExecutionError>;
 
   /**
    * Set the current working directory of the running process

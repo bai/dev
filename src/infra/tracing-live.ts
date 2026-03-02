@@ -21,9 +21,7 @@ const logExportResult = (result: { code: number; error?: any; spans: number }) =
 
     // Handle errors
     if (result.error?.code) {
-      yield* Effect.logWarning(
-        `Failed to export ${result.spans} spans to remote trace endpoint (HTTP ${result.error.code})`,
-      );
+      yield* Effect.logWarning(`Failed to export ${result.spans} spans to remote trace endpoint (HTTP ${result.error.code})`);
 
       // Parse error response if available
       if (result.error.data) {
@@ -94,10 +92,7 @@ const createOtlpTraceExporter = (url: string): Effect.Effect<BatchSpanProcessor,
 /**
  * Factory function that creates a Tracing implementation
  */
-const makeTracingLive = (
-  configLoader: typeof ConfigLoaderTag.Service,
-  versionService: typeof VersionTag.Service,
-): Tracing => ({
+const makeTracingLive = (configLoader: typeof ConfigLoaderTag.Service, versionService: typeof VersionTag.Service): Tracing => ({
   createSdkConfig: () =>
     Effect.gen(function* () {
       const appConfig = yield* configLoader

@@ -7,8 +7,7 @@ export const DOCKER_SERVICE_NAMES = ["postgres17", "postgres18", "valkey"] as co
 
 export type ServiceName = (typeof DOCKER_SERVICE_NAMES)[number];
 
-export const isServiceName = (serviceName: string): serviceName is ServiceName =>
-  DOCKER_SERVICE_NAMES.some((name) => name === serviceName);
+export const isServiceName = (serviceName: string): serviceName is ServiceName => DOCKER_SERVICE_NAMES.some((name) => name === serviceName);
 
 export interface ServiceStatus {
   readonly name: ServiceName;
@@ -23,10 +22,7 @@ export interface DockerServices {
   down(services?: readonly ServiceName[]): Effect.Effect<void, DockerServiceError | ShellExecutionError>;
   restart(services?: readonly ServiceName[]): Effect.Effect<void, DockerServiceError | ShellExecutionError>;
   status(): Effect.Effect<readonly ServiceStatus[], DockerServiceError | ShellExecutionError>;
-  logs(
-    service?: ServiceName,
-    options?: { follow?: boolean; tail?: number },
-  ): Effect.Effect<void, DockerServiceError | ShellExecutionError>;
+  logs(service?: ServiceName, options?: { follow?: boolean; tail?: number }): Effect.Effect<void, DockerServiceError | ShellExecutionError>;
   reset(): Effect.Effect<void, DockerServiceError | ShellExecutionError>;
   isDockerAvailable(): Effect.Effect<boolean, never>;
   performHealthCheck(): Effect.Effect<HealthCheckResult, never>;

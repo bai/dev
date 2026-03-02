@@ -2,8 +2,8 @@ import { it } from "@effect/vitest";
 import { Effect } from "effect";
 import { describe, expect, vi } from "vitest";
 
-import { makeHealthCheckService } from "./health-check-service";
 import type { HealthCheckResult } from "./health-check-port";
+import { makeHealthCheckService } from "./health-check-service";
 import type { ToolHealthRegistry } from "./tool-health-registry-port";
 
 describe("health-check-service", () => {

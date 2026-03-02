@@ -88,9 +88,7 @@ function selfUpdateCli(pathService: PathService): Effect.Effect<void, DevError, 
       Effect.tap(() => Effect.logInfo("✅ CLI repository updated successfully")),
       Effect.catchAll((error) =>
         Effect.gen(function* () {
-          yield* Effect.logWarning(
-            `⚠️  Failed to pull latest changes: ${error.reason || error.message || "Unknown error"}`,
-          );
+          yield* Effect.logWarning(`⚠️  Failed to pull latest changes: ${error.reason || error.message || "Unknown error"}`);
           yield* Effect.logInfo("📝 Continuing with the rest of the upgrade process...");
         }),
       ),
@@ -109,9 +107,7 @@ function selfUpdateCli(pathService: PathService): Effect.Effect<void, DevError, 
       Effect.tap(() => Effect.logInfo("✅ Dependencies updated successfully")),
       Effect.catchAll((error) =>
         Effect.gen(function* () {
-          yield* Effect.logWarning(
-            `⚠️  Failed to install dependencies: ${error.reason || error.message || "Unknown error"}`,
-          );
+          yield* Effect.logWarning(`⚠️  Failed to install dependencies: ${error.reason || error.message || "Unknown error"}`);
           yield* Effect.logInfo("📝 Continuing with the rest of the upgrade process...");
         }),
       ),
@@ -235,13 +231,9 @@ function setupMiseGlobalConfiguration(config: Config): Effect.Effect<void, DevEr
     const misePort = yield* MiseTag;
 
     if (config.miseGlobalConfig) {
-      yield* Effect.logDebug(
-        `📝 Found mise global config with ${Object.keys(config.miseGlobalConfig.tools || {}).length} tools`,
-      );
+      yield* Effect.logDebug(`📝 Found mise global config with ${Object.keys(config.miseGlobalConfig.tools || {}).length} tools`);
 
-      yield* misePort
-        .setupGlobalConfig()
-        .pipe(Effect.mapError((error) => unknownError(`Mise config setup failed: ${error}`)));
+      yield* misePort.setupGlobalConfig().pipe(Effect.mapError((error) => unknownError(`Mise config setup failed: ${error}`)));
 
       yield* Effect.logInfo("✅ Mise global configuration updated successfully");
     } else {
@@ -304,9 +296,7 @@ function checkTool(toolName: string, toolManager: ToolManagement[keyof ToolManag
       yield* Effect.logInfo(`✅ ${toolName} ${currentVersion} is up to date`);
     } else if (currentVersion) {
       yield* Effect.logInfo(`📦 Upgrading ${toolName} from ${currentVersion}...`);
-      yield* toolManager
-        .ensureVersionOrUpgrade()
-        .pipe(Effect.mapError((error) => unknownError(`${toolName} upgrade failed: ${error}`)));
+      yield* toolManager.ensureVersionOrUpgrade().pipe(Effect.mapError((error) => unknownError(`${toolName} upgrade failed: ${error}`)));
     } else {
       yield* Effect.logInfo(`📦 Installing ${toolName}...`);
       yield* toolManager

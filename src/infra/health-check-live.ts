@@ -4,12 +4,7 @@ import { Clock, Effect, Layer } from "effect";
 import { toolHealthChecks } from "../../drizzle/schema";
 import { DatabaseTag, type Database } from "../domain/database-port";
 import { healthCheckError, type HealthCheckError } from "../domain/errors";
-import {
-  HealthCheckTag,
-  type HealthCheck,
-  type HealthCheckResult,
-  type HealthCheckSummary,
-} from "../domain/health-check-port";
+import { HealthCheckTag, type HealthCheck, type HealthCheckResult, type HealthCheckSummary } from "../domain/health-check-port";
 import { HealthCheckServiceTag, type HealthCheckService } from "../domain/health-check-service";
 
 // Health check constants (internal, not user-configurable)
@@ -25,10 +20,7 @@ interface InternalHealthCheckResult {
 }
 
 // Store health check results using Database
-const storeHealthCheckResults = (
-  results: InternalHealthCheckResult[],
-  database: Database,
-): Effect.Effect<void, HealthCheckError> =>
+const storeHealthCheckResults = (results: InternalHealthCheckResult[], database: Database): Effect.Effect<void, HealthCheckError> =>
   database
     .query((db) =>
       Effect.gen(function* () {
@@ -136,9 +128,7 @@ export const makeHealthCheckLive = (database: Database, healthCheckService: Heal
         }),
       );
 
-  const pruneOldRecords = (
-    retentionDays: number = HEALTH_CHECK_RETENTION_DAYS,
-  ): Effect.Effect<void, HealthCheckError> =>
+  const pruneOldRecords = (retentionDays: number = HEALTH_CHECK_RETENTION_DAYS): Effect.Effect<void, HealthCheckError> =>
     Effect.gen(function* () {
       const cutoffDateMs = yield* Clock.currentTimeMillis;
       const cutoffDate = new Date(cutoffDateMs - retentionDays * 24 * 60 * 60 * 1000);

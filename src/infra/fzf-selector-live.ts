@@ -48,11 +48,7 @@ export const makeFzfSelector = (): InteractiveSelector => ({
 
       // fzf returns 130 on ESC/Ctrl-C, which is cancellation, not an error
       return null;
-    }).pipe(
-      Effect.mapError((error) =>
-        error instanceof UnknownError ? error : unknownError(`Fzf selection failed: ${error}`),
-      ),
-    ),
+    }).pipe(Effect.mapError((error) => (error instanceof UnknownError ? error : unknownError(`Fzf selection failed: ${error}`)))),
 });
 
 // Effect Layer for dependency injection

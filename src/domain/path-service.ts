@@ -60,5 +60,4 @@ export class PathServiceTag extends Context.Tag("PathService")<PathServiceTag, P
 export const PathServiceLiveLayer = Layer.succeed(PathServiceTag, PathLive);
 
 // Layer factory that provides PathService with dynamic baseSearchPath
-export const createPathServiceLiveLayer = (baseSearchPath?: string) =>
-  Layer.succeed(PathServiceTag, createPathService(baseSearchPath));
+export const createPathServiceLiveLayer = (baseSearchPath?: string) => Layer.succeed(PathServiceTag, createPathService(baseSearchPath));

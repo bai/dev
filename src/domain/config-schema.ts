@@ -54,10 +54,7 @@ const telemetryConfigSchema = z
   .describe("Telemetry and observability settings");
 
 // Per-service config (empty for now, reserved for future customization)
-const serviceConfigSchema = z
-  .object({})
-  .passthrough()
-  .describe("Service-specific configuration (reserved for future use)");
+const serviceConfigSchema = z.object({}).passthrough().describe("Service-specific configuration (reserved for future use)");
 
 // Services config: keys are enabled services, values are per-service config
 const servicesConfigSchema = z
@@ -78,19 +75,9 @@ export const configSchema = z.object({
     .default("https://raw.githubusercontent.com/bai/dev/refs/heads/main/config.json")
     .describe("Remote URL to fetch shared configuration from"),
   defaultOrg: z.string().default("acmesoftware").describe("Default organization for repository operations"),
-  defaultProvider: gitProviderSchema
-    .optional()
-    .default("github")
-    .describe("Default git provider when not specified (github or gitlab)"),
-  baseSearchPath: z
-    .string()
-    .optional()
-    .default("~/src")
-    .describe("Base directory for searching and cloning repositories"),
-  logLevel: logLevelSchema
-    .optional()
-    .default("info")
-    .describe("Logging verbosity: debug, info, warning, error, or fatal"),
+  defaultProvider: gitProviderSchema.optional().default("github").describe("Default git provider when not specified (github or gitlab)"),
+  baseSearchPath: z.string().optional().default("~/src").describe("Base directory for searching and cloning repositories"),
+  logLevel: logLevelSchema.optional().default("info").describe("Logging verbosity: debug, info, warning, error, or fatal"),
   telemetry: telemetryConfigSchema.default({ mode: "remote" }),
   orgToProvider: z
     .record(z.string(), gitProviderSchema)

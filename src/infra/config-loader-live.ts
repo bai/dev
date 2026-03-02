@@ -2,13 +2,7 @@ import { Effect, Layer } from "effect";
 
 import { ConfigLoaderTag, type ConfigLoader } from "../domain/config-loader-port";
 import { configSchema, type Config } from "../domain/config-schema";
-import {
-  configError,
-  type ConfigError,
-  type FileSystemError,
-  type NetworkError,
-  type UnknownError,
-} from "../domain/errors";
+import { configError, type ConfigError, type FileSystemError, type NetworkError, type UnknownError } from "../domain/errors";
 import { FileSystemTag, type FileSystem } from "../domain/file-system-port";
 import { NetworkTag, type Network } from "../domain/network-port";
 

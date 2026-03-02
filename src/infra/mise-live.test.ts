@@ -62,9 +62,7 @@ const mockShell: Shell & {
   setProcessCwd: () => Effect.void,
 
   lastCall: undefined as { command: string; args: readonly string[]; options?: { cwd?: string } } | undefined,
-  lastInteractiveCall: undefined as
-    | { command: string; args: readonly string[]; options?: { cwd?: string } }
-    | undefined,
+  lastInteractiveCall: undefined as { command: string; args: readonly string[]; options?: { cwd?: string } } | undefined,
 };
 
 const mockFileSystem = {
@@ -236,15 +234,7 @@ describe("mise-live", () => {
       const args = ["subcommand", "--flag1", "value1", "--flag2", "value2"];
       yield* mise.runTask("complex-task", args);
 
-      expect(mockShell.lastInteractiveCall?.args).toEqual([
-        "run",
-        "complex-task",
-        "subcommand",
-        "--flag1",
-        "value1",
-        "--flag2",
-        "value2",
-      ]);
+      expect(mockShell.lastInteractiveCall?.args).toEqual(["run", "complex-task", "subcommand", "--flag1", "value1", "--flag2", "value2"]);
     }),
   );
 

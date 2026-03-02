@@ -67,10 +67,7 @@ describe("directory-live", () => {
           getBasePath: () => "/home/user/dev",
         };
 
-        const testLayer = Layer.mergeAll(
-          Layer.succeed(FileSystemTag, mockFileSystem),
-          Layer.succeed(PathServiceTag, mockPathService),
-        );
+        const testLayer = Layer.mergeAll(Layer.succeed(FileSystemTag, mockFileSystem), Layer.succeed(PathServiceTag, mockPathService));
 
         const directory = makeDirectoryLive(mockPathService, mockFileSystem);
         const result = yield* directory.ensureBaseDirectoryExists().pipe(Effect.provide(testLayer));
@@ -109,10 +106,7 @@ describe("directory-live", () => {
           getBasePath: () => "/home/user/dev",
         };
 
-        const testLayer = Layer.mergeAll(
-          Layer.succeed(FileSystemTag, mockFileSystem),
-          Layer.succeed(PathServiceTag, mockPathService),
-        );
+        const testLayer = Layer.mergeAll(Layer.succeed(FileSystemTag, mockFileSystem), Layer.succeed(PathServiceTag, mockPathService));
 
         const directory = makeDirectoryLive(mockPathService, mockFileSystem);
         const result = yield* directory.ensureBaseDirectoryExists().pipe(Effect.provide(testLayer));
@@ -146,10 +140,7 @@ describe("directory-live", () => {
           getBasePath: () => "/home/user/dev",
         };
 
-        const testLayer = Layer.mergeAll(
-          Layer.succeed(FileSystemTag, mockFileSystem),
-          Layer.succeed(PathServiceTag, mockPathService),
-        );
+        const testLayer = Layer.mergeAll(Layer.succeed(FileSystemTag, mockFileSystem), Layer.succeed(PathServiceTag, mockPathService));
 
         const directory = makeDirectoryLive(mockPathService, mockFileSystem);
 
@@ -185,10 +176,7 @@ describe("directory-live", () => {
           getBasePath: () => "/home/user/dev",
         };
 
-        const testLayer = Layer.mergeAll(
-          Layer.succeed(FileSystemTag, mockFileSystem),
-          Layer.succeed(PathServiceTag, mockPathService),
-        );
+        const testLayer = Layer.mergeAll(Layer.succeed(FileSystemTag, mockFileSystem), Layer.succeed(PathServiceTag, mockPathService));
 
         const directory = makeDirectoryLive(mockPathService, mockFileSystem);
         const result = yield* directory.findDirs().pipe(Effect.provide(testLayer));
@@ -223,10 +211,7 @@ describe("directory-live", () => {
           getBasePath: () => "/home/user/dev",
         };
 
-        const testLayer = Layer.mergeAll(
-          Layer.succeed(FileSystemTag, mockFileSystem),
-          Layer.succeed(PathServiceTag, mockPathService),
-        );
+        const testLayer = Layer.mergeAll(Layer.succeed(FileSystemTag, mockFileSystem), Layer.succeed(PathServiceTag, mockPathService));
 
         const directory = makeDirectoryLive(mockPathService, mockFileSystem);
         const result = yield* directory.findDirs().pipe(Effect.provide(testLayer));
@@ -267,10 +252,7 @@ describe("directory-live", () => {
           getBasePath: () => "/home/user/dev",
         };
 
-        const testLayer = Layer.mergeAll(
-          Layer.succeed(FileSystemTag, mockFileSystem),
-          Layer.succeed(PathServiceTag, mockPathService),
-        );
+        const testLayer = Layer.mergeAll(Layer.succeed(FileSystemTag, mockFileSystem), Layer.succeed(PathServiceTag, mockPathService));
 
         const directory = makeDirectoryLive(mockPathService, mockFileSystem);
         yield* directory.findDirs().pipe(Effect.provide(testLayer));
@@ -304,10 +286,7 @@ describe("directory-live", () => {
           getBasePath: () => "/home/user/dev",
         };
 
-        const testLayer = Layer.mergeAll(
-          Layer.succeed(FileSystemTag, mockFileSystem),
-          Layer.succeed(PathServiceTag, mockPathService),
-        );
+        const testLayer = Layer.mergeAll(Layer.succeed(FileSystemTag, mockFileSystem), Layer.succeed(PathServiceTag, mockPathService));
 
         const directory = makeDirectoryLive(mockPathService, mockFileSystem);
 
@@ -341,10 +320,7 @@ describe("directory-live", () => {
           getBasePath: () => "/home/user/dev",
         };
 
-        const testLayer = Layer.mergeAll(
-          Layer.succeed(FileSystemTag, mockFileSystem),
-          Layer.succeed(PathServiceTag, mockPathService),
-        );
+        const testLayer = Layer.mergeAll(Layer.succeed(FileSystemTag, mockFileSystem), Layer.succeed(PathServiceTag, mockPathService));
 
         const directory = makeDirectoryLive(mockPathService, mockFileSystem);
 
@@ -380,10 +356,7 @@ describe("directory-live", () => {
           getBasePath: () => "/home/user/dev",
         };
 
-        const depsLayer = Layer.mergeAll(
-          Layer.succeed(FileSystemTag, mockFileSystem),
-          Layer.succeed(PathServiceTag, mockPathService),
-        );
+        const depsLayer = Layer.mergeAll(Layer.succeed(FileSystemTag, mockFileSystem), Layer.succeed(PathServiceTag, mockPathService));
         const testLayer = DirectoryLiveLayer.pipe(Layer.provide(depsLayer));
 
         const program = Effect.gen(function* () {
@@ -428,10 +401,7 @@ describe("directory-live", () => {
           getBasePath: () => "/home/user/dev",
         };
 
-        const testLayer = Layer.mergeAll(
-          Layer.succeed(FileSystemTag, mockFileSystem),
-          Layer.succeed(PathServiceTag, mockPathService),
-        );
+        const testLayer = Layer.mergeAll(Layer.succeed(FileSystemTag, mockFileSystem), Layer.succeed(PathServiceTag, mockPathService));
 
         const directory = makeDirectoryLive(mockPathService, mockFileSystem);
         const result = yield* directory.findDirs().pipe(Effect.provide(testLayer));
@@ -464,10 +434,7 @@ describe("directory-live", () => {
           getBasePath: () => "/home/user/dev",
         };
 
-        const testLayer = Layer.mergeAll(
-          Layer.succeed(FileSystemTag, mockFileSystem),
-          Layer.succeed(PathServiceTag, mockPathService),
-        );
+        const testLayer = Layer.mergeAll(Layer.succeed(FileSystemTag, mockFileSystem), Layer.succeed(PathServiceTag, mockPathService));
 
         const directory = makeDirectoryLive(mockPathService, mockFileSystem);
         const result = yield* directory.findDirs().pipe(Effect.provide(testLayer));

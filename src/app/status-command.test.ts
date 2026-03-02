@@ -2,15 +2,15 @@ import { it } from "@effect/vitest";
 import { Cause, Effect, Exit, Layer, Option } from "effect";
 import { describe, expect } from "vitest";
 
-import type { Config } from "../domain/config-schema";
 import type { ConfigLoader } from "../domain/config-loader-port";
+import { ConfigLoaderTag } from "../domain/config-loader-port";
+import type { Config } from "../domain/config-schema";
 import type { DockerServices, ServiceName, ServiceStatus } from "../domain/docker-services-port";
+import { DockerServicesTag } from "../domain/docker-services-port";
 import { healthCheckError } from "../domain/errors";
 import type { HealthCheck } from "../domain/health-check-port";
-import type { Shell } from "../domain/shell-port";
-import { ConfigLoaderTag } from "../domain/config-loader-port";
-import { DockerServicesTag } from "../domain/docker-services-port";
 import { HealthCheckTag } from "../domain/health-check-port";
+import type { Shell } from "../domain/shell-port";
 import { ShellTag } from "../domain/shell-port";
 import { statusCommand } from "./status-command";
 

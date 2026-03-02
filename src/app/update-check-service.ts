@@ -27,8 +27,7 @@ const runPeriodicUpgradeCheck = Effect.gen(function* () {
 
     const currentTime = yield* Clock.currentTimeMillis;
     const shouldUpdate =
-      !lastUpgradeRun ||
-      (lastUpgradeRun && currentTime - lastUpgradeRun.started_at.getTime() > Duration.toMillis(upgradeFrequency));
+      !lastUpgradeRun || (lastUpgradeRun && currentTime - lastUpgradeRun.started_at.getTime() > Duration.toMillis(upgradeFrequency));
 
     if (shouldUpdate) {
       yield* Effect.logInfo("🔄 [dev] It's been more than 7 days since your last upgrade.");

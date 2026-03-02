@@ -2,12 +2,7 @@ import { it } from "@effect/vitest";
 import { Effect, Layer, Option } from "effect";
 import { describe, expect } from "vitest";
 
-import {
-  DockerServicesTag,
-  type DockerServices,
-  type ServiceName,
-  type ServiceStatus,
-} from "../domain/docker-services-port";
+import { DockerServicesTag, type DockerServices, type ServiceName, type ServiceStatus } from "../domain/docker-services-port";
 import type { HealthCheckResult } from "../domain/health-check-port";
 import { handleDown, handleLogs, handleReset, handleRestart, handleUp, withDocker } from "./services-service";
 
@@ -16,8 +11,7 @@ class MockDockerServices implements DockerServices {
   public upCalls: Array<readonly ServiceName[] | undefined> = [];
   public downCalls: Array<readonly ServiceName[] | undefined> = [];
   public restartCalls: Array<readonly ServiceName[] | undefined> = [];
-  public logsCalls: Array<{ readonly service?: ServiceName; readonly options?: { follow?: boolean; tail?: number } }> =
-    [];
+  public logsCalls: Array<{ readonly service?: ServiceName; readonly options?: { follow?: boolean; tail?: number } }> = [];
   public resetCalls = 0;
 
   constructor(private readonly available: boolean) {}
@@ -105,9 +99,7 @@ describe("services-service", () => {
 
       const upError = yield* Effect.flip(handleUp({ services: ["postgres17"] }).pipe(Effect.provide(testLayer)));
       const downError = yield* Effect.flip(handleDown({ services: ["postgres17"] }).pipe(Effect.provide(testLayer)));
-      const restartError = yield* Effect.flip(
-        handleRestart({ services: ["postgres17"] }).pipe(Effect.provide(testLayer)),
-      );
+      const restartError = yield* Effect.flip(handleRestart({ services: ["postgres17"] }).pipe(Effect.provide(testLayer)));
       const logsError = yield* Effect.flip(
         handleLogs({ service: ["postgres17"], follow: false, tail: Option.none() }).pipe(Effect.provide(testLayer)),
       );

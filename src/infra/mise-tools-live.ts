@@ -77,10 +77,7 @@ export const makeMiseToolsLive = (
     );
 
   // Get version info including latest available version from mise version --json
-  const getVersionInfo = (): Effect.Effect<
-    { currentVersion: string | null; latestVersion: string | null },
-    ShellExecutionError
-  > =>
+  const getVersionInfo = (): Effect.Effect<{ currentVersion: string | null; latestVersion: string | null }, ShellExecutionError> =>
     shell.exec("mise", ["version", "--json"]).pipe(
       Effect.flatMap((result) => {
         if (result.exitCode !== 0 || !result.stdout) {
@@ -200,9 +197,7 @@ export const makeMiseToolsLive = (
       if (!currentVersion) {
         yield* Effect.logWarning(`⚠️  Unable to determine mise version`);
       } else if (!meetsMinimum) {
-        yield* Effect.logWarning(
-          `⚠️  Mise ${currentVersion} is below minimum required version (>=${MISE_MIN_VERSION})`,
-        );
+        yield* Effect.logWarning(`⚠️  Mise ${currentVersion} is below minimum required version (>=${MISE_MIN_VERSION})`);
       } else if (latestVersion) {
         yield* Effect.logWarning(`⚠️  Mise ${currentVersion} is outdated (latest: ${latestVersion})`);
       } else {
@@ -226,13 +221,9 @@ export const makeMiseToolsLive = (
 
       // Re-check version after upgrade
       const { currentVersion: versionAfterUpgrade, latestVersion: latestAfterUpgrade } = yield* getVersionInfo();
-      const meetsMinimumAfter = versionAfterUpgrade
-        ? compareVersions(versionAfterUpgrade, MISE_MIN_VERSION) >= 0
-        : false;
+      const meetsMinimumAfter = versionAfterUpgrade ? compareVersions(versionAfterUpgrade, MISE_MIN_VERSION) >= 0 : false;
       const isLatestAfter =
-        versionAfterUpgrade && latestAfterUpgrade
-          ? compareVersions(versionAfterUpgrade, latestAfterUpgrade) >= 0
-          : false;
+        versionAfterUpgrade && latestAfterUpgrade ? compareVersions(versionAfterUpgrade, latestAfterUpgrade) >= 0 : false;
       const isValidAfterUpgrade = meetsMinimumAfter && (isLatestAfter || !latestAfterUpgrade);
 
       if (!isValidAfterUpgrade) {
@@ -258,9 +249,7 @@ export const makeMiseToolsLive = (
     Effect.gen(function* () {
       const checkedAt = new Date(yield* Clock.currentTimeMillis);
 
-      const currentVersion = yield* getCurrentVersion().pipe(
-        Effect.mapError(() => healthCheckError("Failed to get mise version", "mise")),
-      );
+      const currentVersion = yield* getCurrentVersion().pipe(Effect.mapError(() => healthCheckError("Failed to get mise version", "mise")));
 
       if (!currentVersion) {
         return {

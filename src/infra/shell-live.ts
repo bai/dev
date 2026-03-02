@@ -1,21 +1,11 @@
 import { spawn } from "bun";
-
 import { Duration, Effect, Layer } from "effect";
 
-import {
-  shellExecutionError,
-  shellTimeoutError,
-  type ShellExecutionError,
-  type ShellTimeoutError,
-} from "../domain/errors";
+import { shellExecutionError, shellTimeoutError, type ShellExecutionError, type ShellTimeoutError } from "../domain/errors";
 import { ShellTag, type Shell, type SpawnResult } from "../domain/shell-port";
 
 // Individual functions for each method
-const exec = (
-  command: string,
-  args: string[] = [],
-  options: { cwd?: string } = {},
-): Effect.Effect<SpawnResult, ShellExecutionError> =>
+const exec = (command: string, args: string[] = [], options: { cwd?: string } = {}): Effect.Effect<SpawnResult, ShellExecutionError> =>
   Effect.tryPromise({
     try: async () => {
       const proc = spawn([command, ...args], {
@@ -35,8 +25,7 @@ const exec = (
         stderr: stderr.trim(),
       };
     },
-    catch: (error) =>
-      shellExecutionError(command, args, `Failed to execute command`, { cwd: options.cwd, underlyingError: error }),
+    catch: (error) => shellExecutionError(command, args, `Failed to execute command`, { cwd: options.cwd, underlyingError: error }),
   });
 
 const execInteractive = (
@@ -76,9 +65,7 @@ const execWithTimeout = (
 ): Effect.Effect<SpawnResult, ShellExecutionError | ShellTimeoutError> =>
   exec(command, args, options).pipe(
     Effect.timeout(timeout),
-    Effect.catchTag("TimeoutException", () =>
-      shellTimeoutError(command, args, Duration.toMillis(timeout), options.cwd),
-    ),
+    Effect.catchTag("TimeoutException", () => shellTimeoutError(command, args, Duration.toMillis(timeout), options.cwd)),
   );
 
 const execInteractiveWithTimeout = (
@@ -89,9 +76,7 @@ const execInteractiveWithTimeout = (
 ): Effect.Effect<number, ShellExecutionError | ShellTimeoutError> =>
   execInteractive(command, args, options).pipe(
     Effect.timeout(timeout),
-    Effect.catchTag("TimeoutException", () =>
-      shellTimeoutError(command, args, Duration.toMillis(timeout), options.cwd),
-    ),
+    Effect.catchTag("TimeoutException", () => shellTimeoutError(command, args, Duration.toMillis(timeout), options.cwd)),
   );
 
 // Factory function to create Shell implementation

@@ -11,12 +11,7 @@ import { PathServiceTag, type PathService } from "../domain/path-service";
 import { ShellTag, type Shell } from "../domain/shell-port";
 
 // Factory function to create Mise implementation
-export const makeMiseLive = (
-  shell: Shell,
-  fileSystem: FileSystem,
-  configLoader: ConfigLoader,
-  pathService: PathService,
-): Mise => ({
+export const makeMiseLive = (shell: Shell, fileSystem: FileSystem, configLoader: ConfigLoader, pathService: PathService): Mise => ({
   checkInstallation: (): Effect.Effect<MiseInfo, ShellExecutionError> =>
     shell.exec("mise", ["--version"]).pipe(
       Effect.flatMap((result) => {
@@ -58,11 +53,7 @@ export const makeMiseLive = (
     shell.exec("curl", ["-sSfL", "https://mise.run", "|", "sh"]).pipe(
       Effect.flatMap((result) => {
         if (result.exitCode !== 0) {
-          return shellExecutionError(
-            "curl",
-            ["-sSfL", "https://mise.run", "|", "sh"],
-            `Failed to install mise: ${result.stderr}`,
-          );
+          return shellExecutionError("curl", ["-sSfL", "https://mise.run", "|", "sh"], `Failed to install mise: ${result.stderr}`);
         }
         return Effect.void;
       }),

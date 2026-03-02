@@ -7,10 +7,7 @@ export interface Git {
   /**
    * Clone a repository to a destination path
    */
-  cloneRepositoryToPath(
-    repository: Repository,
-    destinationPath: string,
-  ): Effect.Effect<void, GitError | ShellExecutionError>;
+  cloneRepositoryToPath(repository: Repository, destinationPath: string): Effect.Effect<void, GitError | ShellExecutionError>;
 
   /**
    * Pull latest changes from the remote repository

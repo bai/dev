@@ -112,10 +112,7 @@ export const buildAppLayer = (config: Config) => {
   const repositoryServiceLayer = Layer.provide(RepositoryServiceLiveLayer, baseServices);
 
   // Config loader needs filesystem and network
-  const configLoaderLayer = Layer.provide(
-    ConfigLoaderLiveLayer(configPath),
-    Layer.mergeAll(baseServices, networkLayer),
-  );
+  const configLoaderLayer = Layer.provide(ConfigLoaderLiveLayer(configPath), Layer.mergeAll(baseServices, networkLayer));
 
   // Docker services layer (depends on base services)
   const dockerServicesLayer = Layer.provide(DockerServicesLiveLayer(enabledServices), baseServices);
@@ -140,10 +137,7 @@ export const buildAppLayer = (config: Config) => {
   const toolHealthRegistryLayer = Layer.provide(ToolHealthRegistryLiveLayer, toolLayers);
 
   // Repository provider
-  const repoProviderLayer = Layer.provide(
-    MultiRepoProviderLiveLayer(defaultOrg, defaultProvider, orgToProvider),
-    networkLayer,
-  );
+  const repoProviderLayer = Layer.provide(MultiRepoProviderLiveLayer(defaultOrg, defaultProvider, orgToProvider), networkLayer);
 
   // Health check service
   const healthCheckServiceLayer = Layer.effect(

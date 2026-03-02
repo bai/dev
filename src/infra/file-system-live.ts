@@ -36,18 +36,14 @@ const mkdir = (dirPath: string, recursive = true): Effect.Effect<void, FileSyste
     catch: (error) => fileSystemError(`Failed to create directory ${dirPath}: ${error}`, dirPath),
   });
 
-const findDirectoriesGlob = (
-  basePath: string,
-  pattern: string,
-): Effect.Effect<string[], FileSystemError | UnknownError> =>
+const findDirectoriesGlob = (basePath: string, pattern: string): Effect.Effect<string[], FileSystemError | UnknownError> =>
   Effect.tryPromise({
     try: async () => {
       const scanner = new Bun.Glob(pattern);
       const matches = Array.from(scanner.scanSync({ cwd: basePath, onlyFiles: false }));
       return matches;
     },
-    catch: (error) =>
-      fileSystemError(`Failed to find directories with pattern ${pattern} in ${basePath}: ${error}`, basePath),
+    catch: (error) => fileSystemError(`Failed to find directories with pattern ${pattern} in ${basePath}: ${error}`, basePath),
   });
 
 const getCwd = (): Effect.Effect<string> => Effect.sync(() => process.cwd());

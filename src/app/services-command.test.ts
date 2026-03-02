@@ -4,12 +4,7 @@ import { Effect, Layer } from "effect";
 import { describe, expect } from "vitest";
 
 import { CommandRegistryTag } from "../domain/command-registry-port";
-import {
-  DockerServicesTag,
-  type DockerServices,
-  type ServiceName,
-  type ServiceStatus,
-} from "../domain/docker-services-port";
+import { DockerServicesTag, type DockerServices, type ServiceName, type ServiceStatus } from "../domain/docker-services-port";
 import type { HealthCheckResult } from "../domain/health-check-port";
 import { CommandRegistryLiveLayer } from "../infra/command-registry-live";
 import { registerServicesCommand, servicesCommand } from "./services-command";

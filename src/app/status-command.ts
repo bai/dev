@@ -308,9 +308,7 @@ const showSummary = (statusItems: readonly StatusItem[]): Effect.Effect<void, ne
 /**
  * Check for failures and exit with error if found
  */
-const checkForFailures = (
-  statusItems: readonly StatusItem[],
-): Effect.Effect<void, ReturnType<typeof statusCheckError>, never> =>
+const checkForFailures = (statusItems: readonly StatusItem[]): Effect.Effect<void, ReturnType<typeof statusCheckError>, never> =>
   Effect.gen(function* () {
     const failedItems = statusItems.filter((item) => item.status === "fail");
 

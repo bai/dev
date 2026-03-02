@@ -203,24 +203,11 @@ describe("docker-services-live", () => {
       const { shell, fileSystem, dockerServices, composeFilePath } = makeSubject();
       fileSystem.existingPaths.add(composeFilePath);
 
-      shell.setExecInteractiveResponse(
-        "docker",
-        ["compose", "-f", composeFilePath, "logs", "-f", "--tail", "20", "valkey"],
-        130,
-      );
+      shell.setExecInteractiveResponse("docker", ["compose", "-f", composeFilePath, "logs", "-f", "--tail", "20", "valkey"], 130);
 
       yield* dockerServices.logs("valkey", { follow: true, tail: 20 });
 
-      expect(shell.execInteractiveCalls[0]?.args).toEqual([
-        "compose",
-        "-f",
-        composeFilePath,
-        "logs",
-        "-f",
-        "--tail",
-        "20",
-        "valkey",
-      ]);
+      expect(shell.execInteractiveCalls[0]?.args).toEqual(["compose", "-f", composeFilePath, "logs", "-f", "--tail", "20", "valkey"]);
     }),
   );
 

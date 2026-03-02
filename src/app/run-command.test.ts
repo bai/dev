@@ -83,9 +83,7 @@ describe("run-command", () => {
 
   it.effect("runs a task with single argument", () =>
     Effect.gen(function* () {
-      const result = yield* createRunHandler({ _tag: "Some", value: "test" }, ["--watch"]).pipe(
-        Effect.provide(TestLayer),
-      );
+      const result = yield* createRunHandler({ _tag: "Some", value: "test" }, ["--watch"]).pipe(Effect.provide(TestLayer));
 
       expect(mockMise.lastCall).toEqual({
         taskName: "test",
@@ -136,14 +134,10 @@ describe("run-command", () => {
     Effect.gen(function* () {
       const failingMise = {
         ...mockMise,
-        runTask: () =>
-          new ShellExecutionError({ command: "mise", args: ["run", "failing-task"], reason: "Task failed" }),
+        runTask: () => new ShellExecutionError({ command: "mise", args: ["run", "failing-task"], reason: "Task failed" }),
       };
 
-      const failingMiseLayer = Layer.mergeAll(
-        Layer.succeed(FileSystemTag, mockFileSystem),
-        Layer.succeed(MiseTag, failingMise),
-      );
+      const failingMiseLayer = Layer.mergeAll(Layer.succeed(FileSystemTag, mockFileSystem), Layer.succeed(MiseTag, failingMise));
 
       const result = yield* Effect.exit(
         createRunHandler({ _tag: "Some", value: "failing-task" }, []).pipe(Effect.provide(failingMiseLayer)),
@@ -163,8 +157,7 @@ describe("run-command", () => {
       ];
 
       for (const testCase of testCases) {
-        const fullCommand =
-          testCase.args.length > 0 ? `${testCase.taskName} ${testCase.args.join(" ")}` : testCase.taskName;
+        const fullCommand = testCase.args.length > 0 ? `${testCase.taskName} ${testCase.args.join(" ")}` : testCase.taskName;
         expect(fullCommand).toBe(testCase.expected);
       }
     }),

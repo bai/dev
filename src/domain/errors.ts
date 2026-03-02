@@ -130,8 +130,7 @@ export const unknownError = (reason: unknown) => new UnknownError({ reason });
 export const externalToolError = (message: string, options?: { tool?: string; exitCode?: number; stderr?: string }) =>
   new ExternalToolError({ message, ...options });
 export const fileSystemError = (reason: string, path?: string) => new FileSystemError({ reason, path });
-export const statusCheckError = (reason: string, failedComponents: string[]) =>
-  new StatusCheckError({ reason, failedComponents });
+export const statusCheckError = (reason: string, failedComponents: string[]) => new StatusCheckError({ reason, failedComponents });
 export const healthCheckError = (reason: string, tool?: string) => new HealthCheckError({ reason, tool });
 export const shellExecutionError = (
   command: string,
@@ -141,10 +140,8 @@ export const shellExecutionError = (
 ) => new ShellExecutionError({ command, args, reason, ...options });
 export const shellTimeoutError = (command: string, args: readonly string[], timeoutMs: number, cwd?: string) =>
   new ShellTimeoutError({ command, args, timeoutMs, cwd });
-export const dockerServiceError = (
-  reason: string,
-  options?: { service?: string; exitCode?: number; stderr?: string },
-) => new DockerServiceError({ reason, ...options });
+export const dockerServiceError = (reason: string, options?: { service?: string; exitCode?: number; stderr?: string }) =>
+  new DockerServiceError({ reason, ...options });
 
 // Type guards (using Effect's built-in error matching)
 export const isConfigError = (e: DevError): e is ConfigError => e._tag === "ConfigError";

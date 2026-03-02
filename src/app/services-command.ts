@@ -54,8 +54,7 @@ const downHandler = (config: ServicesHandlerConfig) => handleDown(config).pipe(E
 const downCommand = Command.make("down", { services: serviceArg }, downHandler);
 const stopCommand = Command.make("stop", { services: serviceArg }, downHandler);
 
-const restartHandler = (config: ServicesHandlerConfig) =>
-  handleRestart(config).pipe(Effect.withSpan("services.restart"));
+const restartHandler = (config: ServicesHandlerConfig) => handleRestart(config).pipe(Effect.withSpan("services.restart"));
 
 const restartCommand = Command.make("restart", { services: serviceArg }, restartHandler);
 
@@ -71,17 +70,7 @@ export const servicesCommand = Command.make("services", {}, () =>
   Effect.gen(function* () {
     yield* displayHelp();
   }),
-).pipe(
-  Command.withSubcommands([
-    upCommand,
-    startCommand,
-    downCommand,
-    stopCommand,
-    restartCommand,
-    logsCommand,
-    resetCommand,
-  ]),
-);
+).pipe(Command.withSubcommands([upCommand, startCommand, downCommand, stopCommand, restartCommand, logsCommand, resetCommand]));
 
 export const registerServicesCommand: Effect.Effect<void, never, CommandRegistryTag> = Effect.gen(function* () {
   const registry = yield* CommandRegistryTag;

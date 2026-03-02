@@ -67,10 +67,7 @@ const registerAllCommands: Effect.Effect<void, never, CommandRegistryTag> = Effe
 /**
  * Check if help was requested and display appropriate help
  */
-const checkAndDisplayHelp = (
-  args: readonly string[],
-  registry: CommandRegistry,
-): Effect.Effect<boolean, never, never> =>
+const checkAndDisplayHelp = (args: readonly string[], registry: CommandRegistry): Effect.Effect<boolean, never, never> =>
   Effect.gen(function* () {
     const hasHelp = args.includes("--help") || args.includes("-h");
 
@@ -218,16 +215,12 @@ const program = Effect.scoped(
         Effect.tap(() =>
           commandTracker
             .completeCommandRun(runId, typeof process.exitCode === "number" ? process.exitCode : 0)
-            .pipe(
-              Effect.catchAll((error) => Effect.logWarning(`Failed to complete command run tracking: ${error._tag}`)),
-            ),
+            .pipe(Effect.catchAll((error) => Effect.logWarning(`Failed to complete command run tracking: ${error._tag}`))),
         ),
         Effect.tapError(() =>
           commandTracker
             .completeCommandRun(runId, typeof process.exitCode === "number" ? process.exitCode : 1)
-            .pipe(
-              Effect.catchAll((error) => Effect.logWarning(`Failed to complete command run tracking: ${error._tag}`)),
-            ),
+            .pipe(Effect.catchAll((error) => Effect.logWarning(`Failed to complete command run tracking: ${error._tag}`))),
         ),
       );
     }).pipe(Effect.withSpan("cli.execute"));

@@ -6,10 +6,7 @@ import { NetworkTag, type HttpResponse, type Network } from "../domain/network-p
 
 // Factory function to create Network implementation
 export const makeNetworkLive = (fileSystem: FileSystem): Network => ({
-  get: (
-    url: string,
-    options: { headers?: Record<string, string> } = {},
-  ): Effect.Effect<HttpResponse, NetworkError | UnknownError> =>
+  get: (url: string, options: { headers?: Record<string, string> } = {}): Effect.Effect<HttpResponse, NetworkError | UnknownError> =>
     Effect.tryPromise({
       try: async () => {
         const response = await fetch(url, {

@@ -1,4 +1,5 @@
 import type { Database as BunSQLiteDatabase } from "bun:sqlite";
+
 import { Context, type Effect } from "effect";
 
 import type { DrizzleDatabase } from "./drizzle-types";
@@ -12,16 +13,12 @@ export interface Database {
   /**
    * Execute a database operation with the Drizzle instance
    */
-  readonly query: <A, E>(
-    fn: (db: DrizzleDatabase) => Effect.Effect<A, E>,
-  ) => Effect.Effect<A, E | ConfigError | UnknownError>;
+  readonly query: <A, E>(fn: (db: DrizzleDatabase) => Effect.Effect<A, E>) => Effect.Effect<A, E | ConfigError | UnknownError>;
 
   /**
    * Execute a database operation within a transaction
    */
-  readonly transaction: <A, E>(
-    fn: (tx: DrizzleDatabase) => Effect.Effect<A, E>,
-  ) => Effect.Effect<A, E | ConfigError | UnknownError>;
+  readonly transaction: <A, E>(fn: (tx: DrizzleDatabase) => Effect.Effect<A, E>) => Effect.Effect<A, E | ConfigError | UnknownError>;
 
   /**
    * Get the raw SQLite database instance (for special operations like PRAGMA)

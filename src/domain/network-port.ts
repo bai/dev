@@ -13,10 +13,7 @@ export interface Network {
   /**
    * Make an HTTP GET request
    */
-  get(
-    url: string,
-    options?: { headers?: Record<string, string> },
-  ): Effect.Effect<HttpResponse, NetworkError | UnknownError>;
+  get(url: string, options?: { headers?: Record<string, string> }): Effect.Effect<HttpResponse, NetworkError | UnknownError>;
 
   /**
    * Download a file to a destination

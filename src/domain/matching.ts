@@ -109,14 +109,7 @@ function setupMatchStruct(needle: string, haystack: string): MatchStruct | null 
   };
 }
 
-function matchRow(
-  match: MatchStruct,
-  row: number,
-  currD: number[],
-  currM: number[],
-  lastD: number[] | null,
-  lastM: number[] | null,
-): void {
+function matchRow(match: MatchStruct, row: number, currD: number[], currM: number[], lastD: number[] | null, lastM: number[] | null): void {
   const { needleLen, haystackLen, lowerNeedle, lowerHaystack, matchBonus } = match;
   const i = row;
   const needleCh = lowerNeedle.charAt(i);

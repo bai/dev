@@ -7,16 +7,11 @@ import { ShellTag, type Shell } from "../domain/shell-port";
 
 // Factory function to create Git implementation
 export const makeGitLive = (shell: Shell): Git => ({
-  cloneRepositoryToPath: (
-    repository: Repository,
-    destinationPath: string,
-  ): Effect.Effect<void, GitError | ShellExecutionError> =>
+  cloneRepositoryToPath: (repository: Repository, destinationPath: string): Effect.Effect<void, GitError | ShellExecutionError> =>
     Effect.scoped(
       Effect.gen(function* () {
         // Add cleanup finalizer for failed clone operations
-        yield* Effect.addFinalizer(() =>
-          Effect.logDebug(`Git clone operation finalizer called for ${destinationPath}`),
-        );
+        yield* Effect.addFinalizer(() => Effect.logDebug(`Git clone operation finalizer called for ${destinationPath}`));
 
         const result = yield* shell.exec("git", ["clone", repository.cloneUrl, destinationPath]);
 

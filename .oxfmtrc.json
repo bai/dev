@@ -1,39 +1,25 @@
 {
   "$schema": "./node_modules/oxfmt/configuration_schema.json",
-  "endOfLine": "lf",
-  "bracketSpacing": true,
-  "bracketSameLine": false,
-  "singleQuote": false,
-  "jsxSingleQuote": false,
-  "trailingComma": "all",
-  "semi": true,
-  "printWidth": 120,
-  "arrowParens": "always",
+  "printWidth": 140,
   "quoteProps": "consistent",
-  "importOrder": [
-    "^server-only|client-only$",
-    "",
-    "<BUILTIN_MODULES>",
-    "^bun$",
-    "",
-    "^react-scan$",
-    "",
-    "^(react/(.*)$)|^(react-dom/(.*)$)|^(react$)",
-    "",
-    "^(next/(.*)$)|^(next$)",
-    "",
-    "<THIRD_PARTY_MODULES>",
-    "",
-    "^~/lib/(.*)$",
-    "^~/lib/utils/(.*)$",
-    "^~/hooks/(.*)$",
-    "^~/components/(.*)$",
-    "^~/(server|trpc)/(.*)$",
-    "^~/(.*)$",
-    "",
-    "^[./]"
-  ],
-  "importOrderParserPlugins": ["typescript", "jsx", "decorators-legacy"],
-  "importOrderTypeScriptVersion": "5.8.0",
-  "ignorePatterns": ["drizzle/migrations", "docs/**/*.md"]
+  "sortImports": {
+    "sortSideEffects": true
+  },
+  "sortTailwindcss": {
+    "stylesheet": "./app/globals.css",
+    "attributes": ["class", "className"],
+    "functions": ["clsx", "cn", "cva"]
+  },
+  "ignorePatterns": [
+    ".next",
+    ".turbo",
+    "dist",
+    "docs",
+    "node_modules",
+    "pnpm-lock.yaml",
+    "src/drizzle/migrations",
+    "src/components/ui",
+    "drizzle/migrations",
+    "components/ui"
+  ]
 }

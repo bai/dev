@@ -56,9 +56,7 @@ export const cloneCommand = Command.make("clone", { repo }, ({ repo }) =>
       let repository;
       if (isFullUrl(repo)) {
         yield* Effect.logInfo(`Cloning from URL: ${repo}`);
-        repository = yield* repositoryService
-          .parseFullUrlToRepository(repo)
-          .pipe(Effect.withSpan("repository.parse_url"));
+        repository = yield* repositoryService.parseFullUrlToRepository(repo).pipe(Effect.withSpan("repository.parse_url"));
         yield* Effect.annotateCurrentSpan("vcs.repository.owner", repository.organization);
         yield* Effect.annotateCurrentSpan("vcs.repository.name", repository.name);
       } else {
@@ -77,9 +75,7 @@ export const cloneCommand = Command.make("clone", { repo }, ({ repo }) =>
         // Resolve repository details
         yield* Effect.annotateCurrentSpan("vcs.repository.owner", org || "default");
         yield* Effect.annotateCurrentSpan("vcs.repository.name", repoNameFinal);
-        repository = yield* repoProvider
-          .resolveRepository(repoNameFinal, org)
-          .pipe(Effect.withSpan("repository.resolve"));
+        repository = yield* repoProvider.resolveRepository(repoNameFinal, org).pipe(Effect.withSpan("repository.resolve"));
       }
 
       // Use RepositoryService to determine the proper nested destination path

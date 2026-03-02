@@ -35,9 +35,7 @@ interface ParsedRepositoryCoordinates {
   readonly repoName: string;
 }
 
-const parseRepositoryCoordinatesFromUrl = (
-  repoUrl: string,
-): Effect.Effect<ParsedRepositoryCoordinates, ConfigError, never> =>
+const parseRepositoryCoordinatesFromUrl = (repoUrl: string): Effect.Effect<ParsedRepositoryCoordinates, ConfigError, never> =>
   Effect.gen(function* () {
     // Handle scp-style SSH URLs (git@github.com:org/repo.git)
     // Must not start with a protocol (ssh://, https://, etc)
@@ -78,12 +76,7 @@ const parseRepoUrlToPath = (repoUrl: string): Effect.Effect<string, ConfigError,
   Effect.gen(function* () {
     const pathService = yield* PathServiceTag;
     const parsedRepository = yield* parseRepositoryCoordinatesFromUrl(repoUrl);
-    return path.join(
-      pathService.baseSearchPath,
-      parsedRepository.domain,
-      parsedRepository.orgName,
-      parsedRepository.repoName,
-    );
+    return path.join(pathService.baseSearchPath, parsedRepository.domain, parsedRepository.orgName, parsedRepository.repoName);
   });
 
 const parseFullUrlToRepository = (repoUrl: string): Effect.Effect<Repository, ConfigError, never> =>

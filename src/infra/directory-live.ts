@@ -19,10 +19,7 @@ const ensureBaseDirectoryExists = (
     }
   });
 
-const findDirs = (
-  pathService: PathService,
-  fileSystem: FileSystem,
-): Effect.Effect<string[], FileSystemError | UnknownError, never> =>
+const findDirs = (pathService: PathService, fileSystem: FileSystem): Effect.Effect<string[], FileSystemError | UnknownError, never> =>
   Effect.gen(function* () {
     const baseDir = pathService.baseSearchPath;
 

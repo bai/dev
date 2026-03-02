@@ -19,9 +19,7 @@ export interface LogsHandlerConfig {
   readonly tail: Option.Option<number>;
 }
 
-export const validateServiceNames = (
-  services: readonly string[],
-): Effect.Effect<readonly ServiceName[], never, never> =>
+export const validateServiceNames = (services: readonly string[]): Effect.Effect<readonly ServiceName[], never, never> =>
   Effect.gen(function* () {
     const result: ServiceName[] = [];
 
@@ -86,9 +84,7 @@ export const handleRestart = ({
     }),
   );
 
-export const handleLogs = (
-  config: LogsHandlerConfig,
-): Effect.Effect<void, DockerServiceError | ShellExecutionError, DockerServicesTag> =>
+export const handleLogs = (config: LogsHandlerConfig): Effect.Effect<void, DockerServiceError | ShellExecutionError, DockerServicesTag> =>
   withDocker((dockerServices) =>
     Effect.gen(function* () {
       const validServices = yield* validateServiceNames(config.service);

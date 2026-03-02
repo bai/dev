@@ -1,4 +1,5 @@
 import { Database as BunSQLiteDatabase } from "bun:sqlite";
+
 import { drizzle } from "drizzle-orm/bun-sqlite";
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
 import { Effect, Layer } from "effect";
@@ -15,14 +16,8 @@ interface DatabaseWithClose extends Database {
 }
 
 // Factory function that creates Database service
-export const makeDatabaseLive = (
-  sqlite: BunSQLiteDatabase,
-  drizzleDb: DrizzleDatabase,
-  migrationsPath: string,
-): DatabaseWithClose => {
-  const query = <A, E>(
-    fn: (db: DrizzleDatabase) => Effect.Effect<A, E>,
-  ): Effect.Effect<A, E | ConfigError | UnknownError> =>
+export const makeDatabaseLive = (sqlite: BunSQLiteDatabase, drizzleDb: DrizzleDatabase, migrationsPath: string): DatabaseWithClose => {
+  const query = <A, E>(fn: (db: DrizzleDatabase) => Effect.Effect<A, E>): Effect.Effect<A, E | ConfigError | UnknownError> =>
     Effect.gen(function* () {
       yield* Effect.logDebug("Executing database query");
       return yield* fn(drizzleDb).pipe(
@@ -35,9 +30,7 @@ export const makeDatabaseLive = (
       );
     });
 
-  const transaction = <A, E>(
-    fn: (tx: DrizzleDatabase) => Effect.Effect<A, E>,
-  ): Effect.Effect<A, E | ConfigError | UnknownError> =>
+  const transaction = <A, E>(fn: (tx: DrizzleDatabase) => Effect.Effect<A, E>): Effect.Effect<A, E | ConfigError | UnknownError> =>
     Effect.gen(function* () {
       yield* Effect.logDebug("Starting database transaction");
 
@@ -131,9 +124,7 @@ export const DatabaseLiveLayer = Layer.scoped(
   Effect.gen(function* () {
     // Create the Database with proper resource management
     const database = yield* Effect.acquireRelease(createDatabase, (database) =>
-      database
-        .close()
-        .pipe(Effect.catchAll((error) => Effect.logWarning(`Failed to close database cleanly: ${error}`))),
+      database.close().pipe(Effect.catchAll((error) => Effect.logWarning(`Failed to close database cleanly: ${error}`))),
     );
 
     // Return only the public Database interface, not the extended one with close

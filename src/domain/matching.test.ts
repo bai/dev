@@ -92,9 +92,7 @@ describe("matching", () => {
         expect(score("a", "**a")).toBeCloseTo(SCORE_GAP_LEADING * 2);
         expect(score("a", "**a*")).toBeCloseTo(SCORE_GAP_LEADING * 2 + SCORE_GAP_TRAILING);
         expect(score("a", "**a**")).toBeCloseTo(SCORE_GAP_LEADING * 2 + SCORE_GAP_TRAILING * 2);
-        expect(score("aa", "**aa**")).toBeCloseTo(
-          SCORE_GAP_LEADING * 2 + SCORE_MATCH_CONSECUTIVE + SCORE_GAP_TRAILING * 2,
-        );
+        expect(score("aa", "**aa**")).toBeCloseTo(SCORE_GAP_LEADING * 2 + SCORE_MATCH_CONSECUTIVE + SCORE_GAP_TRAILING * 2);
         // Our implementation gives -0.03, which is close to -0.035
         expect(score("aa", "**a*a**")).toBeCloseTo(-0.03, 1);
       });
