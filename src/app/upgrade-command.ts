@@ -278,7 +278,7 @@ function upgradeEssentialTools(): Effect.Effect<void, DevError, ToolManagementTa
 /**
  * Generic function to check and upgrade a tool
  */
-function checkTool(toolName: string, toolManager: ToolManagement[keyof ToolManagement]): Effect.Effect<void, DevError> {
+export function checkTool(toolName: string, toolManager: ToolManagement[keyof ToolManagement]): Effect.Effect<void, DevError> {
   return Effect.gen(function* () {
     yield* Effect.annotateCurrentSpan("tool.name", toolName);
     const { isValid, currentVersion } = yield* toolManager.checkVersion().pipe(
