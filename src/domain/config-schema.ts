@@ -1,6 +1,6 @@
 import * as z from "zod";
 
-import type { GitProviderType, LogLevel, TelemetryMode } from "./models";
+import type { GitProviderType, LogLevel } from "./models";
 
 // Log level schema
 const logLevelSchema: z.ZodType<LogLevel> = z.enum(["debug", "info", "warning", "error", "fatal"]);
@@ -42,25 +42,33 @@ const miseConfigSchema = z.object({
 
 const gitProviderSchema: z.ZodType<GitProviderType> = z.enum(["github", "gitlab"]);
 
-const telemetryModeSchema: z.ZodType<TelemetryMode> = z.enum(["console", "axiom", "disabled"]);
-
 const telemetryAxiomSchema = z
   .object({
     endpoint: z.url().describe("Axiom OTLP traces endpoint"),
-    apiKey: z.string().optional().describe("Axiom API key used for OTLP trace ingestion"),
-    dataset: z.string().describe("Axiom dataset used for trace ingestion"),
+    apiKey: z.string().min(1).describe("Axiom API key used for OTLP trace ingestion"),
+    dataset: z.string().min(1).describe("Axiom dataset used for trace ingestion"),
   })
   .describe("Axiom OTLP exporter settings");
 
+const telemetryDisabledSchema = z.object({
+  mode: z.literal("disabled"),
+  axiom: telemetryAxiomSchema.optional(),
+});
+
+const telemetryConsoleSchema = z.object({
+  mode: z.literal("console"),
+  axiom: telemetryAxiomSchema.optional(),
+});
+
+const telemetryAxiomModeSchema = z.object({
+  mode: z.literal("axiom"),
+  axiom: telemetryAxiomSchema,
+});
+
 const telemetryConfigSchema = z
-  .object({
-    mode: telemetryModeSchema
-      .optional()
-      .default("disabled")
-      .describe("Telemetry mode: 'console' for local output, 'axiom' for Axiom export, 'disabled' to turn off"),
-    axiom: telemetryAxiomSchema.optional(),
-  })
-  .describe("Telemetry and observability settings");
+  .discriminatedUnion("mode", [telemetryDisabledSchema, telemetryConsoleSchema, telemetryAxiomModeSchema])
+  .default({ mode: "disabled" })
+  .describe("Telemetry mode: 'console' for local output, 'axiom' for Axiom export, 'disabled' to turn off");
 
 // Per-service config (empty for now, reserved for future customization)
 const serviceConfigSchema = z.object({}).passthrough().describe("Service-specific configuration (reserved for future use)");
@@ -87,7 +95,7 @@ export const configSchema = z.object({
   defaultProvider: gitProviderSchema.optional().default("github").describe("Default git provider when not specified (github or gitlab)"),
   baseSearchPath: z.string().optional().default("~/src").describe("Base directory for searching and cloning repositories"),
   logLevel: logLevelSchema.optional().default("info").describe("Logging verbosity: debug, info, warning, error, or fatal"),
-  telemetry: telemetryConfigSchema.default({ mode: "disabled" }),
+  telemetry: telemetryConfigSchema,
   orgToProvider: z
     .record(z.string(), gitProviderSchema)
     .optional()

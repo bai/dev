@@ -66,48 +66,130 @@
       "default": {
         "mode": "disabled"
       },
-      "type": "object",
-      "properties": {
-        "mode": {
-          "default": "disabled",
-          "description": "Telemetry mode: 'console' for local output, 'axiom' for Axiom export, 'disabled' to turn off\n\ndefault: `disabled`",
-          "type": "string",
-          "enum": [
-            "console",
-            "axiom",
-            "disabled"
-          ],
-          "examples": [
-            "disabled"
-          ]
-        },
-        "axiom": {
+      "description": "Telemetry mode: 'console' for local output, 'axiom' for Axiom export, 'disabled' to turn off",
+      "oneOf": [
+        {
           "type": "object",
           "properties": {
-            "endpoint": {
+            "mode": {
               "type": "string",
-              "format": "uri",
-              "description": "Axiom OTLP traces endpoint"
+              "const": "disabled"
             },
-            "apiKey": {
-              "description": "Axiom API key used for OTLP trace ingestion",
-              "type": "string"
-            },
-            "dataset": {
-              "type": "string",
-              "description": "Axiom dataset used for trace ingestion"
+            "axiom": {
+              "type": "object",
+              "properties": {
+                "endpoint": {
+                  "type": "string",
+                  "format": "uri",
+                  "description": "Axiom OTLP traces endpoint"
+                },
+                "apiKey": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Axiom API key used for OTLP trace ingestion"
+                },
+                "dataset": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Axiom dataset used for trace ingestion"
+                }
+              },
+              "required": [
+                "endpoint",
+                "apiKey",
+                "dataset"
+              ],
+              "description": "Axiom OTLP exporter settings",
+              "additionalProperties": false
             }
           },
           "required": [
-            "endpoint",
-            "dataset"
+            "mode"
           ],
-          "description": "Axiom OTLP exporter settings",
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "mode": {
+              "type": "string",
+              "const": "console"
+            },
+            "axiom": {
+              "type": "object",
+              "properties": {
+                "endpoint": {
+                  "type": "string",
+                  "format": "uri",
+                  "description": "Axiom OTLP traces endpoint"
+                },
+                "apiKey": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Axiom API key used for OTLP trace ingestion"
+                },
+                "dataset": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Axiom dataset used for trace ingestion"
+                }
+              },
+              "required": [
+                "endpoint",
+                "apiKey",
+                "dataset"
+              ],
+              "description": "Axiom OTLP exporter settings",
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "mode"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "mode": {
+              "type": "string",
+              "const": "axiom"
+            },
+            "axiom": {
+              "type": "object",
+              "properties": {
+                "endpoint": {
+                  "type": "string",
+                  "format": "uri",
+                  "description": "Axiom OTLP traces endpoint"
+                },
+                "apiKey": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Axiom API key used for OTLP trace ingestion"
+                },
+                "dataset": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Axiom dataset used for trace ingestion"
+                }
+              },
+              "required": [
+                "endpoint",
+                "apiKey",
+                "dataset"
+              ],
+              "description": "Axiom OTLP exporter settings",
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "mode",
+            "axiom"
+          ],
           "additionalProperties": false
         }
-      },
-      "description": "Telemetry and observability settings",
-      "additionalProperties": false
+      ]
     },
     "orgToProvider": {
       "default": {},

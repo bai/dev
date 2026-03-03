@@ -90,9 +90,9 @@ describe("tracing-live", () => {
     }),
   );
 
-  it.effect("falls back to noop span processor when axiom mode is missing apiKey", () =>
-    Effect.gen(function* () {
-      const config = configSchema.parse({
+  it.effect("invalid axiom config fails at schema validation before tracing runtime", () =>
+    Effect.sync(() => {
+      const result = configSchema.safeParse({
         telemetry: {
           mode: "axiom",
           axiom: {
@@ -102,9 +102,7 @@ describe("tracing-live", () => {
         },
       });
 
-      const sdkConfig = yield* loadSdkConfig(config);
-
-      expect(sdkConfig.spanProcessor).toBeInstanceOf(NoopSpanProcessor);
+      expect(result.success).toBe(false);
     }),
   );
 });

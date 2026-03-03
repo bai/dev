@@ -1,12 +1,13 @@
+import { ExportResultCode, type ExportResult } from "@opentelemetry/core";
 import type { NodeSdk } from "@effect/opentelemetry";
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
 import * as resources from "@opentelemetry/resources";
-import { BatchSpanProcessor, ConsoleSpanExporter, NoopSpanProcessor } from "@opentelemetry/sdk-trace-base";
+import { BatchSpanProcessor, ConsoleSpanExporter, NoopSpanProcessor, type ReadableSpan, type SpanExporter } from "@opentelemetry/sdk-trace-base";
 import { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION } from "@opentelemetry/semantic-conventions";
 import { Effect, Layer, Runtime } from "effect";
 
 import { ConfigLoaderTag } from "../domain/config-loader-port";
-import type { TelemetryMode } from "../domain/models";
+import type { Config } from "../domain/config-schema";
 import { TracingError, TracingTag, type Tracing } from "../domain/tracing-port";
 import { VersionTag } from "../domain/version-port";
 
@@ -16,52 +17,100 @@ interface AxiomOtlpConfig {
   readonly dataset: string;
 }
 
-interface TelemetryExporterConfig {
-  readonly mode: TelemetryMode;
-  readonly axiom?: {
-    readonly endpoint?: string;
-    readonly apiKey?: string;
-    readonly dataset?: string;
-  };
+interface OtlpExportError extends Error {
+  readonly code?: number;
+  readonly data?: unknown;
+}
+
+interface ExportOutcome {
+  readonly exportResult: ExportResult;
+  readonly spans: number;
 }
 
 /**
  * Logs export results from Axiom OTLP trace endpoint
  */
-const logExportResult = (result: { code: number; error?: any; spans: number }) =>
+const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null;
+
+const parsePayload = (value: unknown): unknown => {
+  if (typeof value !== "string") {
+    return value;
+  }
+
+  try {
+    return JSON.parse(value);
+  } catch {
+    return value;
+  }
+};
+
+const extractErrorMessage = (value: unknown): string | undefined => {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+
+  const error = value.error;
+  if (!isRecord(error)) {
+    return undefined;
+  }
+
+  return typeof error.message === "string" ? error.message : undefined;
+};
+
+const extractActivationUrl = (value: unknown): string | undefined => {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+
+  const error = value.error;
+  if (!isRecord(error) || !Array.isArray(error.details)) {
+    return undefined;
+  }
+
+  for (const detail of error.details) {
+    if (!isRecord(detail) || !isRecord(detail.metadata)) {
+      continue;
+    }
+
+    if (typeof detail.metadata.activationUrl === "string") {
+      return detail.metadata.activationUrl;
+    }
+  }
+
+  return undefined;
+};
+
+const logExportResult = (result: ExportOutcome) =>
   Effect.gen(function* () {
-    if (result.code === 0) {
+    if (result.exportResult.code === ExportResultCode.SUCCESS) {
       // Success - no logging needed for normal operation
       return;
     }
 
+    const exportError = result.exportResult.error as OtlpExportError | undefined;
+
     // Handle errors
-    if (result.error?.code) {
-      yield* Effect.logWarning(`Failed to export ${result.spans} spans to Axiom OTLP endpoint (HTTP ${result.error.code})`);
+    if (typeof exportError?.code === "number") {
+      yield* Effect.logWarning(`Failed to export ${result.spans} spans to Axiom OTLP endpoint (HTTP ${exportError.code})`);
 
       // Parse error response if available
-      if (result.error.data) {
-        try {
-          const errorData = typeof result.error.data === "string" ? JSON.parse(result.error.data) : result.error.data;
+      if (exportError.data !== undefined) {
+        const parsedPayload = parsePayload(exportError.data);
+        const errorMessage = extractErrorMessage(parsedPayload);
+        const activationUrl = extractActivationUrl(parsedPayload);
 
-          if (errorData.error?.message) {
-            yield* Effect.logWarning(`Axiom OTLP error: ${errorData.error.message}`);
-          }
-
-          // Extract activation URL if present
-          const details = errorData.error?.details;
-          if (Array.isArray(details)) {
-            const activationDetail = details.find((d: any) => d.metadata?.activationUrl);
-            if (activationDetail?.metadata?.activationUrl) {
-              yield* Effect.logWarning(`Enable API access at: ${activationDetail.metadata.activationUrl}`);
-            }
-          }
-        } catch {
-          yield* Effect.logWarning(`Axiom OTLP raw error response: ${result.error.data}`);
+        if (errorMessage) {
+          yield* Effect.logWarning(`Axiom OTLP error: ${errorMessage}`);
+        }
+        if (activationUrl) {
+          yield* Effect.logWarning(`Enable API access at: ${activationUrl}`);
+        }
+        if (!errorMessage && !activationUrl) {
+          yield* Effect.logWarning(`Axiom OTLP raw error response: ${String(exportError.data)}`);
         }
       }
     } else {
-      yield* Effect.logWarning(`Failed to export spans to Axiom OTLP: ${result.error?.message || "Unknown error"}`);
+      yield* Effect.logWarning(`Failed to export spans to Axiom OTLP: ${exportError?.message || "Unknown error"}`);
     }
   });
 
@@ -80,27 +129,26 @@ const createOtlpTraceExporter = (config: AxiomOtlpConfig): Effect.Effect<BatchSp
 
     // Create a monitored exporter that logs responses
     const runtime = Runtime.defaultRuntime;
-    const monitoredExporter = {
-      export: (spans: any, resultCallback: (result: any) => void) => {
-        exporter.export(spans, (result: any) => {
+    const monitoredExporter: SpanExporter = {
+      export: (spans: ReadableSpan[], resultCallback: (result: ExportResult) => void) => {
+        exporter.export(spans, (exportResult: ExportResult) => {
           // Log the result asynchronously
           Runtime.runPromise(runtime)(
             logExportResult({
-              code: result.code,
-              error: result.error,
+              exportResult,
               spans: spans.length,
             }),
           ).catch(() => {
             // Ignore logging errors
           });
 
-          resultCallback(result);
+          resultCallback(exportResult);
         });
       },
       shutdown: () => exporter.shutdown(),
     };
 
-    return new BatchSpanProcessor(monitoredExporter as any);
+    return new BatchSpanProcessor(monitoredExporter);
   }).pipe(
     Effect.catchAll(() =>
       Effect.gen(function* () {
@@ -112,21 +160,9 @@ const createOtlpTraceExporter = (config: AxiomOtlpConfig): Effect.Effect<BatchSp
   );
 
 const createAxiomSpanProcessor = (
-  telemetryConfig: TelemetryExporterConfig,
+  telemetryConfig: Extract<Config["telemetry"], { readonly mode: "axiom" }>,
 ): Effect.Effect<NodeSdk.Configuration["spanProcessor"], never, never> =>
   Effect.gen(function* () {
-    if (
-      !telemetryConfig.axiom?.endpoint ||
-      telemetryConfig.axiom.endpoint.trim().length === 0 ||
-      !telemetryConfig.axiom.apiKey ||
-      telemetryConfig.axiom.apiKey.trim().length === 0 ||
-      !telemetryConfig.axiom.dataset ||
-      telemetryConfig.axiom.dataset.trim().length === 0
-    ) {
-      yield* Effect.logWarning("Telemetry: mode 'axiom' requires telemetry.axiom.endpoint/apiKey/dataset; disabling exporter");
-      return new NoopSpanProcessor();
-    }
-
     yield* Effect.logDebug("Telemetry: Using Axiom OTLP trace exporter");
     return yield* createOtlpTraceExporter({
       endpoint: telemetryConfig.axiom.endpoint,
@@ -137,10 +173,7 @@ const createAxiomSpanProcessor = (
 
 const exporterFactories = {
   axiom: createAxiomSpanProcessor,
-} as const satisfies Record<
-  Exclude<TelemetryMode, "console" | "disabled">,
-  (telemetryConfig: TelemetryExporterConfig) => Effect.Effect<NodeSdk.Configuration["spanProcessor"], never, never>
->;
+} as const;
 
 /**
  * Factory function that creates a Tracing implementation
@@ -174,8 +207,8 @@ const makeTracingLive = (configLoader: typeof ConfigLoaderTag.Service, versionSe
           spanProcessor = new NoopSpanProcessor();
           break;
 
-        default:
-          spanProcessor = yield* exporterFactories[telemetryConfig.mode](telemetryConfig);
+        case "axiom":
+          spanProcessor = yield* exporterFactories.axiom(telemetryConfig);
           break;
       }
 
