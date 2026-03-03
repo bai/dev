@@ -66,7 +66,11 @@ describe("tracing-live", () => {
       expect(sdkConfig.resource?.serviceVersion).toBe("1.2.3");
       expect(sdkConfig.resource?.attributes?.["service.namespace"]).toBe("dev");
       expect(sdkConfig.resource?.attributes?.["service.name"]).toBe("cli");
-      expect(sdkConfig.resource?.attributes?.["service.instance.id"]).toBe("0196ed78-467a-7f2f-bf6b-95e73fd43b8d");
+      expect(typeof sdkConfig.resource?.attributes?.["service.instance.id"]).toBe("string");
+      expect(String(sdkConfig.resource?.attributes?.["service.instance.id"]).length).toBe(36);
+      expect(String(sdkConfig.resource?.attributes?.["service.instance.id"])[14]).toBe("7");
+      expect(sdkConfig.resource?.attributes?.["service.instance.id"]).not.toBe("0196ed78-467a-7f2f-bf6b-95e73fd43b8d");
+      expect(sdkConfig.resource?.attributes?.["dev.install.id"]).toBe("0196ed78-467a-7f2f-bf6b-95e73fd43b8d");
     }),
   );
 

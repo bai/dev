@@ -18,6 +18,8 @@ import type { RemoteTelemetryConfig, RemoteTelemetryMode } from "./tracing-expor
 
 const OTLP_SERVICE_NAMESPACE = "dev";
 const OTLP_SERVICE_NAME = "cli";
+const OTLP_INSTALL_ID_ATTRIBUTE = "dev.install.id";
+const OTLP_RUNTIME_SERVICE_INSTANCE_ID = Bun.randomUUIDv7();
 
 const createRemoteSpanProcessor = <Mode extends RemoteTelemetryMode>(
   telemetryConfig: Extract<RemoteTelemetryConfig, { readonly mode: Mode }>,
@@ -66,7 +68,8 @@ const makeTracingLive = (
         [ATTR_SERVICE_NAMESPACE]: OTLP_SERVICE_NAMESPACE,
         [ATTR_SERVICE_NAME]: OTLP_SERVICE_NAME,
         [ATTR_SERVICE_VERSION]: version,
-        [ATTR_SERVICE_INSTANCE_ID]: installId,
+        [ATTR_SERVICE_INSTANCE_ID]: OTLP_RUNTIME_SERVICE_INSTANCE_ID,
+        [OTLP_INSTALL_ID_ATTRIBUTE]: installId,
       };
 
       const resource = resources.resourceFromAttributes(resourceAttributes);
