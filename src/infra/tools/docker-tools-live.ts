@@ -1,8 +1,8 @@
 import { Clock, Context, Effect, Layer } from "effect";
 
-import { healthCheckError, type HealthCheckError } from "../domain/errors";
-import type { HealthCheckResult } from "../domain/health-check-port";
-import { ShellTag, type Shell } from "../domain/shell-port";
+import { healthCheckError, type HealthCheckError } from "../../domain/errors";
+import type { HealthCheckResult } from "../../domain/health-check-port";
+import { ShellTag, type Shell } from "../../domain/shell-port";
 
 export const DOCKER_MIN_VERSION = "29.1.3";
 

@@ -1,8 +1,8 @@
 import { Effect, Layer } from "effect";
 
-import { healthCheckError, type HealthCheckError } from "../domain/errors";
-import { type HealthCheckResult } from "../domain/health-check-port";
-import { ToolHealthRegistryTag, type ToolHealthRegistry } from "../domain/tool-health-registry-port";
+import { healthCheckError, type HealthCheckError } from "../../domain/errors";
+import { type HealthCheckResult } from "../../domain/health-check-port";
+import { ToolHealthRegistryTag, type ToolHealthRegistry } from "../../domain/tool-health-registry-port";
 import { BunToolsTag, type BunTools } from "./bun-tools-live";
 import { DockerToolsTag, type DockerTools } from "./docker-tools-live";
 import { FzfToolsTag, type FzfTools } from "./fzf-tools-live";

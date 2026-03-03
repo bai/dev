@@ -6,17 +6,17 @@ import {
   type ExternalToolError,
   type HealthCheckError,
   type ShellExecutionError,
-} from "../domain/errors";
-import { type HealthCheckResult } from "../domain/health-check-port";
-import { ShellTag, type Shell } from "../domain/shell-port";
+} from "../../domain/errors";
+import { type HealthCheckResult } from "../../domain/health-check-port";
+import { ShellTag, type Shell } from "../../domain/shell-port";
 
-export const FZF_MIN_VERSION = "0.67.0";
+export const GIT_MIN_VERSION = "2.52.0";
 
 /**
- * Fzf tools for version checking and management
- * This is infrastructure-level tooling for fzf version management
+ * Git tools for version checking and management
+ * This is infrastructure-level tooling for git version management
  */
-export interface FzfTools {
+export interface GitTools {
   getCurrentVersion(): Effect.Effect<string | null, ShellExecutionError>;
   checkVersion(): Effect.Effect<{ isValid: boolean; currentVersion: string | null }, ShellExecutionError>;
   performUpgrade(): Effect.Effect<boolean, ShellExecutionError>;
@@ -44,15 +44,15 @@ const compareVersions = (version1: string, version2: string): number => {
   return 0;
 };
 
-// Factory function to create FzfTools implementation
-export const makeFzfToolsLive = (shell: Shell): FzfTools => ({
+// Factory function to create GitTools implementation
+export const makeGitToolsLive = (shell: Shell): GitTools => ({
   getCurrentVersion: (): Effect.Effect<string | null, ShellExecutionError> =>
-    shell.exec("fzf", ["--version"]).pipe(
+    shell.exec("git", ["--version"]).pipe(
       Effect.map((result) => {
         if (result.exitCode === 0 && result.stdout) {
           const output = result.stdout.trim();
-          // Fzf version output is like "0.35.0 (homebrew)"
-          const match = output.match(/(\d+\.\d+\.\d+)/);
+          // Git version output is like "git version 2.39.2"
+          const match = output.match(/git version (\d+\.\d+\.\d+)/);
           return match && match[1] ? match[1] : null;
         }
         return null;
@@ -62,14 +62,15 @@ export const makeFzfToolsLive = (shell: Shell): FzfTools => ({
 
   checkVersion: (): Effect.Effect<{ isValid: boolean; currentVersion: string | null }, ShellExecutionError> =>
     Effect.gen(function* () {
-      const fzfTools = makeFzfToolsLive(shell);
-      const currentVersion = yield* fzfTools.getCurrentVersion();
+      const gitTools = makeGitToolsLive(shell);
+      const currentVersion = yield* gitTools.getCurrentVersion();
 
       if (!currentVersion) {
         return { isValid: false, currentVersion: null };
       }
 
-      const comparison = compareVersions(currentVersion, FZF_MIN_VERSION);
+      const comparison = compareVersions(currentVersion, GIT_MIN_VERSION);
+
       return {
         isValid: comparison >= 0,
         currentVersion,
@@ -78,97 +79,97 @@ export const makeFzfToolsLive = (shell: Shell): FzfTools => ({
 
   performUpgrade: (): Effect.Effect<boolean, ShellExecutionError> =>
     Effect.gen(function* () {
-      yield* Effect.logInfo("🔄 Updating fzf via mise...");
+      yield* Effect.logInfo("🔄 Updating git via mise...");
 
-      const result = yield* shell.exec("mise", ["install", "fzf@latest"]);
+      const result = yield* shell.exec("mise", ["install", "git@latest"]);
 
       if (result.exitCode === 0) {
-        yield* Effect.logInfo("✅ Fzf updated successfully via mise");
+        yield* Effect.logInfo("✅ Git updated successfully via mise");
         return true;
       } else {
-        yield* Effect.logError(`❌ Fzf update failed with exit code: ${result.exitCode}`);
+        yield* Effect.logInfo(`❌ Git update failed with exit code: ${result.exitCode}`);
         return false;
       }
     }),
 
   ensureVersionOrUpgrade: (): Effect.Effect<void, ExternalToolError | ShellExecutionError> =>
     Effect.gen(function* () {
-      const fzfTools = makeFzfToolsLive(shell);
-      const { isValid, currentVersion } = yield* fzfTools.checkVersion();
+      const gitTools = makeGitToolsLive(shell);
+      const { isValid, currentVersion } = yield* gitTools.checkVersion();
 
       if (isValid) {
         return;
       }
 
       if (currentVersion) {
-        yield* Effect.logWarning(`⚠️  Fzf version ${currentVersion} is older than required ${FZF_MIN_VERSION}`);
+        yield* Effect.logWarning(`⚠️  Git version ${currentVersion} is older than required ${GIT_MIN_VERSION}`);
       } else {
-        yield* Effect.logWarning(`⚠️  Unable to determine fzf version`);
+        yield* Effect.logWarning(`⚠️  Unable to determine git version`);
       }
 
-      yield* Effect.logInfo(`🚀 Starting fzf upgrade via mise...`);
+      yield* Effect.logInfo(`🚀 Starting git upgrade via mise...`);
 
-      const updateSuccess = yield* fzfTools.performUpgrade();
+      const updateSuccess = yield* gitTools.performUpgrade();
       if (!updateSuccess) {
-        yield* Effect.logError(`❌ Failed to update fzf to required version`);
-        yield* Effect.logError(`💡 Try manually installing fzf via mise: mise install fzf@latest`);
-        return yield* externalToolError("Failed to update fzf", {
-          tool: "fzf",
+        yield* Effect.logInfo(`❌ Failed to update git to required version`);
+        yield* Effect.logInfo(`💡 Try manually installing git via mise: mise install git@latest`);
+        return yield* externalToolError("Failed to update git", {
+          tool: "git",
           exitCode: 1,
-          stderr: `Required version: ${FZF_MIN_VERSION}, Current: ${currentVersion}`,
+          stderr: `Required version: ${GIT_MIN_VERSION}, Current: ${currentVersion}`,
         });
       }
 
       // Verify upgrade
-      const { isValid: isValidAfterUpgrade, currentVersion: versionAfterUpgrade } = yield* fzfTools.checkVersion();
+      const { isValid: isValidAfterUpgrade, currentVersion: versionAfterUpgrade } = yield* gitTools.checkVersion();
       if (!isValidAfterUpgrade) {
-        yield* Effect.logError(`❌ Fzf upgrade completed but version still doesn't meet requirement`);
+        yield* Effect.logInfo(`❌ Git upgrade completed but version still doesn't meet requirement`);
         if (versionAfterUpgrade) {
-          yield* Effect.logError(`   Current: ${versionAfterUpgrade}, Required: ${FZF_MIN_VERSION}`);
+          yield* Effect.logInfo(`   Current: ${versionAfterUpgrade}, Required: ${GIT_MIN_VERSION}`);
         }
-        return yield* externalToolError("Fzf upgrade failed", {
-          tool: "fzf",
+        return yield* externalToolError("Git upgrade failed", {
+          tool: "git",
           exitCode: 1,
-          stderr: `Required: ${FZF_MIN_VERSION}, Got: ${versionAfterUpgrade}`,
+          stderr: `Required: ${GIT_MIN_VERSION}, Got: ${versionAfterUpgrade}`,
         });
       }
 
       if (versionAfterUpgrade) {
-        yield* Effect.logInfo(`✨ Fzf successfully upgraded to version ${versionAfterUpgrade}`);
+        yield* Effect.logInfo(`✨ Git successfully upgraded to version ${versionAfterUpgrade}`);
       }
     }),
 
   performHealthCheck: (): Effect.Effect<HealthCheckResult, HealthCheckError> =>
     Effect.gen(function* () {
-      const fzfTools = makeFzfToolsLive(shell);
+      const gitTools = makeGitToolsLive(shell);
       const checkedAt = new Date(yield* Clock.currentTimeMillis);
 
-      const currentVersion = yield* fzfTools
+      const currentVersion = yield* gitTools
         .getCurrentVersion()
-        .pipe(Effect.mapError(() => healthCheckError("Failed to get fzf version", "fzf")));
+        .pipe(Effect.mapError(() => healthCheckError("Failed to get git version", "git")));
 
       if (!currentVersion) {
         return {
-          toolName: "fzf",
+          toolName: "git",
           status: "fail",
-          notes: "Fzf not found or unable to determine version",
+          notes: "Git not found or unable to determine version",
           checkedAt,
         };
       }
 
-      const isCompliant = compareVersions(currentVersion, FZF_MIN_VERSION) >= 0;
+      const isCompliant = compareVersions(currentVersion, GIT_MIN_VERSION) >= 0;
       if (!isCompliant) {
         return {
-          toolName: "fzf",
+          toolName: "git",
           version: currentVersion,
           status: "warning",
-          notes: `requires >=${FZF_MIN_VERSION}`,
+          notes: `requires >=${GIT_MIN_VERSION}`,
           checkedAt,
         };
       }
 
       return {
-        toolName: "fzf",
+        toolName: "git",
         version: currentVersion,
         status: "ok",
         checkedAt,
@@ -177,13 +178,13 @@ export const makeFzfToolsLive = (shell: Shell): FzfTools => ({
 });
 
 // Service tag for Effect Context system
-export class FzfToolsTag extends Context.Tag("FzfTools")<FzfToolsTag, FzfTools>() {}
+export class GitToolsTag extends Context.Tag("GitTools")<GitToolsTag, GitTools>() {}
 
 // Effect Layer for dependency injection
-export const FzfToolsLiveLayer = Layer.effect(
-  FzfToolsTag,
+export const GitToolsLiveLayer = Layer.effect(
+  GitToolsTag,
   Effect.gen(function* () {
     const shell = yield* ShellTag;
-    return makeFzfToolsLive(shell);
+    return makeGitToolsLive(shell);
   }),
 );

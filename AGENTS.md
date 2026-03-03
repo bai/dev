@@ -50,7 +50,7 @@ This CLI tool follows hexagonal architecture principles with dependency injectio
 - **Commands**: `src/app/*-command.ts`
 - **Services**: `src/app/*-service.ts`
 - **Ports**: `src/domain/*-port.ts`
-- **Infrastructure**: `src/infra/*-live.ts`
+- **Infrastructure**: `src/infra/*-live.ts` (adapter families use subdirectories: `src/infra/tools/`, `src/infra/tracing/`)
 - **Wiring**: `src/wiring.ts`
 
 ### Development Workflow

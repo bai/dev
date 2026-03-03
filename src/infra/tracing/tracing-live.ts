@@ -9,10 +9,10 @@ import {
 } from "@opentelemetry/semantic-conventions";
 import { Effect, Layer } from "effect";
 
-import { ConfigLoaderTag } from "../domain/config-loader-port";
-import { InstallIdentityTag } from "../domain/install-identity-port";
-import { TracingError, TracingTag, type Tracing } from "../domain/tracing-port";
-import { VersionTag } from "../domain/version-port";
+import { ConfigLoaderTag } from "../../domain/config-loader-port";
+import { InstallIdentityTag } from "../../domain/install-identity-port";
+import { TracingError, TracingTag, type Tracing } from "../../domain/tracing-port";
+import { VersionTag } from "../../domain/version-port";
 import { tracingExporterFactories } from "./tracing-exporter-registry-live";
 import type { RemoteTelemetryConfig, RemoteTelemetryMode } from "./tracing-exporter-types";
 

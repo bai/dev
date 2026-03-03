@@ -114,8 +114,8 @@ src/
 │   ├── *-command.ts   # Command implementations (e.g., clone-command.ts, cd-command.ts)
 │   └── *-service.ts   # Application services (e.g., command-tracking-service.ts, version-service.ts)
 │
-├── infra/         # 🔌 Adapters (flat structure with -live suffix)
-│   ├── config-loader-live.ts  # Configuration loader implementation
+├── infra/         # 🔌 Adapters (-live suffix; adapter families use subdirectories)
+│   ├── config-loader-live.ts
 │   ├── database-live.ts
 │   ├── run-store-live.ts
 │   ├── directory-live.ts
@@ -123,25 +123,38 @@ src/
 │   ├── git-live.ts
 │   ├── health-check-live.ts
 │   ├── install-identity-live.ts
-│   ├── tool-health-registry-live.ts
 │   ├── keychain-live.ts
 │   ├── mise-live.ts
 │   ├── network-live.ts
 │   ├── github-provider-live.ts
 │   ├── fzf-selector-live.ts
 │   ├── shell-live.ts
-│   ├── tracing-live.ts
-│   ├── tracing-exporter-types.ts         # Tracing exporter factory types
-│   ├── tracing-exporter-registry-live.ts # Exporter factory registry
-│   ├── axiom-tracing-exporter-live.ts    # Axiom OTLP exporter adapter
-│   ├── *-tools-live.ts  # Tool implementations (e.g., bun-tools-live.ts, git-tools-live.ts)
-│   └── tool-management-live.ts
+│   ├── tools/                            # Tool adapter family
+│   │   ├── *-tools-live.ts               #   Individual tool adapters (bun, git, mise, fzf, gcloud, docker)
+│   │   ├── tool-management-live.ts       #   Upgrade/version registry
+│   │   └── tool-health-registry-live.ts  #   Health check registry
+│   └── tracing/                          # Tracing adapter family
+│       ├── tracing-live.ts               #   Orchestrator (implements Tracing port)
+│       ├── tracing-exporter-types.ts     #   Exporter factory interface
+│       ├── tracing-exporter-registry-live.ts  #   Mode-to-factory registry
+│       └── axiom-tracing-exporter-live.ts     #   Axiom OTLP exporter
 │
 ├── wiring.ts      # ⚙️ Composition root - configuration loading and layer composition
 └── index.ts       # 🚀 Entry point with main command definition
 ```
 
-### 4.1 Layer Isolation Rules
+### 4.1 Adapter Family Subdirectories
+
+Single-adapter ports use flat files in `src/infra/` (e.g., `database-live.ts`, `shell-live.ts`).  When an adapter family has **3+ implementations** or is designed for **plugin-like extensibility**, it gets a subdirectory within `src/infra/`.  Subdirectories are purely organizational — they don't create new architectural layers.  The dependency rule (arrows pointing inward) governs layers, not directories within a layer.
+
+Each adapter-family subdirectory contains:
+
+* Individual adapter files (`*-live.ts`)
+* A shared types file (when needed, e.g. `tracing-exporter-types.ts`)
+* A registry that composes the adapters (e.g. `tool-management-live.ts`, `tracing-exporter-registry-live.ts`)
+* Co-located tests
+
+### 4.2 Layer Isolation Rules
 
 | Layer         | Can Import From                 | Must **NOT** Import From |
 | ------------- | ------------------------------- | ------------------------ |
@@ -150,7 +163,7 @@ src/
 | **Infra**     | Domain, Effect, external libs   | App, CLI                 |
 | **Root**      | Every layer                     | —                        |
 
-### 4.2 Layer Definitions
+### 4.3 Layer Definitions
 
 | Layer         | Services Included                                                      |
 | ------------- | ---------------------------------------------------------------------- |

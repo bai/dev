@@ -1,6 +1,6 @@
 import { Effect, Layer } from "effect";
 
-import { ToolManagementTag, type ToolManagement, type ToolManager } from "../domain/tool-management-port";
+import { ToolManagementTag, type ToolManagement, type ToolManager } from "../../domain/tool-management-port";
 import { BunToolsTag, type BunTools } from "./bun-tools-live";
 import { FzfToolsTag, type FzfTools } from "./fzf-tools-live";
 import { GcloudToolsTag, type GcloudTools } from "./gcloud-tools-live";

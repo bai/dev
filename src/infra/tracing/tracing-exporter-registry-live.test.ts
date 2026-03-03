@@ -3,7 +3,7 @@ import { BatchSpanProcessor } from "@opentelemetry/sdk-trace-base";
 import { Effect } from "effect";
 import { describe, expect } from "vitest";
 
-import { configSchema } from "../domain/config-schema";
+import { configSchema } from "../../domain/config-schema";
 import { tracingExporterFactories } from "./tracing-exporter-registry-live";
 
 describe("tracing-exporter-registry-live", () => {

@@ -4,22 +4,27 @@ import { it } from "@effect/vitest";
 import { Effect } from "effect";
 import { describe, expect } from "vitest";
 
-import type { ConfigLoader } from "../domain/config-loader-port";
-import type { Config } from "../domain/config-schema";
-import { configSchema } from "../domain/config-schema";
-import type { FileSystem } from "../domain/file-system-port";
-import type { PathService } from "../domain/path-service";
-import type { Shell, SpawnResult } from "../domain/shell-port";
-import { makeMiseToolsLive } from "./mise-tools-live";
+import type { Config } from "../../domain/config-schema";
+import type { FileSystem } from "../../domain/file-system-port";
+import type { PathService } from "../../domain/path-service";
+import type { Shell, SpawnResult } from "../../domain/shell-port";
+import { makeGcloudToolsLive } from "./gcloud-tools-live";
 
 class MockShell implements Shell {
+  public readonly execCalls: Array<{
+    readonly command: string;
+    readonly args: readonly string[];
+    readonly options?: { readonly cwd?: string };
+  }> = [];
+
   exec(
-    _command: string,
-    _args: string[] = [],
-    _options?: {
+    command: string,
+    args: string[] = [],
+    options?: {
       readonly cwd?: string;
     },
   ): Effect.Effect<SpawnResult, never> {
+    this.execCalls.push({ command, args, options });
     return Effect.succeed({
       exitCode: 0,
       stdout: "",
@@ -46,14 +51,12 @@ class MockFileSystem implements FileSystem {
   public readonly existingPaths = new Set<string>();
   public readonly existsCalls: string[] = [];
   public readonly mkdirCalls: Array<{ readonly path: string; readonly recursive?: boolean }> = [];
-  public readonly writeFileCalls: Array<{ readonly path: string; readonly content: string }> = [];
 
   readFile(_path: string): Effect.Effect<string, never> {
     return Effect.succeed("");
   }
 
-  writeFile(path: string, content: string): Effect.Effect<void, never> {
-    this.writeFileCalls.push({ path, content });
+  writeFile(_path: string, _content: string): Effect.Effect<void, never> {
     return Effect.void;
   }
 
@@ -96,62 +99,41 @@ class MockPathService implements PathService {
   }
 }
 
-const mockConfigLoader: ConfigLoader = {
-  load: () =>
-    Effect.succeed(
-      configSchema.parse({
-        miseGlobalConfig: {
-          tools: {
-            bun: "1.2.17",
-          },
-        },
-      }),
-    ),
-  save: (_config) => Effect.void,
-  refresh: () => Effect.succeed(configSchema.parse({})),
-};
-
 const makeSubject = () => {
   const shell = new MockShell();
   const fileSystem = new MockFileSystem();
   const pathService = new MockPathService();
-  const miseTools = makeMiseToolsLive(shell, fileSystem, mockConfigLoader, pathService);
-  const configDir = path.join(pathService.homeDir, ".config", "mise");
-  const configFile = path.join(configDir, "config.toml");
+  const gcloudTools = makeGcloudToolsLive(shell, fileSystem, pathService);
+  const configDir = path.join(pathService.homeDir, ".config", "gcloud");
 
   return {
     fileSystem,
-    miseTools,
+    gcloudTools,
     configDir,
-    configFile,
   };
 };
 
-describe("mise-tools-live", () => {
-  it.effect("setupGlobalConfig uses pathService home directory for config paths", () =>
+describe("gcloud-tools-live", () => {
+  it.effect("setupConfig uses pathService home directory for gcloud config path", () =>
     Effect.gen(function* () {
-      const { fileSystem, miseTools, configDir, configFile } = makeSubject();
+      const { fileSystem, gcloudTools, configDir } = makeSubject();
 
-      yield* miseTools.setupGlobalConfig();
+      yield* gcloudTools.setupConfig();
 
       expect(fileSystem.existsCalls).toContain(configDir);
       expect(fileSystem.mkdirCalls).toEqual([{ path: configDir, recursive: true }]);
-      expect(fileSystem.writeFileCalls).toHaveLength(1);
-      expect(fileSystem.writeFileCalls[0]?.path).toBe(configFile);
-      expect(fileSystem.writeFileCalls[0]?.content).toContain("[tools]");
     }),
   );
 
-  it.effect("setupGlobalConfig skips mkdir when config directory already exists", () =>
+  it.effect("setupConfig skips mkdir when config directory already exists", () =>
     Effect.gen(function* () {
-      const { fileSystem, miseTools, configDir, configFile } = makeSubject();
+      const { fileSystem, gcloudTools, configDir } = makeSubject();
       fileSystem.existingPaths.add(configDir);
 
-      yield* miseTools.setupGlobalConfig();
+      yield* gcloudTools.setupConfig();
 
       expect(fileSystem.existsCalls).toContain(configDir);
       expect(fileSystem.mkdirCalls).toHaveLength(0);
-      expect(fileSystem.writeFileCalls[0]?.path).toBe(configFile);
     }),
   );
 });

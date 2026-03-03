@@ -3,7 +3,7 @@ import path from "path";
 import { stringify } from "@iarna/toml";
 import { Clock, Context, Effect, Layer } from "effect";
 
-import { ConfigLoaderTag, type ConfigLoader } from "../domain/config-loader-port";
+import { ConfigLoaderTag, type ConfigLoader } from "../../domain/config-loader-port";
 import {
   externalToolError,
   healthCheckError,
@@ -12,11 +12,11 @@ import {
   type HealthCheckError,
   type ShellExecutionError,
   type UnknownError,
-} from "../domain/errors";
-import { FileSystemTag, type FileSystem } from "../domain/file-system-port";
-import { type HealthCheckResult } from "../domain/health-check-port";
-import { PathServiceTag, type PathService } from "../domain/path-service";
-import { ShellTag, type Shell } from "../domain/shell-port";
+} from "../../domain/errors";
+import { FileSystemTag, type FileSystem } from "../../domain/file-system-port";
+import { type HealthCheckResult } from "../../domain/health-check-port";
+import { PathServiceTag, type PathService } from "../../domain/path-service";
+import { ShellTag, type Shell } from "../../domain/shell-port";
 
 export const MISE_MIN_VERSION = "2026.1.5";
 

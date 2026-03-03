@@ -3,17 +3,17 @@ import { BatchSpanProcessor, NoopSpanProcessor } from "@opentelemetry/sdk-trace-
 import { Effect } from "effect";
 import { describe, expect } from "vitest";
 
-import type { ConfigLoader } from "../domain/config-loader-port";
-import { ConfigLoaderTag } from "../domain/config-loader-port";
-import { configSchema } from "../domain/config-schema";
-import type { Git } from "../domain/git-port";
-import { GitTag } from "../domain/git-port";
-import type { InstallIdentity } from "../domain/install-identity-port";
-import { InstallIdentityTag } from "../domain/install-identity-port";
-import { PathLive, PathServiceTag } from "../domain/path-service";
-import { TracingTag } from "../domain/tracing-port";
-import type { Version } from "../domain/version-port";
-import { VersionTag } from "../domain/version-port";
+import type { ConfigLoader } from "../../domain/config-loader-port";
+import { ConfigLoaderTag } from "../../domain/config-loader-port";
+import { configSchema } from "../../domain/config-schema";
+import type { Git } from "../../domain/git-port";
+import { GitTag } from "../../domain/git-port";
+import type { InstallIdentity } from "../../domain/install-identity-port";
+import { InstallIdentityTag } from "../../domain/install-identity-port";
+import { PathLive, PathServiceTag } from "../../domain/path-service";
+import { TracingTag } from "../../domain/tracing-port";
+import type { Version } from "../../domain/version-port";
+import { VersionTag } from "../../domain/version-port";
 import { TracingLiveLayer } from "./tracing-live";
 
 const mockVersion: Version = {

@@ -3,7 +3,7 @@ import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
 import { BatchSpanProcessor, ConsoleSpanExporter, type ReadableSpan, type SpanExporter } from "@opentelemetry/sdk-trace-base";
 import { Effect, Runtime } from "effect";
 
-import type { Config } from "../domain/config-schema";
+import type { Config } from "../../domain/config-schema";
 import type { TracingExporterFactory } from "./tracing-exporter-types";
 
 interface AxiomExportError extends Error {

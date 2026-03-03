@@ -10,11 +10,11 @@ import {
   type HealthCheckError,
   type ShellExecutionError,
   type UnknownError,
-} from "../domain/errors";
-import { FileSystemTag, type FileSystem } from "../domain/file-system-port";
-import { type HealthCheckResult } from "../domain/health-check-port";
-import { PathServiceTag, type PathService } from "../domain/path-service";
-import { ShellTag, type Shell } from "../domain/shell-port";
+} from "../../domain/errors";
+import { FileSystemTag, type FileSystem } from "../../domain/file-system-port";
+import { type HealthCheckResult } from "../../domain/health-check-port";
+import { PathServiceTag, type PathService } from "../../domain/path-service";
+import { ShellTag, type Shell } from "../../domain/shell-port";
 
 export const GCLOUD_MIN_VERSION = "552.0.0";
 
