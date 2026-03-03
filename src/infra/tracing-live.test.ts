@@ -55,7 +55,10 @@ describe("tracing-live", () => {
       const sdkConfig = yield* loadSdkConfig(config);
 
       expect(sdkConfig.spanProcessor).toBeInstanceOf(BatchSpanProcessor);
+      expect(sdkConfig.resource?.serviceName).toBe("cli");
       expect(sdkConfig.resource?.serviceVersion).toBe("1.2.3");
+      expect(sdkConfig.resource?.attributes?.["service.namespace"]).toBe("dev");
+      expect(sdkConfig.resource?.attributes?.["service.name"]).toBe("cli");
     }),
   );
 

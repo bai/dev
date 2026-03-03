@@ -1,7 +1,7 @@
 import type { NodeSdk } from "@effect/opentelemetry";
 import * as resources from "@opentelemetry/resources";
 import { BatchSpanProcessor, ConsoleSpanExporter, NoopSpanProcessor } from "@opentelemetry/sdk-trace-base";
-import { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION } from "@opentelemetry/semantic-conventions";
+import { ATTR_SERVICE_NAME, ATTR_SERVICE_NAMESPACE, ATTR_SERVICE_VERSION } from "@opentelemetry/semantic-conventions";
 import { Effect, Layer } from "effect";
 
 import { ConfigLoaderTag } from "../domain/config-loader-port";
@@ -9,6 +9,9 @@ import { TracingError, TracingTag, type Tracing } from "../domain/tracing-port";
 import { VersionTag } from "../domain/version-port";
 import { tracingExporterFactories } from "./tracing-exporters";
 import type { RemoteTelemetryConfig, RemoteTelemetryMode } from "./tracing-exporters/types";
+
+const OTLP_SERVICE_NAMESPACE = "dev";
+const OTLP_SERVICE_NAME = "cli";
 
 const createRemoteSpanProcessor = <Mode extends RemoteTelemetryMode>(
   telemetryConfig: Extract<RemoteTelemetryConfig, { readonly mode: Mode }>,
@@ -47,7 +50,8 @@ const makeTracingLive = (configLoader: typeof ConfigLoaderTag.Service, versionSe
       });
 
       const resourceAttributes: Record<string, string> = {
-        [ATTR_SERVICE_NAME]: "dev-cli",
+        [ATTR_SERVICE_NAMESPACE]: OTLP_SERVICE_NAMESPACE,
+        [ATTR_SERVICE_NAME]: OTLP_SERVICE_NAME,
         [ATTR_SERVICE_VERSION]: version,
       };
 
@@ -55,7 +59,7 @@ const makeTracingLive = (configLoader: typeof ConfigLoaderTag.Service, versionSe
 
       return {
         resource: {
-          serviceName: "dev-cli",
+          serviceName: OTLP_SERVICE_NAME,
           serviceVersion: version,
           attributes: resource.attributes,
         },
