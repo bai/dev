@@ -15,46 +15,95 @@
       "description": "Remote URL to fetch shared configuration from\n\ndefault: `https://raw.githubusercontent.com/bai/dev/refs/heads/main/config.json`",
       "type": "string",
       "format": "uri",
-      "examples": ["https://raw.githubusercontent.com/bai/dev/refs/heads/main/config.json"]
+      "examples": [
+        "https://raw.githubusercontent.com/bai/dev/refs/heads/main/config.json"
+      ]
     },
     "defaultOrg": {
-      "default": "flywheelsoftware",
-      "description": "Default organization for repository operations\n\ndefault: `flywheelsoftware`",
+      "default": "acmesoftware",
+      "description": "Default organization for repository operations\n\ndefault: `acmesoftware`",
       "type": "string",
-      "examples": ["flywheelsoftware"]
+      "examples": [
+        "acmesoftware"
+      ]
     },
     "defaultProvider": {
       "default": "github",
       "description": "Default git provider when not specified (github or gitlab)\n\ndefault: `github`",
       "type": "string",
-      "enum": ["github", "gitlab"],
-      "examples": ["github"]
+      "enum": [
+        "github",
+        "gitlab"
+      ],
+      "examples": [
+        "github"
+      ]
     },
     "baseSearchPath": {
       "default": "~/src",
       "description": "Base directory for searching and cloning repositories\n\ndefault: `~/src`",
       "type": "string",
-      "examples": ["~/src"]
+      "examples": [
+        "~/src"
+      ]
     },
     "logLevel": {
       "default": "info",
       "description": "Logging verbosity: debug, info, warning, error, or fatal\n\ndefault: `info`",
       "type": "string",
-      "enum": ["debug", "info", "warning", "error", "fatal"],
-      "examples": ["info"]
+      "enum": [
+        "debug",
+        "info",
+        "warning",
+        "error",
+        "fatal"
+      ],
+      "examples": [
+        "info"
+      ]
     },
     "telemetry": {
       "default": {
-        "mode": "remote"
+        "mode": "disabled"
       },
       "type": "object",
       "properties": {
         "mode": {
-          "default": "remote",
-          "description": "Telemetry mode: 'console' for local output, 'remote' for cloud, 'disabled' to turn off\n\ndefault: `remote`",
+          "default": "disabled",
+          "description": "Telemetry mode: 'console' for local output, 'remote' for cloud, 'disabled' to turn off\n\ndefault: `disabled`",
           "type": "string",
-          "enum": ["console", "remote", "disabled"],
-          "examples": ["remote"]
+          "enum": [
+            "console",
+            "remote",
+            "disabled"
+          ],
+          "examples": [
+            "disabled"
+          ]
+        },
+        "axiom": {
+          "type": "object",
+          "properties": {
+            "endpoint": {
+              "type": "string",
+              "format": "uri",
+              "description": "Axiom OTLP traces endpoint"
+            },
+            "apiKey": {
+              "description": "Axiom API key used for OTLP trace ingestion",
+              "type": "string"
+            },
+            "dataset": {
+              "type": "string",
+              "description": "Axiom dataset used for trace ingestion"
+            }
+          },
+          "required": [
+            "endpoint",
+            "dataset"
+          ],
+          "description": "Axiom OTLP exporter settings",
+          "additionalProperties": false
         }
       },
       "description": "Telemetry and observability settings",
@@ -69,7 +118,10 @@
       },
       "additionalProperties": {
         "type": "string",
-        "enum": ["github", "gitlab"]
+        "enum": [
+          "github",
+          "gitlab"
+        ]
       }
     },
     "miseGlobalConfig": {

@@ -44,12 +44,21 @@ const gitProviderSchema: z.ZodType<GitProviderType> = z.enum(["github", "gitlab"
 
 const telemetryModeSchema: z.ZodType<TelemetryMode> = z.enum(["console", "remote", "disabled"]);
 
+const telemetryAxiomSchema = z
+  .object({
+    endpoint: z.url().describe("Axiom OTLP traces endpoint"),
+    apiKey: z.string().optional().describe("Axiom API key used for OTLP trace ingestion"),
+    dataset: z.string().describe("Axiom dataset used for trace ingestion"),
+  })
+  .describe("Axiom OTLP exporter settings");
+
 const telemetryConfigSchema = z
   .object({
     mode: telemetryModeSchema
       .optional()
-      .default("remote")
+      .default("disabled")
       .describe("Telemetry mode: 'console' for local output, 'remote' for cloud, 'disabled' to turn off"),
+    axiom: telemetryAxiomSchema.optional(),
   })
   .describe("Telemetry and observability settings");
 
@@ -78,7 +87,7 @@ export const configSchema = z.object({
   defaultProvider: gitProviderSchema.optional().default("github").describe("Default git provider when not specified (github or gitlab)"),
   baseSearchPath: z.string().optional().default("~/src").describe("Base directory for searching and cloning repositories"),
   logLevel: logLevelSchema.optional().default("info").describe("Logging verbosity: debug, info, warning, error, or fatal"),
-  telemetry: telemetryConfigSchema.default({ mode: "remote" }),
+  telemetry: telemetryConfigSchema.default({ mode: "disabled" }),
   orgToProvider: z
     .record(z.string(), gitProviderSchema)
     .optional()

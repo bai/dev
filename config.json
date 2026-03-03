@@ -9,7 +9,12 @@
     "acmesoftware": "gitlab"
   },
   "telemetry": {
-    "mode": "remote"
+    "mode": "disabled",
+    "axiom": {
+      "endpoint": "https://api.axiom.co/v1/traces",
+      "apiKey": "xaat-0ea28533-92be-434f-aaa1-179d905130da",
+      "dataset": "devcli"
+    }
   },
   "miseGlobalConfig": {
     "tools": {

@@ -9,9 +9,11 @@ import { ConfigLoaderTag } from "../domain/config-loader-port";
 import { TracingError, TracingTag, type Tracing } from "../domain/tracing-port";
 import { VersionTag } from "../domain/version-port";
 
-const AXIOM_OTLP_TRACES_ENDPOINT = "https://api.axiom.co/v1/traces";
-const AXIOM_OTLP_API_KEY = "xaat-0ea28533-92be-434f-aaa1-179d905130da";
-const AXIOM_OTLP_DATASET = "devcli";
+interface AxiomOtlpConfig {
+  readonly endpoint: string;
+  readonly apiKey: string;
+  readonly dataset: string;
+}
 
 /**
  * Logs export results from Axiom OTLP trace endpoint
@@ -56,13 +58,13 @@ const logExportResult = (result: { code: number; error?: any; spans: number }) =
 /**
  * Creates an OTLP trace exporter for Axiom (without collector)
  */
-const createOtlpTraceExporter = (): Effect.Effect<BatchSpanProcessor, never, never> =>
+const createOtlpTraceExporter = (config: AxiomOtlpConfig): Effect.Effect<BatchSpanProcessor, never, never> =>
   Effect.try(() => {
     const exporter = new OTLPTraceExporter({
-      url: AXIOM_OTLP_TRACES_ENDPOINT,
+      url: config.endpoint,
       headers: {
-        "Authorization": `Bearer ${AXIOM_OTLP_API_KEY}`,
-        "X-Axiom-Dataset": AXIOM_OTLP_DATASET,
+        "Authorization": `Bearer ${config.apiKey}`,
+        "X-Axiom-Dataset": config.dataset,
       },
     });
 
@@ -127,8 +129,27 @@ const makeTracingLive = (configLoader: typeof ConfigLoaderTag.Service, versionSe
           break;
 
         case "remote":
+          if (
+            !telemetryConfig.axiom?.endpoint ||
+            telemetryConfig.axiom.endpoint.trim().length === 0 ||
+            !telemetryConfig.axiom.apiKey ||
+            telemetryConfig.axiom.apiKey.trim().length === 0 ||
+            !telemetryConfig.axiom.dataset ||
+            telemetryConfig.axiom.dataset.trim().length === 0
+          ) {
+            yield* Effect.logWarning(
+              "Telemetry: remote mode enabled but telemetry.axiom.endpoint/apiKey/dataset are missing; disabling exporter",
+            );
+            spanProcessor = new NoopSpanProcessor();
+            break;
+          }
+
           yield* Effect.logDebug("Telemetry: Using Axiom OTLP trace exporter");
-          spanProcessor = yield* createOtlpTraceExporter();
+          spanProcessor = yield* createOtlpTraceExporter({
+            endpoint: telemetryConfig.axiom.endpoint,
+            apiKey: telemetryConfig.axiom.apiKey,
+            dataset: telemetryConfig.axiom.dataset,
+          });
           break;
 
         case "disabled":
