@@ -9,7 +9,7 @@
     "acmesoftware": "gitlab"
   },
   "telemetry": {
-    "mode": "disabled"
+    "mode": "remote"
   },
   "miseGlobalConfig": {
     "tools": {

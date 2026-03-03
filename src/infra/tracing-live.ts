@@ -9,11 +9,12 @@ import { ConfigLoaderTag } from "../domain/config-loader-port";
 import { TracingError, TracingTag, type Tracing } from "../domain/tracing-port";
 import { VersionTag } from "../domain/version-port";
 
-const DATADOG_OTLP_TRACES_ENDPOINT = "https://otlp.datadoghq.com/v1/traces";
-const DATADOG_OTLP_API_KEY = "7e77b20d95b0a05e799f2e0514ae01b4";
+const AXIOM_OTLP_TRACES_ENDPOINT = "https://api.axiom.co/v1/traces";
+const AXIOM_OTLP_API_KEY = "xaat-0ea28533-92be-434f-aaa1-179d905130da";
+const AXIOM_OTLP_DATASET = "devcli";
 
 /**
- * Logs export results from Datadog OTLP trace endpoint
+ * Logs export results from Axiom OTLP trace endpoint
  */
 const logExportResult = (result: { code: number; error?: any; spans: number }) =>
   Effect.gen(function* () {
@@ -24,7 +25,7 @@ const logExportResult = (result: { code: number; error?: any; spans: number }) =
 
     // Handle errors
     if (result.error?.code) {
-      yield* Effect.logWarning(`Failed to export ${result.spans} spans to Datadog OTLP endpoint (HTTP ${result.error.code})`);
+      yield* Effect.logWarning(`Failed to export ${result.spans} spans to Axiom OTLP endpoint (HTTP ${result.error.code})`);
 
       // Parse error response if available
       if (result.error.data) {
@@ -32,7 +33,7 @@ const logExportResult = (result: { code: number; error?: any; spans: number }) =
           const errorData = typeof result.error.data === "string" ? JSON.parse(result.error.data) : result.error.data;
 
           if (errorData.error?.message) {
-            yield* Effect.logWarning(`Datadog OTLP error: ${errorData.error.message}`);
+            yield* Effect.logWarning(`Axiom OTLP error: ${errorData.error.message}`);
           }
 
           // Extract activation URL if present
@@ -44,23 +45,24 @@ const logExportResult = (result: { code: number; error?: any; spans: number }) =
             }
           }
         } catch {
-          yield* Effect.logWarning(`Datadog OTLP raw error response: ${result.error.data}`);
+          yield* Effect.logWarning(`Axiom OTLP raw error response: ${result.error.data}`);
         }
       }
     } else {
-      yield* Effect.logWarning(`Failed to export spans to Datadog OTLP: ${result.error?.message || "Unknown error"}`);
+      yield* Effect.logWarning(`Failed to export spans to Axiom OTLP: ${result.error?.message || "Unknown error"}`);
     }
   });
 
 /**
- * Creates an OTLP trace exporter for Datadog (without collector)
+ * Creates an OTLP trace exporter for Axiom (without collector)
  */
 const createOtlpTraceExporter = (): Effect.Effect<BatchSpanProcessor, never, never> =>
   Effect.try(() => {
     const exporter = new OTLPTraceExporter({
-      url: DATADOG_OTLP_TRACES_ENDPOINT,
+      url: AXIOM_OTLP_TRACES_ENDPOINT,
       headers: {
-        "dd-api-key": DATADOG_OTLP_API_KEY,
+        "Authorization": `Bearer ${AXIOM_OTLP_API_KEY}`,
+        "X-Axiom-Dataset": AXIOM_OTLP_DATASET,
       },
     });
 
@@ -90,7 +92,7 @@ const createOtlpTraceExporter = (): Effect.Effect<BatchSpanProcessor, never, nev
   }).pipe(
     Effect.catchAll(() =>
       Effect.gen(function* () {
-        yield* Effect.logWarning("Failed to initialize Datadog OTLP trace exporter");
+        yield* Effect.logWarning("Failed to initialize Axiom OTLP trace exporter");
         yield* Effect.logWarning("Falling back to console exporter");
         return new BatchSpanProcessor(new ConsoleSpanExporter());
       }),
@@ -125,7 +127,7 @@ const makeTracingLive = (configLoader: typeof ConfigLoaderTag.Service, versionSe
           break;
 
         case "remote":
-          yield* Effect.logDebug("Telemetry: Using Datadog OTLP trace exporter");
+          yield* Effect.logDebug("Telemetry: Using Axiom OTLP trace exporter");
           spanProcessor = yield* createOtlpTraceExporter();
           break;
 
