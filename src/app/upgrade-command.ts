@@ -283,7 +283,7 @@ function checkTool(toolName: string, toolManager: ToolManagement[keyof ToolManag
     yield* Effect.annotateCurrentSpan("tool.name", toolName);
     const { isValid, currentVersion } = yield* toolManager.checkVersion().pipe(
       Effect.mapError((error) => unknownError(`${toolName} version check failed: ${error}`)),
-      Effect.withSpan(`tools.check_${toolName.toLowerCase()}_version`),
+      Effect.withSpan("tools.check_version"),
     );
 
     yield* Effect.annotateCurrentSpan("tool.version.valid", isValid.toString());

@@ -4,6 +4,21 @@ import { Duration, Effect, Layer } from "effect";
 import { shellExecutionError, shellTimeoutError, type ShellExecutionError, type ShellTimeoutError } from "../domain/errors";
 import { ShellTag, type Shell, type SpawnResult } from "../domain/shell-port";
 
+const createShellSpanAttributes = (command: string, args: string[], cwd?: string): Record<string, string | number> => {
+  if (cwd) {
+    return {
+      "shell.command": command,
+      "shell.args.count": args.length,
+      "shell.cwd": cwd,
+    };
+  }
+
+  return {
+    "shell.command": command,
+    "shell.args.count": args.length,
+  };
+};
+
 // Individual functions for each method
 const exec = (command: string, args: string[] = [], options: { cwd?: string } = {}): Effect.Effect<SpawnResult, ShellExecutionError> =>
   Effect.tryPromise({
@@ -26,7 +41,10 @@ const exec = (command: string, args: string[] = [], options: { cwd?: string } = 
       };
     },
     catch: (error) => shellExecutionError(command, args, `Failed to execute command`, { cwd: options.cwd, underlyingError: error }),
-  });
+  }).pipe(
+    Effect.tap((result) => Effect.annotateCurrentSpan("shell.exit_code", result.exitCode)),
+    Effect.withSpan("shell.exec", { attributes: createShellSpanAttributes(command, args, options.cwd) }),
+  );
 
 const execInteractive = (
   command: string,
@@ -49,7 +67,10 @@ const execInteractive = (
         cwd: options.cwd,
         underlyingError: error,
       }),
-  });
+  }).pipe(
+    Effect.tap((exitCode) => Effect.annotateCurrentSpan("shell.exit_code", exitCode)),
+    Effect.withSpan("shell.exec_interactive", { attributes: createShellSpanAttributes(command, args, options.cwd) }),
+  );
 
 const setProcessCwd = (path: string): Effect.Effect<void> =>
   Effect.sync(() => {
