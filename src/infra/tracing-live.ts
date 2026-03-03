@@ -1,10 +1,16 @@
 import type { NodeSdk } from "@effect/opentelemetry";
 import * as resources from "@opentelemetry/resources";
 import { BatchSpanProcessor, ConsoleSpanExporter, NoopSpanProcessor } from "@opentelemetry/sdk-trace-base";
-import { ATTR_SERVICE_NAME, ATTR_SERVICE_NAMESPACE, ATTR_SERVICE_VERSION } from "@opentelemetry/semantic-conventions";
+import {
+  ATTR_SERVICE_INSTANCE_ID,
+  ATTR_SERVICE_NAME,
+  ATTR_SERVICE_NAMESPACE,
+  ATTR_SERVICE_VERSION,
+} from "@opentelemetry/semantic-conventions";
 import { Effect, Layer } from "effect";
 
 import { ConfigLoaderTag } from "../domain/config-loader-port";
+import { InstallIdentityTag } from "../domain/install-identity-port";
 import { TracingError, TracingTag, type Tracing } from "../domain/tracing-port";
 import { VersionTag } from "../domain/version-port";
 import { tracingExporterFactories } from "./tracing-exporters";
@@ -21,7 +27,11 @@ const createRemoteSpanProcessor = <Mode extends RemoteTelemetryMode>(
 /**
  * Factory function that creates a Tracing implementation
  */
-const makeTracingLive = (configLoader: typeof ConfigLoaderTag.Service, versionService: typeof VersionTag.Service): Tracing => ({
+const makeTracingLive = (
+  configLoader: typeof ConfigLoaderTag.Service,
+  versionService: typeof VersionTag.Service,
+  installIdentityService: typeof InstallIdentityTag.Service,
+): Tracing => ({
   createSdkConfig: () =>
     Effect.gen(function* () {
       const appConfig = yield* configLoader
@@ -33,6 +43,9 @@ const makeTracingLive = (configLoader: typeof ConfigLoaderTag.Service, versionSe
       const version = yield* versionService.getVersion.pipe(
         Effect.orElseSucceed(() => "0.0.1"),
         Effect.withSpan("version.get_cli"),
+      );
+      const installId = yield* installIdentityService.getOrCreateInstallId.pipe(
+        Effect.catchAll((error) => new TracingError({ reason: `Failed to get install identity: ${error._tag}` })),
       );
 
       const spanProcessor = yield* Effect.gen(function* () {
@@ -53,6 +66,7 @@ const makeTracingLive = (configLoader: typeof ConfigLoaderTag.Service, versionSe
         [ATTR_SERVICE_NAMESPACE]: OTLP_SERVICE_NAMESPACE,
         [ATTR_SERVICE_NAME]: OTLP_SERVICE_NAME,
         [ATTR_SERVICE_VERSION]: version,
+        [ATTR_SERVICE_INSTANCE_ID]: installId,
       };
 
       const resource = resources.resourceFromAttributes(resourceAttributes);
@@ -76,6 +90,7 @@ export const TracingLiveLayer = Layer.effect(
   Effect.gen(function* () {
     const configLoader = yield* ConfigLoaderTag;
     const versionService = yield* VersionTag;
-    return makeTracingLive(configLoader, versionService);
+    const installIdentityService = yield* InstallIdentityTag;
+    return makeTracingLive(configLoader, versionService, installIdentityService);
   }),
 );

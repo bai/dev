@@ -29,6 +29,7 @@ import { GcloudToolsLiveLayer } from "./infra/gcloud-tools-live";
 import { GitLiveLayer } from "./infra/git-live";
 import { GitToolsLiveLayer } from "./infra/git-tools-live";
 import { HealthCheckLiveLayer } from "./infra/health-check-live";
+import { InstallIdentityLiveLayer } from "./infra/install-identity-live";
 import { KeychainLiveLayer } from "./infra/keychain-live";
 import { MiseLiveLayer } from "./infra/mise-live";
 import { MiseToolsLiveLayer } from "./infra/mise-tools-live";
@@ -109,6 +110,7 @@ export const buildAppLayer = (config: Config) => {
   const gitLayer = Layer.provide(GitLiveLayer, baseServices);
   const directoryLayer = Layer.provide(DirectoryLiveLayer, baseServices);
   const databaseLayer = Layer.provide(DatabaseLiveLayer, baseServices);
+  const installIdentityLayer = Layer.provide(InstallIdentityLiveLayer, databaseLayer);
   const repositoryServiceLayer = Layer.provide(RepositoryServiceLiveLayer, baseServices);
 
   // Config loader needs filesystem and network
@@ -152,7 +154,7 @@ export const buildAppLayer = (config: Config) => {
   const versionLayer = Layer.provide(VersionLiveLayer, Layer.mergeAll(gitLayer, baseServices));
 
   // Tracing layer (needs config, shell, and version)
-  const tracingLayer = Layer.provide(TracingLiveLayer, Layer.mergeAll(configLoaderLayer, baseServices, versionLayer));
+  const tracingLayer = Layer.provide(TracingLiveLayer, Layer.mergeAll(configLoaderLayer, baseServices, versionLayer, installIdentityLayer));
 
   // Stage 4: Application services
   const infraLayer = Layer.mergeAll(
@@ -161,6 +163,7 @@ export const buildAppLayer = (config: Config) => {
     gitLayer,
     directoryLayer,
     databaseLayer,
+    installIdentityLayer,
     repositoryServiceLayer,
     configLoaderLayer,
     toolLayers,

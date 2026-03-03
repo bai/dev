@@ -27,3 +27,9 @@ export const toolHealthChecks = sqliteTable(
   },
   (table) => [index("idx_tool_latest").on(table.tool_name, desc(table.checked_at))],
 );
+
+export const installMetadata = sqliteTable("install_metadata", {
+  key: text().primaryKey(),
+  install_id: text().notNull(),
+  created_at: integer({ mode: "timestamp" }).notNull(),
+});

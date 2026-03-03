@@ -274,8 +274,11 @@ const mainProgram = Effect.gen(function* () {
         yield* Effect.logWarning(`Failed to initialize tracing configuration, using defaults: ${errorMessage}`);
         return {
           resource: {
-            serviceName: "dev-cli",
+            serviceName: "cli",
             serviceVersion: "0.0.1",
+            attributes: {
+              "service.namespace": "dev",
+            },
           },
           spanProcessor: undefined, // Will use default NoopSpanProcessor
         };

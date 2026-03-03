@@ -8,6 +8,8 @@ import { ConfigLoaderTag } from "../domain/config-loader-port";
 import { configSchema } from "../domain/config-schema";
 import type { Git } from "../domain/git-port";
 import { GitTag } from "../domain/git-port";
+import type { InstallIdentity } from "../domain/install-identity-port";
+import { InstallIdentityTag } from "../domain/install-identity-port";
 import { PathLive, PathServiceTag } from "../domain/path-service";
 import { TracingTag } from "../domain/tracing-port";
 import type { Version } from "../domain/version-port";
@@ -27,6 +29,10 @@ const mockGit: Git = {
   getRemoteOriginUrl: () => Effect.succeed("https://github.com/acme/repo"),
 };
 
+const mockInstallIdentity: InstallIdentity = {
+  getOrCreateInstallId: Effect.succeed("0196ed78-467a-7f2f-bf6b-95e73fd43b8d"),
+};
+
 const makeConfigLoader = (config: ReturnType<typeof configSchema.parse>): ConfigLoader => ({
   load: () => Effect.succeed(config),
   save: () => Effect.void,
@@ -41,6 +47,7 @@ const loadSdkConfig = (config: ReturnType<typeof configSchema.parse>) =>
     Effect.provide(TracingLiveLayer),
     Effect.provideService(ConfigLoaderTag, makeConfigLoader(config)),
     Effect.provideService(VersionTag, mockVersion),
+    Effect.provideService(InstallIdentityTag, mockInstallIdentity),
     Effect.provideService(GitTag, mockGit),
     Effect.provideService(PathServiceTag, PathLive),
   );
@@ -59,6 +66,7 @@ describe("tracing-live", () => {
       expect(sdkConfig.resource?.serviceVersion).toBe("1.2.3");
       expect(sdkConfig.resource?.attributes?.["service.namespace"]).toBe("dev");
       expect(sdkConfig.resource?.attributes?.["service.name"]).toBe("cli");
+      expect(sdkConfig.resource?.attributes?.["service.instance.id"]).toBe("0196ed78-467a-7f2f-bf6b-95e73fd43b8d");
     }),
   );
 
