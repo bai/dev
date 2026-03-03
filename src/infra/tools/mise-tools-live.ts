@@ -1,45 +1,33 @@
-import path from "path";
-
-import { stringify } from "@iarna/toml";
 import { Clock, Context, Effect, Layer } from "effect";
 
-import { ConfigLoaderTag, type ConfigLoader } from "../../domain/config-loader-port";
 import {
   externalToolError,
   healthCheckError,
-  unknownError,
   type ExternalToolError,
   type HealthCheckError,
   type ShellExecutionError,
   type UnknownError,
 } from "../../domain/errors";
-import { FileSystemTag, type FileSystem } from "../../domain/file-system-port";
 import { type HealthCheckResult } from "../../domain/health-check-port";
-import { PathServiceTag, type PathService } from "../../domain/path-service";
+import { MiseTag, type Mise } from "../../domain/mise-port";
 import { ShellTag, type Shell } from "../../domain/shell-port";
 
 export const MISE_MIN_VERSION = "2026.1.5";
 
 /**
- * Mise tools for version checking and management
- * This is infrastructure-level tooling for mise version management
+ * Mise tools for version checking and management.
+ * Delegates global config setup to the Mise domain port.
  */
 export interface MiseTools {
   getCurrentVersion(): Effect.Effect<string | null, ShellExecutionError>;
   checkVersion(): Effect.Effect<{ isValid: boolean; currentVersion: string | null }, ShellExecutionError>;
   performUpgrade(): Effect.Effect<boolean, ShellExecutionError>;
   ensureVersionOrUpgrade(): Effect.Effect<void, ExternalToolError | ShellExecutionError | UnknownError>;
-  setupGlobalConfig(): Effect.Effect<void, UnknownError>;
   performHealthCheck(): Effect.Effect<HealthCheckResult, HealthCheckError>;
 }
 
 // Factory function that creates MiseTools with dependencies
-export const makeMiseToolsLive = (
-  shell: Shell,
-  filesystem: FileSystem,
-  configLoader: ConfigLoader,
-  pathService: PathService,
-): MiseTools => {
+export const makeMiseToolsLive = (shell: Shell, mise: Mise): MiseTools => {
   // Helper function for version comparison
   const compareVersions = (version1: string, version2: string): number => {
     const v1Parts = version1.split(".").map(Number);
@@ -137,46 +125,6 @@ export const makeMiseToolsLive = (
       }
     });
 
-  const setupGlobalConfig = (): Effect.Effect<void, UnknownError> =>
-    Effect.gen(function* () {
-      yield* Effect.logDebug("🔧 Setting up mise global configuration...");
-
-      const miseConfigDir = path.join(pathService.homeDir, ".config", "mise");
-      const miseConfigFile = path.join(miseConfigDir, "config.toml");
-
-      // Create config directory if it doesn't exist
-      const configDirExists = yield* filesystem.exists(miseConfigDir);
-      if (!configDirExists) {
-        yield* Effect.logDebug("   📂 Creating mise config directory...");
-        yield* filesystem.mkdir(miseConfigDir, true).pipe(
-          Effect.mapError((error) => {
-            return unknownError(`Failed to create mise config directory: ${error}`);
-          }),
-        );
-      }
-
-      // Load config dynamically from the config loader
-      const config = yield* configLoader.load().pipe(
-        Effect.mapError((error) => {
-          return unknownError(`Failed to load config: ${error}`);
-        }),
-      );
-
-      // Write mise global config if it exists in the loaded config
-      if (config.miseGlobalConfig) {
-        const tomlContent = stringify(config.miseGlobalConfig as Record<string, any>);
-
-        yield* filesystem.writeFile(miseConfigFile, tomlContent).pipe(
-          Effect.mapError((error) => {
-            return unknownError(`Failed to write mise config: ${error}`);
-          }),
-        );
-        yield* Effect.logDebug("   ✅ Mise global config ready");
-      } else {
-        yield* Effect.logDebug("   ⚠️  No mise global config found in loaded configuration");
-      }
-    });
-
   const ensureVersionOrUpgrade = (): Effect.Effect<void, ExternalToolError | ShellExecutionError | UnknownError> =>
     Effect.gen(function* () {
       const { currentVersion, latestVersion } = yield* getVersionInfo();
@@ -189,7 +137,7 @@ export const makeMiseToolsLive = (
       // If version is already valid (latest), skip upgrade
       if (isValid && currentVersion) {
         yield* Effect.logInfo(`✅ Mise ${currentVersion} is the latest version`);
-        yield* setupGlobalConfig();
+        yield* mise.setupGlobalConfig();
         return;
       }
 
@@ -217,7 +165,7 @@ export const makeMiseToolsLive = (
         });
       }
 
-      yield* setupGlobalConfig();
+      yield* mise.setupGlobalConfig();
 
       // Re-check version after upgrade
       const { currentVersion: versionAfterUpgrade, latestVersion: latestAfterUpgrade } = yield* getVersionInfo();
@@ -284,7 +232,6 @@ export const makeMiseToolsLive = (
     checkVersion,
     performUpgrade,
     ensureVersionOrUpgrade,
-    setupGlobalConfig,
     performHealthCheck,
   };
 };
@@ -297,9 +244,7 @@ export const MiseToolsLiveLayer = Layer.effect(
   MiseToolsTag,
   Effect.gen(function* () {
     const shell = yield* ShellTag;
-    const filesystem = yield* FileSystemTag;
-    const configLoader = yield* ConfigLoaderTag;
-    const pathService = yield* PathServiceTag;
-    return makeMiseToolsLive(shell, filesystem, configLoader, pathService);
+    const mise = yield* MiseTag;
+    return makeMiseToolsLive(shell, mise);
   }),
 );

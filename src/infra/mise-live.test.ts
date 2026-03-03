@@ -245,4 +245,63 @@ describe("mise-live", () => {
       expect(mockShell.lastInteractiveCall?.args).toEqual(["run", "simple-task"]);
     }),
   );
+
+  it.effect("setupGlobalConfig writes config to correct path", () =>
+    Effect.gen(function* () {
+      const writeFileCalls: Array<{ path: string; content: string }> = [];
+      const existsCalls: string[] = [];
+      const mkdirCalls: Array<{ path: string; recursive?: boolean }> = [];
+
+      const trackingFileSystem: FileSystem = {
+        ...mockFileSystem,
+        exists: (p) => {
+          existsCalls.push(p);
+          return Effect.succeed(false);
+        },
+        mkdir: (p, recursive) => {
+          mkdirCalls.push({ path: p, recursive });
+          return Effect.void;
+        },
+        writeFile: (p, content) => {
+          writeFileCalls.push({ path: p, content });
+          return Effect.void;
+        },
+      };
+
+      const trackingMise = makeMiseLive(mockShell, trackingFileSystem, mockConfigLoader, mockPathService);
+      yield* trackingMise.setupGlobalConfig();
+
+      expect(existsCalls).toContain("/home/user/.config/mise");
+      expect(mkdirCalls).toEqual([{ path: "/home/user/.config/mise", recursive: true }]);
+      expect(writeFileCalls).toHaveLength(1);
+      expect(writeFileCalls[0]?.path).toBe("/home/user/.config/mise/config.toml");
+      expect(writeFileCalls[0]?.content).toContain("[settings]");
+    }),
+  );
+
+  it.effect("setupGlobalConfig skips mkdir when config directory exists", () =>
+    Effect.gen(function* () {
+      const mkdirCalls: Array<{ path: string }> = [];
+      const writeFileCalls: Array<{ path: string; content: string }> = [];
+
+      const trackingFileSystem: FileSystem = {
+        ...mockFileSystem,
+        exists: () => Effect.succeed(true),
+        mkdir: (p) => {
+          mkdirCalls.push({ path: p });
+          return Effect.void;
+        },
+        writeFile: (p, content) => {
+          writeFileCalls.push({ path: p, content });
+          return Effect.void;
+        },
+      };
+
+      const trackingMise = makeMiseLive(mockShell, trackingFileSystem, mockConfigLoader, mockPathService);
+      yield* trackingMise.setupGlobalConfig();
+
+      expect(mkdirCalls).toHaveLength(0);
+      expect(writeFileCalls[0]?.path).toBe("/home/user/.config/mise/config.toml");
+    }),
+  );
 });

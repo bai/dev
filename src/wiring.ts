@@ -121,15 +121,16 @@ export const buildAppLayer = (config: Config) => {
 
   // Stage 3: Tool services (depend on base + config)
   const toolDependencies = Layer.mergeAll(baseServices, configLoaderLayer);
+  const miseLiveProvided = Layer.provide(MiseLiveLayer, toolDependencies);
 
   const toolLayers = Layer.mergeAll(
-    Layer.provide(MiseLiveLayer, toolDependencies),
+    miseLiveProvided,
     Layer.provide(KeychainLiveLayer, baseServices),
     Layer.provide(FzfToolsLiveLayer, baseServices),
     Layer.provide(BunToolsLiveLayer, baseServices),
     Layer.provide(DockerToolsLiveLayer, baseServices),
     Layer.provide(GitToolsLiveLayer, baseServices),
-    Layer.provide(MiseToolsLiveLayer, toolDependencies),
+    Layer.provide(MiseToolsLiveLayer, Layer.mergeAll(baseServices, miseLiveProvided)),
     Layer.provide(GcloudToolsLiveLayer, baseServices),
     InteractiveSelectorLiveLayer,
   );
