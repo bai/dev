@@ -1,9 +1,9 @@
-import { Effect, Layer } from "effect";
+import { Effect } from "effect";
 
 import type { NetworkError, UnknownError } from "../domain/errors";
 import type { GitProvider, Repository } from "../domain/models";
-import { NetworkTag, type Network } from "../domain/network-port";
-import { RepoProviderTag, type RepoProvider } from "../domain/repo-provider-port";
+import type { Network } from "../domain/network-port";
+import type { RepoProvider } from "../domain/repo-provider-port";
 
 // Factory function that creates GitHubProvider with dependencies
 export const makeGitHubProvider = (network: Network, defaultOrg = "octocat"): RepoProvider => {
@@ -37,13 +37,3 @@ export const makeGitHubProvider = (network: Network, defaultOrg = "octocat"): Re
     getProvider,
   };
 };
-
-// Effect Layer for dependency injection using factory function
-export const GitHubProviderLiveLayer = (defaultOrg: string) =>
-  Layer.effect(
-    RepoProviderTag,
-    Effect.gen(function* () {
-      const network = yield* NetworkTag;
-      return makeGitHubProvider(network, defaultOrg);
-    }),
-  );

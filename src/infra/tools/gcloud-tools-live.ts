@@ -15,13 +15,10 @@ import { FileSystemTag, type FileSystem } from "../../domain/file-system-port";
 import { type HealthCheckResult } from "../../domain/health-check-port";
 import { PathServiceTag, type PathService } from "../../domain/path-service";
 import { ShellTag, type Shell } from "../../domain/shell-port";
+import { compareVersions } from "../../domain/version-utils";
 
 export const GCLOUD_MIN_VERSION = "552.0.0";
 
-/**
- * Google Cloud tools for version checking and management
- * This is infrastructure-level tooling for gcloud version management
- */
 export interface GcloudTools {
   getCurrentVersion(): Effect.Effect<string | null, ShellExecutionError>;
   checkVersion(): Effect.Effect<{ isValid: boolean; currentVersion: string | null }, ShellExecutionError>;
@@ -33,27 +30,6 @@ export interface GcloudTools {
 
 // Factory function that creates GcloudTools with dependencies
 export const makeGcloudToolsLive = (shell: Shell, filesystem: FileSystem, pathService: PathService): GcloudTools => {
-  // Helper function for version comparison
-  const compareVersions = (version1: string, version2: string): number => {
-    const v1Parts = version1.split(".").map(Number);
-    const v2Parts = version2.split(".").map(Number);
-
-    const maxLength = Math.max(v1Parts.length, v2Parts.length);
-    while (v1Parts.length < maxLength) v1Parts.push(0);
-    while (v2Parts.length < maxLength) v2Parts.push(0);
-
-    for (let i = 0; i < maxLength; i++) {
-      const v1Part = v1Parts[i] ?? 0;
-      const v2Part = v2Parts[i] ?? 0;
-
-      if (v1Part < v2Part) return -1;
-      if (v1Part > v2Part) return 1;
-    }
-
-    return 0;
-  };
-
-  // Individual functions implementing the service methods
   const getCurrentVersion = (): Effect.Effect<string | null, ShellExecutionError> =>
     shell.exec("gcloud", ["version"]).pipe(
       Effect.map((result) => {

@@ -7,8 +7,8 @@ import type { Config } from "./config-schema";
 
 // Pure constants - no side effects
 export const DEFAULT_HOME_DIR = os.homedir();
-export const DEFAULT_BASE_SEARCH_DIR = "src";
-export const DEFAULT_DEV_DIR = ".dev";
+const DEFAULT_BASE_SEARCH_DIR = "src";
+const DEFAULT_DEV_DIR = ".dev";
 
 // XDG Base Directory Specification compliant paths
 export const XDG_CONFIG_HOME = process.env.XDG_CONFIG_HOME || path.join(DEFAULT_HOME_DIR, ".config");
@@ -55,9 +55,6 @@ export const PathLive: PathService = createPathService();
 
 // Service tag for Effect Context system
 export class PathServiceTag extends Context.Tag("PathService")<PathServiceTag, PathService>() {}
-
-// Layer that provides PathService (default)
-export const PathServiceLiveLayer = Layer.succeed(PathServiceTag, PathLive);
 
 // Layer factory that provides PathService with dynamic baseSearchPath
 export const createPathServiceLiveLayer = (baseSearchPath?: string) => Layer.succeed(PathServiceTag, createPathService(baseSearchPath));

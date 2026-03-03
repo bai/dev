@@ -21,17 +21,11 @@ export interface LogsHandlerConfig {
 
 export const validateServiceNames = (services: readonly string[]): Effect.Effect<readonly ServiceName[], never, never> =>
   Effect.gen(function* () {
-    const result: ServiceName[] = [];
-
-    for (const service of services) {
-      if (isServiceName(service)) {
-        result.push(service);
-      } else {
-        yield* Effect.logWarning(`Unknown service: ${service}. Valid services: ${DOCKER_SERVICE_NAMES.join(", ")}`);
-      }
-    }
-
-    return result;
+    yield* Effect.forEach(
+      services.filter((s) => !isServiceName(s)),
+      (service) => Effect.logWarning(`Unknown service: ${service}. Valid services: ${DOCKER_SERVICE_NAMES.join(", ")}`),
+    );
+    return services.filter(isServiceName);
   });
 
 export const withDocker = <A, E, R>(

@@ -270,7 +270,7 @@ export function positions(needle: string, haystack: string): number[] | null {
   return result;
 }
 
-export interface Choice {
+interface Choice {
   str: string;
   score: number;
   positions?: number[];

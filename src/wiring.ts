@@ -12,7 +12,7 @@ import { type Config } from "./domain/config-schema";
 import { DirectoryTag } from "./domain/directory-port";
 import type { ServiceName } from "./domain/docker-services-port";
 import { HealthCheckServiceTag, makeHealthCheckService } from "./domain/health-check-service";
-import { createPathServiceLiveLayer } from "./domain/path-service";
+import { createPathService, createPathServiceLiveLayer } from "./domain/path-service";
 import { RepositoryServiceLiveLayer } from "./domain/repository-service";
 import { ToolHealthRegistryTag } from "./domain/tool-health-registry-port";
 import { CommandRegistryLiveLayer } from "./infra/command-registry-live";
@@ -61,21 +61,16 @@ export const loadConfiguration = () =>
   Effect.gen(function* () {
     yield* Effect.logDebug("🔧 Loading configuration...");
 
-    const configPath = path.join(os.homedir(), ".config", "dev", "config.json");
-    const baseSearchPath = path.join(os.homedir(), "src");
+    const defaults = createPathService();
 
     // Minimal bootstrap layer for config loading
     const bootstrapLayer = Layer.mergeAll(
       FileSystemLiveLayer,
-      createPathServiceLiveLayer(baseSearchPath),
+      createPathServiceLiveLayer(),
       Layer.provide(NetworkLiveLayer, FileSystemLiveLayer),
       Layer.provide(
-        ConfigLoaderLiveLayer(configPath),
-        Layer.mergeAll(
-          FileSystemLiveLayer,
-          createPathServiceLiveLayer(baseSearchPath),
-          Layer.provide(NetworkLiveLayer, FileSystemLiveLayer),
-        ),
+        ConfigLoaderLiveLayer(defaults.configPath),
+        Layer.mergeAll(FileSystemLiveLayer, createPathServiceLiveLayer(), Layer.provide(NetworkLiveLayer, FileSystemLiveLayer)),
       ),
     );
 
@@ -94,7 +89,7 @@ export const loadConfiguration = () =>
 export const buildAppLayer = (config: Config) => {
   // Extract configuration values
   const defaultOrg = config.defaultOrg;
-  const configPath = path.join(os.homedir(), ".config", "dev", "config.json");
+  const defaults = createPathService();
   const baseSearchPath = expandTildePath(config.baseSearchPath);
   const defaultProvider = config.defaultProvider;
   const orgToProvider = config.orgToProvider;
@@ -114,7 +109,7 @@ export const buildAppLayer = (config: Config) => {
   const repositoryServiceLayer = Layer.provide(RepositoryServiceLiveLayer, baseServices);
 
   // Config loader needs filesystem and network
-  const configLoaderLayer = Layer.provide(ConfigLoaderLiveLayer(configPath), Layer.mergeAll(baseServices, networkLayer));
+  const configLoaderLayer = Layer.provide(ConfigLoaderLiveLayer(defaults.configPath), Layer.mergeAll(baseServices, networkLayer));
 
   // Docker services layer (depends on base services)
   const dockerServicesLayer = Layer.provide(DockerServicesLiveLayer(enabledServices), baseServices);

@@ -4,7 +4,7 @@ import { Clock, Effect, Layer } from "effect";
 import { toolHealthChecks } from "../../drizzle/schema";
 import { DatabaseTag, type Database } from "../domain/database-port";
 import { healthCheckError, type HealthCheckError } from "../domain/errors";
-import { HealthCheckTag, type HealthCheck, type HealthCheckResult, type HealthCheckSummary } from "../domain/health-check-port";
+import { HealthCheckTag, type HealthCheck, type HealthCheckResult } from "../domain/health-check-port";
 import { HealthCheckServiceTag, type HealthCheckService } from "../domain/health-check-service";
 
 // Health check constants (internal, not user-configurable)
@@ -71,10 +71,8 @@ export const makeHealthCheckLive = (database: Database, healthCheckService: Heal
     Effect.gen(function* () {
       yield* Effect.logDebug("Running health checks synchronously...");
 
-      // Get health check results from the service
       const results = yield* healthCheckService.runAllHealthChecks();
 
-      // Convert HealthCheckResult[] to InternalHealthCheckResult[] for storage
       const internalResults: InternalHealthCheckResult[] = results.map((result) => ({
         toolName: result.toolName,
         version: result.version,
@@ -83,21 +81,18 @@ export const makeHealthCheckLive = (database: Database, healthCheckService: Heal
         checkedAt: result.checkedAt.getTime(),
       }));
 
-      // Store results in database
       yield* storeHealthCheckResults(internalResults, database);
 
       yield* Effect.logDebug("Health checks completed successfully");
 
-      // Return the results
       return results;
-    });
+    }).pipe(Effect.withSpan("health_check.run_all"));
 
-  const getLatestResults = (): Effect.Effect<readonly HealthCheckSummary[], HealthCheckError> =>
+  const getLatestResults = (): Effect.Effect<readonly HealthCheckResult[], HealthCheckError> =>
     database
       .query((db) =>
         Effect.tryPromise({
           try: async () => {
-            // Use a subquery to get the latest check for each tool
             const latestChecks = await db
               .select()
               .from(toolHealthChecks)
@@ -126,6 +121,7 @@ export const makeHealthCheckLive = (database: Database, healthCheckService: Heal
           if (error._tag === "HealthCheckError") return error;
           return healthCheckError(`Database query failed: ${String(error)}`);
         }),
+        Effect.withSpan("health_check.get_latest"),
       );
 
   const pruneOldRecords = (retentionDays: number = HEALTH_CHECK_RETENTION_DAYS): Effect.Effect<void, HealthCheckError> =>
@@ -150,7 +146,7 @@ export const makeHealthCheckLive = (database: Database, healthCheckService: Heal
         );
 
       yield* Effect.logDebug(`Pruned health check records older than ${retentionDays} days`);
-    });
+    }).pipe(Effect.withSpan("health_check.prune", { attributes: { "health_check.retention_days": retentionDays } }));
 
   return {
     runHealthChecks,

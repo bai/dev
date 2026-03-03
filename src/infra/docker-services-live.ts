@@ -1,6 +1,6 @@
 import path from "path";
 
-import { Clock, Context, Effect, Layer } from "effect";
+import { Clock, Effect, Layer } from "effect";
 
 import {
   DOCKER_SERVICE_NAMES,
@@ -262,16 +262,14 @@ export const makeDockerServicesLive = (
         const runningServices = new Map<string, DockerPsJson>();
 
         if (result.stdout.trim()) {
-          const lines = result.stdout.trim().split("\n");
-          for (const line of lines) {
-            try {
-              const parsed = JSON.parse(line) as DockerPsJson;
-              const serviceName = parsed.Name.replace("dev-", "");
-              runningServices.set(serviceName, parsed);
-            } catch {
-              // Skip unparseable lines
-            }
-          }
+          yield* Effect.forEach(result.stdout.trim().split("\n"), (line) =>
+            Effect.try(() => JSON.parse(line) as DockerPsJson).pipe(
+              Effect.andThen((parsed) => {
+                runningServices.set(parsed.Name.replace("dev-", ""), parsed);
+              }),
+              Effect.ignore,
+            ),
+          );
         }
 
         return enabledServices.map((name): ServiceStatus => {
@@ -427,11 +425,6 @@ export const makeDockerServicesLive = (
   };
 };
 
-export class DockerServicesToolsTag extends Context.Tag("DockerServicesTools")<
-  DockerServicesToolsTag,
-  { performHealthCheck: () => Effect.Effect<HealthCheckResult, never> }
->() {}
-
 export const DockerServicesLiveLayer = (enabledServices?: readonly ServiceName[]) =>
   Layer.effect(
     DockerServicesTag,
@@ -440,19 +433,5 @@ export const DockerServicesLiveLayer = (enabledServices?: readonly ServiceName[]
       const fs = yield* FileSystemTag;
       const pathService = yield* PathServiceTag;
       return makeDockerServicesLive(shell, fs, pathService, enabledServices);
-    }),
-  );
-
-export const DockerServicesToolsLiveLayer = (enabledServices?: readonly ServiceName[]) =>
-  Layer.effect(
-    DockerServicesToolsTag,
-    Effect.gen(function* () {
-      const shell = yield* ShellTag;
-      const fs = yield* FileSystemTag;
-      const pathService = yield* PathServiceTag;
-      const dockerServices = makeDockerServicesLive(shell, fs, pathService, enabledServices);
-      return {
-        performHealthCheck: () => dockerServices.performHealthCheck(),
-      };
     }),
   );

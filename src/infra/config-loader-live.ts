@@ -13,7 +13,6 @@ export const makeConfigLoaderLive = (fileSystem: FileSystem, network: Network, c
     fileSystem.exists(configPath).pipe(
       Effect.flatMap((exists) => {
         if (!exists) {
-          // Create a new config with all defaults from the schema
           const newConfig = configSchema.parse({});
           return save(newConfig).pipe(Effect.map(() => newConfig));
         }
@@ -29,12 +28,11 @@ export const makeConfigLoaderLive = (fileSystem: FileSystem, network: Network, c
           ),
         );
       }),
+      Effect.withSpan("config.load", { attributes: { "config.path": configPath } }),
     );
 
-  const save = (config: Config): Effect.Effect<void, FileSystemError | UnknownError> => {
-    const content = JSON.stringify(config, null, 2);
-    return fileSystem.writeFile(configPath, content);
-  };
+  const save = (config: Config): Effect.Effect<void, FileSystemError | UnknownError> =>
+    fileSystem.writeFile(configPath, JSON.stringify(config, null, 2)).pipe(Effect.withSpan("config.save"));
 
   const refresh = (): Effect.Effect<Config, ConfigError | FileSystemError | NetworkError | UnknownError> =>
     load().pipe(
@@ -57,10 +55,10 @@ export const makeConfigLoaderLive = (fileSystem: FileSystem, network: Network, c
               catch: (error) => configError(`Invalid remote config: ${error}`),
             }).pipe(Effect.flatMap((validatedConfig) => save(validatedConfig).pipe(Effect.map(() => validatedConfig))));
           }),
-          // Fall back to current config if remote fetch fails
           Effect.orElseSucceed(() => currentConfig),
         );
       }),
+      Effect.withSpan("config.refresh"),
     );
 
   return {

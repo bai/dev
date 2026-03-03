@@ -29,7 +29,7 @@ export const makeNetworkLive = (fileSystem: FileSystem): Network => ({
         };
       },
       catch: (error) => networkError(`HTTP request failed: ${error}`),
-    }),
+    }).pipe(Effect.withSpan("http.get", { attributes: { "http.url": url } })),
 
   downloadFile: (url: string, destinationPath: string): Effect.Effect<void, NetworkError | UnknownError> =>
     Effect.gen(function* () {
@@ -59,7 +59,7 @@ export const makeNetworkLive = (fileSystem: FileSystem): Network => ({
           }
         }),
       );
-    }),
+    }).pipe(Effect.withSpan("http.download_file", { attributes: { "http.url": url, "fs.path": destinationPath } })),
 
   checkConnectivity: (url: string): Effect.Effect<boolean> =>
     Effect.tryPromise({
@@ -68,7 +68,10 @@ export const makeNetworkLive = (fileSystem: FileSystem): Network => ({
         return response.ok;
       },
       catch: () => false,
-    }).pipe(Effect.orElseSucceed(() => false)),
+    }).pipe(
+      Effect.orElseSucceed(() => false),
+      Effect.withSpan("http.check_connectivity", { attributes: { "http.url": url } }),
+    ),
 });
 
 // Effect Layer for dependency injection

@@ -108,9 +108,6 @@ export const configSchema = z.object({
   services: servicesConfigSchema,
 });
 
-// Re-export schemas for other modules
-export { miseConfigSchema, logLevelSchema };
-
 // Use Zod's inferred type as the source of truth
 // This ensures the type matches what Zod actually produces (with defaults applied)
 export type Config = z.infer<typeof configSchema>;

@@ -1,21 +1,3 @@
-// Core configuration types (moved from config schema to maintain proper layering)
-
-export interface MiseConfig {
-  readonly min_version?: string;
-  readonly env?: Record<string, string> & {
-    readonly _?: {
-      readonly path?: string[];
-      readonly file?: string[];
-    };
-  };
-  readonly tools?: Record<string, string | string[]>;
-  readonly settings?: {
-    readonly idiomatic_version_file_enable_tools?: string[];
-    readonly trusted_config_paths?: string[];
-    readonly experimental?: boolean;
-  };
-}
-
 export type GitProviderType = "github" | "gitlab";
 export type LogLevel = "debug" | "info" | "warning" | "error" | "fatal";
 

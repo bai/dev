@@ -40,23 +40,26 @@ export const makeRunStoreLive = (database: Database): RunStore => {
             Effect.map((insertedRun) => insertedRun.id),
           ),
         ),
+        Effect.withSpan("run_store.record", { attributes: { "run.command": run.command_name } }),
       );
 
   const complete = (id: string, exitCode: number, finishedAt: Date): Effect.Effect<void, ConfigError | UnknownError> =>
-    database.query((db) =>
-      Effect.tryPromise({
-        try: async () => {
-          await db
-            .update(runs)
-            .set({
-              exit_code: exitCode,
-              finished_at: finishedAt,
-            })
-            .where(eq(runs.id, id));
-        },
-        catch: (error) => configError(`Failed to complete command run: ${error}`),
-      }),
-    );
+    database
+      .query((db) =>
+        Effect.tryPromise({
+          try: async () => {
+            await db
+              .update(runs)
+              .set({
+                exit_code: exitCode,
+                finished_at: finishedAt,
+              })
+              .where(eq(runs.id, id));
+          },
+          catch: (error) => configError(`Failed to complete command run: ${error}`),
+        }),
+      )
+      .pipe(Effect.withSpan("run_store.complete", { attributes: { "run.id": id, "run.exit_code": exitCode } }));
 
   const prune = (keepDays: number): Effect.Effect<void, ConfigError | UnknownError> =>
     Clock.currentTimeMillis.pipe(
@@ -73,29 +76,32 @@ export const makeRunStoreLive = (database: Database): RunStore => {
           }),
         );
       }),
+      Effect.withSpan("run_store.prune", { attributes: { "run_store.keep_days": keepDays } }),
     );
 
   const getRecentRuns = (limit: number): Effect.Effect<CommandRun[], ConfigError | UnknownError> =>
-    database.query((db) =>
-      Effect.tryPromise({
-        try: async () => {
-          const result = await db.select().from(runs).orderBy(desc(runs.started_at)).limit(limit);
+    database
+      .query((db) =>
+        Effect.tryPromise({
+          try: async () => {
+            const result = await db.select().from(runs).orderBy(desc(runs.started_at)).limit(limit);
 
-          return result.map((row) => ({
-            id: row.id,
-            cli_version: row.cli_version,
-            command_name: row.command_name,
-            arguments: row.arguments ?? undefined,
-            exit_code: row.exit_code ?? undefined,
-            cwd: row.cwd,
-            started_at: new Date(row.started_at),
-            finished_at: row.finished_at ? new Date(row.finished_at) : undefined,
-            duration_ms: row.duration_ms ?? undefined,
-          }));
-        },
-        catch: (error) => configError(`Failed to get recent runs: ${error}`),
-      }),
-    );
+            return result.map((row) => ({
+              id: row.id,
+              cli_version: row.cli_version,
+              command_name: row.command_name,
+              arguments: row.arguments ?? undefined,
+              exit_code: row.exit_code ?? undefined,
+              cwd: row.cwd,
+              started_at: new Date(row.started_at),
+              finished_at: row.finished_at ? new Date(row.finished_at) : undefined,
+              duration_ms: row.duration_ms ?? undefined,
+            }));
+          },
+          catch: (error) => configError(`Failed to get recent runs: ${error}`),
+        }),
+      )
+      .pipe(Effect.withSpan("run_store.get_recent", { attributes: { "run_store.limit": limit } }));
 
   const completeIncompleteRuns = (): Effect.Effect<void, ConfigError | UnknownError> =>
     Clock.currentTimeMillis.pipe(
@@ -105,11 +111,10 @@ export const makeRunStoreLive = (database: Database): RunStore => {
         return database.query((db) =>
           Effect.tryPromise({
             try: async () => {
-              // Mark any runs that don't have a finished_at as interrupted
               await db
                 .update(runs)
                 .set({
-                  exit_code: 130, // Standard exit code for SIGINT (Ctrl+C)
+                  exit_code: 130,
                   finished_at: now,
                 })
                 .where(isNull(runs.finished_at));
@@ -118,6 +123,7 @@ export const makeRunStoreLive = (database: Database): RunStore => {
           }),
         );
       }),
+      Effect.withSpan("run_store.complete_incomplete"),
     );
 
   return {

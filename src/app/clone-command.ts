@@ -52,31 +52,30 @@ export const cloneCommand = Command.make("clone", { repo }, ({ repo }) =>
         return yield* unknownError("Repository name is required");
       }
 
-      // Check if input is a full URL - if so, parse it directly
-      let repository;
-      if (isFullUrl(repo)) {
-        yield* Effect.logInfo(`Cloning from URL: ${repo}`);
-        repository = yield* repositoryService.parseFullUrlToRepository(repo).pipe(Effect.withSpan("repository.parse_url"));
-        yield* Effect.annotateCurrentSpan("vcs.repository.owner", repository.organization);
-        yield* Effect.annotateCurrentSpan("vcs.repository.name", repository.name);
-      } else {
-        // Parse org/repo or just repo
-        const [orgOrRepo, repoName] = repo.includes("/") ? repo.split("/", 2) : [undefined, repo];
+      const repository = yield* isFullUrl(repo)
+        ? Effect.gen(function* () {
+            yield* Effect.logInfo(`Cloning from URL: ${repo}`);
+            const resolved = yield* repositoryService.parseFullUrlToRepository(repo).pipe(Effect.withSpan("repository.parse_url"));
+            yield* Effect.annotateCurrentSpan("vcs.repository.owner", resolved.organization);
+            yield* Effect.annotateCurrentSpan("vcs.repository.name", resolved.name);
+            return resolved;
+          })
+        : Effect.gen(function* () {
+            const [orgOrRepo, repoName] = repo.includes("/") ? repo.split("/", 2) : [undefined, repo];
 
-        const org = orgOrRepo;
-        const repoNameFinal = repoName || orgOrRepo;
+            const org = orgOrRepo;
+            const repoNameFinal = repoName || orgOrRepo;
 
-        if (!repoNameFinal) {
-          return yield* unknownError("Invalid repository name format");
-        }
+            if (!repoNameFinal) {
+              return yield* unknownError("Invalid repository name format");
+            }
 
-        yield* Effect.logInfo(`Resolving repository: ${org ? `${org}/${repoNameFinal}` : repoNameFinal}`);
+            yield* Effect.logInfo(`Resolving repository: ${org ? `${org}/${repoNameFinal}` : repoNameFinal}`);
 
-        // Resolve repository details
-        yield* Effect.annotateCurrentSpan("vcs.repository.owner", org || "default");
-        yield* Effect.annotateCurrentSpan("vcs.repository.name", repoNameFinal);
-        repository = yield* repoProvider.resolveRepository(repoNameFinal, org).pipe(Effect.withSpan("repository.resolve"));
-      }
+            yield* Effect.annotateCurrentSpan("vcs.repository.owner", org || "default");
+            yield* Effect.annotateCurrentSpan("vcs.repository.name", repoNameFinal);
+            return yield* repoProvider.resolveRepository(repoNameFinal, org).pipe(Effect.withSpan("repository.resolve"));
+          });
 
       // Use RepositoryService to determine the proper nested destination path
       const destinationPath = yield* repositoryService

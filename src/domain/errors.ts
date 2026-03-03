@@ -143,20 +143,6 @@ export const shellTimeoutError = (command: string, args: readonly string[], time
 export const dockerServiceError = (reason: string, options?: { service?: string; exitCode?: number; stderr?: string }) =>
   new DockerServiceError({ reason, ...options });
 
-// Type guards (using Effect's built-in error matching)
-export const isConfigError = (e: DevError): e is ConfigError => e._tag === "ConfigError";
-export const isGitError = (e: DevError): e is GitError => e._tag === "GitError";
-export const isNetworkError = (e: DevError): e is NetworkError => e._tag === "NetworkError";
-export const isAuthError = (e: DevError): e is AuthError => e._tag === "AuthError";
-export const isUnknownError = (e: DevError): e is UnknownError => e._tag === "UnknownError";
-export const isExternalToolError = (e: DevError): e is ExternalToolError => e._tag === "ExternalToolError";
-export const isFileSystemError = (e: DevError): e is FileSystemError => e._tag === "FileSystemError";
-export const isStatusCheckError = (e: DevError): e is StatusCheckError => e._tag === "StatusCheckError";
-export const isHealthCheckError = (e: DevError): e is HealthCheckError => e._tag === "HealthCheckError";
-export const isShellExecutionError = (e: DevError): e is ShellExecutionError => e._tag === "ShellExecutionError";
-export const isShellTimeoutError = (e: DevError): e is ShellTimeoutError => e._tag === "ShellTimeoutError";
-export const isDockerServiceError = (e: DevError): e is DockerServiceError => e._tag === "DockerServiceError";
-
 /**
  * Extracts a human-readable error message from various error types
  * @param error - The error to extract message from

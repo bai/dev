@@ -58,9 +58,7 @@ export const runCommand = Command.make("run", { task, taskArgs }, ({ task, taskA
         return;
       }
 
-      for (const task of tasks) {
-        yield* Effect.logInfo(`  ${task}`);
-      }
+      yield* Effect.forEach(tasks, (task) => Effect.logInfo(`  ${task}`));
       return;
     }
 

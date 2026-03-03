@@ -171,13 +171,10 @@ export function ensureCorrectConfigUrl(pathService: PathService): Effect.Effect<
     }
 
     const projectConfigContent = yield* fileSystem.readFile(projectConfigPath);
-    let projectConfig: Config;
-
-    try {
-      projectConfig = Bun.JSONC.parse(projectConfigContent) as Config;
-    } catch (error) {
-      return yield* unknownError(`Invalid project config.json: ${error}`);
-    }
+    const projectConfig = yield* Effect.try({
+      try: () => Bun.JSONC.parse(projectConfigContent) as Config,
+      catch: (error) => unknownError(`Invalid project config.json: ${error}`),
+    });
 
     if (!projectConfig.configUrl) {
       return yield* unknownError("No configUrl found in project config.json");
@@ -187,22 +184,19 @@ export function ensureCorrectConfigUrl(pathService: PathService): Effect.Effect<
     const localConfigPath = `${pathService.configDir}/config.json`;
     const localConfigExists = yield* fileSystem.exists(localConfigPath);
 
-    let localConfig: Config;
-    if (localConfigExists) {
-      const localConfigContent = yield* fileSystem.readFile(localConfigPath);
-      try {
-        localConfig = Bun.JSONC.parse(localConfigContent) as Config;
-      } catch (error) {
-        return yield* unknownError(`Invalid local config.json: ${error}`);
-      }
-    } else {
-      // If local config doesn't exist, create minimal config with correct URL
-      // Use schema parsing to apply all defaults
-      localConfig = configSchema.parse({
-        configUrl: projectConfig.configUrl,
-        defaultOrg: projectConfig.defaultOrg || "default",
-      });
-    }
+    const localConfig = localConfigExists
+      ? yield* fileSystem.readFile(localConfigPath).pipe(
+          Effect.flatMap((content) =>
+            Effect.try({
+              try: () => Bun.JSONC.parse(content) as Config,
+              catch: (error) => unknownError(`Invalid local config.json: ${error}`),
+            }),
+          ),
+        )
+      : configSchema.parse({
+          configUrl: projectConfig.configUrl,
+          defaultOrg: projectConfig.defaultOrg || "default",
+        });
 
     // Step 3: Update configUrl if it's different
     if (localConfig.configUrl !== projectConfig.configUrl) {
