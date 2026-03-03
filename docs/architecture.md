@@ -433,3 +433,54 @@ export const CacheLayer = Layer.effect(
 ```
 
 That's it — the system remains *pure*, *composable* and *idiomatically Effect-TS*.
+
+### Adding a New Tracing Exporter
+
+Tracing exporters follow a plugin-like pattern with compile-time completeness enforcement. The type derivation chain flows from the Zod schema:
+
+```text
+configSchema (Zod discriminated union on "mode")
+  → Config (z.infer)
+    → RemoteTelemetryConfig / RemoteTelemetryMode (Exclude local modes)
+      → TracingExporterFactoryMap (mapped type: every remote mode must have a factory)
+```
+
+To add a new remote exporter (e.g. Honeycomb):
+
+1. **Add the config variant** to the Zod discriminated union in `src/domain/config-schema.ts`:
+
+```ts
+const telemetryHoneycombSchema = z.object({
+  mode: z.literal("honeycomb"),
+  honeycomb: z.object({
+    endpoint: z.url(),
+    apiKey: z.string().min(1),
+    dataset: z.string().min(1),
+  }),
+});
+
+// Add to the discriminated union members:
+const telemetryConfigSchema = z
+  .discriminatedUnion("mode", [
+    telemetryDisabledSchema,
+    telemetryConsoleSchema,
+    telemetryAxiomModeSchema,
+    telemetryHoneycombSchema,          // ← new
+  ])
+  .default({ mode: "disabled" });
+```
+
+At this point TypeScript will report an error on `tracing-exporter-registry-live.ts` because `TracingExporterFactoryMap` requires every `RemoteTelemetryMode` to have a corresponding factory entry.
+
+2. **Create the exporter adapter** at `src/infra/honeycomb-tracing-exporter-live.ts` implementing `TracingExporterFactory<"honeycomb">`.
+
+3. **Register** the factory in `src/infra/tracing-exporter-registry-live.ts`:
+
+```ts
+export const tracingExporterFactories = {
+  axiom: axiomTracingExporterFactory,
+  honeycomb: honeycombTracingExporterFactory,  // ← new
+} as const satisfies TracingExporterFactoryMap;
+```
+
+No changes to `tracing-live.ts` are needed — `createRemoteSpanProcessor` dispatches through the registry automatically.
