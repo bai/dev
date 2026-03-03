@@ -15,52 +15,33 @@
       "description": "Remote URL to fetch shared configuration from\n\ndefault: `https://raw.githubusercontent.com/bai/dev/refs/heads/main/config.json`",
       "type": "string",
       "format": "uri",
-      "examples": [
-        "https://raw.githubusercontent.com/bai/dev/refs/heads/main/config.json"
-      ]
+      "examples": ["https://raw.githubusercontent.com/bai/dev/refs/heads/main/config.json"]
     },
     "defaultOrg": {
       "default": "acmesoftware",
       "description": "Default organization for repository operations\n\ndefault: `acmesoftware`",
       "type": "string",
-      "examples": [
-        "acmesoftware"
-      ]
+      "examples": ["acmesoftware"]
     },
     "defaultProvider": {
       "default": "github",
       "description": "Default git provider when not specified (github or gitlab)\n\ndefault: `github`",
       "type": "string",
-      "enum": [
-        "github",
-        "gitlab"
-      ],
-      "examples": [
-        "github"
-      ]
+      "enum": ["github", "gitlab"],
+      "examples": ["github"]
     },
     "baseSearchPath": {
       "default": "~/src",
       "description": "Base directory for searching and cloning repositories\n\ndefault: `~/src`",
       "type": "string",
-      "examples": [
-        "~/src"
-      ]
+      "examples": ["~/src"]
     },
     "logLevel": {
       "default": "info",
       "description": "Logging verbosity: debug, info, warning, error, or fatal\n\ndefault: `info`",
       "type": "string",
-      "enum": [
-        "debug",
-        "info",
-        "warning",
-        "error",
-        "fatal"
-      ],
-      "examples": [
-        "info"
-      ]
+      "enum": ["debug", "info", "warning", "error", "fatal"],
+      "examples": ["info"]
     },
     "telemetry": {
       "default": {
@@ -94,18 +75,12 @@
                   "description": "Axiom dataset used for trace ingestion"
                 }
               },
-              "required": [
-                "endpoint",
-                "apiKey",
-                "dataset"
-              ],
+              "required": ["endpoint", "apiKey", "dataset"],
               "description": "Axiom OTLP exporter settings",
               "additionalProperties": false
             }
           },
-          "required": [
-            "mode"
-          ],
+          "required": ["mode"],
           "additionalProperties": false
         },
         {
@@ -134,18 +109,12 @@
                   "description": "Axiom dataset used for trace ingestion"
                 }
               },
-              "required": [
-                "endpoint",
-                "apiKey",
-                "dataset"
-              ],
+              "required": ["endpoint", "apiKey", "dataset"],
               "description": "Axiom OTLP exporter settings",
               "additionalProperties": false
             }
           },
-          "required": [
-            "mode"
-          ],
+          "required": ["mode"],
           "additionalProperties": false
         },
         {
@@ -174,19 +143,12 @@
                   "description": "Axiom dataset used for trace ingestion"
                 }
               },
-              "required": [
-                "endpoint",
-                "apiKey",
-                "dataset"
-              ],
+              "required": ["endpoint", "apiKey", "dataset"],
               "description": "Axiom OTLP exporter settings",
               "additionalProperties": false
             }
           },
-          "required": [
-            "mode",
-            "axiom"
-          ],
+          "required": ["mode", "axiom"],
           "additionalProperties": false
         }
       ]
@@ -200,10 +162,7 @@
       },
       "additionalProperties": {
         "type": "string",
-        "enum": [
-          "github",
-          "gitlab"
-        ]
+        "enum": ["github", "gitlab"]
       }
     },
     "miseGlobalConfig": {
