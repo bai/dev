@@ -13,8 +13,8 @@ import { ConfigLoaderTag } from "../domain/config-loader-port";
 import { InstallIdentityTag } from "../domain/install-identity-port";
 import { TracingError, TracingTag, type Tracing } from "../domain/tracing-port";
 import { VersionTag } from "../domain/version-port";
-import { tracingExporterFactories } from "./tracing-exporters";
-import type { RemoteTelemetryConfig, RemoteTelemetryMode } from "./tracing-exporters/types";
+import { tracingExporterFactories } from "./tracing-exporter-registry-live";
+import type { RemoteTelemetryConfig, RemoteTelemetryMode } from "./tracing-exporter-types";
 
 const OTLP_SERVICE_NAMESPACE = "dev";
 const OTLP_SERVICE_NAME = "cli";

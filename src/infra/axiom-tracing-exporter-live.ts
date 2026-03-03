@@ -3,8 +3,8 @@ import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
 import { BatchSpanProcessor, ConsoleSpanExporter, type ReadableSpan, type SpanExporter } from "@opentelemetry/sdk-trace-base";
 import { Effect, Runtime } from "effect";
 
-import type { Config } from "../../domain/config-schema";
-import type { TracingExporterFactory } from "./types";
+import type { Config } from "../domain/config-schema";
+import type { TracingExporterFactory } from "./tracing-exporter-types";
 
 interface AxiomExportError extends Error {
   readonly code?: number;
@@ -55,17 +55,12 @@ const extractActivationUrl = (value: unknown): string | undefined => {
     return undefined;
   }
 
-  for (const detail of error.details) {
-    if (!isRecord(detail) || !isRecord(detail.metadata)) {
-      continue;
-    }
+  const match = error.details.find(
+    (detail: unknown): detail is Record<string, Record<string, unknown>> =>
+      isRecord(detail) && isRecord(detail.metadata) && typeof detail.metadata.activationUrl === "string",
+  );
 
-    if (typeof detail.metadata.activationUrl === "string") {
-      return detail.metadata.activationUrl;
-    }
-  }
-
-  return undefined;
+  return match?.metadata?.activationUrl as string | undefined;
 };
 
 const logExportResult = (result: AxiomExportOutcome) =>

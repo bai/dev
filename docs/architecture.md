@@ -122,6 +122,7 @@ src/
 │   ├── file-system-live.ts
 │   ├── git-live.ts
 │   ├── health-check-live.ts
+│   ├── install-identity-live.ts
 │   ├── tool-health-registry-live.ts
 │   ├── keychain-live.ts
 │   ├── mise-live.ts
@@ -129,6 +130,10 @@ src/
 │   ├── github-provider-live.ts
 │   ├── fzf-selector-live.ts
 │   ├── shell-live.ts
+│   ├── tracing-live.ts
+│   ├── tracing-exporter-types.ts         # Tracing exporter factory types
+│   ├── tracing-exporter-registry-live.ts # Exporter factory registry
+│   ├── axiom-tracing-exporter-live.ts    # Axiom OTLP exporter adapter
 │   ├── *-tools-live.ts  # Tool implementations (e.g., bun-tools-live.ts, git-tools-live.ts)
 │   └── tool-management-live.ts
 │
@@ -295,18 +300,34 @@ A tiny adapter (`RunStoreLive`) inserts a row *before* command execution and fin
 
 ## 9 · Configuration Handling
 
-`ConfigLoader` reads `~/.config/dev/config.json` (following XDG Base Directory Specification), applies migrations and validation, then provides the resulting object via a Context Tag so that any Effect can simply `yield* ConfigTag`.
+`ConfigLoader` reads `~/.config/dev/config.json` (following XDG Base Directory Specification), validates via a Zod schema (`configSchema`), then provides the resulting object via a Context Tag so that any Effect can simply `yield* ConfigLoaderTag`.
+
+The `Config` type is inferred from the Zod schema, ensuring the type always matches what parsing actually produces (with defaults applied).
 
 ```ts
-export interface Config {
-  configUrl: string;
-  defaultOrg: string;
-  paths: { base: string };
-  telemetry?: { enabled: boolean };
-  plugins?: { git?: readonly string[] };
-}
+// src/domain/config-schema.ts
+export const configSchema = z.object({
+  configUrl: z.url().default("https://..."),
+  defaultOrg: z.string().default("acmesoftware"),
+  defaultProvider: gitProviderSchema.optional().default("github"),
+  baseSearchPath: z.string().optional().default("~/src"),
+  logLevel: logLevelSchema.optional().default("info"),
+  telemetry: telemetryConfigSchema, // discriminated union on "mode"
+  orgToProvider: z.record(z.string(), gitProviderSchema).optional().default({}),
+  miseGlobalConfig: miseConfigSchema.optional(),
+  miseRepoConfig: miseConfigSchema.optional(),
+  services: servicesConfigSchema,
+});
 
-export const ConfigTag = Context.Tag<Config>("Config");
+export type Config = z.infer<typeof configSchema>;
+```
+
+Telemetry uses a Zod discriminated union on the `mode` field (`"disabled"`, `"console"`, or `"axiom"`), making invalid states unrepresentable at parse time:
+
+```ts
+const telemetryConfigSchema = z
+  .discriminatedUnion("mode", [telemetryDisabledSchema, telemetryConsoleSchema, telemetryAxiomModeSchema])
+  .default({ mode: "disabled" });
 ```
 
 ### 9.1 Example `config.json`
@@ -315,15 +336,12 @@ export const ConfigTag = Context.Tag<Config>("Config");
 {
   "configUrl": "https://raw.githubusercontent.com/acme/dev-configs/main/org.json",
   "defaultOrg": "acme",
-  "paths": { "base": "~/src" },
-  "telemetry": { "enabled": true },
-  "plugins": {
-    "git": []
-  }
+  "baseSearchPath": "~/src",
+  "telemetry": { "mode": "disabled" }
 }
 ```
 
-*The loader migrates and validates this on startup; `dev upgrade` refreshes it from `configUrl` if the remote version differs.*
+*The loader validates this on startup; `dev upgrade` refreshes it from `configUrl` if the remote version differs.*
 
 ---
 

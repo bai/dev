@@ -3,10 +3,10 @@ import { BatchSpanProcessor } from "@opentelemetry/sdk-trace-base";
 import { Effect } from "effect";
 import { describe, expect } from "vitest";
 
-import { configSchema } from "../../domain/config-schema";
-import { tracingExporterFactories } from "./index";
+import { configSchema } from "../domain/config-schema";
+import { tracingExporterFactories } from "./tracing-exporter-registry-live";
 
-describe("tracing-exporters/index", () => {
+describe("tracing-exporter-registry-live", () => {
   it.effect("routes axiom mode through the exporter registry", () =>
     Effect.gen(function* () {
       const telemetry = configSchema.parse({

@@ -4,20 +4,11 @@ import { Duration, Effect, Layer } from "effect";
 import { shellExecutionError, shellTimeoutError, type ShellExecutionError, type ShellTimeoutError } from "../domain/errors";
 import { ShellTag, type Shell, type SpawnResult } from "../domain/shell-port";
 
-const createShellSpanAttributes = (command: string, args: string[], cwd?: string): Record<string, string | number> => {
-  if (cwd) {
-    return {
-      "shell.command": command,
-      "shell.args.count": args.length,
-      "shell.cwd": cwd,
-    };
-  }
-
-  return {
-    "shell.command": command,
-    "shell.args.count": args.length,
-  };
-};
+const createShellSpanAttributes = (command: string, args: string[], cwd?: string): Record<string, string | number> => ({
+  "shell.command": command,
+  "shell.args.count": args.length,
+  ...(cwd ? { "shell.cwd": cwd } : {}),
+});
 
 // Individual functions for each method
 const exec = (command: string, args: string[] = [], options: { cwd?: string } = {}): Effect.Effect<SpawnResult, ShellExecutionError> =>

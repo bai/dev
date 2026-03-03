@@ -1,7 +1,7 @@
 import type { NodeSdk } from "@effect/opentelemetry";
 import type { Effect } from "effect";
 
-import type { Config } from "../../domain/config-schema";
+import type { Config } from "../domain/config-schema";
 
 type LocalTelemetryConfig = Extract<Config["telemetry"], { readonly mode: "disabled" | "console" }>;
 
