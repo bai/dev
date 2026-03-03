@@ -19,7 +19,7 @@ export interface MiseConfig {
 export type GitProviderType = "github" | "gitlab";
 export type LogLevel = "debug" | "info" | "warning" | "error" | "fatal";
 
-export type TelemetryMode = "console" | "remote" | "disabled";
+export type TelemetryMode = "console" | "axiom" | "disabled";
 
 // Note: Config type is now generated from Zod schema in config-schema.ts
 // This ensures the type matches what Zod produces with defaults applied

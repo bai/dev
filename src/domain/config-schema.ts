@@ -42,7 +42,7 @@ const miseConfigSchema = z.object({
 
 const gitProviderSchema: z.ZodType<GitProviderType> = z.enum(["github", "gitlab"]);
 
-const telemetryModeSchema: z.ZodType<TelemetryMode> = z.enum(["console", "remote", "disabled"]);
+const telemetryModeSchema: z.ZodType<TelemetryMode> = z.enum(["console", "axiom", "disabled"]);
 
 const telemetryAxiomSchema = z
   .object({
@@ -57,7 +57,7 @@ const telemetryConfigSchema = z
     mode: telemetryModeSchema
       .optional()
       .default("disabled")
-      .describe("Telemetry mode: 'console' for local output, 'remote' for cloud, 'disabled' to turn off"),
+      .describe("Telemetry mode: 'console' for local output, 'axiom' for Axiom export, 'disabled' to turn off"),
     axiom: telemetryAxiomSchema.optional(),
   })
   .describe("Telemetry and observability settings");

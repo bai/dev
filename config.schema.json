@@ -70,11 +70,11 @@
       "properties": {
         "mode": {
           "default": "disabled",
-          "description": "Telemetry mode: 'console' for local output, 'remote' for cloud, 'disabled' to turn off\n\ndefault: `disabled`",
+          "description": "Telemetry mode: 'console' for local output, 'axiom' for Axiom export, 'disabled' to turn off\n\ndefault: `disabled`",
           "type": "string",
           "enum": [
             "console",
-            "remote",
+            "axiom",
             "disabled"
           ],
           "examples": [
