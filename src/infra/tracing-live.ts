@@ -9,8 +9,11 @@ import { ConfigLoaderTag } from "../domain/config-loader-port";
 import { TracingError, TracingTag, type Tracing } from "../domain/tracing-port";
 import { VersionTag } from "../domain/version-port";
 
+const DATADOG_OTLP_TRACES_ENDPOINT = "https://otlp.datadoghq.com/v1/traces";
+const DATADOG_OTLP_API_KEY = "7e77b20d95b0a05e799f2e0514ae01b4";
+
 /**
- * Logs export results from remote trace endpoint
+ * Logs export results from Datadog OTLP trace endpoint
  */
 const logExportResult = (result: { code: number; error?: any; spans: number }) =>
   Effect.gen(function* () {
@@ -21,7 +24,7 @@ const logExportResult = (result: { code: number; error?: any; spans: number }) =
 
     // Handle errors
     if (result.error?.code) {
-      yield* Effect.logWarning(`Failed to export ${result.spans} spans to remote trace endpoint (HTTP ${result.error.code})`);
+      yield* Effect.logWarning(`Failed to export ${result.spans} spans to Datadog OTLP endpoint (HTTP ${result.error.code})`);
 
       // Parse error response if available
       if (result.error.data) {
@@ -29,7 +32,7 @@ const logExportResult = (result: { code: number; error?: any; spans: number }) =
           const errorData = typeof result.error.data === "string" ? JSON.parse(result.error.data) : result.error.data;
 
           if (errorData.error?.message) {
-            yield* Effect.logWarning(`Remote trace endpoint error: ${errorData.error.message}`);
+            yield* Effect.logWarning(`Datadog OTLP error: ${errorData.error.message}`);
           }
 
           // Extract activation URL if present
@@ -37,24 +40,29 @@ const logExportResult = (result: { code: number; error?: any; spans: number }) =
           if (Array.isArray(details)) {
             const activationDetail = details.find((d: any) => d.metadata?.activationUrl);
             if (activationDetail?.metadata?.activationUrl) {
-              yield* Effect.logWarning(`Enable the API at: ${activationDetail.metadata.activationUrl}`);
+              yield* Effect.logWarning(`Enable API access at: ${activationDetail.metadata.activationUrl}`);
             }
           }
         } catch {
-          yield* Effect.logWarning(`Raw error response: ${result.error.data}`);
+          yield* Effect.logWarning(`Datadog OTLP raw error response: ${result.error.data}`);
         }
       }
     } else {
-      yield* Effect.logWarning(`Failed to export spans: ${result.error?.message || "Unknown error"}`);
+      yield* Effect.logWarning(`Failed to export spans to Datadog OTLP: ${result.error?.message || "Unknown error"}`);
     }
   });
 
 /**
- * Creates an OTLP trace exporter for remote endpoints
+ * Creates an OTLP trace exporter for Datadog (without collector)
  */
-const createOtlpTraceExporter = (url: string): Effect.Effect<BatchSpanProcessor, never, never> =>
+const createOtlpTraceExporter = (): Effect.Effect<BatchSpanProcessor, never, never> =>
   Effect.try(() => {
-    const exporter = new OTLPTraceExporter({ url });
+    const exporter = new OTLPTraceExporter({
+      url: DATADOG_OTLP_TRACES_ENDPOINT,
+      headers: {
+        "dd-api-key": DATADOG_OTLP_API_KEY,
+      },
+    });
 
     // Create a monitored exporter that logs responses
     const runtime = Runtime.defaultRuntime;
@@ -82,7 +90,7 @@ const createOtlpTraceExporter = (url: string): Effect.Effect<BatchSpanProcessor,
   }).pipe(
     Effect.catchAll(() =>
       Effect.gen(function* () {
-        yield* Effect.logWarning("Failed to initialize OTLP trace exporter");
+        yield* Effect.logWarning("Failed to initialize Datadog OTLP trace exporter");
         yield* Effect.logWarning("Falling back to console exporter");
         return new BatchSpanProcessor(new ConsoleSpanExporter());
       }),
@@ -117,8 +125,8 @@ const makeTracingLive = (configLoader: typeof ConfigLoaderTag.Service, versionSe
           break;
 
         case "remote":
-          yield* Effect.logDebug("Telemetry: Using remote OTLP exporter");
-          spanProcessor = yield* createOtlpTraceExporter("https://usedevup.com/api/traces");
+          yield* Effect.logDebug("Telemetry: Using Datadog OTLP trace exporter");
+          spanProcessor = yield* createOtlpTraceExporter();
           break;
 
         case "disabled":
