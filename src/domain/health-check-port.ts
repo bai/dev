@@ -5,6 +5,7 @@ import { type HealthCheckError } from "./errors";
 export interface HealthCheckResult {
   readonly toolName: string;
   readonly version?: string;
+  readonly binaryPath?: string;
   readonly status: "ok" | "warning" | "fail";
   readonly notes?: string;
   readonly checkedAt: Date;

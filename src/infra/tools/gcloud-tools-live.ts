@@ -28,6 +28,12 @@ export interface GcloudTools {
 
 // Factory function that creates GcloudTools with dependencies
 export const makeGcloudToolsLive = (shell: Shell, filesystem: FileSystem, pathService: PathService): GcloudTools => {
+  const getBinaryPath = (): Effect.Effect<string | undefined, never> =>
+    shell.exec("which", ["gcloud"]).pipe(
+      Effect.map((result) => (result.exitCode === 0 && result.stdout ? result.stdout.trim() : undefined)),
+      Effect.orElseSucceed(() => undefined),
+    );
+
   const getCurrentVersion = (): Effect.Effect<string | null, ShellExecutionError> =>
     shell.exec("gcloud", ["version"]).pipe(
       Effect.map((result) => {
@@ -113,6 +119,7 @@ export const makeGcloudToolsLive = (shell: Shell, filesystem: FileSystem, pathSe
       displayName: "Gcloud",
       minVersion: GCLOUD_MIN_VERSION,
       getCurrentVersion,
+      getBinaryPath,
     });
 
   return {

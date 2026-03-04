@@ -11,6 +11,7 @@ import { ShellTag } from "../domain/shell-port";
 interface StatusItem {
   readonly tool: string;
   readonly version?: string;
+  readonly binaryPath?: string;
   readonly status: "ok" | "warning" | "fail";
   readonly notes?: string;
 }
@@ -157,6 +158,7 @@ const getHealthCheckResults: Effect.Effect<readonly StatusItem[], never, HealthC
         (result): StatusItem => ({
           tool: result.toolName,
           version: result.version,
+          binaryPath: result.binaryPath,
           status: result.status,
           notes: result.notes,
         }),
@@ -184,7 +186,7 @@ const getHealthCheckResults: Effect.Effect<readonly StatusItem[], never, HealthC
 /**
  * Display health check results
  */
-const displayHealthCheckResults = (statusItems: readonly StatusItem[]): Effect.Effect<void, never, ShellTag> =>
+const displayHealthCheckResults = (statusItems: readonly StatusItem[]): Effect.Effect<void, never, never> =>
   Effect.gen(function* () {
     if (statusItems.length > 0) {
       yield* displayToolGroup("🔧 Development Tools:", statusItems);
@@ -260,7 +262,7 @@ const showDockerServicesStatus: Effect.Effect<void, never, DockerServicesTag> = 
 /**
  * Display a group of tools
  */
-const displayToolGroup = (title: string, items: readonly StatusItem[]): Effect.Effect<void, never, ShellTag> =>
+const displayToolGroup = (title: string, items: readonly StatusItem[]): Effect.Effect<void, never, never> =>
   Effect.gen(function* () {
     yield* Effect.logInfo(title);
 
@@ -272,13 +274,11 @@ const displayToolGroup = (title: string, items: readonly StatusItem[]): Effect.E
 /**
  * Display a single tool item
  */
-const displayToolItem = (item: StatusItem): Effect.Effect<void, never, ShellTag> =>
+const displayToolItem = (item: StatusItem): Effect.Effect<void, never, never> =>
   Effect.gen(function* () {
     const icon = item.status === "ok" ? "✅" : item.status === "warning" ? "⚠️ " : "❌";
     const versionText = item.version ? ` ${item.version}` : "";
-
-    const toolPath = yield* getToolPath(item.tool);
-    const pathText = toolPath ? ` - ${toolPath}` : "";
+    const pathText = item.binaryPath ? ` - ${item.binaryPath}` : "";
 
     yield* Effect.logInfo(`  ${icon} ${item.tool}${versionText}${pathText}`);
 
@@ -319,29 +319,6 @@ const checkForFailures = (statusItems: readonly StatusItem[]): Effect.Effect<voi
 
       yield* statusCheckError(`Found ${failCount} failing tool(s) and ${warnCount} warning(s)`, failedComponents);
     }
-  });
-
-/**
- * Get tool path using mise which, falling back to system which
- */
-const getToolPath = (toolName: string): Effect.Effect<string | null, never, ShellTag> =>
-  Effect.gen(function* () {
-    // Try mise which first
-    const misePath = yield* executeCommand(["mise", "which", toolName]).pipe(
-      Effect.map((result) => (result.exitCode === 0 ? result.stdout.trim() : null)),
-    );
-
-    // Return if mise found the tool
-    if (misePath !== null) {
-      return misePath;
-    }
-
-    // Fallback to system which
-    const systemPath = yield* executeCommand(["which", toolName]).pipe(
-      Effect.map((result) => (result.exitCode === 0 ? result.stdout.trim() : null)),
-    );
-
-    return systemPath;
   });
 
 /**

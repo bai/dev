@@ -17,6 +17,12 @@ export interface BunTools {
 
 // Factory function to create BunTools implementation
 export const makeBunToolsLive = (shell: Shell): BunTools => {
+  const getBinaryPath = (): Effect.Effect<string | undefined, never> =>
+    shell.exec("which", ["bun"]).pipe(
+      Effect.map((result) => (result.exitCode === 0 && result.stdout ? result.stdout.trim() : undefined)),
+      Effect.orElseSucceed(() => undefined),
+    );
+
   const getCurrentVersion = (): Effect.Effect<string | null, ShellExecutionError> =>
     shell.exec("bun", ["--version"]).pipe(
       Effect.map((result) => {
@@ -67,6 +73,7 @@ export const makeBunToolsLive = (shell: Shell): BunTools => {
       displayName: "Bun",
       minVersion: BUN_MIN_VERSION,
       getCurrentVersion,
+      getBinaryPath,
     });
 
   return {

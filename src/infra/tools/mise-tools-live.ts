@@ -22,6 +22,12 @@ export const makeMiseToolsLive = (shell: Shell, mise: Mise): MiseTools => {
   const resolveRequiredVersion = (latestVersion: string | null): string =>
     latestVersion && compareVersions(latestVersion, MISE_MIN_VERSION) >= 0 ? latestVersion : MISE_MIN_VERSION;
 
+  const getBinaryPath = (): Effect.Effect<string | undefined, never> =>
+    shell.exec("which", ["mise"]).pipe(
+      Effect.map((result) => (result.exitCode === 0 && result.stdout ? result.stdout.trim() : undefined)),
+      Effect.orElseSucceed(() => undefined),
+    );
+
   const getCurrentVersion = (): Effect.Effect<string | null, ShellExecutionError> =>
     shell.exec("mise", ["--version"]).pipe(
       Effect.map((result) => {
@@ -118,6 +124,7 @@ export const makeMiseToolsLive = (shell: Shell, mise: Mise): MiseTools => {
       displayName: "Mise",
       minVersion: MISE_MIN_VERSION,
       getCurrentVersion,
+      getBinaryPath,
     });
 
   return {

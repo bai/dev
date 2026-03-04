@@ -17,6 +17,12 @@ export interface GitTools {
 
 // Factory function to create GitTools implementation
 export const makeGitToolsLive = (shell: Shell): GitTools => {
+  const getBinaryPath = (): Effect.Effect<string | undefined, never> =>
+    shell.exec("which", ["git"]).pipe(
+      Effect.map((result) => (result.exitCode === 0 && result.stdout ? result.stdout.trim() : undefined)),
+      Effect.orElseSucceed(() => undefined),
+    );
+
   const getCurrentVersion = (): Effect.Effect<string | null, ShellExecutionError> =>
     shell.exec("git", ["--version"]).pipe(
       Effect.map((result) => {
@@ -65,6 +71,7 @@ export const makeGitToolsLive = (shell: Shell): GitTools => {
       displayName: "Git",
       minVersion: GIT_MIN_VERSION,
       getCurrentVersion,
+      getBinaryPath,
     });
 
   return {

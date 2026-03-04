@@ -17,6 +17,12 @@ export interface DockerTools {
 }
 
 export const makeDockerToolsLive = (shell: Shell): DockerTools => {
+  const getBinaryPath = (): Effect.Effect<string | undefined, never> =>
+    shell.exec("which", ["docker"]).pipe(
+      Effect.map((result) => (result.exitCode === 0 && result.stdout ? result.stdout.trim() : undefined)),
+      Effect.orElseSucceed(() => undefined),
+    );
+
   const getDockerVersion = (): Effect.Effect<string | null, never> =>
     shell.exec("docker", ["--version"]).pipe(
       Effect.map((result) => {
@@ -48,6 +54,7 @@ export const makeDockerToolsLive = (shell: Shell): DockerTools => {
   const performHealthCheck = (): Effect.Effect<HealthCheckResult, HealthCheckError> =>
     Effect.gen(function* () {
       const checkedAt = new Date(yield* Clock.currentTimeMillis);
+      const binaryPath = yield* getBinaryPath();
 
       const dockerVersion = yield* getDockerVersion().pipe(
         Effect.mapError(() => healthCheckError("Failed to get docker version", "docker")),
@@ -56,6 +63,7 @@ export const makeDockerToolsLive = (shell: Shell): DockerTools => {
       if (!dockerVersion) {
         return {
           toolName: "docker",
+          binaryPath,
           status: "fail",
           notes: "Docker not found or unable to determine version",
           checkedAt,
@@ -70,6 +78,7 @@ export const makeDockerToolsLive = (shell: Shell): DockerTools => {
         return {
           toolName: "docker",
           version,
+          binaryPath,
           status: "warning",
           notes: `requires >=${DOCKER_MIN_VERSION}`,
           checkedAt,
@@ -79,6 +88,7 @@ export const makeDockerToolsLive = (shell: Shell): DockerTools => {
       return {
         toolName: "docker",
         version,
+        binaryPath,
         status: "ok",
         checkedAt,
       };

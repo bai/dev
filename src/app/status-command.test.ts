@@ -56,7 +56,6 @@ describe("status-command", () => {
       const shellContext = createShell({
         "git rev-parse --abbrev-ref HEAD": { exitCode: 0, stdout: "main", stderr: "" },
         "git remote get-url origin": { exitCode: 0, stdout: "https://github.com/acme/repo.git", stderr: "" },
-        "mise which git": { exitCode: 0, stdout: "/usr/local/bin/git", stderr: "" },
       });
 
       const layer = Layer.mergeAll(
@@ -78,17 +77,14 @@ describe("status-command", () => {
       const result = yield* Effect.exit(statusCommand.handler({}).pipe(Effect.provide(layer)));
 
       expect(Exit.isSuccess(result)).toBe(true);
-      expect(shellContext.calls).toContain("mise which git");
     }),
   );
 
-  it.effect("falls back to system which when mise which fails", () =>
+  it.effect("succeeds without resolving tool path in status command", () =>
     Effect.gen(function* () {
       const shellContext = createShell({
         "git rev-parse --abbrev-ref HEAD": { exitCode: 0, stdout: "main", stderr: "" },
         "git remote get-url origin": { exitCode: 0, stdout: "https://github.com/acme/repo.git", stderr: "" },
-        "mise which git": { exitCode: 1, stdout: "", stderr: "not managed by mise" },
-        "which git": { exitCode: 0, stdout: "/usr/bin/git", stderr: "" },
       });
 
       const layer = Layer.mergeAll(
@@ -110,8 +106,6 @@ describe("status-command", () => {
       const result = yield* Effect.exit(statusCommand.handler({}).pipe(Effect.provide(layer)));
 
       expect(Exit.isSuccess(result)).toBe(true);
-      expect(shellContext.calls).toContain("mise which git");
-      expect(shellContext.calls).toContain("which git");
     }),
   );
 
@@ -120,7 +114,6 @@ describe("status-command", () => {
       const shellContext = createShell({
         "git rev-parse --abbrev-ref HEAD": { exitCode: 0, stdout: "main", stderr: "" },
         "git remote get-url origin": { exitCode: 0, stdout: "https://github.com/acme/repo.git", stderr: "" },
-        "mise which bun": { exitCode: 0, stdout: "/usr/local/bin/bun", stderr: "" },
       });
 
       const layer = Layer.mergeAll(
@@ -151,7 +144,6 @@ describe("status-command", () => {
       const shellContext = createShell({
         "git rev-parse --abbrev-ref HEAD": { exitCode: 0, stdout: "main", stderr: "" },
         "git remote get-url origin": { exitCode: 0, stdout: "https://github.com/acme/repo.git", stderr: "" },
-        "mise which bun": { exitCode: 0, stdout: "/usr/local/bin/bun", stderr: "" },
       });
 
       const layer = Layer.mergeAll(
@@ -193,8 +185,6 @@ describe("status-command", () => {
       const shellContext = createShell({
         "git rev-parse --abbrev-ref HEAD": { exitCode: 1, stdout: "", stderr: "" },
         "git remote get-url origin": { exitCode: 1, stdout: "", stderr: "" },
-        "mise which health-check-runtime": { exitCode: 1, stdout: "", stderr: "" },
-        "which health-check-runtime": { exitCode: 1, stdout: "", stderr: "" },
       });
 
       const failingHealthCheck: HealthCheck = {

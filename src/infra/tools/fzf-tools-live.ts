@@ -17,6 +17,12 @@ export interface FzfTools {
 
 // Factory function to create FzfTools implementation
 export const makeFzfToolsLive = (shell: Shell): FzfTools => {
+  const getBinaryPath = (): Effect.Effect<string | undefined, never> =>
+    shell.exec("which", ["fzf"]).pipe(
+      Effect.map((result) => (result.exitCode === 0 && result.stdout ? result.stdout.trim() : undefined)),
+      Effect.orElseSucceed(() => undefined),
+    );
+
   const getCurrentVersion = (): Effect.Effect<string | null, ShellExecutionError> =>
     shell.exec("fzf", ["--version"]).pipe(
       Effect.map((result) => {
@@ -65,6 +71,7 @@ export const makeFzfToolsLive = (shell: Shell): FzfTools => {
       displayName: "Fzf",
       minVersion: FZF_MIN_VERSION,
       getCurrentVersion,
+      getBinaryPath,
     });
 
   return {

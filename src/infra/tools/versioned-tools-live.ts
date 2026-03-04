@@ -15,6 +15,7 @@ interface VersionedToolContext {
   readonly displayName: string;
   readonly minVersion: string;
   readonly getCurrentVersion: () => Effect.Effect<string | null, ShellExecutionError>;
+  readonly getBinaryPath?: () => Effect.Effect<string | undefined, never>;
   readonly performUpgrade: () => Effect.Effect<boolean, ShellExecutionError>;
   readonly manualUpgradeHint?: string;
 }
@@ -85,10 +86,11 @@ export const ensureMinimumVersionOrUpgrade = (
   });
 
 export const buildMinimumVersionHealthCheck = (
-  context: Pick<VersionedToolContext, "toolId" | "displayName" | "minVersion" | "getCurrentVersion">,
+  context: Pick<VersionedToolContext, "toolId" | "displayName" | "minVersion" | "getCurrentVersion" | "getBinaryPath">,
 ): Effect.Effect<HealthCheckResult, HealthCheckError> =>
   Effect.gen(function* () {
     const checkedAt = new Date(yield* Clock.currentTimeMillis);
+    const binaryPath = context.getBinaryPath ? yield* context.getBinaryPath() : undefined;
 
     const currentVersion = yield* context
       .getCurrentVersion()
@@ -97,6 +99,7 @@ export const buildMinimumVersionHealthCheck = (
     if (!currentVersion) {
       return {
         toolName: context.toolId,
+        binaryPath,
         status: "fail",
         notes: `${context.displayName} not found or unable to determine version`,
         checkedAt,
@@ -108,6 +111,7 @@ export const buildMinimumVersionHealthCheck = (
       return {
         toolName: context.toolId,
         version: currentVersion,
+        binaryPath,
         status: "warning",
         notes: `requires >=${context.minVersion}`,
         checkedAt,
@@ -117,6 +121,7 @@ export const buildMinimumVersionHealthCheck = (
     return {
       toolName: context.toolId,
       version: currentVersion,
+      binaryPath,
       status: "ok",
       checkedAt,
     };
