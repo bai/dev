@@ -1,13 +1,6 @@
 [tools]
 bun = "latest"
 
-[env]
-DEV_PROJECT_ROOT = "{{ config_root }}"
-
-[tasks.test-args]
-description = "Test task that echoes all arguments"
-run = "echo 'Task received arguments:' \"$@\""
-
 [tasks.lint]
 description = "Run linting"
 run = "bun run lint"
