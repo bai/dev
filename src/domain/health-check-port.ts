@@ -16,17 +16,6 @@ export interface HealthCheck {
    * Used by `dev status` command
    */
   runHealthChecks(): Effect.Effect<readonly HealthCheckResult[], HealthCheckError>;
-
-  /**
-   * Get the latest health check results for each tool from cache
-   * Used for quick status display if available
-   */
-  getLatestResults(): Effect.Effect<readonly HealthCheckResult[], HealthCheckError>;
-
-  /**
-   * Prune old health check records based on retention policy
-   */
-  pruneOldRecords(retentionDays?: number): Effect.Effect<void, HealthCheckError>;
 }
 
 export class HealthCheckTag extends Context.Tag("HealthCheck")<HealthCheckTag, HealthCheck>() {}

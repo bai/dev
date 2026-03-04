@@ -21,9 +21,9 @@ describe("command-registry-live", () => {
       const registry = yield* CommandRegistryTag;
       yield* registry.register(alpha);
       yield* registry.register(beta);
-      const allCommands = yield* registry.getAll();
+      const commands = yield* registry.getCommands();
 
-      expect(allCommands.map((command) => command.name)).toEqual(["alpha", "beta"]);
+      expect(commands).toEqual([alpha.command, beta.command]);
     }).pipe(Effect.provide(CommandRegistryLiveLayer)),
   );
 
@@ -39,7 +39,7 @@ describe("command-registry-live", () => {
     }).pipe(Effect.provide(CommandRegistryLiveLayer)),
   );
 
-  it.effect("projects registered commands and help handlers", () =>
+  it.effect("projects registered commands", () =>
     Effect.gen(function* () {
       const alpha = makeCommandInfo("alpha");
       const beta = makeCommandInfo("beta");
@@ -47,11 +47,7 @@ describe("command-registry-live", () => {
       yield* registry.register(alpha);
       yield* registry.register(beta);
       const commands = yield* registry.getCommands();
-      const handlers = yield* registry.getHelpHandlers();
       expect(commands).toEqual([alpha.command, beta.command]);
-      expect(Object.keys(handlers).sort()).toEqual(["alpha", "beta"]);
-      expect(handlers.alpha).toBe(alpha.displayHelp);
-      expect(handlers.beta).toBe(beta.displayHelp);
     }).pipe(Effect.provide(CommandRegistryLiveLayer)),
   );
 });

@@ -61,9 +61,6 @@ export const cloneCommand = Command.make("clone", { repo }, ({ repo }) =>
             return resolved;
           })
         : Effect.gen(function* () {
-            const normalizedInputUrl = yield* repositoryService.expandToFullGitUrl(repo, repoProvider.getDefaultOrg());
-            yield* Effect.annotateCurrentSpan("vcs.repository.url.input_normalized", normalizedInputUrl);
-
             const [orgOrRepo, repoName] = repo.includes("/") ? repo.split("/", 2) : [undefined, repo];
 
             const org = orgOrRepo;

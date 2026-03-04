@@ -1,15 +1,13 @@
-import { Clock, Context, Effect, Layer } from "effect";
+import { Context, Effect, Layer } from "effect";
 
 import {
-  externalToolError,
-  healthCheckError,
   type ExternalToolError,
   type HealthCheckError,
   type ShellExecutionError,
 } from "../../domain/errors";
 import { type HealthCheckResult } from "../../domain/health-check-port";
 import { ShellTag, type Shell } from "../../domain/shell-port";
-import { compareVersions } from "../../domain/version-utils";
+import { buildMinimumVersionHealthCheck, checkVersionAgainstMinimum, ensureMinimumVersionOrUpgrade } from "./versioned-tools-live";
 
 export const FZF_MIN_VERSION = "0.67.0";
 
@@ -22,8 +20,8 @@ export interface FzfTools {
 }
 
 // Factory function to create FzfTools implementation
-export const makeFzfToolsLive = (shell: Shell): FzfTools => ({
-  getCurrentVersion: (): Effect.Effect<string | null, ShellExecutionError> =>
+export const makeFzfToolsLive = (shell: Shell): FzfTools => {
+  const getCurrentVersion = (): Effect.Effect<string | null, ShellExecutionError> =>
     shell.exec("fzf", ["--version"]).pipe(
       Effect.map((result) => {
         if (result.exitCode === 0 && result.stdout) {
@@ -35,25 +33,9 @@ export const makeFzfToolsLive = (shell: Shell): FzfTools => ({
         return null;
       }),
       Effect.orElseSucceed(() => null),
-    ),
+    );
 
-  checkVersion: (): Effect.Effect<{ isValid: boolean; currentVersion: string | null }, ShellExecutionError> =>
-    Effect.gen(function* () {
-      const fzfTools = makeFzfToolsLive(shell);
-      const currentVersion = yield* fzfTools.getCurrentVersion();
-
-      if (!currentVersion) {
-        return { isValid: false, currentVersion: null };
-      }
-
-      const comparison = compareVersions(currentVersion, FZF_MIN_VERSION);
-      return {
-        isValid: comparison >= 0,
-        currentVersion,
-      };
-    }),
-
-  performUpgrade: (): Effect.Effect<boolean, ShellExecutionError> =>
+  const performUpgrade = (): Effect.Effect<boolean, ShellExecutionError> =>
     Effect.gen(function* () {
       yield* Effect.logInfo("🔄 Updating fzf via mise...");
 
@@ -66,92 +48,37 @@ export const makeFzfToolsLive = (shell: Shell): FzfTools => ({
         yield* Effect.logError(`❌ Fzf update failed with exit code: ${result.exitCode}`);
         return false;
       }
-    }),
+    });
 
-  ensureVersionOrUpgrade: (): Effect.Effect<void, ExternalToolError | ShellExecutionError> =>
-    Effect.gen(function* () {
-      const fzfTools = makeFzfToolsLive(shell);
-      const { isValid, currentVersion } = yield* fzfTools.checkVersion();
+  const checkVersion = (): Effect.Effect<{ isValid: boolean; currentVersion: string | null }, ShellExecutionError> =>
+    checkVersionAgainstMinimum({ minVersion: FZF_MIN_VERSION, getCurrentVersion });
 
-      if (isValid) {
-        return;
-      }
+  const ensureVersionOrUpgrade = (): Effect.Effect<void, ExternalToolError | ShellExecutionError> =>
+    ensureMinimumVersionOrUpgrade({
+      toolId: "fzf",
+      displayName: "Fzf",
+      minVersion: FZF_MIN_VERSION,
+      getCurrentVersion,
+      performUpgrade,
+      manualUpgradeHint: "Try manually installing fzf via mise: mise install fzf@latest",
+    });
 
-      if (currentVersion) {
-        yield* Effect.logWarning(`⚠️  Fzf version ${currentVersion} is older than required ${FZF_MIN_VERSION}`);
-      } else {
-        yield* Effect.logWarning(`⚠️  Unable to determine fzf version`);
-      }
+  const performHealthCheck = (): Effect.Effect<HealthCheckResult, HealthCheckError> =>
+    buildMinimumVersionHealthCheck({
+      toolId: "fzf",
+      displayName: "Fzf",
+      minVersion: FZF_MIN_VERSION,
+      getCurrentVersion,
+    });
 
-      yield* Effect.logInfo(`🚀 Starting fzf upgrade via mise...`);
-
-      const updateSuccess = yield* fzfTools.performUpgrade();
-      if (!updateSuccess) {
-        yield* Effect.logError(`❌ Failed to update fzf to required version`);
-        yield* Effect.logError(`💡 Try manually installing fzf via mise: mise install fzf@latest`);
-        return yield* externalToolError("Failed to update fzf", {
-          tool: "fzf",
-          exitCode: 1,
-          stderr: `Required version: ${FZF_MIN_VERSION}, Current: ${currentVersion}`,
-        });
-      }
-
-      // Verify upgrade
-      const { isValid: isValidAfterUpgrade, currentVersion: versionAfterUpgrade } = yield* fzfTools.checkVersion();
-      if (!isValidAfterUpgrade) {
-        yield* Effect.logError(`❌ Fzf upgrade completed but version still doesn't meet requirement`);
-        if (versionAfterUpgrade) {
-          yield* Effect.logError(`   Current: ${versionAfterUpgrade}, Required: ${FZF_MIN_VERSION}`);
-        }
-        return yield* externalToolError("Fzf upgrade failed", {
-          tool: "fzf",
-          exitCode: 1,
-          stderr: `Required: ${FZF_MIN_VERSION}, Got: ${versionAfterUpgrade}`,
-        });
-      }
-
-      if (versionAfterUpgrade) {
-        yield* Effect.logInfo(`✨ Fzf successfully upgraded to version ${versionAfterUpgrade}`);
-      }
-    }),
-
-  performHealthCheck: (): Effect.Effect<HealthCheckResult, HealthCheckError> =>
-    Effect.gen(function* () {
-      const fzfTools = makeFzfToolsLive(shell);
-      const checkedAt = new Date(yield* Clock.currentTimeMillis);
-
-      const currentVersion = yield* fzfTools
-        .getCurrentVersion()
-        .pipe(Effect.mapError(() => healthCheckError("Failed to get fzf version", "fzf")));
-
-      if (!currentVersion) {
-        return {
-          toolName: "fzf",
-          status: "fail",
-          notes: "Fzf not found or unable to determine version",
-          checkedAt,
-        };
-      }
-
-      const isCompliant = compareVersions(currentVersion, FZF_MIN_VERSION) >= 0;
-      if (!isCompliant) {
-        return {
-          toolName: "fzf",
-          version: currentVersion,
-          status: "warning",
-          notes: `requires >=${FZF_MIN_VERSION}`,
-          checkedAt,
-        };
-      }
-
-      return {
-        toolName: "fzf",
-        version: currentVersion,
-        status: "ok",
-        checkedAt,
-      };
-    }),
-});
+  return {
+    getCurrentVersion,
+    checkVersion,
+    performUpgrade,
+    ensureVersionOrUpgrade,
+    performHealthCheck,
+  };
+};
 
 // Service tag for Effect Context system
 export class FzfToolsTag extends Context.Tag("FzfTools")<FzfToolsTag, FzfTools>() {}

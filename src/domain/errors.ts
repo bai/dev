@@ -56,13 +56,6 @@ export class ShellExecutionError extends Data.TaggedError("ShellExecutionError")
   readonly underlyingError?: unknown;
 }> {}
 
-export class ShellTimeoutError extends Data.TaggedError("ShellTimeoutError")<{
-  readonly command: string;
-  readonly args: readonly string[];
-  readonly timeoutMs: number;
-  readonly cwd?: string;
-}> {}
-
 export class DockerServiceError extends Data.TaggedError("DockerServiceError")<{
   readonly reason: string;
   readonly service?: string;
@@ -81,7 +74,6 @@ export type DevError =
   | StatusCheckError
   | HealthCheckError
   | ShellExecutionError
-  | ShellTimeoutError
   | DockerServiceError
   | TracingError
   | UnknownError;
@@ -109,8 +101,6 @@ export const exitCode = (error: DevError): number => {
       return 8;
     case "ShellExecutionError":
       return 9;
-    case "ShellTimeoutError":
-      return 10;
     case "DockerServiceError":
       return 11;
     case "TracingError":
@@ -138,8 +128,6 @@ export const shellExecutionError = (
   reason: string,
   options?: { cwd?: string; underlyingError?: unknown },
 ) => new ShellExecutionError({ command, args, reason, ...options });
-export const shellTimeoutError = (command: string, args: readonly string[], timeoutMs: number, cwd?: string) =>
-  new ShellTimeoutError({ command, args, timeoutMs, cwd });
 export const dockerServiceError = (reason: string, options?: { service?: string; exitCode?: number; stderr?: string }) =>
   new DockerServiceError({ reason, ...options });
 

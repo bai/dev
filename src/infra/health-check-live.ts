@@ -88,70 +88,8 @@ export const makeHealthCheckLive = (database: Database, healthCheckService: Heal
       return results;
     }).pipe(Effect.withSpan("health_check.run_all"));
 
-  const getLatestResults = (): Effect.Effect<readonly HealthCheckResult[], HealthCheckError> =>
-    database
-      .query((db) =>
-        Effect.tryPromise({
-          try: async () => {
-            const latestChecks = await db
-              .select()
-              .from(toolHealthChecks)
-              .where(
-                sql`(tool_name, checked_at) IN (
-                  SELECT tool_name, MAX(checked_at)
-                  FROM tool_health_checks
-                  GROUP BY tool_name
-                )`,
-              )
-              .orderBy(toolHealthChecks.tool_name);
-
-            return latestChecks.map((check) => ({
-              toolName: check.tool_name,
-              version: check.version || undefined,
-              status: check.status as "ok" | "warning" | "fail",
-              notes: check.notes || undefined,
-              checkedAt: new Date(check.checked_at),
-            }));
-          },
-          catch: (error) => healthCheckError(`Failed to get latest health check results: ${error}`),
-        }),
-      )
-      .pipe(
-        Effect.mapError((error) => {
-          if (error._tag === "HealthCheckError") return error;
-          return healthCheckError(`Database query failed: ${String(error)}`);
-        }),
-        Effect.withSpan("health_check.get_latest"),
-      );
-
-  const pruneOldRecords = (retentionDays: number = HEALTH_CHECK_RETENTION_DAYS): Effect.Effect<void, HealthCheckError> =>
-    Effect.gen(function* () {
-      const cutoffDateMs = yield* Clock.currentTimeMillis;
-      const cutoffDate = new Date(cutoffDateMs - retentionDays * 24 * 60 * 60 * 1000);
-
-      yield* database
-        .query((db) =>
-          Effect.tryPromise({
-            try: async () => {
-              await db.delete(toolHealthChecks).where(sql`checked_at < ${cutoffDate}`);
-            },
-            catch: (error) => healthCheckError(`Failed to prune old health check records: ${error}`),
-          }),
-        )
-        .pipe(
-          Effect.mapError((error) => {
-            if (error._tag === "HealthCheckError") return error;
-            return healthCheckError(`Database operation failed: ${String(error)}`);
-          }),
-        );
-
-      yield* Effect.logDebug(`Pruned health check records older than ${retentionDays} days`);
-    }).pipe(Effect.withSpan("health_check.prune", { attributes: { "health_check.retention_days": retentionDays } }));
-
   return {
     runHealthChecks,
-    getLatestResults,
-    pruneOldRecords,
   };
 };
 

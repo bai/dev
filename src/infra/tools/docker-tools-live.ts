@@ -16,8 +16,8 @@ export interface DockerTools {
   readonly performHealthCheck: () => Effect.Effect<HealthCheckResult, HealthCheckError>;
 }
 
-export const makeDockerToolsLive = (shell: Shell): DockerTools => ({
-  getDockerVersion: (): Effect.Effect<string | null, never> =>
+export const makeDockerToolsLive = (shell: Shell): DockerTools => {
+  const getDockerVersion = (): Effect.Effect<string | null, never> =>
     shell.exec("docker", ["--version"]).pipe(
       Effect.map((result) => {
         if (result.exitCode === 0 && result.stdout) {
@@ -29,9 +29,9 @@ export const makeDockerToolsLive = (shell: Shell): DockerTools => ({
         return null;
       }),
       Effect.orElseSucceed(() => null),
-    ),
+    );
 
-  getComposeVersion: (): Effect.Effect<string | null, never> =>
+  const getComposeVersion = (): Effect.Effect<string | null, never> =>
     shell.exec("docker", ["compose", "version"]).pipe(
       Effect.map((result) => {
         if (result.exitCode === 0 && result.stdout) {
@@ -43,16 +43,13 @@ export const makeDockerToolsLive = (shell: Shell): DockerTools => ({
         return null;
       }),
       Effect.orElseSucceed(() => null),
-    ),
+    );
 
-  performHealthCheck: (): Effect.Effect<HealthCheckResult, HealthCheckError> =>
+  const performHealthCheck = (): Effect.Effect<HealthCheckResult, HealthCheckError> =>
     Effect.gen(function* () {
-      const dockerTools = makeDockerToolsLive(shell);
       const checkedAt = new Date(yield* Clock.currentTimeMillis);
 
-      const dockerVersion = yield* dockerTools
-        .getDockerVersion()
-        .pipe(Effect.mapError(() => healthCheckError("Failed to get docker version", "docker")));
+      const dockerVersion = yield* getDockerVersion().pipe(Effect.mapError(() => healthCheckError("Failed to get docker version", "docker")));
 
       if (!dockerVersion) {
         return {
@@ -63,7 +60,7 @@ export const makeDockerToolsLive = (shell: Shell): DockerTools => ({
         };
       }
 
-      const composeVersion = yield* dockerTools.getComposeVersion();
+      const composeVersion = yield* getComposeVersion();
       const version = composeVersion ? `${dockerVersion} (compose ${composeVersion})` : dockerVersion;
 
       const isCompliant = compareVersions(dockerVersion, DOCKER_MIN_VERSION) >= 0;
@@ -83,8 +80,14 @@ export const makeDockerToolsLive = (shell: Shell): DockerTools => ({
         status: "ok",
         checkedAt,
       };
-    }),
-});
+    });
+
+  return {
+    getDockerVersion,
+    getComposeVersion,
+    performHealthCheck,
+  };
+};
 
 export class DockerToolsTag extends Context.Tag("DockerTools")<DockerToolsTag, DockerTools>() {}
 

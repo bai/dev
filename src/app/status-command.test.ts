@@ -67,8 +67,6 @@ describe("status-command", () => {
     Effect.gen(function* () {
       const failingHealthCheck: HealthCheck = {
         runHealthChecks: () => healthCheckError("registry unavailable"),
-        getLatestResults: () => Effect.succeed([]),
-        pruneOldRecords: () => Effect.void,
       };
 
       const testLayer = Layer.mergeAll(

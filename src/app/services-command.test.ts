@@ -115,11 +115,10 @@ describe("services-command", () => {
 
       const registry = yield* CommandRegistryTag;
       const registered = yield* registry.getByName("services");
-      const helpHandlers = yield* registry.getHelpHandlers();
 
       expect(registered).toBeDefined();
       expect(registered?.command).toBe(servicesCommand);
-      expect(helpHandlers["services"]).toBeDefined();
+      expect(registered?.displayHelp).toBeDefined();
     }).pipe(Effect.provide(CommandRegistryLiveLayer)),
   );
 

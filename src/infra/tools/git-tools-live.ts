@@ -1,15 +1,13 @@
-import { Clock, Context, Effect, Layer } from "effect";
+import { Context, Effect, Layer } from "effect";
 
 import {
-  externalToolError,
-  healthCheckError,
   type ExternalToolError,
   type HealthCheckError,
   type ShellExecutionError,
 } from "../../domain/errors";
 import { type HealthCheckResult } from "../../domain/health-check-port";
 import { ShellTag, type Shell } from "../../domain/shell-port";
-import { compareVersions } from "../../domain/version-utils";
+import { buildMinimumVersionHealthCheck, checkVersionAgainstMinimum, ensureMinimumVersionOrUpgrade } from "./versioned-tools-live";
 
 export const GIT_MIN_VERSION = "2.52.0";
 
@@ -22,8 +20,8 @@ export interface GitTools {
 }
 
 // Factory function to create GitTools implementation
-export const makeGitToolsLive = (shell: Shell): GitTools => ({
-  getCurrentVersion: (): Effect.Effect<string | null, ShellExecutionError> =>
+export const makeGitToolsLive = (shell: Shell): GitTools => {
+  const getCurrentVersion = (): Effect.Effect<string | null, ShellExecutionError> =>
     shell.exec("git", ["--version"]).pipe(
       Effect.map((result) => {
         if (result.exitCode === 0 && result.stdout) {
@@ -35,26 +33,9 @@ export const makeGitToolsLive = (shell: Shell): GitTools => ({
         return null;
       }),
       Effect.orElseSucceed(() => null),
-    ),
+    );
 
-  checkVersion: (): Effect.Effect<{ isValid: boolean; currentVersion: string | null }, ShellExecutionError> =>
-    Effect.gen(function* () {
-      const gitTools = makeGitToolsLive(shell);
-      const currentVersion = yield* gitTools.getCurrentVersion();
-
-      if (!currentVersion) {
-        return { isValid: false, currentVersion: null };
-      }
-
-      const comparison = compareVersions(currentVersion, GIT_MIN_VERSION);
-
-      return {
-        isValid: comparison >= 0,
-        currentVersion,
-      };
-    }),
-
-  performUpgrade: (): Effect.Effect<boolean, ShellExecutionError> =>
+  const performUpgrade = (): Effect.Effect<boolean, ShellExecutionError> =>
     Effect.gen(function* () {
       yield* Effect.logInfo("🔄 Updating git via mise...");
 
@@ -67,92 +48,37 @@ export const makeGitToolsLive = (shell: Shell): GitTools => ({
         yield* Effect.logInfo(`❌ Git update failed with exit code: ${result.exitCode}`);
         return false;
       }
-    }),
+    });
 
-  ensureVersionOrUpgrade: (): Effect.Effect<void, ExternalToolError | ShellExecutionError> =>
-    Effect.gen(function* () {
-      const gitTools = makeGitToolsLive(shell);
-      const { isValid, currentVersion } = yield* gitTools.checkVersion();
+  const checkVersion = (): Effect.Effect<{ isValid: boolean; currentVersion: string | null }, ShellExecutionError> =>
+    checkVersionAgainstMinimum({ minVersion: GIT_MIN_VERSION, getCurrentVersion });
 
-      if (isValid) {
-        return;
-      }
+  const ensureVersionOrUpgrade = (): Effect.Effect<void, ExternalToolError | ShellExecutionError> =>
+    ensureMinimumVersionOrUpgrade({
+      toolId: "git",
+      displayName: "Git",
+      minVersion: GIT_MIN_VERSION,
+      getCurrentVersion,
+      performUpgrade,
+      manualUpgradeHint: "Try manually installing git via mise: mise install git@latest",
+    });
 
-      if (currentVersion) {
-        yield* Effect.logWarning(`⚠️  Git version ${currentVersion} is older than required ${GIT_MIN_VERSION}`);
-      } else {
-        yield* Effect.logWarning(`⚠️  Unable to determine git version`);
-      }
+  const performHealthCheck = (): Effect.Effect<HealthCheckResult, HealthCheckError> =>
+    buildMinimumVersionHealthCheck({
+      toolId: "git",
+      displayName: "Git",
+      minVersion: GIT_MIN_VERSION,
+      getCurrentVersion,
+    });
 
-      yield* Effect.logInfo(`🚀 Starting git upgrade via mise...`);
-
-      const updateSuccess = yield* gitTools.performUpgrade();
-      if (!updateSuccess) {
-        yield* Effect.logInfo(`❌ Failed to update git to required version`);
-        yield* Effect.logInfo(`💡 Try manually installing git via mise: mise install git@latest`);
-        return yield* externalToolError("Failed to update git", {
-          tool: "git",
-          exitCode: 1,
-          stderr: `Required version: ${GIT_MIN_VERSION}, Current: ${currentVersion}`,
-        });
-      }
-
-      // Verify upgrade
-      const { isValid: isValidAfterUpgrade, currentVersion: versionAfterUpgrade } = yield* gitTools.checkVersion();
-      if (!isValidAfterUpgrade) {
-        yield* Effect.logInfo(`❌ Git upgrade completed but version still doesn't meet requirement`);
-        if (versionAfterUpgrade) {
-          yield* Effect.logInfo(`   Current: ${versionAfterUpgrade}, Required: ${GIT_MIN_VERSION}`);
-        }
-        return yield* externalToolError("Git upgrade failed", {
-          tool: "git",
-          exitCode: 1,
-          stderr: `Required: ${GIT_MIN_VERSION}, Got: ${versionAfterUpgrade}`,
-        });
-      }
-
-      if (versionAfterUpgrade) {
-        yield* Effect.logInfo(`✨ Git successfully upgraded to version ${versionAfterUpgrade}`);
-      }
-    }),
-
-  performHealthCheck: (): Effect.Effect<HealthCheckResult, HealthCheckError> =>
-    Effect.gen(function* () {
-      const gitTools = makeGitToolsLive(shell);
-      const checkedAt = new Date(yield* Clock.currentTimeMillis);
-
-      const currentVersion = yield* gitTools
-        .getCurrentVersion()
-        .pipe(Effect.mapError(() => healthCheckError("Failed to get git version", "git")));
-
-      if (!currentVersion) {
-        return {
-          toolName: "git",
-          status: "fail",
-          notes: "Git not found or unable to determine version",
-          checkedAt,
-        };
-      }
-
-      const isCompliant = compareVersions(currentVersion, GIT_MIN_VERSION) >= 0;
-      if (!isCompliant) {
-        return {
-          toolName: "git",
-          version: currentVersion,
-          status: "warning",
-          notes: `requires >=${GIT_MIN_VERSION}`,
-          checkedAt,
-        };
-      }
-
-      return {
-        toolName: "git",
-        version: currentVersion,
-        status: "ok",
-        checkedAt,
-      };
-    }),
-});
+  return {
+    getCurrentVersion,
+    checkVersion,
+    performUpgrade,
+    ensureVersionOrUpgrade,
+    performHealthCheck,
+  };
+};
 
 // Service tag for Effect Context system
 export class GitToolsTag extends Context.Tag("GitTools")<GitToolsTag, GitTools>() {}

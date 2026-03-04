@@ -4,7 +4,7 @@ import { Context, Effect, Layer } from "effect";
 
 import { configError, type ConfigError } from "./errors";
 import type { GitProviderType, Repository } from "./models";
-import { normalizeOrganizationName, normalizeOrgToProviderMap } from "./org-provider-utils";
+import { resolveRepositoryInput } from "./org-provider-utils";
 import { PathServiceTag } from "./path-service";
 
 /**
@@ -110,39 +110,11 @@ const expandToFullGitUrl = (
     if (isFullUrl(repoInput)) {
       return repoInput;
     }
-
-    let orgName = defaultOrg;
-    let repoName = repoInput;
-    let provider: GitProviderType = "github"; // default provider
-    let isExplicitOrg = false;
-
-    // Check if input has org/repo format
-    if (repoInput.includes("/")) {
-      const parts = repoInput.split("/");
-      if (parts.length === 2 && parts[0] && parts[1]) {
-        orgName = parts[0];
-        repoName = parts[1];
-        isExplicitOrg = true;
-      }
-    }
-
-    // Determine provider based on forced option, org mapping, or default
-    const orgToProviderMap = normalizeOrgToProviderMap(orgToProvider ?? {});
-    const mappedProvider = orgToProviderMap[normalizeOrganizationName(orgName)];
-    const mappedDefaultOrgProvider = orgToProviderMap[normalizeOrganizationName(defaultOrg)];
-
-    if (forceProvider) {
-      provider = forceProvider;
-    } else if (mappedProvider !== undefined) {
-      provider = mappedProvider;
-    } else if (!isExplicitOrg && mappedDefaultOrgProvider !== undefined) {
-      // Only use default org's provider if no explicit org was specified
-      provider = mappedDefaultOrgProvider;
-    }
+    const resolved = resolveRepositoryInput(repoInput, defaultOrg, "github", orgToProvider ?? {}, forceProvider);
 
     // Construct the full URL
-    const baseUrl = provider === "gitlab" ? "https://gitlab.com" : "https://github.com";
-    return `${baseUrl}/${orgName}/${repoName}`;
+    const baseUrl = resolved.provider === "gitlab" ? "https://gitlab.com" : "https://github.com";
+    return `${baseUrl}/${resolved.organization}/${resolved.repositoryName}`;
   });
 
 // Functional service implementation as plain object

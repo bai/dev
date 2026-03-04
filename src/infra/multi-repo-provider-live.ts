@@ -1,7 +1,7 @@
 import { Layer } from "effect";
 
 import type { GitProviderType } from "../domain/models";
-import { normalizeOrganizationName, normalizeOrgToProviderMap } from "../domain/org-provider-utils";
+import { resolveProviderForOrganization } from "../domain/org-provider-utils";
 import { RepoProviderTag, type RepoProvider } from "../domain/repo-provider-port";
 import { makeGitHubProvider } from "./github-provider-live";
 import { makeGitLabProvider } from "./gitlab-provider-live";
@@ -17,10 +17,9 @@ export const makeMultiRepoProvider = (
   // Create provider instances using the factory functions
   const githubProvider = makeGitHubProvider(defaultOrg);
   const gitlabProvider = makeGitLabProvider(defaultOrg);
-  const normalizedOrgToProvider = normalizeOrgToProviderMap(orgToProvider);
 
   const getProviderTypeForOrg = (org: string): GitProviderType =>
-    normalizedOrgToProvider[normalizeOrganizationName(org)] ?? defaultProvider;
+    resolveProviderForOrganization(org, defaultProvider, orgToProvider);
 
   /**
    * Select the appropriate provider based on organization

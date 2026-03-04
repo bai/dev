@@ -8,8 +8,6 @@ import { CommandRegistryTag, type CommandInfo, type CommandRegistry } from "../d
 const makeCommandRegistry = (commandsRef: Ref.Ref<ReadonlyArray<CommandInfo>>): CommandRegistry => ({
   register: (info) => Ref.update(commandsRef, (commands) => [...commands, info]),
 
-  getAll: () => Ref.get(commandsRef),
-
   getByName: (name) =>
     Effect.gen(function* () {
       const commands = yield* Ref.get(commandsRef);
@@ -20,16 +18,6 @@ const makeCommandRegistry = (commandsRef: Ref.Ref<ReadonlyArray<CommandInfo>>): 
     Effect.gen(function* () {
       const commands = yield* Ref.get(commandsRef);
       return commands.map((cmd) => cmd.command);
-    }),
-
-  getHelpHandlers: () =>
-    Effect.gen(function* () {
-      const commands = yield* Ref.get(commandsRef);
-      const handlers: Record<string, () => Effect.Effect<void, never, never>> = {};
-      for (const cmd of commands) {
-        handlers[cmd.name] = cmd.displayHelp;
-      }
-      return handlers;
     }),
 });
 

@@ -1,7 +1,7 @@
 import { spawn } from "bun";
-import { Duration, Effect, Layer } from "effect";
+import { Effect, Layer } from "effect";
 
-import { shellExecutionError, shellTimeoutError, type ShellExecutionError, type ShellTimeoutError } from "../domain/errors";
+import { shellExecutionError, type ShellExecutionError } from "../domain/errors";
 import { ShellTag, type Shell, type SpawnResult } from "../domain/shell-port";
 
 const createShellSpanAttributes = (command: string, args: string[], cwd?: string): Record<string, string | number> => ({
@@ -68,39 +68,11 @@ const setProcessCwd = (path: string): Effect.Effect<void> =>
     process.chdir(path);
   });
 
-// Timeout wrapper methods for better resource management
-const execWithTimeout = (
-  command: string,
-  args: string[] = [],
-  timeout: Duration.Duration,
-  options: { cwd?: string } = {},
-): Effect.Effect<SpawnResult, ShellExecutionError | ShellTimeoutError> =>
-  exec(command, args, options).pipe(
-    Effect.timeout(timeout),
-    Effect.catchTag("TimeoutException", () => shellTimeoutError(command, args, Duration.toMillis(timeout), options.cwd)),
-  );
-
-const execInteractiveWithTimeout = (
-  command: string,
-  args: string[] = [],
-  timeout: Duration.Duration,
-  options: { cwd?: string } = {},
-): Effect.Effect<number, ShellExecutionError | ShellTimeoutError> =>
-  execInteractive(command, args, options).pipe(
-    Effect.timeout(timeout),
-    Effect.catchTag("TimeoutException", () => shellTimeoutError(command, args, Duration.toMillis(timeout), options.cwd)),
-  );
-
 // Factory function to create Shell implementation
-export const makeShellLive = (): Shell & {
-  execWithTimeout: typeof execWithTimeout;
-  execInteractiveWithTimeout: typeof execInteractiveWithTimeout;
-} => ({
+export const makeShellLive = (): Shell => ({
   exec,
   execInteractive,
   setProcessCwd,
-  execWithTimeout,
-  execInteractiveWithTimeout,
 });
 
 // Effect Layer for dependency injection with proper resource management
