@@ -46,17 +46,10 @@ export const loadConfiguration = () =>
     yield* Effect.logDebug("🔧 Loading configuration...");
 
     const defaults = createPathService();
+    const bootstrapDependencies = Layer.mergeAll(FileSystemLiveLayer, Layer.provide(NetworkLiveLayer, FileSystemLiveLayer));
 
     // Minimal bootstrap layer for config loading
-    const bootstrapLayer = Layer.mergeAll(
-      FileSystemLiveLayer,
-      createPathServiceLiveLayer(),
-      Layer.provide(NetworkLiveLayer, FileSystemLiveLayer),
-      Layer.provide(
-        ConfigLoaderLiveLayer(defaults.configPath),
-        Layer.mergeAll(FileSystemLiveLayer, createPathServiceLiveLayer(), Layer.provide(NetworkLiveLayer, FileSystemLiveLayer)),
-      ),
-    );
+    const bootstrapLayer = Layer.provide(ConfigLoaderLiveLayer(defaults.configPath), bootstrapDependencies);
 
     // Provide the bootstrap layer and load config
     return yield* Effect.gen(function* () {
