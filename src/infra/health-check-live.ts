@@ -6,6 +6,7 @@ import { DatabaseTag, type Database } from "../domain/database-port";
 import { healthCheckError, type HealthCheckError } from "../domain/errors";
 import { HealthCheckTag, type HealthCheck, type HealthCheckResult } from "../domain/health-check-port";
 import { HealthCheckServiceTag, type HealthCheckService } from "../domain/health-check-service";
+import { annotateErrorTypeOnFailure } from "./tracing/error-type";
 
 // Health check constants (internal, not user-configurable)
 const HEALTH_CHECK_RETENTION_DAYS = 30;
@@ -86,7 +87,7 @@ export const makeHealthCheckLive = (database: Database, healthCheckService: Heal
       yield* Effect.logDebug("Health checks completed successfully");
 
       return results;
-    }).pipe(Effect.withSpan("health_check.run_all"));
+    }).pipe(annotateErrorTypeOnFailure, Effect.withSpan("health_check.run_all"));
 
   return {
     runHealthChecks,

@@ -13,6 +13,7 @@ import { Effect, Layer } from "effect";
 import { networkError, type NetworkError, type UnknownError } from "../domain/errors";
 import { FileSystemTag, type FileSystem } from "../domain/file-system-port";
 import { NetworkTag, type HttpResponse, type Network } from "../domain/network-port";
+import { annotateErrorTypeOnFailure } from "./tracing/error-type";
 
 const createHttpClientSpanAttributes = (url: string, method: string): Record<string, string | number> => {
   if (!URL.canParse(url)) {
@@ -62,7 +63,10 @@ export const makeNetworkLive = (fileSystem: FileSystem): Network => ({
         body,
         headers,
       };
-    }).pipe(Effect.withSpan("http.get", { attributes: createHttpClientSpanAttributes(url, HTTP_REQUEST_METHOD_VALUE_GET) })),
+    }).pipe(
+      annotateErrorTypeOnFailure,
+      Effect.withSpan("http.get", { attributes: createHttpClientSpanAttributes(url, HTTP_REQUEST_METHOD_VALUE_GET) }),
+    ),
 
   downloadFile: (url: string, destinationPath: string): Effect.Effect<void, NetworkError | UnknownError> =>
     Effect.gen(function* () {
@@ -98,6 +102,7 @@ export const makeNetworkLive = (fileSystem: FileSystem): Network => ({
         }),
       );
     }).pipe(
+      annotateErrorTypeOnFailure,
       Effect.withSpan("http.download_file", {
         attributes: {
           ...createHttpClientSpanAttributes(url, HTTP_REQUEST_METHOD_VALUE_GET),

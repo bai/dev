@@ -14,6 +14,7 @@ import { FileSystemTag, type FileSystem } from "../domain/file-system-port";
 import type { HealthCheckResult } from "../domain/health-check-port";
 import { PathServiceTag, type PathService } from "../domain/path-service";
 import { ShellTag, type Shell } from "../domain/shell-port";
+import { annotateErrorTypeOnFailure } from "./tracing/error-type";
 
 const SERVICE_PORTS: Record<ServiceName, number> = {
   postgres17: 55432,
@@ -130,7 +131,7 @@ export const makeDockerServicesLive = (
       const result = yield* shell.exec("docker", ["compose", ...fullArgs]);
       yield* Effect.annotateCurrentSpan("docker.compose.exit_code", result.exitCode);
       return result;
-    }).pipe(Effect.withSpan("docker.compose.exec"));
+    }).pipe(annotateErrorTypeOnFailure, Effect.withSpan("docker.compose.exec"));
 
   const runComposeAndCheck = (
     args: readonly string[],
@@ -147,7 +148,7 @@ export const makeDockerServicesLive = (
         });
       }
       return result;
-    }).pipe(Effect.withSpan("docker.compose.exec_checked"));
+    }).pipe(annotateErrorTypeOnFailure, Effect.withSpan("docker.compose.exec_checked"));
 
   const runComposeInteractive = (args: readonly string[]): Effect.Effect<number, ShellExecutionError> =>
     Effect.gen(function* () {
@@ -159,7 +160,7 @@ export const makeDockerServicesLive = (
       const exitCode = yield* shell.execInteractive("docker", ["compose", ...fullArgs]);
       yield* Effect.annotateCurrentSpan("docker.compose.exit_code", exitCode);
       return exitCode;
-    }).pipe(Effect.withSpan("docker.compose.exec_interactive"));
+    }).pipe(annotateErrorTypeOnFailure, Effect.withSpan("docker.compose.exec_interactive"));
 
   const parseServiceState = (state: string): ServiceStatus["state"] => {
     const lower = state.toLowerCase();
@@ -341,7 +342,9 @@ export const makeDockerServicesLive = (
 
         // Remove the compose file so it regenerates fresh
         yield* Effect.logInfo("Removing compose file...");
-        const rmResult = yield* shell.exec("rm", ["-f", composeFilePath]).pipe(Effect.withSpan("filesystem.remove_file"));
+        const rmResult = yield* shell
+          .exec("rm", ["-f", composeFilePath])
+          .pipe(annotateErrorTypeOnFailure, Effect.withSpan("filesystem.remove_file"));
         if (rmResult.exitCode !== 0) {
           return yield* dockerServiceError("Failed to remove compose file", {
             exitCode: rmResult.exitCode,

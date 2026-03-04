@@ -5,6 +5,7 @@ import { configSchema, type Config } from "../domain/config-schema";
 import { configError, type ConfigError, type FileSystemError, type NetworkError, type UnknownError } from "../domain/errors";
 import { FileSystemTag, type FileSystem } from "../domain/file-system-port";
 import { NetworkTag, type Network } from "../domain/network-port";
+import { annotateErrorTypeOnFailure } from "./tracing/error-type";
 
 // Factory function that creates ConfigLoader with dependencies
 export const makeConfigLoaderLive = (fileSystem: FileSystem, network: Network, configPath: string): ConfigLoader => {
@@ -28,11 +29,12 @@ export const makeConfigLoaderLive = (fileSystem: FileSystem, network: Network, c
           ),
         );
       }),
+      annotateErrorTypeOnFailure,
       Effect.withSpan("config.load", { attributes: { "config.path": configPath } }),
     );
 
   const save = (config: Config): Effect.Effect<void, FileSystemError | UnknownError> =>
-    fileSystem.writeFile(configPath, JSON.stringify(config, null, 2)).pipe(Effect.withSpan("config.save"));
+    fileSystem.writeFile(configPath, JSON.stringify(config, null, 2)).pipe(annotateErrorTypeOnFailure, Effect.withSpan("config.save"));
 
   const refresh = (): Effect.Effect<Config, ConfigError | FileSystemError | NetworkError | UnknownError> =>
     load().pipe(
@@ -58,6 +60,7 @@ export const makeConfigLoaderLive = (fileSystem: FileSystem, network: Network, c
           Effect.orElseSucceed(() => currentConfig),
         );
       }),
+      annotateErrorTypeOnFailure,
       Effect.withSpan("config.refresh"),
     );
 

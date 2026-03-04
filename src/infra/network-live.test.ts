@@ -2,6 +2,7 @@ import { NodeSdk } from "@effect/opentelemetry";
 import { it } from "@effect/vitest";
 import { InMemorySpanExporter, SimpleSpanProcessor } from "@opentelemetry/sdk-trace-base";
 import {
+  ATTR_ERROR_TYPE,
   ATTR_HTTP_REQUEST_METHOD,
   ATTR_HTTP_RESPONSE_STATUS_CODE,
   ATTR_SERVER_ADDRESS,
@@ -191,6 +192,7 @@ describe("network-live", () => {
       expect(span?.attributes[ATTR_SERVER_ADDRESS]).toBe("example.com");
       expect(span?.attributes[ATTR_SERVER_PORT]).toBe(8443);
       expect(span?.attributes[ATTR_HTTP_RESPONSE_STATUS_CODE]).toBe(200);
+      expect(span?.attributes[ATTR_ERROR_TYPE]).toBeUndefined();
     }).pipe(Effect.provide(telemetryLayer), Effect.scoped);
   });
 
@@ -210,6 +212,7 @@ describe("network-live", () => {
       expect(span?.attributes[ATTR_SERVER_ADDRESS]).toBeUndefined();
       expect(span?.attributes[ATTR_SERVER_PORT]).toBeUndefined();
       expect(span?.attributes[ATTR_HTTP_RESPONSE_STATUS_CODE]).toBeUndefined();
+      expect(span?.attributes[ATTR_ERROR_TYPE]).toBe("NetworkError");
     }).pipe(Effect.provide(telemetryLayer), Effect.scoped);
   });
 
@@ -235,6 +238,7 @@ describe("network-live", () => {
       expect(span?.attributes[ATTR_SERVER_PORT]).toBe(8443);
       expect(span?.attributes[ATTR_HTTP_RESPONSE_STATUS_CODE]).toBe(404);
       expect(span?.attributes[ATTR_FILE_PATH]).toBe("/tmp/out.txt");
+      expect(span?.attributes[ATTR_ERROR_TYPE]).toBe("NetworkError");
     }).pipe(Effect.provide(telemetryLayer), Effect.scoped);
   });
 

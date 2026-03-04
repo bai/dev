@@ -3,6 +3,7 @@ import { Effect, Layer } from "effect";
 
 import { shellExecutionError, type ShellExecutionError } from "../domain/errors";
 import { ShellTag, type Shell, type SpawnResult } from "../domain/shell-port";
+import { annotateErrorTypeOnFailure } from "./tracing/error-type";
 
 const createShellSpanAttributes = (command: string, args: string[], cwd?: string): Record<string, string | number> => ({
   "shell.command": command,
@@ -34,6 +35,7 @@ const exec = (command: string, args: string[] = [], options: { cwd?: string } = 
     catch: (error) => shellExecutionError(command, args, `Failed to execute command`, { cwd: options.cwd, underlyingError: error }),
   }).pipe(
     Effect.tap((result) => Effect.annotateCurrentSpan("shell.exit_code", result.exitCode)),
+    annotateErrorTypeOnFailure,
     Effect.withSpan("shell.exec", { attributes: createShellSpanAttributes(command, args, options.cwd) }),
   );
 
@@ -60,6 +62,7 @@ const execInteractive = (
       }),
   }).pipe(
     Effect.tap((exitCode) => Effect.annotateCurrentSpan("shell.exit_code", exitCode)),
+    annotateErrorTypeOnFailure,
     Effect.withSpan("shell.exec_interactive", { attributes: createShellSpanAttributes(command, args, options.cwd) }),
   );
 

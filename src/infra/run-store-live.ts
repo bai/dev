@@ -6,6 +6,7 @@ import { DatabaseTag, type Database } from "../domain/database-port";
 import { configError, type ConfigError, type UnknownError } from "../domain/errors";
 import type { CommandRun } from "../domain/models";
 import { RunStoreTag, type RunStore } from "../domain/run-store-port";
+import { annotateErrorTypeOnFailure } from "./tracing/error-type";
 
 // Factory function that creates RunStore
 export const makeRunStoreLive = (database: Database): RunStore => {
@@ -40,6 +41,7 @@ export const makeRunStoreLive = (database: Database): RunStore => {
             Effect.map((insertedRun) => insertedRun.id),
           ),
         ),
+        annotateErrorTypeOnFailure,
         Effect.withSpan("run_store.record", { attributes: { "run.command": run.command_name } }),
       );
 
@@ -59,7 +61,7 @@ export const makeRunStoreLive = (database: Database): RunStore => {
           catch: (error) => configError(`Failed to complete command run: ${error}`),
         }),
       )
-      .pipe(Effect.withSpan("run_store.complete", { attributes: { "run.id": id, "run.exit_code": exitCode } }));
+      .pipe(annotateErrorTypeOnFailure, Effect.withSpan("run_store.complete", { attributes: { "run.id": id, "run.exit_code": exitCode } }));
 
   const prune = (keepDays: number): Effect.Effect<void, ConfigError | UnknownError> =>
     Clock.currentTimeMillis.pipe(
@@ -76,6 +78,7 @@ export const makeRunStoreLive = (database: Database): RunStore => {
           }),
         );
       }),
+      annotateErrorTypeOnFailure,
       Effect.withSpan("run_store.prune", { attributes: { "run_store.keep_days": keepDays } }),
     );
 
@@ -101,7 +104,7 @@ export const makeRunStoreLive = (database: Database): RunStore => {
           catch: (error) => configError(`Failed to get recent runs: ${error}`),
         }),
       )
-      .pipe(Effect.withSpan("run_store.get_recent", { attributes: { "run_store.limit": limit } }));
+      .pipe(annotateErrorTypeOnFailure, Effect.withSpan("run_store.get_recent", { attributes: { "run_store.limit": limit } }));
 
   const completeIncompleteRuns = (): Effect.Effect<void, ConfigError | UnknownError> =>
     Clock.currentTimeMillis.pipe(
@@ -123,6 +126,7 @@ export const makeRunStoreLive = (database: Database): RunStore => {
           }),
         );
       }),
+      annotateErrorTypeOnFailure,
       Effect.withSpan("run_store.complete_incomplete"),
     );
 

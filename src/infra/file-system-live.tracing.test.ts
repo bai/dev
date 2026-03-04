@@ -5,6 +5,7 @@ import path from "path";
 import { NodeSdk } from "@effect/opentelemetry";
 import { it } from "@effect/vitest";
 import { InMemorySpanExporter, SimpleSpanProcessor } from "@opentelemetry/sdk-trace-base";
+import { ATTR_ERROR_TYPE } from "@opentelemetry/semantic-conventions";
 import { ATTR_FILE_PATH } from "@opentelemetry/semantic-conventions/incubating";
 import { Effect } from "effect";
 import { afterEach, beforeEach, describe, expect } from "vitest";
@@ -109,6 +110,22 @@ describe("file-system-live", () => {
       const span = exporter.getFinishedSpans().find((candidate) => candidate.name === "fs.find_directories_glob");
       expect(span).toBeDefined();
       expect(span?.attributes[ATTR_FILE_PATH]).toBe(tempDir);
+    }).pipe(Effect.provide(telemetryLayer), Effect.scoped);
+  });
+
+  it.effect("readFile failure emits error.type span attribute", () => {
+    const exporter = new InMemorySpanExporter();
+    const telemetryLayer = createTelemetryLayer(exporter);
+
+    return Effect.gen(function* () {
+      const fileSystem = makeFileSystemLive();
+      const missingPath = path.join(tempDir, "missing.txt");
+      yield* Effect.exit(fileSystem.readFile(missingPath));
+
+      const span = exporter.getFinishedSpans().find((candidate) => candidate.name === "fs.read_file");
+      expect(span).toBeDefined();
+      expect(span?.attributes[ATTR_FILE_PATH]).toBe(missingPath);
+      expect(span?.attributes[ATTR_ERROR_TYPE]).toBe("FileSystemError");
     }).pipe(Effect.provide(telemetryLayer), Effect.scoped);
   });
 });
