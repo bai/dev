@@ -2,7 +2,6 @@ import { Command } from "@effect/cli";
 import { NodeSdk } from "@effect/opentelemetry";
 import { BunRuntime } from "@effect/platform-bun";
 import { Effect, Layer } from "effect";
-import type { Option } from "effect/Option";
 
 import { registerCdCommand } from "./app/cd-command";
 import { registerCloneCommand } from "./app/clone-command";
@@ -14,7 +13,7 @@ import { registerSyncCommand } from "./app/sync-command";
 import { registerUpCommand } from "./app/up-command";
 import { UpdateCheckerTag } from "./app/update-check-service";
 import { registerUpgradeCommand } from "./app/upgrade-command";
-import { CommandRegistryTag, type CommandRegistry, type RegisteredCommand } from "./domain/command-registry-port";
+import { CommandRegistryTag, type CommandRegistry } from "./domain/command-registry-port";
 import { exitCode, extractErrorMessage, type DevError } from "./domain/errors";
 import { TracingTag } from "./domain/tracing-port";
 import { VersionTag } from "./domain/version-port";
@@ -23,7 +22,7 @@ import { setupApplication } from "./wiring";
 /**
  * Display help for the main dev command
  */
-const displayMainHelp = (): Effect.Effect<void, never, never> =>
+export const displayMainHelp = (): Effect.Effect<void, never, never> =>
   Effect.gen(function* () {
     yield* Effect.logInfo("A CLI tool for quick navigation and environment management\n");
 
@@ -68,7 +67,7 @@ const registerAllCommands: Effect.Effect<void, never, CommandRegistryTag> = Effe
 /**
  * Check if help was requested and display appropriate help
  */
-const checkAndDisplayHelp = (args: readonly string[], registry: CommandRegistry): Effect.Effect<boolean, never, never> =>
+export const checkAndDisplayHelp = (args: readonly string[], registry: CommandRegistry): Effect.Effect<boolean, never, never> =>
   Effect.gen(function* () {
     const hasHelp = args.includes("--help") || args.includes("-h");
 
@@ -96,17 +95,28 @@ const checkAndDisplayHelp = (args: readonly string[], registry: CommandRegistry)
 /**
  * Create the main command dynamically from the registry
  */
-const createMainCommand = (
+const toNonEmptyReadonlyArray = <A>(values: ReadonlyArray<A>): readonly [A, ...A[]] | null => {
+  const [first, ...remaining] = values;
+  if (first === undefined) {
+    return null;
+  }
+  return [first, ...remaining];
+};
+
+export const createMainCommand = (
   registry: CommandRegistry,
-): Effect.Effect<Command.Command<"dev", unknown, unknown, { readonly subcommand: Option<unknown> }>, never, never> =>
+) =>
   Effect.gen(function* () {
     const commands = yield* registry.getCommands();
-    // TypeScript requires a non-empty array for withSubcommands
-    // We know we have commands registered, so this cast is safe
-    const nonEmptyCommands = commands as unknown as readonly [RegisteredCommand, ...RegisteredCommand[]];
-    return Command.make("dev", {}, () => Effect.logInfo("Use --help to see available commands")).pipe(
-      Command.withSubcommands(nonEmptyCommands),
-    );
+    const baseCommand = Command.make("dev", {}, () => Effect.logInfo("Use --help to see available commands"));
+
+    const subcommands = toNonEmptyReadonlyArray(commands);
+    if (!subcommands) {
+      yield* Effect.logWarning("No commands registered; running without subcommands");
+      return baseCommand;
+    }
+
+    return baseCommand.pipe(Command.withSubcommands(subcommands));
   });
 
 /**
@@ -115,7 +125,7 @@ const createMainCommand = (
  * @param metadata - CLI metadata including name, version, and description
  * @returns Effect that may fail with command/runtime errors
  */
-const runCli = (
+export const runCli = (
   registry: CommandRegistry,
   metadata: {
     name: string;
@@ -153,7 +163,7 @@ const runCli = (
       const mainCommand = yield* createMainCommand(registry);
 
       // Create CLI runner
-      const cli = Command.run(mainCommand, {
+      const cli = Command.run(mainCommand as Command.Command<string, unknown, unknown, unknown>, {
         name: metadata.name,
         version: metadata.version,
       });
@@ -167,7 +177,35 @@ const runCli = (
   );
 };
 
-const program = Effect.scoped(
+export const handleProgramError = (error: unknown): Effect.Effect<void, never, never> =>
+  Effect.gen(function* () {
+    // Try to handle as DevError first
+    if (error && typeof error === "object" && "_tag" in error) {
+      const devError = error as DevError;
+      yield* Effect.logError(`❌ ${devError._tag}: ${extractErrorMessage(devError)}`);
+      yield* Effect.sync(() => {
+        process.exitCode = exitCode(devError);
+      });
+      return;
+    }
+
+    // Handle unknown errors
+    const errorMessage = extractErrorMessage(error);
+    yield* Effect.logError(`❌ Unknown error: ${errorMessage}`);
+    yield* Effect.sync(() => {
+      process.exitCode = 1;
+    });
+  });
+
+export const handleProgramCause = (cause: unknown): Effect.Effect<void, never, never> =>
+  Effect.gen(function* () {
+    yield* Effect.logError(`❌ Unexpected error: ${String(cause)}`);
+    yield* Effect.sync(() => {
+      process.exitCode = 1;
+    });
+  });
+
+export const program = Effect.scoped(
   Effect.gen(function* () {
     // Add shutdown finalizer for graceful cleanup
     yield* Effect.addFinalizer(() =>
@@ -233,37 +271,12 @@ const program = Effect.scoped(
     yield* Effect.logDebug("✅ CLI execution completed");
   }).pipe(Effect.withSpan("cli.main")),
 ).pipe(
-  Effect.catchAll((error) =>
-    Effect.gen(function* () {
-      // Try to handle as DevError first
-      if (error && typeof error === "object" && "_tag" in error) {
-        const devError = error as DevError;
-        yield* Effect.logError(`❌ ${devError._tag}: ${extractErrorMessage(devError)}`);
-        yield* Effect.sync(() => {
-          process.exitCode = exitCode(devError);
-        });
-      } else {
-        // Handle unknown errors
-        const errorMessage = extractErrorMessage(error);
-        yield* Effect.logError(`❌ Unknown error: ${errorMessage}`);
-        yield* Effect.sync(() => {
-          process.exitCode = 1;
-        });
-      }
-    }),
-  ),
-  Effect.catchAllCause((cause) =>
-    Effect.gen(function* () {
-      yield* Effect.logError(`❌ Unexpected error: ${String(cause)}`);
-      yield* Effect.sync(() => {
-        process.exitCode = 1;
-      });
-    }),
-  ),
+  Effect.catchAll(handleProgramError),
+  Effect.catchAllCause(handleProgramCause),
 ) as Effect.Effect<void, never, never>;
 
 // Create the main program with tracing
-const mainProgram = Effect.gen(function* () {
+export const mainProgram = Effect.gen(function* () {
   // Setup application and get the app layer
   const { appLayer } = yield* setupApplication();
 
@@ -299,4 +312,8 @@ const mainProgram = Effect.gen(function* () {
 }).pipe(Effect.scoped);
 
 // Run the program with BunRuntime
-BunRuntime.runMain(mainProgram as Effect.Effect<void, never, never>);
+export const runMainProgram = () => BunRuntime.runMain(mainProgram as Effect.Effect<void, never, never>);
+
+if (import.meta.main) {
+  runMainProgram();
+}

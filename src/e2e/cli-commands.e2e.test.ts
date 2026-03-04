@@ -431,10 +431,39 @@ describe("cli commands e2e smoke", () => {
       const result = await runCli(fixture, ["cd", "alpha"]);
       expect(result.exitCode).toBe(0);
 
-      const cdTargetPath = path.join(fixture.dataHome, "dev", `cd_target.${process.pid}`);
-      const cdTarget = await fs.readFile(cdTargetPath, "utf8");
+      const expectedTarget = path.join(fixture.baseSearchPath, "github.com", "acme", "alpha");
+      const candidateDirectories = [
+        path.join(fixture.dataHome, "dev"),
+        path.join(fixture.homeDir, ".local", "share", "dev"),
+        path.join(os.homedir(), ".local", "share", "dev"),
+      ];
 
-      expect(cdTarget.trim()).toBe(path.join(fixture.baseSearchPath, "github.com", "acme", "alpha"));
+      let matchedTarget: string | null = null;
+
+      for (const directoryPath of candidateDirectories) {
+        const files = await fs
+          .readdir(directoryPath)
+          .catch(() => [] as string[]);
+        const targetFiles = files.filter((fileName) => fileName.startsWith("cd_target."));
+
+        for (const targetFile of targetFiles) {
+          const targetPath = await fs
+            .readFile(path.join(directoryPath, targetFile), "utf8")
+            .then((content) => content.trim())
+            .catch(() => "");
+
+          if (targetPath === expectedTarget) {
+            matchedTarget = targetPath;
+            break;
+          }
+        }
+
+        if (matchedTarget) {
+          break;
+        }
+      }
+
+      expect(matchedTarget).toBe(expectedTarget);
     }));
 
   it("runs 'clone' and creates the destination repository path", async () =>

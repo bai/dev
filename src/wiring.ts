@@ -38,18 +38,23 @@ import { ToolHealthRegistryLiveLayer } from "./infra/tools/tool-health-registry-
 import { ToolManagementLiveLayer } from "./infra/tools/tool-management-live";
 import { TracingLiveLayer } from "./infra/tracing/tracing-live";
 
+interface SetupOptions {
+  readonly configPath?: string;
+}
+
 /**
  * Load configuration
  */
-export const loadConfiguration = () =>
+export const loadConfiguration = (options: SetupOptions = {}) =>
   Effect.gen(function* () {
     yield* Effect.logDebug("🔧 Loading configuration...");
 
     const defaults = createPathService();
+    const configPath = options.configPath ?? defaults.configPath;
     const bootstrapDependencies = Layer.mergeAll(FileSystemLiveLayer, Layer.provide(NetworkLiveLayer, FileSystemLiveLayer));
 
     // Minimal bootstrap layer for config loading
-    const bootstrapLayer = Layer.provide(ConfigLoaderLiveLayer(defaults.configPath), bootstrapDependencies);
+    const bootstrapLayer = Layer.provide(ConfigLoaderLiveLayer(configPath), bootstrapDependencies);
 
     // Provide the bootstrap layer and load config
     return yield* Effect.gen(function* () {
@@ -168,16 +173,21 @@ export const buildAppLayer = (config: Config) => {
 /**
  * Setup application with configuration
  */
-export const setupApplication = () =>
+export const setupApplication = (options: SetupOptions = {}) =>
   Effect.gen(function* () {
     // Load configuration
     yield* Effect.logDebug("🔧 Setting up application...");
-    const config = yield* loadConfiguration();
+    const config = yield* loadConfiguration(options);
     const defaults = createPathService();
 
     // Build layers
     yield* Effect.logDebug("🔨 Building application layers...");
     const appLayer = buildAppLayer(config);
+    const baseSearchPath = defaults.getBasePath(config);
+    const directorySetupLayer = Layer.provide(
+      DirectoryLiveLayer,
+      Layer.mergeAll(FileSystemLiveLayer, createPathServiceLiveLayer(baseSearchPath)),
+    );
 
     yield* Effect.logDebug(`✅ Application ready (org: ${config.defaultOrg})`);
 
@@ -186,9 +196,8 @@ export const setupApplication = () =>
       yield* Effect.logDebug("📁 Ensuring base directory exists...");
       const directoryService = yield* DirectoryTag;
       yield* directoryService.ensureBaseDirectoryExists();
-      const baseSearchPath = defaults.getBasePath(config);
       yield* Effect.logDebug(`✅ Base directory ready at: ${baseSearchPath}`);
-    }).pipe(Effect.provide(appLayer), Effect.withSpan("directory.ensure_base"));
+    }).pipe(Effect.provide(directorySetupLayer), Effect.withSpan("directory.ensure_base"));
 
     return { config, appLayer };
   });
