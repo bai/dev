@@ -441,9 +441,7 @@ describe("cli commands e2e smoke", () => {
       let matchedTarget: string | null = null;
 
       for (const directoryPath of candidateDirectories) {
-        const files = await fs
-          .readdir(directoryPath)
-          .catch(() => [] as string[]);
+        const files = await fs.readdir(directoryPath).catch(() => [] as string[]);
         const targetFiles = files.filter((fileName) => fileName.startsWith("cd_target."));
 
         for (const targetFile of targetFiles) {

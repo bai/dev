@@ -48,9 +48,15 @@ describe("org-provider-utils", () => {
   });
 
   it("force provider overrides organization mapping", () => {
-    const resolved = resolveRepositoryInput("acmesoftware/dev", "default-org", "github", {
-      acmesoftware: "gitlab",
-    }, "github");
+    const resolved = resolveRepositoryInput(
+      "acmesoftware/dev",
+      "default-org",
+      "github",
+      {
+        acmesoftware: "gitlab",
+      },
+      "github",
+    );
 
     expect(resolved).toEqual({
       organization: "acmesoftware",

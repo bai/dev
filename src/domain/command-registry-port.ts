@@ -1,7 +1,10 @@
-import type { Command } from "@effect/cli";
 import { Context, type Effect } from "effect";
 
-export type RegisteredCommand = Command.Command<string, unknown, unknown, unknown>;
+/**
+ * Opaque command object stored by the registry.
+ * Concrete CLI command types are interpreted at the composition root.
+ */
+export type RegisteredCommand = unknown;
 
 export interface CommandInfo {
   readonly name: string;

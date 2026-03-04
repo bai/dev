@@ -19,6 +19,8 @@ import { TracingTag } from "./domain/tracing-port";
 import { VersionTag } from "./domain/version-port";
 import { setupApplication } from "./wiring";
 
+type CliCommand = Command.Command<string, unknown, unknown, unknown>;
+
 /**
  * Display help for the main dev command
  */
@@ -103,11 +105,9 @@ const toNonEmptyReadonlyArray = <A>(values: ReadonlyArray<A>): readonly [A, ...A
   return [first, ...remaining];
 };
 
-export const createMainCommand = (
-  registry: CommandRegistry,
-) =>
+export const createMainCommand = (registry: CommandRegistry) =>
   Effect.gen(function* () {
-    const commands = yield* registry.getCommands();
+    const commands = (yield* registry.getCommands()) as ReadonlyArray<CliCommand>;
     const baseCommand = Command.make("dev", {}, () => Effect.logInfo("Use --help to see available commands"));
 
     const subcommands = toNonEmptyReadonlyArray(commands);
@@ -270,10 +270,7 @@ export const program = Effect.scoped(
 
     yield* Effect.logDebug("✅ CLI execution completed");
   }).pipe(Effect.withSpan("cli.main")),
-).pipe(
-  Effect.catchAll(handleProgramError),
-  Effect.catchAllCause(handleProgramCause),
-) as Effect.Effect<void, never, never>;
+).pipe(Effect.catchAll(handleProgramError), Effect.catchAllCause(handleProgramCause)) as Effect.Effect<void, never, never>;
 
 // Create the main program with tracing
 export const mainProgram = Effect.gen(function* () {
