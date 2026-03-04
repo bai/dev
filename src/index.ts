@@ -1,6 +1,7 @@
 import { Command } from "@effect/cli";
 import { NodeSdk } from "@effect/opentelemetry";
 import { BunRuntime } from "@effect/platform-bun";
+import { ATTR_SERVICE_NAMESPACE } from "@opentelemetry/semantic-conventions";
 import { Effect, Layer } from "effect";
 
 import { registerCdCommand } from "./app/cd-command";
@@ -292,7 +293,7 @@ export const mainProgram = Effect.gen(function* () {
             serviceName: "cli",
             serviceVersion: "0.0.1",
             attributes: {
-              "service.namespace": "dev",
+              [ATTR_SERVICE_NAMESPACE]: "dev",
             },
           },
           spanProcessor: undefined, // Will use default NoopSpanProcessor

@@ -1,3 +1,4 @@
+import { ATTR_URL_FULL } from "@opentelemetry/semantic-conventions";
 import { Effect, Layer } from "effect";
 
 import { networkError, type NetworkError, type UnknownError } from "../domain/errors";
@@ -29,7 +30,7 @@ export const makeNetworkLive = (fileSystem: FileSystem): Network => ({
         };
       },
       catch: (error) => networkError(`HTTP request failed: ${error}`),
-    }).pipe(Effect.withSpan("http.get", { attributes: { "http.url": url } })),
+    }).pipe(Effect.withSpan("http.get", { attributes: { [ATTR_URL_FULL]: url } })),
 
   downloadFile: (url: string, destinationPath: string): Effect.Effect<void, NetworkError | UnknownError> =>
     Effect.gen(function* () {
@@ -59,7 +60,7 @@ export const makeNetworkLive = (fileSystem: FileSystem): Network => ({
           }
         }),
       );
-    }).pipe(Effect.withSpan("http.download_file", { attributes: { "http.url": url, "fs.path": destinationPath } })),
+    }).pipe(Effect.withSpan("http.download_file", { attributes: { [ATTR_URL_FULL]: url, "fs.path": destinationPath } })),
 
   checkConnectivity: (url: string): Effect.Effect<boolean> =>
     Effect.tryPromise({
@@ -70,7 +71,7 @@ export const makeNetworkLive = (fileSystem: FileSystem): Network => ({
       catch: () => false,
     }).pipe(
       Effect.orElseSucceed(() => false),
-      Effect.withSpan("http.check_connectivity", { attributes: { "http.url": url } }),
+      Effect.withSpan("http.check_connectivity", { attributes: { [ATTR_URL_FULL]: url } }),
     ),
 });
 

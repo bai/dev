@@ -18,7 +18,7 @@ import type { RemoteTelemetryConfig, RemoteTelemetryMode } from "./tracing-expor
 
 const OTLP_SERVICE_NAMESPACE = "dev";
 const OTLP_SERVICE_NAME = "cli";
-const OTLP_INSTALL_ID_ATTRIBUTE = "dev.install.id";
+const OTLP_INSTALL_ID_ATTRIBUTE = "app.installation.id";
 const OTLP_RUNTIME_SERVICE_INSTANCE_ID = Bun.randomUUIDv7();
 
 const createRemoteSpanProcessor = <Mode extends RemoteTelemetryMode>(
