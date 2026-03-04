@@ -78,4 +78,37 @@ describe("file-system-live", () => {
       expect(span?.attributes[ATTR_FILE_PATH]).toBe(filePath);
     }).pipe(Effect.provide(telemetryLayer), Effect.scoped);
   });
+
+  it.effect("mkdir emits file.path span attribute", () => {
+    const exporter = new InMemorySpanExporter();
+    const telemetryLayer = createTelemetryLayer(exporter);
+
+    return Effect.gen(function* () {
+      const fileSystem = makeFileSystemLive();
+      const dirPath = path.join(tempDir, "mkdir-target");
+      yield* fileSystem.mkdir(dirPath, true);
+
+      const span = exporter.getFinishedSpans().find((candidate) => candidate.name === "fs.mkdir");
+      expect(span).toBeDefined();
+      expect(span?.attributes[ATTR_FILE_PATH]).toBe(dirPath);
+    }).pipe(Effect.provide(telemetryLayer), Effect.scoped);
+  });
+
+  it.effect("findDirectoriesGlob emits file.path span attribute", () => {
+    const exporter = new InMemorySpanExporter();
+    const telemetryLayer = createTelemetryLayer(exporter);
+
+    return Effect.gen(function* () {
+      const fileSystem = makeFileSystemLive();
+      yield* Effect.promise(() => fs.mkdir(path.join(tempDir, "project-one"), { recursive: true }));
+      yield* Effect.promise(() => fs.mkdir(path.join(tempDir, "project-two"), { recursive: true }));
+
+      const result = yield* fileSystem.findDirectoriesGlob(tempDir, "project*");
+      expect(result.length).toBeGreaterThan(0);
+
+      const span = exporter.getFinishedSpans().find((candidate) => candidate.name === "fs.find_directories_glob");
+      expect(span).toBeDefined();
+      expect(span?.attributes[ATTR_FILE_PATH]).toBe(tempDir);
+    }).pipe(Effect.provide(telemetryLayer), Effect.scoped);
+  });
 });

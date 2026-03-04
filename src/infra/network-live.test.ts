@@ -194,6 +194,25 @@ describe("network-live", () => {
     }).pipe(Effect.provide(telemetryLayer), Effect.scoped);
   });
 
+  it.effect("get with invalid URL emits fallback HTTP attrs without server fields", () => {
+    const exporter = new InMemorySpanExporter();
+    const telemetryLayer = createTelemetryLayer(exporter);
+    vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("invalid url"));
+
+    return Effect.gen(function* () {
+      const network = makeNetworkLive(createMockFileSystem().fileSystem);
+      yield* Effect.exit(network.get("not-a-url"));
+
+      const span = exporter.getFinishedSpans().find((candidate) => candidate.name === "http.get");
+      expect(span).toBeDefined();
+      expect(span?.attributes[ATTR_HTTP_REQUEST_METHOD]).toBe(HTTP_REQUEST_METHOD_VALUE_GET);
+      expect(span?.attributes[ATTR_URL_FULL]).toBe("not-a-url");
+      expect(span?.attributes[ATTR_SERVER_ADDRESS]).toBeUndefined();
+      expect(span?.attributes[ATTR_SERVER_PORT]).toBeUndefined();
+      expect(span?.attributes[ATTR_HTTP_RESPONSE_STATUS_CODE]).toBeUndefined();
+    }).pipe(Effect.provide(telemetryLayer), Effect.scoped);
+  });
+
   it.effect("downloadFile emits response status code semconv attribute on HTTP errors", () => {
     const exporter = new InMemorySpanExporter();
     const telemetryLayer = createTelemetryLayer(exporter);
