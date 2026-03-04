@@ -1,18 +1,2 @@
 [tools]
 bun = "latest"
-
-[tasks.lint]
-description = "Run linting"
-run = "bun run lint"
-
-[tasks.format]
-description = "Run formatting"
-run = "bun run format"
-
-[tasks.test]
-description = "Run tests"
-run = "bun run test"
-
-[tasks.typecheck]
-description = "Run typechecking"
-run = "bun run typecheck"
