@@ -8,32 +8,39 @@ import { FileSystemTag, type FileSystem } from "../domain/file-system-port";
 import { PathServiceTag, type PathService } from "../domain/path-service";
 import { DirectoryLiveLayer, makeDirectoryLive } from "./directory-live";
 
+const makePathService = (baseSearchPath = "/home/user/dev"): PathService => ({
+  homeDir: "/home/user",
+  baseSearchPath,
+  devDir: "/home/user/.dev",
+  configDir: "/home/user/.config/dev",
+  configPath: "/home/user/.config/dev/config.json",
+  dataDir: "/home/user/.local/share/dev",
+  dbPath: "/home/user/.local/share/dev/dev.db",
+  cacheDir: "/home/user/.cache/dev",
+  getBasePath: () => baseSearchPath,
+});
+
+const makeFileSystem = (overrides: Partial<FileSystem> = {}): FileSystem => ({
+  exists: () => Effect.succeed(true),
+  mkdir: () => Effect.void,
+  readFile: () => Effect.succeed(""),
+  writeFile: () => Effect.void,
+  findDirectoriesGlob: () => Effect.succeed([]),
+  getCwd: () => Effect.succeed("/current"),
+  resolvePath: (path) => path,
+  ...overrides,
+});
+
+const makeDeps = (fileSystem: FileSystem, pathService = makePathService()) =>
+  Layer.mergeAll(Layer.succeed(FileSystemTag, fileSystem), Layer.succeed(PathServiceTag, pathService));
+
 describe("directory-live", () => {
   describe("makeDirectoryLive", () => {
     it("creates a Directory implementation", () => {
-      const mockFileSystem: FileSystem = {
-        exists: () => Effect.succeed(true),
-        mkdir: () => Effect.void,
-        readFile: () => fileSystemError("Not implemented"),
-        writeFile: () => fileSystemError("Not implemented"),
-        findDirectoriesGlob: () => Effect.succeed([]),
-        getCwd: () => Effect.succeed("/current"),
-        resolvePath: (p: string) => p,
-      };
+      const pathService = makePathService();
+      const fileSystem = makeFileSystem();
 
-      const mockPathService: PathService = {
-        homeDir: "/home/user",
-        baseSearchPath: "/home/user/dev",
-        devDir: "/home/user/.dev",
-        configDir: "/home/user/.config/dev",
-        configPath: "/home/user/.config/dev/config.json",
-        dataDir: "/home/user/.local/share/dev",
-        dbPath: "/home/user/.local/share/dev/dev.db",
-        cacheDir: "/home/user/.cache/dev",
-        getBasePath: () => "/home/user/dev",
-      };
-
-      const directory = makeDirectoryLive(mockPathService, mockFileSystem);
+      const directory = makeDirectoryLive(pathService, fileSystem);
 
       expect(directory).toHaveProperty("ensureBaseDirectoryExists");
       expect(directory).toHaveProperty("findDirs");
@@ -43,290 +50,135 @@ describe("directory-live", () => {
   });
 
   describe("ensureBaseDirectoryExists", () => {
-    it.effect("creates base directory when it doesn't exist", () =>
+    it.effect("creates base directory when it does not exist", () =>
       Effect.gen(function* () {
-        const mockFileSystem: FileSystem = {
+        const pathService = makePathService();
+        const mkdirCalls: Array<{ readonly path: string; readonly recursive?: boolean }> = [];
+        const fileSystem = makeFileSystem({
           exists: () => Effect.succeed(false),
-          mkdir: () => Effect.void,
-          readFile: () => fileSystemError("Not implemented"),
-          writeFile: () => fileSystemError("Not implemented"),
-          findDirectoriesGlob: () => fileSystemError("Not implemented"),
-          getCwd: () => Effect.succeed("/current"),
-          resolvePath: (p: string) => p,
-        };
+          mkdir: (path, recursive) =>
+            Effect.sync(() => {
+              mkdirCalls.push({ path, recursive });
+            }),
+        });
 
-        const mockPathService: PathService = {
-          homeDir: "/home/user",
-          baseSearchPath: "/home/user/dev",
-          devDir: "/home/user/.dev",
-          configDir: "/home/user/.config/dev",
-          configPath: "/home/user/.config/dev/config.json",
-          dataDir: "/home/user/.local/share/dev",
-          dbPath: "/home/user/.local/share/dev/dev.db",
-          cacheDir: "/home/user/.cache/dev",
-          getBasePath: () => "/home/user/dev",
-        };
+        const directory = makeDirectoryLive(pathService, fileSystem);
+        yield* directory.ensureBaseDirectoryExists();
 
-        const testLayer = Layer.mergeAll(Layer.succeed(FileSystemTag, mockFileSystem), Layer.succeed(PathServiceTag, mockPathService));
-
-        const directory = makeDirectoryLive(mockPathService, mockFileSystem);
-        const result = yield* directory.ensureBaseDirectoryExists().pipe(Effect.provide(testLayer));
-
-        expect(result).toBeUndefined();
+        expect(mkdirCalls).toEqual([{ path: "/home/user/dev", recursive: true }]);
       }),
     );
 
-    it.effect("does not create directory when it already exists", () =>
+    it.effect("does not create base directory when it already exists", () =>
       Effect.gen(function* () {
+        const pathService = makePathService();
         let mkdirCalled = false;
-
-        const mockFileSystem: FileSystem = {
+        const fileSystem = makeFileSystem({
           exists: () => Effect.succeed(true),
           mkdir: () =>
             Effect.sync(() => {
               mkdirCalled = true;
-              return undefined;
             }),
-          readFile: () => fileSystemError("Not implemented"),
-          writeFile: () => fileSystemError("Not implemented"),
-          findDirectoriesGlob: () => fileSystemError("Not implemented"),
-          getCwd: () => Effect.succeed("/current"),
-          resolvePath: (p: string) => p,
-        };
+        });
 
-        const mockPathService: PathService = {
-          homeDir: "/home/user",
-          baseSearchPath: "/home/user/dev",
-          devDir: "/home/user/.dev",
-          configDir: "/home/user/.config/dev",
-          configPath: "/home/user/.config/dev/config.json",
-          dataDir: "/home/user/.local/share/dev",
-          dbPath: "/home/user/.local/share/dev/dev.db",
-          cacheDir: "/home/user/.cache/dev",
-          getBasePath: () => "/home/user/dev",
-        };
+        const directory = makeDirectoryLive(pathService, fileSystem);
+        yield* directory.ensureBaseDirectoryExists();
 
-        const testLayer = Layer.mergeAll(Layer.succeed(FileSystemTag, mockFileSystem), Layer.succeed(PathServiceTag, mockPathService));
-
-        const directory = makeDirectoryLive(mockPathService, mockFileSystem);
-        const result = yield* directory.ensureBaseDirectoryExists().pipe(Effect.provide(testLayer));
-
-        expect(result).toBeUndefined();
         expect(mkdirCalled).toBe(false);
       }),
     );
 
     it.effect("propagates filesystem errors from mkdir", () =>
       Effect.gen(function* () {
-        const mockFileSystem: FileSystem = {
+        const pathService = makePathService();
+        const fileSystem = makeFileSystem({
           exists: () => Effect.succeed(false),
-          mkdir: () => fileSystemError("Permission denied", "/home/user/dev"),
-          readFile: () => fileSystemError("Not implemented"),
-          writeFile: () => fileSystemError("Not implemented"),
-          findDirectoriesGlob: () => fileSystemError("Not implemented"),
-          getCwd: () => Effect.succeed("/current"),
-          resolvePath: (p: string) => p,
-        };
+          mkdir: () => Effect.fail(fileSystemError("Permission denied", "/home/user/dev")),
+        });
 
-        const mockPathService: PathService = {
-          homeDir: "/home/user",
-          baseSearchPath: "/home/user/dev",
-          devDir: "/home/user/.dev",
-          configDir: "/home/user/.config/dev",
-          configPath: "/home/user/.config/dev/config.json",
-          dataDir: "/home/user/.local/share/dev",
-          dbPath: "/home/user/.local/share/dev/dev.db",
-          cacheDir: "/home/user/.cache/dev",
-          getBasePath: () => "/home/user/dev",
-        };
+        const directory = makeDirectoryLive(pathService, fileSystem);
+        const error = yield* Effect.flip(directory.ensureBaseDirectoryExists());
 
-        const testLayer = Layer.mergeAll(Layer.succeed(FileSystemTag, mockFileSystem), Layer.succeed(PathServiceTag, mockPathService));
-
-        const directory = makeDirectoryLive(mockPathService, mockFileSystem);
-
-        const result = yield* Effect.flip(directory.ensureBaseDirectoryExists().pipe(Effect.provide(testLayer)));
-
-        expect(result).toEqual(fileSystemError("Permission denied", "/home/user/dev"));
+        expect(error).toMatchObject({
+          _tag: "FileSystemError",
+          reason: "Permission denied",
+          path: "/home/user/dev",
+        });
       }),
     );
   });
 
   describe("findDirs", () => {
-    it.effect("returns empty array when base directory doesn't exist and creates it", () =>
+    it.effect("returns empty list and creates base directory when missing", () =>
       Effect.gen(function* () {
-        const mockFileSystem: FileSystem = {
+        const pathService = makePathService();
+        const mkdirCalls: Array<{ readonly path: string; readonly recursive?: boolean }> = [];
+        let findDirectoriesGlobCalls = 0;
+
+        const fileSystem = makeFileSystem({
           exists: () => Effect.succeed(false),
-          mkdir: () => Effect.void,
-          readFile: () => fileSystemError("Not implemented"),
-          writeFile: () => fileSystemError("Not implemented"),
-          findDirectoriesGlob: () => Effect.succeed([]),
-          getCwd: () => Effect.succeed("/current"),
-          resolvePath: (p: string) => p,
-        };
-
-        const mockPathService: PathService = {
-          homeDir: "/home/user",
-          baseSearchPath: "/home/user/dev",
-          devDir: "/home/user/.dev",
-          configDir: "/home/user/.config/dev",
-          configPath: "/home/user/.config/dev/config.json",
-          dataDir: "/home/user/.local/share/dev",
-          dbPath: "/home/user/.local/share/dev/dev.db",
-          cacheDir: "/home/user/.cache/dev",
-          getBasePath: () => "/home/user/dev",
-        };
-
-        const testLayer = Layer.mergeAll(Layer.succeed(FileSystemTag, mockFileSystem), Layer.succeed(PathServiceTag, mockPathService));
-
-        const directory = makeDirectoryLive(mockPathService, mockFileSystem);
-        const result = yield* directory.findDirs().pipe(Effect.provide(testLayer));
-
-        expect(result).toEqual([]);
-      }),
-    );
-
-    it.effect("returns directories when base directory exists", () =>
-      Effect.gen(function* () {
-        const expectedDirs = ["/home/user/dev/github.com/org/repo/", "/home/user/dev/gitlab.com/org/project/"];
-
-        const mockFileSystem: FileSystem = {
-          exists: () => Effect.succeed(true),
-          mkdir: () => Effect.void,
-          readFile: () => fileSystemError("Not implemented"),
-          writeFile: () => fileSystemError("Not implemented"),
-          findDirectoriesGlob: () => Effect.succeed(expectedDirs),
-          getCwd: () => Effect.succeed("/current"),
-          resolvePath: (p: string) => p,
-        };
-
-        const mockPathService: PathService = {
-          homeDir: "/home/user",
-          baseSearchPath: "/home/user/dev",
-          devDir: "/home/user/.dev",
-          configDir: "/home/user/.config/dev",
-          configPath: "/home/user/.config/dev/config.json",
-          dataDir: "/home/user/.local/share/dev",
-          dbPath: "/home/user/.local/share/dev/dev.db",
-          cacheDir: "/home/user/.cache/dev",
-          getBasePath: () => "/home/user/dev",
-        };
-
-        const testLayer = Layer.mergeAll(Layer.succeed(FileSystemTag, mockFileSystem), Layer.succeed(PathServiceTag, mockPathService));
-
-        const directory = makeDirectoryLive(mockPathService, mockFileSystem);
-        const result = yield* directory.findDirs().pipe(Effect.provide(testLayer));
-
-        expect(result).toEqual(expectedDirs);
-      }),
-    );
-
-    it.effect("uses correct glob pattern for 3-level deep directories", () =>
-      Effect.gen(function* () {
-        let capturedGlob = "";
-        let capturedBaseDir = "";
-
-        const mockFileSystem: FileSystem = {
-          exists: () => Effect.succeed(true),
-          mkdir: () => Effect.void,
-          readFile: () => fileSystemError("Not implemented"),
-          writeFile: () => fileSystemError("Not implemented"),
-          findDirectoriesGlob: (baseDir: string, pattern: string) =>
+          mkdir: (path, recursive) =>
             Effect.sync(() => {
-              capturedBaseDir = baseDir;
-              capturedGlob = pattern;
+              mkdirCalls.push({ path, recursive });
+            }),
+          findDirectoriesGlob: () =>
+            Effect.sync(() => {
+              findDirectoriesGlobCalls += 1;
               return [];
             }),
-          getCwd: () => Effect.succeed("/current"),
-          resolvePath: (p: string) => p,
-        };
+        });
 
-        const mockPathService: PathService = {
-          homeDir: "/home/user",
-          baseSearchPath: "/home/user/dev",
-          devDir: "/home/user/.dev",
-          configDir: "/home/user/.config/dev",
-          configPath: "/home/user/.config/dev/config.json",
-          dataDir: "/home/user/.local/share/dev",
-          dbPath: "/home/user/.local/share/dev/dev.db",
-          cacheDir: "/home/user/.cache/dev",
-          getBasePath: () => "/home/user/dev",
-        };
+        const directory = makeDirectoryLive(pathService, fileSystem);
+        const directories = yield* directory.findDirs();
 
-        const testLayer = Layer.mergeAll(Layer.succeed(FileSystemTag, mockFileSystem), Layer.succeed(PathServiceTag, mockPathService));
+        expect(directories).toEqual([]);
+        expect(mkdirCalls).toEqual([{ path: "/home/user/dev", recursive: true }]);
+        expect(findDirectoriesGlobCalls).toBe(0);
+      }),
+    );
 
-        const directory = makeDirectoryLive(mockPathService, mockFileSystem);
-        yield* directory.findDirs().pipe(Effect.provide(testLayer));
+    it.effect("returns directories from glob when base directory exists", () =>
+      Effect.gen(function* () {
+        const pathService = makePathService();
+        const expectedDirectories = ["/home/user/dev/github.com/org/repo/", "/home/user/dev/gitlab.com/org/project/"];
+        let capturedBaseDir = "";
+        let capturedPattern = "";
 
+        const fileSystem = makeFileSystem({
+          exists: () => Effect.succeed(true),
+          findDirectoriesGlob: (baseDir, pattern) =>
+            Effect.sync(() => {
+              capturedBaseDir = baseDir;
+              capturedPattern = pattern;
+              return expectedDirectories;
+            }),
+        });
+
+        const directory = makeDirectoryLive(pathService, fileSystem);
+        const directories = yield* directory.findDirs();
+
+        expect(directories).toEqual(expectedDirectories);
         expect(capturedBaseDir).toBe("/home/user/dev");
-        expect(capturedGlob).toBe("*/*/*/");
+        expect(capturedPattern).toBe("*/*/*/");
       }),
     );
 
     it.effect("propagates filesystem errors from findDirectoriesGlob", () =>
       Effect.gen(function* () {
-        const mockFileSystem: FileSystem = {
+        const pathService = makePathService();
+        const fileSystem = makeFileSystem({
           exists: () => Effect.succeed(true),
-          mkdir: () => Effect.void,
-          readFile: () => fileSystemError("Not implemented"),
-          writeFile: () => fileSystemError("Not implemented"),
-          findDirectoriesGlob: () => fileSystemError("Permission denied", "/home/user/dev"),
-          getCwd: () => Effect.succeed("/current"),
-          resolvePath: (p: string) => p,
-        };
+          findDirectoriesGlob: () => Effect.fail(fileSystemError("Glob search failed", "/home/user/dev")),
+        });
 
-        const mockPathService: PathService = {
-          homeDir: "/home/user",
-          baseSearchPath: "/home/user/dev",
-          devDir: "/home/user/.dev",
-          configDir: "/home/user/.config/dev",
-          configPath: "/home/user/.config/dev/config.json",
-          dataDir: "/home/user/.local/share/dev",
-          dbPath: "/home/user/.local/share/dev/dev.db",
-          cacheDir: "/home/user/.cache/dev",
-          getBasePath: () => "/home/user/dev",
-        };
+        const directory = makeDirectoryLive(pathService, fileSystem);
+        const error = yield* Effect.flip(directory.findDirs());
 
-        const testLayer = Layer.mergeAll(Layer.succeed(FileSystemTag, mockFileSystem), Layer.succeed(PathServiceTag, mockPathService));
-
-        const directory = makeDirectoryLive(mockPathService, mockFileSystem);
-
-        const result = yield* Effect.flip(directory.findDirs().pipe(Effect.provide(testLayer)));
-
-        expect(result).toEqual(fileSystemError("Permission denied", "/home/user/dev"));
-      }),
-    );
-
-    it.effect("propagates filesystem errors from glob search", () =>
-      Effect.gen(function* () {
-        const mockFileSystem: FileSystem = {
-          exists: () => Effect.succeed(true),
-          mkdir: () => Effect.void,
-          readFile: () => fileSystemError("Not implemented"),
-          writeFile: () => fileSystemError("Not implemented"),
-          findDirectoriesGlob: () => fileSystemError("Glob search failed"),
-          getCwd: () => Effect.succeed("/current"),
-          resolvePath: (p: string) => p,
-        };
-
-        const mockPathService: PathService = {
-          homeDir: "/home/user",
-          baseSearchPath: "/home/user/dev",
-          devDir: "/home/user/.dev",
-          configDir: "/home/user/.config/dev",
-          configPath: "/home/user/.config/dev/config.json",
-          dataDir: "/home/user/.local/share/dev",
-          dbPath: "/home/user/.local/share/dev/dev.db",
-          cacheDir: "/home/user/.cache/dev",
-          getBasePath: () => "/home/user/dev",
-        };
-
-        const testLayer = Layer.mergeAll(Layer.succeed(FileSystemTag, mockFileSystem), Layer.succeed(PathServiceTag, mockPathService));
-
-        const directory = makeDirectoryLive(mockPathService, mockFileSystem);
-
-        const result = yield* Effect.flip(directory.findDirs().pipe(Effect.provide(testLayer)));
-
-        expect(result).toEqual(fileSystemError("Glob search failed"));
+        expect(error).toMatchObject({
+          _tag: "FileSystemError",
+          reason: "Glob search failed",
+          path: "/home/user/dev",
+        });
       }),
     );
   });
@@ -334,38 +186,17 @@ describe("directory-live", () => {
   describe("DirectoryLiveLayer", () => {
     it.effect("provides Directory service via layer", () =>
       Effect.gen(function* () {
-        const mockFileSystem: FileSystem = {
-          exists: () => Effect.succeed(true),
-          mkdir: () => Effect.void,
-          readFile: () => fileSystemError("Not implemented"),
-          writeFile: () => fileSystemError("Not implemented"),
-          findDirectoriesGlob: () => Effect.succeed([]),
-          getCwd: () => Effect.succeed("/current"),
-          resolvePath: (p: string) => p,
-        };
+        const pathService = makePathService();
+        const fileSystem = makeFileSystem();
 
-        const mockPathService: PathService = {
-          homeDir: "/home/user",
-          baseSearchPath: "/home/user/dev",
-          devDir: "/home/user/.dev",
-          configDir: "/home/user/.config/dev",
-          configPath: "/home/user/.config/dev/config.json",
-          dataDir: "/home/user/.local/share/dev",
-          dbPath: "/home/user/.local/share/dev/dev.db",
-          cacheDir: "/home/user/.cache/dev",
-          getBasePath: () => "/home/user/dev",
-        };
+        const testLayer = DirectoryLiveLayer.pipe(Layer.provide(makeDeps(fileSystem, pathService)));
 
-        const depsLayer = Layer.mergeAll(Layer.succeed(FileSystemTag, mockFileSystem), Layer.succeed(PathServiceTag, mockPathService));
-        const testLayer = DirectoryLiveLayer.pipe(Layer.provide(depsLayer));
-
-        const program = Effect.gen(function* () {
+        const directories = yield* Effect.gen(function* () {
           const directory = yield* DirectoryTag;
           return yield* directory.findDirs();
-        });
+        }).pipe(Effect.provide(testLayer));
 
-        const result = yield* program.pipe(Effect.provide(testLayer));
-        expect(result).toEqual([]);
+        expect(directories).toEqual([]);
       }),
     );
   });
@@ -373,73 +204,35 @@ describe("directory-live", () => {
   describe("integration scenarios", () => {
     it.effect("handles typical development directory structure", () =>
       Effect.gen(function* () {
-        const mockDirs = [
+        const expectedDirectories = [
           "/home/user/dev/github.com/myorg/frontend/",
           "/home/user/dev/github.com/myorg/backend/",
           "/home/user/dev/gitlab.com/company/project/",
         ];
 
-        const mockFileSystem: FileSystem = {
-          exists: () => Effect.succeed(true),
-          mkdir: () => Effect.void,
-          readFile: () => fileSystemError("Not implemented"),
-          writeFile: () => fileSystemError("Not implemented"),
-          findDirectoriesGlob: () => Effect.succeed(mockDirs),
-          getCwd: () => Effect.succeed("/current"),
-          resolvePath: (p: string) => p,
-        };
+        const pathService = makePathService();
+        const fileSystem = makeFileSystem({
+          findDirectoriesGlob: () => Effect.succeed(expectedDirectories),
+        });
 
-        const mockPathService: PathService = {
-          homeDir: "/home/user",
-          baseSearchPath: "/home/user/dev",
-          devDir: "/home/user/.dev",
-          configDir: "/home/user/.config/dev",
-          configPath: "/home/user/.config/dev/config.json",
-          dataDir: "/home/user/.local/share/dev",
-          dbPath: "/home/user/.local/share/dev/dev.db",
-          cacheDir: "/home/user/.cache/dev",
-          getBasePath: () => "/home/user/dev",
-        };
+        const directory = makeDirectoryLive(pathService, fileSystem);
+        const directories = yield* directory.findDirs();
 
-        const testLayer = Layer.mergeAll(Layer.succeed(FileSystemTag, mockFileSystem), Layer.succeed(PathServiceTag, mockPathService));
-
-        const directory = makeDirectoryLive(mockPathService, mockFileSystem);
-        const result = yield* directory.findDirs().pipe(Effect.provide(testLayer));
-
-        expect(result).toEqual(mockDirs);
+        expect(directories).toEqual(expectedDirectories);
       }),
     );
 
     it.effect("handles empty development directory", () =>
       Effect.gen(function* () {
-        const mockFileSystem: FileSystem = {
-          exists: () => Effect.succeed(true),
-          mkdir: () => Effect.void,
-          readFile: () => fileSystemError("Not implemented"),
-          writeFile: () => fileSystemError("Not implemented"),
+        const pathService = makePathService();
+        const fileSystem = makeFileSystem({
           findDirectoriesGlob: () => Effect.succeed([]),
-          getCwd: () => Effect.succeed("/current"),
-          resolvePath: (p: string) => p,
-        };
+        });
 
-        const mockPathService: PathService = {
-          homeDir: "/home/user",
-          baseSearchPath: "/home/user/dev",
-          devDir: "/home/user/.dev",
-          configDir: "/home/user/.config/dev",
-          configPath: "/home/user/.config/dev/config.json",
-          dataDir: "/home/user/.local/share/dev",
-          dbPath: "/home/user/.local/share/dev/dev.db",
-          cacheDir: "/home/user/.cache/dev",
-          getBasePath: () => "/home/user/dev",
-        };
+        const directory = makeDirectoryLive(pathService, fileSystem);
+        const directories = yield* directory.findDirs();
 
-        const testLayer = Layer.mergeAll(Layer.succeed(FileSystemTag, mockFileSystem), Layer.succeed(PathServiceTag, mockPathService));
-
-        const directory = makeDirectoryLive(mockPathService, mockFileSystem);
-        const result = yield* directory.findDirs().pipe(Effect.provide(testLayer));
-
-        expect(result).toEqual([]);
+        expect(directories).toEqual([]);
       }),
     );
   });

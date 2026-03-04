@@ -26,6 +26,10 @@ interface E2eFixture {
   readonly commandLogPath: string;
 }
 
+interface FixtureOptions {
+  readonly includeLocalConfig?: boolean;
+}
+
 const writeExecutable = async (filePath: string, content: string): Promise<void> => {
   await fs.writeFile(filePath, content, "utf8");
   await fs.chmod(filePath, 0o755);
@@ -271,7 +275,7 @@ echo "/usr/bin/\${1-}"
   );
 };
 
-const createFixture = async (): Promise<E2eFixture> => {
+const createFixture = async (options: FixtureOptions = {}): Promise<E2eFixture> => {
   const rootDir = await fs.mkdtemp(path.join(os.tmpdir(), "dev-e2e-"));
   const homeDir = path.join(rootDir, "home");
   const configHome = path.join(rootDir, "xdg-config");
@@ -312,9 +316,11 @@ const createFixture = async (): Promise<E2eFixture> => {
   };
   await fs.writeFile(path.join(devDir, "config.json"), JSON.stringify(projectConfig, null, 2), "utf8");
 
-  const localConfigPath = path.join(configHome, "dev", "config.json");
-  await fs.mkdir(path.dirname(localConfigPath), { recursive: true });
-  await fs.writeFile(localConfigPath, JSON.stringify(projectConfig, null, 2), "utf8");
+  if (options.includeLocalConfig !== false) {
+    const localConfigPath = path.join(configHome, "dev", "config.json");
+    await fs.mkdir(path.dirname(localConfigPath), { recursive: true });
+    await fs.writeFile(localConfigPath, JSON.stringify(projectConfig, null, 2), "utf8");
+  }
 
   await fs.mkdir(path.join(baseSearchPath, "github.com", "acme", "alpha"), { recursive: true });
   await fs.mkdir(path.join(baseSearchPath, "github.com", "acme", "bravo"), { recursive: true });
@@ -374,8 +380,8 @@ const readCommandLog = async (fixture: E2eFixture): Promise<string> => {
   }
 };
 
-const withFixture = async (run: (fixture: E2eFixture) => Promise<void>): Promise<void> => {
-  const fixture = await createFixture();
+const withFixture = async (run: (fixture: E2eFixture) => Promise<void>, options: FixtureOptions = {}): Promise<void> => {
+  const fixture = await createFixture(options);
   try {
     await run(fixture);
   } finally {
@@ -384,6 +390,46 @@ const withFixture = async (run: (fixture: E2eFixture) => Promise<void>): Promise
 };
 
 describe("cli commands e2e smoke", () => {
+  it("shows main help output for --help", async () =>
+    withFixture(async (fixture) => {
+      const result = await runCli(fixture, ["--help"]);
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain("USAGE");
+      expect(result.stdout).toContain("dev <command> [options]");
+    }));
+
+  it("shows command-specific help for known commands", async () =>
+    withFixture(async (fixture) => {
+      const result = await runCli(fixture, ["clone", "--help"]);
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain("dev clone <repo>");
+    }));
+
+  it("falls back to main help for unknown command help requests", async () =>
+    withFixture(async (fixture) => {
+      const result = await runCli(fixture, ["unknown-command", "--help"]);
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain("COMMANDS");
+      expect(result.stdout).toContain("Use 'dev <command> --help'");
+    }));
+
+  it("bootstraps local configuration when config file is missing", async () =>
+    withFixture(
+      async (fixture) => {
+        const result = await runCli(fixture, ["--help"]);
+        expect(result.exitCode).toBe(0);
+
+        const configPath = path.join(fixture.configHome, "dev", "config.json");
+        const configExists = await fs
+          .access(configPath)
+          .then(() => true)
+          .catch(() => false);
+
+        expect(configExists).toBe(true);
+      },
+      { includeLocalConfig: false },
+    ));
+
   it("runs 'cd' and writes shell integration target", async () =>
     withFixture(async (fixture) => {
       const result = await runCli(fixture, ["cd", "alpha"]);
