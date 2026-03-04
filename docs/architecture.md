@@ -400,7 +400,7 @@ Use in-memory fakes to avoid I/O.
 
 ### 13.2 Integration Coverage
 
-The current repository keeps integration-style tests co-located under `src/` as well (e.g. command wiring tests, layer composition tests, adapter tests with temp files). There is no dedicated top-level `tests/` directory at this time.
+The repository keeps integration-style tests co-located under `src/` (e.g. command wiring tests, layer composition tests, adapter tests with temp files). End-to-end CLI smoke tests live in the top-level `tests/e2e/` directory.
 
 ---
 
