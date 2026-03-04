@@ -1,65 +1,21 @@
 import { it } from "@effect/vitest";
-import { Effect, Layer } from "effect";
+import { Effect } from "effect";
 import { describe, expect } from "vitest";
 
 import type { GitProviderType } from "../domain/models";
-import { NetworkTag, type HttpResponse, type Network } from "../domain/network-port";
 import { RepoProviderTag } from "../domain/repo-provider-port";
 import { makeMultiRepoProvider, MultiRepoProviderLiveLayer } from "./multi-repo-provider-live";
 
 describe("multi-repo-provider-live", () => {
-  // Mock Network implementation
-  class MockNetwork implements Network {
-    get(url: string): Effect.Effect<HttpResponse, never> {
-      // Return different responses based on URL to simulate GitHub vs GitLab
-      if (url.includes("github.com")) {
-        return Effect.succeed({
-          status: 200,
-          statusText: "OK",
-          body: JSON.stringify({
-            total_count: 0,
-            incomplete_results: false,
-            items: [],
-          }),
-          headers: {},
-        });
-      } else if (url.includes("gitlab.com")) {
-        return Effect.succeed({
-          status: 200,
-          statusText: "OK",
-          body: JSON.stringify([]),
-          headers: {},
-        });
-      }
-
-      return Effect.succeed({
-        status: 200,
-        statusText: "OK",
-        body: "[]",
-        headers: {},
-      });
-    }
-
-    downloadFile(_url: string, _destinationPath: string): Effect.Effect<void, never> {
-      return Effect.void;
-    }
-
-    checkConnectivity(_url: string): Effect.Effect<boolean> {
-      return Effect.succeed(true);
-    }
-  }
-
-  const mockNetwork = new MockNetwork();
-
   describe("makeMultiRepoProvider", () => {
     it("creates a MultiRepoProvider with correct configuration", () => {
-      const provider = makeMultiRepoProvider(mockNetwork, "acmesoftware", "github", { acmesoftware: "gitlab" });
+      const provider = makeMultiRepoProvider("acmesoftware", "github", { acmesoftware: "gitlab" });
 
       expect(provider.getDefaultOrg()).toBe("acmesoftware");
     });
 
     it("returns default provider info when no mapping for default org", () => {
-      const provider = makeMultiRepoProvider(mockNetwork, "someorg", "github", {});
+      const provider = makeMultiRepoProvider("someorg", "github", {});
 
       const providerInfo = provider.getProvider();
       expect(providerInfo.name).toBe("github");
@@ -67,7 +23,7 @@ describe("multi-repo-provider-live", () => {
     });
 
     it("returns mapped provider info for default org", () => {
-      const provider = makeMultiRepoProvider(mockNetwork, "acmesoftware", "github", { acmesoftware: "gitlab" });
+      const provider = makeMultiRepoProvider("acmesoftware", "github", { acmesoftware: "gitlab" });
 
       const providerInfo = provider.getProvider();
       expect(providerInfo.name).toBe("gitlab");
@@ -78,7 +34,7 @@ describe("multi-repo-provider-live", () => {
   describe("resolveRepository", () => {
     it.effect("resolves repository with no org using default org and its mapping", () =>
       Effect.gen(function* () {
-        const provider = makeMultiRepoProvider(mockNetwork, "acmesoftware", "github", {
+        const provider = makeMultiRepoProvider("acmesoftware", "github", {
           acmesoftware: "gitlab",
         });
 
@@ -93,7 +49,7 @@ describe("multi-repo-provider-live", () => {
 
     it.effect("resolves repository with explicit org that has mapping", () =>
       Effect.gen(function* () {
-        const provider = makeMultiRepoProvider(mockNetwork, "defaultorg", "github", { acmesoftware: "gitlab" });
+        const provider = makeMultiRepoProvider("defaultorg", "github", { acmesoftware: "gitlab" });
 
         const repository = yield* provider.resolveRepository("test-repo", "acmesoftware");
 
@@ -106,7 +62,7 @@ describe("multi-repo-provider-live", () => {
 
     it.effect("resolves repository with explicit org that has no mapping", () =>
       Effect.gen(function* () {
-        const provider = makeMultiRepoProvider(mockNetwork, "defaultorg", "github", { acmesoftware: "gitlab" });
+        const provider = makeMultiRepoProvider("defaultorg", "github", { acmesoftware: "gitlab" });
 
         const repository = yield* provider.resolveRepository("test-repo", "octocat");
 
@@ -119,7 +75,7 @@ describe("multi-repo-provider-live", () => {
 
     it.effect("resolves repository with explicit org using default provider when no mapping", () =>
       Effect.gen(function* () {
-        const provider = makeMultiRepoProvider(mockNetwork, "defaultorg", "gitlab", {});
+        const provider = makeMultiRepoProvider("defaultorg", "gitlab", {});
 
         const repository = yield* provider.resolveRepository("test-repo", "someorg");
 
@@ -132,7 +88,7 @@ describe("multi-repo-provider-live", () => {
 
     it.effect("resolves repository with default org when no mapping and default provider", () =>
       Effect.gen(function* () {
-        const provider = makeMultiRepoProvider(mockNetwork, "defaultorg", "github", {});
+        const provider = makeMultiRepoProvider("defaultorg", "github", {});
 
         const repository = yield* provider.resolveRepository("test-repo");
 
@@ -146,7 +102,7 @@ describe("multi-repo-provider-live", () => {
 
   describe("provider selection logic", () => {
     it("selects GitHub provider when org not in mapping and default is github", () => {
-      const provider = makeMultiRepoProvider(mockNetwork, "defaultorg", "github", { acmesoftware: "gitlab" });
+      const provider = makeMultiRepoProvider("defaultorg", "github", { acmesoftware: "gitlab" });
 
       // Test internal provider selection by checking the result
       const result = provider.getProvider();
@@ -154,21 +110,21 @@ describe("multi-repo-provider-live", () => {
     });
 
     it("selects GitLab provider when org not in mapping and default is gitlab", () => {
-      const provider = makeMultiRepoProvider(mockNetwork, "defaultorg", "gitlab", { acmesoftware: "github" });
+      const provider = makeMultiRepoProvider("defaultorg", "gitlab", { acmesoftware: "github" });
 
       const result = provider.getProvider();
       expect(result.name).toBe("gitlab");
     });
 
     it("selects GitLab provider when default org is mapped to gitlab", () => {
-      const provider = makeMultiRepoProvider(mockNetwork, "acmesoftware", "github", { AcmeSoftware: "gitlab" });
+      const provider = makeMultiRepoProvider("acmesoftware", "github", { AcmeSoftware: "gitlab" });
 
       const result = provider.getProvider();
       expect(result.name).toBe("gitlab");
     });
 
     it("selects GitHub provider when default org is mapped to github", () => {
-      const provider = makeMultiRepoProvider(mockNetwork, "acmesoftware", "gitlab", { AcmeSoftware: "github" });
+      const provider = makeMultiRepoProvider("acmesoftware", "gitlab", { AcmeSoftware: "github" });
 
       const result = provider.getProvider();
       expect(result.name).toBe("github");
@@ -177,8 +133,7 @@ describe("multi-repo-provider-live", () => {
 
   describe("MultiRepoProviderLiveLayer", () => {
     it.effect("provides MultiRepoProvider through Effect layer", () => {
-      const networkLayer = Layer.succeed(NetworkTag, mockNetwork);
-      const providerLayer = Layer.provide(MultiRepoProviderLiveLayer("acmesoftware", "github", { acmesoftware: "gitlab" }), networkLayer);
+      const providerLayer = MultiRepoProviderLiveLayer("acmesoftware", "github", { acmesoftware: "gitlab" });
 
       return Effect.gen(function* () {
         const provider = yield* RepoProviderTag;
@@ -191,8 +146,7 @@ describe("multi-repo-provider-live", () => {
     });
 
     it.effect("resolves repository through layer-provided instance", () => {
-      const networkLayer = Layer.succeed(NetworkTag, mockNetwork);
-      const providerLayer = Layer.provide(MultiRepoProviderLiveLayer("acmesoftware", "github", { acmesoftware: "gitlab" }), networkLayer);
+      const providerLayer = MultiRepoProviderLiveLayer("acmesoftware", "github", { acmesoftware: "gitlab" });
 
       return Effect.gen(function* () {
         const provider = yield* RepoProviderTag;
@@ -209,7 +163,7 @@ describe("multi-repo-provider-live", () => {
   describe("edge cases", () => {
     it.effect("handles empty orgToProvider mapping", () =>
       Effect.gen(function* () {
-        const provider = makeMultiRepoProvider(mockNetwork, "defaultorg", "github", {});
+        const provider = makeMultiRepoProvider("defaultorg", "github", {});
 
         const repository = yield* provider.resolveRepository("test-repo");
 
@@ -227,7 +181,7 @@ describe("multi-repo-provider-live", () => {
           "microsoft": "github",
         };
 
-        const provider = makeMultiRepoProvider(mockNetwork, "acmesoftware", "github", orgToProvider);
+        const provider = makeMultiRepoProvider("acmesoftware", "github", orgToProvider);
 
         // Test different orgs
         const repo1 = yield* provider.resolveRepository("test1", "acmesoftware");
@@ -249,7 +203,7 @@ describe("multi-repo-provider-live", () => {
     );
 
     it("handles organization mappings case-insensitively for default org", () => {
-      const provider = makeMultiRepoProvider(mockNetwork, "acmesoftware", "github", { AcmeSoftware: "gitlab" });
+      const provider = makeMultiRepoProvider("acmesoftware", "github", { AcmeSoftware: "gitlab" });
 
       const providerInfo = provider.getProvider();
       expect(providerInfo.name).toBe("gitlab");
@@ -257,7 +211,7 @@ describe("multi-repo-provider-live", () => {
 
     it.effect("handles organization mappings case-insensitively for explicit org", () =>
       Effect.gen(function* () {
-        const provider = makeMultiRepoProvider(mockNetwork, "defaultorg", "github", { AcmeSoftware: "gitlab" });
+        const provider = makeMultiRepoProvider("defaultorg", "github", { AcmeSoftware: "gitlab" });
 
         const repository = yield* provider.resolveRepository("test-repo", "acmesoftware");
 
@@ -268,7 +222,7 @@ describe("multi-repo-provider-live", () => {
 
     it.effect("matches mixed-case default org against lowercase mapping", () =>
       Effect.gen(function* () {
-        const provider = makeMultiRepoProvider(mockNetwork, "AcmeSoftware", "github", { acmesoftware: "gitlab" });
+        const provider = makeMultiRepoProvider("AcmeSoftware", "github", { acmesoftware: "gitlab" });
 
         const repository = yield* provider.resolveRepository("test-repo");
 
@@ -280,7 +234,7 @@ describe("multi-repo-provider-live", () => {
 
     it.effect("matches mixed-case explicit org against lowercase mapping", () =>
       Effect.gen(function* () {
-        const provider = makeMultiRepoProvider(mockNetwork, "defaultorg", "github", { acmesoftware: "gitlab" });
+        const provider = makeMultiRepoProvider("defaultorg", "github", { acmesoftware: "gitlab" });
 
         const repository = yield* provider.resolveRepository("test-repo", "AcMeSoftware");
 
@@ -292,7 +246,7 @@ describe("multi-repo-provider-live", () => {
 
     it.effect("preserves repository name casing while resolving provider", () =>
       Effect.gen(function* () {
-        const provider = makeMultiRepoProvider(mockNetwork, "defaultorg", "github", { acmesoftware: "gitlab" });
+        const provider = makeMultiRepoProvider("defaultorg", "github", { acmesoftware: "gitlab" });
 
         const repository = yield* provider.resolveRepository("MyRepo", "AcMeSoftware");
 

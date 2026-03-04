@@ -4,15 +4,8 @@ import { Context, Effect, Layer } from "effect";
 
 import { configError, type ConfigError } from "./errors";
 import type { GitProviderType, Repository } from "./models";
+import { normalizeOrganizationName, normalizeOrgToProviderMap } from "./org-provider-utils";
 import { PathServiceTag } from "./path-service";
-
-const normalizeOrganizationName = (organization: string): string => organization.toLowerCase();
-
-const normalizeOrgToProviderMap = (orgToProvider: Record<string, GitProviderType>): Record<string, GitProviderType> =>
-  Object.entries(orgToProvider).reduce<Record<string, GitProviderType>>((accumulator, [organization, provider]) => {
-    accumulator[normalizeOrganizationName(organization)] = provider;
-    return accumulator;
-  }, {});
 
 /**
  * Repository service for handling repository URL parsing and expansion

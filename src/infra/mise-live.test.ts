@@ -221,6 +221,18 @@ describe("mise-live", () => {
     }),
   );
 
+  it.effect("installs mise using shell pipeline execution", () =>
+    Effect.gen(function* () {
+      yield* mise.install();
+
+      expect(mockShell.lastCall).toEqual({
+        command: "sh",
+        args: ["-c", "curl -sSfL https://mise.run | sh"],
+        options: undefined,
+      });
+    }),
+  );
+
   it.effect("handles missing cwd parameter correctly", () =>
     Effect.gen(function* () {
       yield* mise.runTask("test", ["--help"]);

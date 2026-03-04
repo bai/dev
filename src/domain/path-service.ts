@@ -30,12 +30,23 @@ export interface PathService {
 
 // Individual functions for each method
 const getBasePath = (config: Config): string => {
-  return config.baseSearchPath ?? path.join(DEFAULT_HOME_DIR, DEFAULT_BASE_SEARCH_DIR);
+  return resolveUserPath(config.baseSearchPath ?? path.join(DEFAULT_HOME_DIR, DEFAULT_BASE_SEARCH_DIR));
+};
+
+export const resolveUserPath = (filePath: string, homeDir: string = DEFAULT_HOME_DIR): string => {
+  if (filePath.startsWith("~/")) {
+    return path.join(homeDir, filePath.slice(2));
+  }
+  if (filePath === "~") {
+    return homeDir;
+  }
+  return path.resolve(filePath);
 };
 
 // Factory function to create PathService with dynamic baseSearchPath
 export const createPathService = (baseSearchPath?: string): PathService => {
-  const resolvedBaseSearchPath = baseSearchPath ?? path.join(DEFAULT_HOME_DIR, DEFAULT_BASE_SEARCH_DIR);
+  const resolvedBaseSearchPath =
+    baseSearchPath === undefined ? path.join(DEFAULT_HOME_DIR, DEFAULT_BASE_SEARCH_DIR) : resolveUserPath(baseSearchPath);
 
   return {
     homeDir: DEFAULT_HOME_DIR,
@@ -57,4 +68,5 @@ export const PathLive: PathService = createPathService();
 export class PathServiceTag extends Context.Tag("PathService")<PathServiceTag, PathService>() {}
 
 // Layer factory that provides PathService with dynamic baseSearchPath
-export const createPathServiceLiveLayer = (baseSearchPath?: string) => Layer.succeed(PathServiceTag, createPathService(baseSearchPath));
+export const createPathServiceLiveLayer = (baseSearchPath?: string) =>
+  Layer.succeed(PathServiceTag, baseSearchPath === undefined ? PathLive : createPathService(baseSearchPath));

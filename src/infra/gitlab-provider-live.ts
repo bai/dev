@@ -1,12 +1,11 @@
-import { Effect, Layer } from "effect";
+import { Effect } from "effect";
 
 import type { NetworkError, UnknownError } from "../domain/errors";
 import type { GitProvider, Repository } from "../domain/models";
-import { NetworkTag, type Network } from "../domain/network-port";
-import { RepoProviderTag, type RepoProvider } from "../domain/repo-provider-port";
+import type { RepoProvider } from "../domain/repo-provider-port";
 
 // Factory function that creates GitLabProvider with dependencies
-export const makeGitLabProvider = (network: Network, defaultOrg = "gitlab-org"): RepoProvider => {
+export const makeGitLabProvider = (defaultOrg = "gitlab-org"): RepoProvider => {
   const provider: GitProvider = {
     name: "gitlab",
     baseUrl: "https://gitlab.com",
@@ -37,13 +36,3 @@ export const makeGitLabProvider = (network: Network, defaultOrg = "gitlab-org"):
     getProvider,
   };
 };
-
-// Effect Layer for dependency injection using factory function
-export const GitLabProviderLiveLayer = (defaultOrg: string) =>
-  Layer.effect(
-    RepoProviderTag,
-    Effect.gen(function* () {
-      const network = yield* NetworkTag;
-      return makeGitLabProvider(network, defaultOrg);
-    }),
-  );

@@ -12,6 +12,7 @@ import { registerServicesCommand } from "./app/services-command";
 import { registerStatusCommand } from "./app/status-command";
 import { registerSyncCommand } from "./app/sync-command";
 import { registerUpCommand } from "./app/up-command";
+import { UpdateCheckerTag } from "./app/update-check-service";
 import { registerUpgradeCommand } from "./app/upgrade-command";
 import { CommandRegistryTag, type CommandRegistry, type RegisteredCommand } from "./domain/command-registry-port";
 import { exitCode, extractErrorMessage, type DevError } from "./domain/errors";
@@ -184,12 +185,16 @@ const program = Effect.scoped(
     yield* Effect.gen(function* () {
       // Get services
       const commandTracker = yield* CommandTrackerTag;
+      const updateChecker = yield* UpdateCheckerTag;
       const versionService = yield* VersionTag;
       const registry = yield* CommandRegistryTag;
       const version = yield* versionService.getVersion;
 
       // Register all commands
       yield* registerAllCommands;
+
+      // Show periodic upgrade hint when applicable
+      yield* updateChecker.runPeriodicUpgradeCheck().pipe(Effect.withSpan("upgrade.periodic_check"));
 
       // Add cleanup for command tracker
       yield* Effect.addFinalizer(() => commandTracker.gracefulShutdown().pipe(Effect.catchAll(() => Effect.void)));

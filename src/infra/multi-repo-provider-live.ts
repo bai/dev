@@ -1,31 +1,22 @@
-import { Effect, Layer } from "effect";
+import { Layer } from "effect";
 
 import type { GitProviderType } from "../domain/models";
-import { NetworkTag, type Network } from "../domain/network-port";
+import { normalizeOrganizationName, normalizeOrgToProviderMap } from "../domain/org-provider-utils";
 import { RepoProviderTag, type RepoProvider } from "../domain/repo-provider-port";
 import { makeGitHubProvider } from "./github-provider-live";
 import { makeGitLabProvider } from "./gitlab-provider-live";
-
-const normalizeOrganizationName = (organization: string): string => organization.toLowerCase();
-
-const normalizeOrgToProviderMap = (orgToProvider: Record<string, GitProviderType>): Record<string, GitProviderType> =>
-  Object.entries(orgToProvider).reduce<Record<string, GitProviderType>>((accumulator, [organization, provider]) => {
-    accumulator[normalizeOrganizationName(organization)] = provider;
-    return accumulator;
-  }, {});
 
 /**
  * Factory function that creates a multi-provider that can select the appropriate provider based on organization
  */
 export const makeMultiRepoProvider = (
-  network: Network,
   defaultOrg: string,
   defaultProvider: GitProviderType,
   orgToProvider: Record<string, GitProviderType>,
 ): RepoProvider => {
   // Create provider instances using the factory functions
-  const githubProvider = makeGitHubProvider(network, defaultOrg);
-  const gitlabProvider = makeGitLabProvider(network, defaultOrg);
+  const githubProvider = makeGitHubProvider(defaultOrg);
+  const gitlabProvider = makeGitLabProvider(defaultOrg);
   const normalizedOrgToProvider = normalizeOrgToProviderMap(orgToProvider);
 
   const getProviderTypeForOrg = (org: string): GitProviderType =>
@@ -75,11 +66,4 @@ export const MultiRepoProviderLiveLayer = (
   defaultOrg: string,
   defaultProvider: GitProviderType,
   orgToProvider: Record<string, GitProviderType>,
-) =>
-  Layer.effect(
-    RepoProviderTag,
-    Effect.gen(function* () {
-      const network = yield* NetworkTag;
-      return makeMultiRepoProvider(network, defaultOrg, defaultProvider, orgToProvider);
-    }),
-  );
+) => Layer.succeed(RepoProviderTag, makeMultiRepoProvider(defaultOrg, defaultProvider, orgToProvider));

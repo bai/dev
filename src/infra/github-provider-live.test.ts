@@ -3,49 +3,13 @@ import { Effect } from "effect";
 import { describe, expect } from "vitest";
 
 import type { GitProvider } from "../domain/models";
-import type { HttpResponse, Network } from "../domain/network-port";
 import { makeGitHubProvider } from "./github-provider-live";
 
 describe("github-provider-live", () => {
-  // Mock NetworkPort implementation
-  class MockNetwork implements Network {
-    private responses = new Map<string, { status: number; statusText: string; body: string }>();
-
-    setResponse(url: string, response: { status: number; statusText: string; body: string }): void {
-      this.responses.set(url, response);
-    }
-
-    get(_url: string, _options?: { headers?: Record<string, string> }): Effect.Effect<HttpResponse, never, never> {
-      const response = this.responses.get(_url);
-      if (!response) {
-        return Effect.succeed({
-          status: 404,
-          statusText: "Not Found",
-          body: "",
-          headers: {},
-        });
-      }
-      return Effect.succeed({
-        ...response,
-        headers: {},
-      });
-    }
-
-    downloadFile(_url: string, _destinationPath: string): Effect.Effect<void, never, never> {
-      return Effect.void;
-    }
-
-    checkConnectivity(_url: string): Effect.Effect<boolean, never, never> {
-      return Effect.succeed(true);
-    }
-  }
-
   describe("resolveRepository", () => {
     it.effect("resolves repository successfully", () =>
       Effect.gen(function* () {
-        const network = new MockNetwork();
-
-        const provider = makeGitHubProvider(network, "default-org");
+        const provider = makeGitHubProvider("default-org");
         const repository = yield* provider.resolveRepository("myrepo", "myorg");
 
         expect(repository.name).toBe("myrepo");
@@ -58,9 +22,7 @@ describe("github-provider-live", () => {
 
     it.effect("uses default org when not specified", () =>
       Effect.gen(function* () {
-        const network = new MockNetwork();
-
-        const provider = makeGitHubProvider(network, "octocat");
+        const provider = makeGitHubProvider("octocat");
         const repository = yield* provider.resolveRepository("myrepo");
 
         expect(repository.organization).toBe("octocat");
@@ -69,9 +31,7 @@ describe("github-provider-live", () => {
 
     it.effect("always succeeds even for non-existent repositories", () =>
       Effect.gen(function* () {
-        const network = new MockNetwork();
-
-        const provider = makeGitHubProvider(network, "default-org");
+        const provider = makeGitHubProvider("default-org");
         const result = yield* provider.resolveRepository("nonexistent", "myorg");
 
         expect(result.name).toBe("nonexistent");
@@ -85,8 +45,7 @@ describe("github-provider-live", () => {
   describe("getDefaultOrg", () => {
     it.effect("returns configured default org", () =>
       Effect.sync(() => {
-        const network = new MockNetwork();
-        const provider = makeGitHubProvider(network, "my-default-org");
+        const provider = makeGitHubProvider("my-default-org");
 
         expect(provider.getDefaultOrg()).toBe("my-default-org");
       }),
@@ -94,8 +53,7 @@ describe("github-provider-live", () => {
 
     it.effect("returns octocat when no default specified", () =>
       Effect.sync(() => {
-        const network = new MockNetwork();
-        const provider = makeGitHubProvider(network);
+        const provider = makeGitHubProvider();
 
         expect(provider.getDefaultOrg()).toBe("octocat");
       }),
@@ -105,8 +63,7 @@ describe("github-provider-live", () => {
   describe("getProvider", () => {
     it.effect("returns GitHub provider info", () =>
       Effect.sync(() => {
-        const network = new MockNetwork();
-        const provider = makeGitHubProvider(network, "default-org");
+        const provider = makeGitHubProvider("default-org");
 
         const providerInfo: GitProvider = provider.getProvider();
         expect(providerInfo.name).toBe("github");

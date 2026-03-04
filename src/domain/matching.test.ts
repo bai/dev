@@ -81,7 +81,6 @@ describe("matching", () => {
     describe("exact scoring", () => {
       const SCORE_GAP_LEADING = -0.005;
       const SCORE_GAP_TRAILING = -0.005;
-      const SCORE_GAP_INNER = -0.01;
       const SCORE_MATCH_CONSECUTIVE = 1.0;
       const SCORE_MATCH_SLASH = 0.9;
       const SCORE_MATCH_CAPITAL = 0.7;
@@ -357,8 +356,8 @@ describe("matching", () => {
 
     it("chooses consecutive matches over better bonuses", () => {
       // Should prefer consecutive "test" over "Test" with capital bonus
-      const consecutiveScore = score("test", "testing");
-      const capitalScore = score("test", "Test");
+      expect(score("test", "testing")).toBeGreaterThan(-Infinity);
+      expect(score("test", "Test")).toBeGreaterThan(-Infinity);
       // This might not always be true, but tests the trade-off
       expect(positions("test", "testTest")).toEqual([0, 1, 2, 3]);
     });

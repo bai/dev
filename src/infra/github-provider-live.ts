@@ -2,11 +2,10 @@ import { Effect } from "effect";
 
 import type { NetworkError, UnknownError } from "../domain/errors";
 import type { GitProvider, Repository } from "../domain/models";
-import type { Network } from "../domain/network-port";
 import type { RepoProvider } from "../domain/repo-provider-port";
 
 // Factory function that creates GitHubProvider with dependencies
-export const makeGitHubProvider = (network: Network, defaultOrg = "octocat"): RepoProvider => {
+export const makeGitHubProvider = (defaultOrg = "octocat"): RepoProvider => {
   const provider: GitProvider = {
     name: "github",
     baseUrl: "https://github.com",

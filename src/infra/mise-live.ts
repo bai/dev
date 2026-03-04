@@ -50,10 +50,10 @@ export const makeMiseLive = (shell: Shell, fileSystem: FileSystem, configLoader:
     ),
 
   install: (): Effect.Effect<void, ShellExecutionError> =>
-    shell.exec("curl", ["-sSfL", "https://mise.run", "|", "sh"]).pipe(
+    shell.exec("sh", ["-c", "curl -sSfL https://mise.run | sh"]).pipe(
       Effect.flatMap((result) => {
         if (result.exitCode !== 0) {
-          return shellExecutionError("curl", ["-sSfL", "https://mise.run", "|", "sh"], `Failed to install mise: ${result.stderr}`);
+          return shellExecutionError("sh", ["-c", "curl -sSfL https://mise.run | sh"], `Failed to install mise: ${result.stderr}`);
         }
         return Effect.void;
       }),

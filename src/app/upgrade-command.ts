@@ -66,11 +66,10 @@ export const upgradeCommand = Command.make("upgrade", {}, () =>
 /**
  * Self-update the CLI repository
  */
-function selfUpdateCli(pathService: PathService): Effect.Effect<void, DevError, FileSystemTag | GitTag | ShellTag> {
+function selfUpdateCli(pathService: PathService): Effect.Effect<void, DevError, GitTag | ShellTag> {
   return Effect.gen(function* () {
     yield* Effect.logInfo("🔄 Self-updating CLI repository...");
 
-    const fileSystem = yield* FileSystemTag;
     const git = yield* GitTag;
     const shell = yield* ShellTag;
 

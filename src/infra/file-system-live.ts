@@ -1,11 +1,11 @@
 import fs from "fs/promises";
-import os from "os";
 import path from "path";
 
 import { Effect, Layer } from "effect";
 
 import { fileSystemError, type FileSystemError, type UnknownError } from "../domain/errors";
 import { FileSystemTag, type FileSystem } from "../domain/file-system-port";
+import { resolveUserPath } from "../domain/path-service";
 
 // Individual functions for each method
 const readFile = (filePath: string): Effect.Effect<string, FileSystemError | UnknownError> =>
@@ -52,13 +52,7 @@ const findDirectoriesGlob = (basePath: string, pattern: string): Effect.Effect<s
 const getCwd = (): Effect.Effect<string> => Effect.sync(() => process.cwd());
 
 const resolvePath = (filePath: string): string => {
-  if (filePath.startsWith("~/")) {
-    return path.join(os.homedir(), filePath.slice(2));
-  }
-  if (filePath === "~") {
-    return os.homedir();
-  }
-  return path.resolve(filePath);
+  return resolveUserPath(filePath);
 };
 
 // Factory function to create FileSystem implementation
