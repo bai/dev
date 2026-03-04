@@ -1,8 +1,6 @@
 import { Clock, Context, Effect, Layer } from "effect";
 
 import { type ConfigError, type UnknownError } from "../domain/errors";
-import type { GitTag } from "../domain/git-port";
-import type { PathServiceTag } from "../domain/path-service";
 import { RunStoreTag } from "../domain/run-store-port";
 import { VersionTag } from "../domain/version-port";
 
@@ -11,7 +9,7 @@ import { VersionTag } from "../domain/version-port";
  * This is app-level logic for command execution tracking
  */
 export interface CommandTracker {
-  recordCommandRun(): Effect.Effect<string, ConfigError | UnknownError, RunStoreTag | VersionTag | GitTag | PathServiceTag>;
+  recordCommandRun(): Effect.Effect<string, ConfigError | UnknownError, RunStoreTag | VersionTag>;
   completeCommandRun(id: string, exitCode: number): Effect.Effect<void, ConfigError | UnknownError, RunStoreTag>;
 
   /**
@@ -21,7 +19,7 @@ export interface CommandTracker {
 }
 
 // Individual functions implementing the service methods
-const recordCommandRun = (): Effect.Effect<string, ConfigError | UnknownError, RunStoreTag | VersionTag | GitTag | PathServiceTag> =>
+const recordCommandRun = (): Effect.Effect<string, ConfigError | UnknownError, RunStoreTag | VersionTag> =>
   Effect.gen(function* () {
     const runStore = yield* RunStoreTag;
     const version = yield* VersionTag;

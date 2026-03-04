@@ -1,10 +1,8 @@
 import path from "path";
 
-import { Clock, Context, Effect, Layer } from "effect";
+import { Context, Effect, Layer } from "effect";
 
 import {
-  externalToolError,
-  healthCheckError,
   unknownError,
   type ExternalToolError,
   type HealthCheckError,
@@ -15,7 +13,7 @@ import { FileSystemTag, type FileSystem } from "../../domain/file-system-port";
 import { type HealthCheckResult } from "../../domain/health-check-port";
 import { PathServiceTag, type PathService } from "../../domain/path-service";
 import { ShellTag, type Shell } from "../../domain/shell-port";
-import { compareVersions } from "../../domain/version-utils";
+import { buildMinimumVersionHealthCheck, checkVersionAgainstMinimum, ensureMinimumVersionOrUpgrade } from "./versioned-tools-live";
 
 export const GCLOUD_MIN_VERSION = "552.0.0";
 
@@ -50,19 +48,7 @@ export const makeGcloudToolsLive = (shell: Shell, filesystem: FileSystem, pathSe
     );
 
   const checkVersion = (): Effect.Effect<{ isValid: boolean; currentVersion: string | null }, ShellExecutionError> =>
-    getCurrentVersion().pipe(
-      Effect.map((currentVersion) => {
-        if (!currentVersion) {
-          return { isValid: false, currentVersion: null };
-        }
-
-        const comparison = compareVersions(currentVersion, GCLOUD_MIN_VERSION);
-        return {
-          isValid: comparison >= 0,
-          currentVersion,
-        };
-      }),
-    );
+    checkVersionAgainstMinimum({ minVersion: GCLOUD_MIN_VERSION, getCurrentVersion });
 
   const performUpgrade = (): Effect.Effect<boolean, ShellExecutionError> =>
     Effect.gen(function* () {
@@ -104,85 +90,29 @@ export const makeGcloudToolsLive = (shell: Shell, filesystem: FileSystem, pathSe
 
   const ensureVersionOrUpgrade = (): Effect.Effect<void, ExternalToolError | ShellExecutionError | UnknownError> =>
     Effect.gen(function* () {
-      const { isValid, currentVersion } = yield* checkVersion();
-
-      if (isValid) {
+      const versionCheck = yield* checkVersion();
+      if (versionCheck.isValid) {
         return;
       }
 
-      if (currentVersion) {
-        yield* Effect.logWarning(`⚠️  Gcloud version ${currentVersion} is older than required ${GCLOUD_MIN_VERSION}`);
-      } else {
-        yield* Effect.logWarning(`⚠️  Unable to determine gcloud version`);
-      }
-
-      yield* Effect.logInfo(`🚀 Starting gcloud upgrade via mise...`);
-
-      const updateSuccess = yield* performUpgrade();
-      if (!updateSuccess) {
-        yield* Effect.logError(`❌ Failed to update gcloud to required version`);
-        yield* Effect.logError(`💡 Try manually installing gcloud via mise: mise install gcloud@latest`);
-        return yield* externalToolError("Failed to update gcloud", {
-          tool: "gcloud",
-          exitCode: 1,
-          stderr: `Required version: ${GCLOUD_MIN_VERSION}, Current: ${currentVersion}`,
-        });
-      }
+      yield* ensureMinimumVersionOrUpgrade({
+        toolId: "gcloud",
+        displayName: "Gcloud",
+        minVersion: GCLOUD_MIN_VERSION,
+        getCurrentVersion,
+        performUpgrade,
+        manualUpgradeHint: "Try manually installing gcloud via mise: mise install gcloud@latest",
+      });
 
       yield* setupConfig();
-
-      const { isValid: isValidAfterUpgrade, currentVersion: versionAfterUpgrade } = yield* checkVersion();
-      if (!isValidAfterUpgrade) {
-        yield* Effect.logError(`❌ Gcloud upgrade completed but version still doesn't meet requirement`);
-        if (versionAfterUpgrade) {
-          yield* Effect.logError(`   Current: ${versionAfterUpgrade}, Required: ${GCLOUD_MIN_VERSION}`);
-        }
-        return yield* externalToolError("Gcloud upgrade failed", {
-          tool: "gcloud",
-          exitCode: 1,
-          stderr: `Required: ${GCLOUD_MIN_VERSION}, Got: ${versionAfterUpgrade}`,
-        });
-      }
-
-      if (versionAfterUpgrade) {
-        yield* Effect.logInfo(`✨ Gcloud successfully upgraded to version ${versionAfterUpgrade}`);
-      }
     });
 
   const performHealthCheck = (): Effect.Effect<HealthCheckResult, HealthCheckError> =>
-    Effect.gen(function* () {
-      const checkedAt = new Date(yield* Clock.currentTimeMillis);
-
-      const currentVersion = yield* getCurrentVersion().pipe(
-        Effect.mapError(() => healthCheckError("Failed to get gcloud version", "gcloud")),
-      );
-
-      if (!currentVersion) {
-        return {
-          toolName: "gcloud",
-          status: "fail",
-          notes: "Gcloud not found or unable to determine version",
-          checkedAt,
-        };
-      }
-
-      const isCompliant = compareVersions(currentVersion, GCLOUD_MIN_VERSION) >= 0;
-      if (!isCompliant) {
-        return {
-          toolName: "gcloud",
-          version: currentVersion,
-          status: "warning",
-          notes: `requires >=${GCLOUD_MIN_VERSION}`,
-          checkedAt,
-        };
-      }
-
-      return {
-        toolName: "gcloud",
-        version: currentVersion,
-        status: "ok",
-        checkedAt,
-      };
+    buildMinimumVersionHealthCheck({
+      toolId: "gcloud",
+      displayName: "Gcloud",
+      minVersion: GCLOUD_MIN_VERSION,
+      getCurrentVersion,
     });
 
   return {

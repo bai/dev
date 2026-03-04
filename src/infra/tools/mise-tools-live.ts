@@ -1,8 +1,6 @@
-import { Clock, Context, Effect, Layer } from "effect";
+import { Context, Effect, Layer } from "effect";
 
 import {
-  externalToolError,
-  healthCheckError,
   type ExternalToolError,
   type HealthCheckError,
   type ShellExecutionError,
@@ -12,6 +10,7 @@ import { type HealthCheckResult } from "../../domain/health-check-port";
 import { MiseTag, type Mise } from "../../domain/mise-port";
 import { ShellTag, type Shell } from "../../domain/shell-port";
 import { compareVersions } from "../../domain/version-utils";
+import { buildMinimumVersionHealthCheck, checkVersionAgainstMinimum, ensureMinimumVersionOrUpgrade } from "./versioned-tools-live";
 
 export const MISE_MIN_VERSION = "2026.1.5";
 
@@ -25,6 +24,9 @@ export interface MiseTools {
 
 // Factory function that creates MiseTools with dependencies
 export const makeMiseToolsLive = (shell: Shell, mise: Mise): MiseTools => {
+  const resolveRequiredVersion = (latestVersion: string | null): string =>
+    latestVersion && compareVersions(latestVersion, MISE_MIN_VERSION) >= 0 ? latestVersion : MISE_MIN_VERSION;
+
   const getCurrentVersion = (): Effect.Effect<string | null, ShellExecutionError> =>
     shell.exec("mise", ["--version"]).pipe(
       Effect.map((result) => {
@@ -63,28 +65,14 @@ export const makeMiseToolsLive = (shell: Shell, mise: Mise): MiseTools => {
     );
 
   const checkVersion = (): Effect.Effect<{ isValid: boolean; currentVersion: string | null }, ShellExecutionError> =>
-    getVersionInfo().pipe(
-      Effect.map(({ currentVersion, latestVersion }) => {
-        if (!currentVersion) {
-          return { isValid: false, currentVersion: null };
-        }
-
-        // First check minimum version requirement
-        const meetsMinimum = compareVersions(currentVersion, MISE_MIN_VERSION) >= 0;
-        if (!meetsMinimum) {
-          return { isValid: false, currentVersion };
-        }
-
-        // Then check if we have the latest version
-        if (latestVersion) {
-          const isLatest = compareVersions(currentVersion, latestVersion) >= 0;
-          return { isValid: isLatest, currentVersion };
-        }
-
-        // If we can't determine latest, assume valid if >= minimum
-        return { isValid: true, currentVersion };
-      }),
-    );
+    Effect.gen(function* () {
+      const { currentVersion, latestVersion } = yield* getVersionInfo();
+      const requiredVersion = resolveRequiredVersion(latestVersion);
+      return yield* checkVersionAgainstMinimum({
+        minVersion: requiredVersion,
+        getCurrentVersion: () => Effect.succeed(currentVersion),
+      });
+    });
 
   const performUpgrade = (): Effect.Effect<boolean, ShellExecutionError> =>
     Effect.gen(function* () {
@@ -104,103 +92,37 @@ export const makeMiseToolsLive = (shell: Shell, mise: Mise): MiseTools => {
   const ensureVersionOrUpgrade = (): Effect.Effect<void, ExternalToolError | ShellExecutionError | UnknownError> =>
     Effect.gen(function* () {
       const { currentVersion, latestVersion } = yield* getVersionInfo();
+      const requiredVersion = resolveRequiredVersion(latestVersion);
+      const isValid = currentVersion ? compareVersions(currentVersion, requiredVersion) >= 0 : false;
 
-      // Check if version is valid (meets minimum and is latest)
-      const meetsMinimum = currentVersion ? compareVersions(currentVersion, MISE_MIN_VERSION) >= 0 : false;
-      const isLatest = currentVersion && latestVersion ? compareVersions(currentVersion, latestVersion) >= 0 : false;
-      const isValid = meetsMinimum && (isLatest || !latestVersion);
-
-      // If version is already valid (latest), skip upgrade
       if (isValid && currentVersion) {
-        yield* Effect.logInfo(`✅ Mise ${currentVersion} is the latest version`);
+        if (latestVersion) {
+          yield* Effect.logInfo(`✅ Mise ${currentVersion} is the latest version`);
+        } else {
+          yield* Effect.logInfo(`✅ Mise ${currentVersion} meets required version >=${requiredVersion}`);
+        }
         yield* mise.setupGlobalConfig();
         return;
       }
 
-      // Show appropriate warning based on why upgrade is needed
-      if (!currentVersion) {
-        yield* Effect.logWarning(`⚠️  Unable to determine mise version`);
-      } else if (!meetsMinimum) {
-        yield* Effect.logWarning(`⚠️  Mise ${currentVersion} is below minimum required version (>=${MISE_MIN_VERSION})`);
-      } else if (latestVersion) {
-        yield* Effect.logWarning(`⚠️  Mise ${currentVersion} is outdated (latest: ${latestVersion})`);
-      } else {
-        yield* Effect.logWarning(`⚠️  Mise ${currentVersion} may be outdated`);
-      }
-
-      yield* Effect.logInfo(`🚀 Starting mise upgrade...`);
-
-      const updateSuccess = yield* performUpgrade();
-      if (!updateSuccess) {
-        yield* Effect.logError(`❌ Failed to update mise`);
-        yield* Effect.logError(`💡 Try manually updating mise: mise self-update`);
-        return yield* externalToolError("Failed to update mise", {
-          tool: "mise",
-          exitCode: 1,
-          stderr: `Required: >=${MISE_MIN_VERSION}, Latest: ${latestVersion ?? "unknown"}, Current: ${currentVersion}`,
-        });
-      }
+      yield* ensureMinimumVersionOrUpgrade({
+        toolId: "mise",
+        displayName: "Mise",
+        minVersion: requiredVersion,
+        getCurrentVersion,
+        performUpgrade,
+        manualUpgradeHint: "Try manually updating mise: mise self-update",
+      });
 
       yield* mise.setupGlobalConfig();
-
-      // Re-check version after upgrade
-      const { currentVersion: versionAfterUpgrade, latestVersion: latestAfterUpgrade } = yield* getVersionInfo();
-      const meetsMinimumAfter = versionAfterUpgrade ? compareVersions(versionAfterUpgrade, MISE_MIN_VERSION) >= 0 : false;
-      const isLatestAfter =
-        versionAfterUpgrade && latestAfterUpgrade ? compareVersions(versionAfterUpgrade, latestAfterUpgrade) >= 0 : false;
-      const isValidAfterUpgrade = meetsMinimumAfter && (isLatestAfter || !latestAfterUpgrade);
-
-      if (!isValidAfterUpgrade) {
-        yield* Effect.logError(`❌ Mise upgrade completed but not at latest version`);
-        if (versionAfterUpgrade) {
-          yield* Effect.logError(
-            `   Current: ${versionAfterUpgrade}, Required: >=${MISE_MIN_VERSION}, Latest: ${latestAfterUpgrade ?? "unknown"}`,
-          );
-        }
-        return yield* externalToolError("Mise upgrade failed", {
-          tool: "mise",
-          exitCode: 1,
-          stderr: `Required: >=${MISE_MIN_VERSION}, Latest: ${latestAfterUpgrade ?? "unknown"}, Got: ${versionAfterUpgrade}`,
-        });
-      }
-
-      if (versionAfterUpgrade) {
-        yield* Effect.logInfo(`✨ Mise successfully upgraded to version ${versionAfterUpgrade}`);
-      }
     });
 
   const performHealthCheck = (): Effect.Effect<HealthCheckResult, HealthCheckError> =>
-    Effect.gen(function* () {
-      const checkedAt = new Date(yield* Clock.currentTimeMillis);
-
-      const currentVersion = yield* getCurrentVersion().pipe(Effect.mapError(() => healthCheckError("Failed to get mise version", "mise")));
-
-      if (!currentVersion) {
-        return {
-          toolName: "mise",
-          status: "fail",
-          notes: "Mise not found or unable to determine version",
-          checkedAt,
-        };
-      }
-
-      const isCompliant = compareVersions(currentVersion, MISE_MIN_VERSION) >= 0;
-      if (!isCompliant) {
-        return {
-          toolName: "mise",
-          version: currentVersion,
-          status: "warning",
-          notes: `requires >=${MISE_MIN_VERSION}`,
-          checkedAt,
-        };
-      }
-
-      return {
-        toolName: "mise",
-        version: currentVersion,
-        status: "ok",
-        checkedAt,
-      };
+    buildMinimumVersionHealthCheck({
+      toolId: "mise",
+      displayName: "Mise",
+      minVersion: MISE_MIN_VERSION,
+      getCurrentVersion,
     });
 
   return {

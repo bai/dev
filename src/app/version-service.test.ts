@@ -17,7 +17,7 @@ const createGitMock = (getCurrentCommitShaImpl: Git["getCurrentCommitSha"]): Git
 });
 
 const makeVersionLayer = (git: Git, pathService = createPathService("/tmp/src")) =>
-  Layer.mergeAll(VersionLiveLayer, Layer.succeed(GitTag, git), Layer.succeed(PathServiceTag, pathService));
+  Layer.provide(VersionLiveLayer, Layer.mergeAll(Layer.succeed(GitTag, git), Layer.succeed(PathServiceTag, pathService)));
 
 describe("version-service", () => {
   it.effect("returns current commit sha from Git", () => {
