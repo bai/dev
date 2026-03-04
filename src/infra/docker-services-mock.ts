@@ -3,7 +3,7 @@ import { Effect } from "effect";
 import type { DockerServices, ServiceName, ServiceStatus } from "../domain/docker-services-port";
 import type { HealthCheckResult } from "../domain/health-check-port";
 
-export class RecordingDockerServices implements DockerServices {
+export class DockerServicesMock implements DockerServices {
   public availabilityChecks = 0;
   public upCalls: Array<{ readonly services?: readonly ServiceName[]; readonly spanName: string }> = [];
   public downCalls: Array<{ readonly services?: readonly ServiceName[]; readonly spanName: string }> = [];

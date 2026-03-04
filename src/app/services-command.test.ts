@@ -5,9 +5,9 @@ import { describe, expect } from "vitest";
 
 import { CommandRegistryTag } from "../domain/command-registry-port";
 import { DockerServicesTag, type DockerServices } from "../domain/docker-services-port";
+import { DockerServicesMock } from "../infra/docker-services-mock";
 import { CommandRegistryLiveLayer } from "../infra/command-registry-live";
 import { registerServicesCommand, servicesCommand } from "./services-command";
-import { RecordingDockerServices } from "./services-test-support";
 
 const runServicesCommand = (args: readonly string[], dockerServices: DockerServices) =>
   Command.run(servicesCommand, { name: "dev", version: "0.0.0" })(["node", "dev", ...args]).pipe(
@@ -30,7 +30,7 @@ describe("services-command", () => {
 
   it.effect("routes up subcommand to docker up with services.up span", () =>
     Effect.gen(function* () {
-      const dockerServices = new RecordingDockerServices(true);
+      const dockerServices = new DockerServicesMock(true);
 
       yield* runServicesCommand(["up", "postgres17"], dockerServices);
 
@@ -46,7 +46,7 @@ describe("services-command", () => {
 
   it.effect("routes logs subcommand to docker logs with parsed options and services.logs span", () =>
     Effect.gen(function* () {
-      const dockerServices = new RecordingDockerServices(true);
+      const dockerServices = new DockerServicesMock(true);
 
       yield* runServicesCommand(["logs", "valkey", "--follow", "--tail", "25"], dockerServices);
 
@@ -66,7 +66,7 @@ describe("services-command", () => {
 
   it.effect("routes reset subcommand with services.reset span", () =>
     Effect.gen(function* () {
-      const dockerServices = new RecordingDockerServices(true);
+      const dockerServices = new DockerServicesMock(true);
 
       yield* runServicesCommand(["reset"], dockerServices);
 
@@ -77,7 +77,7 @@ describe("services-command", () => {
 
   it.effect("fails command execution when docker is unavailable", () =>
     Effect.gen(function* () {
-      const dockerServices = new RecordingDockerServices(false);
+      const dockerServices = new DockerServicesMock(false);
 
       const error = yield* Effect.flip(runServicesCommand(["up", "postgres17"], dockerServices));
 

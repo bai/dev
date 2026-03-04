@@ -3,13 +3,13 @@ import { Effect, Layer, Option } from "effect";
 import { describe, expect } from "vitest";
 
 import { DockerServicesTag } from "../domain/docker-services-port";
+import { DockerServicesMock } from "../infra/docker-services-mock";
 import { handleDown, handleLogs, handleReset, handleRestart, handleUp, withDocker } from "./services-service";
-import { RecordingDockerServices } from "./services-test-support";
 
 describe("services-service", () => {
   it.effect("withDocker short-circuits when docker is unavailable", () =>
     Effect.gen(function* () {
-      const dockerServices = new RecordingDockerServices(false);
+      const dockerServices = new DockerServicesMock(false);
       let executed = false;
       const testLayer = Layer.succeed(DockerServicesTag, dockerServices);
 
@@ -29,7 +29,7 @@ describe("services-service", () => {
 
   it.effect("withDocker executes handler when docker is available", () =>
     Effect.gen(function* () {
-      const dockerServices = new RecordingDockerServices(true);
+      const dockerServices = new DockerServicesMock(true);
       const testLayer = Layer.succeed(DockerServicesTag, dockerServices);
 
       const result = yield* withDocker((_docker) => Effect.succeed("ok")).pipe(Effect.provide(testLayer));
@@ -41,7 +41,7 @@ describe("services-service", () => {
 
   it.effect("all service handlers short-circuit when docker is unavailable", () =>
     Effect.gen(function* () {
-      const dockerServices = new RecordingDockerServices(false);
+      const dockerServices = new DockerServicesMock(false);
       const testLayer = Layer.succeed(DockerServicesTag, dockerServices);
 
       const upError = yield* Effect.flip(handleUp({ services: ["postgres17"] }).pipe(Effect.provide(testLayer)));
@@ -68,7 +68,7 @@ describe("services-service", () => {
 
   it.effect("logs handler passes validated service and tail options", () =>
     Effect.gen(function* () {
-      const dockerServices = new RecordingDockerServices(true);
+      const dockerServices = new DockerServicesMock(true);
       const testLayer = Layer.succeed(DockerServicesTag, dockerServices);
 
       yield* handleLogs({
@@ -92,7 +92,7 @@ describe("services-service", () => {
 
   it.effect("up handler defaults to all services when names are invalid", () =>
     Effect.gen(function* () {
-      const dockerServices = new RecordingDockerServices(true);
+      const dockerServices = new DockerServicesMock(true);
       const testLayer = Layer.succeed(DockerServicesTag, dockerServices);
 
       yield* handleUp({ services: ["invalid-service"] }).pipe(Effect.provide(testLayer));

@@ -4,13 +4,15 @@ import { it } from "@effect/vitest";
 import { Effect } from "effect";
 import { describe, expect } from "vitest";
 
+import { FileSystemMock } from "./file-system-mock";
 import { makeDockerServicesLive } from "./docker-services-live";
-import { MockFileSystem, MockShell, makePathService } from "./test-port-mocks";
+import { makePathServiceMock } from "./path-service-mock";
+import { ShellMock } from "./shell-mock";
 
 const makeSubject = () => {
-  const shell = new MockShell();
-  const fileSystem = new MockFileSystem();
-  const pathService = makePathService({
+  const shell = new ShellMock();
+  const fileSystem = new FileSystemMock();
+  const pathService = makePathServiceMock({
     homeDir: "/home/user",
     baseSearchPath: "/home/user/src",
     dataDir: "/tmp/dev-data",
