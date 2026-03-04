@@ -1,0 +1,172 @@
+import { Database as BunSQLiteDatabase } from "bun:sqlite";
+
+import { it } from "@effect/vitest";
+import { drizzle } from "drizzle-orm/bun-sqlite";
+import { Effect, Layer } from "effect";
+import { describe, expect, vi } from "vitest";
+
+import { DatabaseTag } from "../domain/database-port";
+import type { DrizzleDatabase } from "../domain/drizzle-types";
+import { configError } from "../domain/errors";
+import { FileSystemTag } from "../domain/file-system-port";
+import { PathServiceTag } from "../domain/path-service";
+import { DatabaseLiveLayer, makeDatabaseLive } from "./database-live";
+import { FileSystemMock } from "./file-system-mock";
+import { makePathServiceMock } from "./path-service-mock";
+
+const isTaggedError = (error: unknown): error is { readonly _tag: string; readonly reason?: unknown } =>
+  typeof error === "object" && error !== null && "_tag" in error;
+
+const createSqliteMock = () => {
+  const exec = vi.fn();
+  const close = vi.fn();
+  return {
+    sqlite: {
+      exec,
+      close,
+    } as unknown as BunSQLiteDatabase,
+    exec,
+    close,
+  };
+};
+
+describe("database-live", () => {
+  it.effect("query delegates to drizzle database and returns the callback result", () =>
+    Effect.gen(function* () {
+      const { sqlite } = createSqliteMock();
+      const drizzleDb = { marker: "drizzle-db" } as unknown as DrizzleDatabase;
+      const database = makeDatabaseLive(sqlite, drizzleDb, "/tmp/migrations");
+
+      const value = yield* database.query((db) => Effect.succeed(db === drizzleDb));
+
+      expect(value).toBe(true);
+    }),
+  );
+
+  it.effect("query preserves tagged domain errors", () =>
+    Effect.gen(function* () {
+      const { sqlite } = createSqliteMock();
+      const drizzleDb = {} as DrizzleDatabase;
+      const database = makeDatabaseLive(sqlite, drizzleDb, "/tmp/migrations");
+      const taggedError = configError("query failed");
+
+      const error = yield* Effect.flip(database.query(() => Effect.fail(taggedError)));
+
+      expect(error).toBe(taggedError);
+    }),
+  );
+
+  it.effect("query maps untagged errors to UnknownError", () =>
+    Effect.gen(function* () {
+      const { sqlite } = createSqliteMock();
+      const drizzleDb = {} as DrizzleDatabase;
+      const database = makeDatabaseLive(sqlite, drizzleDb, "/tmp/migrations");
+
+      const error = yield* Effect.flip(database.query(() => Effect.fail("boom")));
+
+      expect(isTaggedError(error)).toBe(true);
+      if (isTaggedError(error)) {
+        expect(error._tag).toBe("UnknownError");
+        expect(String(error.reason)).toContain("Database query failed");
+      }
+    }),
+  );
+
+  it.effect("transaction maps untagged errors to UnknownError", () =>
+    Effect.gen(function* () {
+      const { sqlite } = createSqliteMock();
+      const drizzleDb = {} as DrizzleDatabase;
+      const database = makeDatabaseLive(sqlite, drizzleDb, "/tmp/migrations");
+
+      const error = yield* Effect.flip(database.transaction(() => Effect.fail(new Error("tx failed"))));
+
+      expect(isTaggedError(error)).toBe(true);
+      if (isTaggedError(error)) {
+        expect(error._tag).toBe("UnknownError");
+        expect(String(error.reason)).toContain("Database transaction failed");
+      }
+    }),
+  );
+
+  it.effect("raw returns sqlite instance and close checkpoints WAL before closing", () =>
+    Effect.gen(function* () {
+      const { sqlite, exec, close } = createSqliteMock();
+      const drizzleDb = {} as DrizzleDatabase;
+      const database = makeDatabaseLive(sqlite, drizzleDb, "/tmp/migrations");
+
+      const raw = yield* database.raw();
+      yield* database.close();
+
+      expect(raw).toBe(sqlite);
+      expect(exec).toHaveBeenCalledWith("PRAGMA wal_checkpoint(TRUNCATE);");
+      expect(close).toHaveBeenCalledTimes(1);
+    }),
+  );
+
+  it.effect("migrate succeeds with repository migration files", () =>
+    Effect.gen(function* () {
+      const sqlite = new BunSQLiteDatabase(":memory:");
+      const drizzleDb: DrizzleDatabase = drizzle(sqlite);
+      const database = makeDatabaseLive(sqlite, drizzleDb, `${process.cwd()}/drizzle/migrations`);
+
+      yield* database.migrate();
+
+      const migratedTables = yield* Effect.sync(
+        () =>
+          sqlite
+            .query("select name from sqlite_master where type='table' and name in ('runs', 'tool_health_checks', 'install_metadata')")
+            .all() as Array<{ readonly name: string }>,
+      );
+
+      expect(migratedTables.map((table) => table.name).sort()).toEqual(["install_metadata", "runs", "tool_health_checks"]);
+
+      yield* database.close();
+    }),
+  );
+
+  it.effect("migrate maps migration failures to ConfigError", () =>
+    Effect.gen(function* () {
+      const sqlite = new BunSQLiteDatabase(":memory:");
+      const drizzleDb: DrizzleDatabase = drizzle(sqlite);
+      const database = makeDatabaseLive(sqlite, drizzleDb, `/tmp/missing-migrations-${Date.now()}`);
+
+      const error = yield* Effect.flip(database.migrate());
+
+      expect(error._tag).toBe("ConfigError");
+      expect(error.reason).toContain("Failed to run migrations");
+
+      yield* database.close();
+    }),
+  );
+
+  it.effect("DatabaseLiveLayer initializes and provides a migrated database", () =>
+    Effect.gen(function* () {
+      const dbPath = `/tmp/dev-live-layer-${Date.now()}.db`;
+      const fileSystem = new FileSystemMock();
+      const pathService = makePathServiceMock({
+        dbPath,
+        devDir: process.cwd(),
+      });
+
+      const dependencies = Layer.mergeAll(Layer.succeed(FileSystemTag, fileSystem), Layer.succeed(PathServiceTag, pathService));
+      const databaseLayer = Layer.provide(DatabaseLiveLayer, dependencies);
+
+      const tableNames = yield* Effect.scoped(
+        Effect.gen(function* () {
+          const database = yield* DatabaseTag;
+          const raw = yield* database.raw();
+          return yield* Effect.sync(
+            () =>
+              raw
+                .query("select name from sqlite_master where type='table' and name in ('runs', 'tool_health_checks', 'install_metadata')")
+                .all() as Array<{ readonly name: string }>,
+          );
+        }).pipe(Effect.provide(databaseLayer)),
+      );
+
+      expect(tableNames.map((table) => table.name).sort()).toEqual(["install_metadata", "runs", "tool_health_checks"]);
+      expect(fileSystem.mkdirCalls[0]?.path).toBe("/tmp");
+      expect(fileSystem.mkdirCalls[0]?.recursive).toBe(true);
+    }),
+  );
+});
