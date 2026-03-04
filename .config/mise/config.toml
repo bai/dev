@@ -5,6 +5,10 @@ bun = "latest"
 description = "Run linting"
 run = "bun run lint"
 
+[tasks.format]
+description = "Run formatting"
+run = "bun run format"
+
 [tasks.test]
 description = "Run tests"
 run = "bun run test"
