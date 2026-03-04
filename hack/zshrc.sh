@@ -8,13 +8,6 @@
 [ -f "$HOME"/.local/share/mise/installs/gcloud/latest/path.zsh.inc ] && source "$HOME"/.local/share/mise/installs/gcloud/latest/path.zsh.inc
 [ -f "$HOME"/.local/share/mise/installs/gcloud/latest/completion.zsh.inc ] && source "$HOME"/.local/share/mise/installs/gcloud/latest/completion.zsh.inc
 
-export BUNDLE_IGNORE_MESSAGES=true
-export BUNDLE_IGNORE_FUNDING_REQUESTS=true
-
-export HOMEBREW_NO_AUTO_UPDATE=1
-export HOMEBREW_NO_ANALYTICS=1
-export HOMEBREW_NO_ENV_HINTS=1
-
 function dev() {
   # Use shell's PID to make filename unique per shell, avoiding race conditions
   # when multiple processes call dev cd concurrently (e.g., in Overmind)
