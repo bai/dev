@@ -1,4 +1,16 @@
+import { NodeSdk } from "@effect/opentelemetry";
 import { it } from "@effect/vitest";
+import { InMemorySpanExporter, SimpleSpanProcessor } from "@opentelemetry/sdk-trace-base";
+import {
+  ATTR_HTTP_REQUEST_METHOD,
+  ATTR_HTTP_RESPONSE_STATUS_CODE,
+  ATTR_SERVER_ADDRESS,
+  ATTR_SERVER_PORT,
+  ATTR_URL_FULL,
+  HTTP_REQUEST_METHOD_VALUE_GET,
+  HTTP_REQUEST_METHOD_VALUE_HEAD,
+} from "@opentelemetry/semantic-conventions";
+import { ATTR_FILE_PATH } from "@opentelemetry/semantic-conventions/incubating";
 import { Cause, Effect, Exit, Option } from "effect";
 import { afterEach, describe, expect, vi } from "vitest";
 
@@ -26,6 +38,14 @@ const createMockFileSystem = (
 
   return { fileSystem, writes };
 };
+
+const createTelemetryLayer = (exporter: InMemorySpanExporter) =>
+  NodeSdk.layer(() => ({
+    spanProcessor: new SimpleSpanProcessor(exporter),
+    resource: {
+      serviceName: "test-network",
+    },
+  }));
 
 describe("network-live", () => {
   afterEach(() => {
@@ -149,4 +169,77 @@ describe("network-live", () => {
       expect(connected).toBe(false);
     }),
   );
+
+  it.effect("get emits HTTP semconv attributes", () => {
+    const exporter = new InMemorySpanExporter();
+    const telemetryLayer = createTelemetryLayer(exporter);
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response("payload", {
+        status: 200,
+        statusText: "OK",
+      }),
+    );
+
+    return Effect.gen(function* () {
+      const network = makeNetworkLive(createMockFileSystem().fileSystem);
+      yield* network.get("https://example.com:8443/config.json");
+
+      const span = exporter.getFinishedSpans().find((candidate) => candidate.name === "http.get");
+      expect(span).toBeDefined();
+      expect(span?.attributes[ATTR_HTTP_REQUEST_METHOD]).toBe(HTTP_REQUEST_METHOD_VALUE_GET);
+      expect(span?.attributes[ATTR_URL_FULL]).toBe("https://example.com:8443/config.json");
+      expect(span?.attributes[ATTR_SERVER_ADDRESS]).toBe("example.com");
+      expect(span?.attributes[ATTR_SERVER_PORT]).toBe(8443);
+      expect(span?.attributes[ATTR_HTTP_RESPONSE_STATUS_CODE]).toBe(200);
+    }).pipe(Effect.provide(telemetryLayer), Effect.scoped);
+  });
+
+  it.effect("downloadFile emits response status code semconv attribute on HTTP errors", () => {
+    const exporter = new InMemorySpanExporter();
+    const telemetryLayer = createTelemetryLayer(exporter);
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response("not found", {
+        status: 404,
+        statusText: "Not Found",
+      }),
+    );
+
+    return Effect.gen(function* () {
+      const network = makeNetworkLive(createMockFileSystem().fileSystem);
+      yield* Effect.exit(network.downloadFile("https://example.com:8443/missing", "/tmp/out.txt"));
+
+      const span = exporter.getFinishedSpans().find((candidate) => candidate.name === "http.download_file");
+      expect(span).toBeDefined();
+      expect(span?.attributes[ATTR_HTTP_REQUEST_METHOD]).toBe(HTTP_REQUEST_METHOD_VALUE_GET);
+      expect(span?.attributes[ATTR_URL_FULL]).toBe("https://example.com:8443/missing");
+      expect(span?.attributes[ATTR_SERVER_ADDRESS]).toBe("example.com");
+      expect(span?.attributes[ATTR_SERVER_PORT]).toBe(8443);
+      expect(span?.attributes[ATTR_HTTP_RESPONSE_STATUS_CODE]).toBe(404);
+      expect(span?.attributes[ATTR_FILE_PATH]).toBe("/tmp/out.txt");
+    }).pipe(Effect.provide(telemetryLayer), Effect.scoped);
+  });
+
+  it.effect("checkConnectivity emits HTTP semconv attributes for HEAD requests", () => {
+    const exporter = new InMemorySpanExporter();
+    const telemetryLayer = createTelemetryLayer(exporter);
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response("", {
+        status: 204,
+        statusText: "No Content",
+      }),
+    );
+
+    return Effect.gen(function* () {
+      const network = makeNetworkLive(createMockFileSystem().fileSystem);
+      yield* network.checkConnectivity("https://example.com:8443/health");
+
+      const span = exporter.getFinishedSpans().find((candidate) => candidate.name === "http.check_connectivity");
+      expect(span).toBeDefined();
+      expect(span?.attributes[ATTR_HTTP_REQUEST_METHOD]).toBe(HTTP_REQUEST_METHOD_VALUE_HEAD);
+      expect(span?.attributes[ATTR_URL_FULL]).toBe("https://example.com:8443/health");
+      expect(span?.attributes[ATTR_SERVER_ADDRESS]).toBe("example.com");
+      expect(span?.attributes[ATTR_SERVER_PORT]).toBe(8443);
+      expect(span?.attributes[ATTR_HTTP_RESPONSE_STATUS_CODE]).toBe(204);
+    }).pipe(Effect.provide(telemetryLayer), Effect.scoped);
+  });
 });

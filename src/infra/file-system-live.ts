@@ -1,6 +1,7 @@
 import fs from "fs/promises";
 import path from "path";
 
+import { ATTR_FILE_PATH } from "@opentelemetry/semantic-conventions/incubating";
 import { Effect, Layer } from "effect";
 
 import { fileSystemError, type FileSystemError, type UnknownError } from "../domain/errors";
@@ -12,7 +13,7 @@ const readFile = (filePath: string): Effect.Effect<string, FileSystemError | Unk
   Effect.tryPromise({
     try: () => fs.readFile(filePath, "utf-8"),
     catch: (error) => fileSystemError(`Failed to read file ${filePath}: ${error}`, filePath),
-  }).pipe(Effect.withSpan("fs.read_file", { attributes: { "fs.path": filePath } }));
+  }).pipe(Effect.withSpan("fs.read_file", { attributes: { [ATTR_FILE_PATH]: filePath } }));
 
 const writeFile = (filePath: string, content: string): Effect.Effect<void, FileSystemError | UnknownError> =>
   Effect.tryPromise({
@@ -22,7 +23,7 @@ const writeFile = (filePath: string, content: string): Effect.Effect<void, FileS
       await fs.writeFile(filePath, content, "utf-8");
     },
     catch: (error) => fileSystemError(`Failed to write file ${filePath}: ${error}`, filePath),
-  }).pipe(Effect.withSpan("fs.write_file", { attributes: { "fs.path": filePath } }));
+  }).pipe(Effect.withSpan("fs.write_file", { attributes: { [ATTR_FILE_PATH]: filePath } }));
 
 const exists = (filePath: string): Effect.Effect<boolean> =>
   Effect.tryPromise({
@@ -30,14 +31,14 @@ const exists = (filePath: string): Effect.Effect<boolean> =>
     catch: (_error) => false,
   }).pipe(
     Effect.orElseSucceed(() => false),
-    Effect.withSpan("fs.exists", { attributes: { "fs.path": filePath } }),
+    Effect.withSpan("fs.exists", { attributes: { [ATTR_FILE_PATH]: filePath } }),
   );
 
 const mkdir = (dirPath: string, recursive = true): Effect.Effect<void, FileSystemError | UnknownError> =>
   Effect.tryPromise({
     try: () => fs.mkdir(dirPath, { recursive }),
     catch: (error) => fileSystemError(`Failed to create directory ${dirPath}: ${error}`, dirPath),
-  }).pipe(Effect.withSpan("fs.mkdir", { attributes: { "fs.path": dirPath } }));
+  }).pipe(Effect.withSpan("fs.mkdir", { attributes: { [ATTR_FILE_PATH]: dirPath } }));
 
 const findDirectoriesGlob = (basePath: string, pattern: string): Effect.Effect<string[], FileSystemError | UnknownError> =>
   Effect.tryPromise({
@@ -47,7 +48,7 @@ const findDirectoriesGlob = (basePath: string, pattern: string): Effect.Effect<s
       return matches;
     },
     catch: (error) => fileSystemError(`Failed to find directories with pattern ${pattern} in ${basePath}: ${error}`, basePath),
-  }).pipe(Effect.withSpan("fs.find_directories_glob", { attributes: { "fs.path": basePath, "fs.glob_pattern": pattern } }));
+  }).pipe(Effect.withSpan("fs.find_directories_glob", { attributes: { [ATTR_FILE_PATH]: basePath, "fs.glob_pattern": pattern } }));
 
 const getCwd = (): Effect.Effect<string> => Effect.sync(() => process.cwd());
 
