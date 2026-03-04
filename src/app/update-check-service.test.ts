@@ -45,10 +45,7 @@ describe("update-check-service", () => {
 
       const layer = Layer.succeed(RunStoreTag, runStore);
 
-      yield* withArgv(
-        ["bun", "src/index.ts", "upgrade"],
-        UpdateCheckerLive.runPeriodicUpgradeCheck().pipe(Effect.provide(layer)),
-      );
+      yield* withArgv(["bun", "src/index.ts", "upgrade"], UpdateCheckerLive.runPeriodicUpgradeCheck().pipe(Effect.provide(layer)));
 
       expect(getRecentRunsCalls).toBe(0);
     }),
@@ -79,10 +76,7 @@ describe("update-check-service", () => {
 
       const layer = Layer.succeed(RunStoreTag, runStore);
 
-      yield* withArgv(
-        ["bun", "src/index.ts", "status"],
-        UpdateCheckerLive.runPeriodicUpgradeCheck().pipe(Effect.provide(layer)),
-      );
+      yield* withArgv(["bun", "src/index.ts", "status"], UpdateCheckerLive.runPeriodicUpgradeCheck().pipe(Effect.provide(layer)));
 
       expect(getRecentRunsCalls).toBe(1);
       expect(requestedLimit).toBe(100);
@@ -99,10 +93,7 @@ describe("update-check-service", () => {
       const layer = Layer.succeed(RunStoreTag, runStore);
 
       const result = yield* Effect.exit(
-        withArgv(
-          ["bun", "src/index.ts", "status"],
-          UpdateCheckerLive.runPeriodicUpgradeCheck().pipe(Effect.provide(layer)),
-        ),
+        withArgv(["bun", "src/index.ts", "status"], UpdateCheckerLive.runPeriodicUpgradeCheck().pipe(Effect.provide(layer))),
       );
 
       expect(Exit.isSuccess(result)).toBe(true);
@@ -119,10 +110,7 @@ describe("update-check-service", () => {
       const layer = Layer.succeed(RunStoreTag, runStore);
 
       const result = yield* Effect.exit(
-        withArgv(
-          ["bun", "src/index.ts", "status"],
-          UpdateCheckerLive.runPeriodicUpgradeCheck().pipe(Effect.provide(layer)),
-        ),
+        withArgv(["bun", "src/index.ts", "status"], UpdateCheckerLive.runPeriodicUpgradeCheck().pipe(Effect.provide(layer))),
       );
 
       expect(Exit.isSuccess(result)).toBe(true);

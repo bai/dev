@@ -63,10 +63,7 @@ describe("up-command", () => {
   it.effect("installs mise when missing, then installs tools", () =>
     Effect.gen(function* () {
       const mise = new MockMise(false);
-      const testLayer = Layer.mergeAll(
-        Layer.succeed(MiseTag, mise),
-        Layer.succeed(FileSystemTag, makeFileSystem("/tmp/project")),
-      );
+      const testLayer = Layer.mergeAll(Layer.succeed(MiseTag, mise), Layer.succeed(FileSystemTag, makeFileSystem("/tmp/project")));
 
       yield* upCommand.handler({}).pipe(Effect.provide(testLayer));
 
@@ -78,10 +75,7 @@ describe("up-command", () => {
   it.effect("skips mise install when already present", () =>
     Effect.gen(function* () {
       const mise = new MockMise(true);
-      const testLayer = Layer.mergeAll(
-        Layer.succeed(MiseTag, mise),
-        Layer.succeed(FileSystemTag, makeFileSystem("/tmp/project")),
-      );
+      const testLayer = Layer.mergeAll(Layer.succeed(MiseTag, mise), Layer.succeed(FileSystemTag, makeFileSystem("/tmp/project")));
 
       yield* upCommand.handler({}).pipe(Effect.provide(testLayer));
 

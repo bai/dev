@@ -2,11 +2,7 @@ import { it } from "@effect/vitest";
 import { Cause, Effect, Exit, Option } from "effect";
 import { describe, expect } from "vitest";
 
-import {
-  buildMinimumVersionHealthCheck,
-  checkVersionAgainstMinimum,
-  ensureMinimumVersionOrUpgrade,
-} from "./versioned-tools-live";
+import { buildMinimumVersionHealthCheck, checkVersionAgainstMinimum, ensureMinimumVersionOrUpgrade } from "./versioned-tools-live";
 
 describe("versioned-tools-live", () => {
   it.effect("checkVersionAgainstMinimum marks missing versions as invalid", () =>

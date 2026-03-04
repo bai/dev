@@ -49,7 +49,9 @@ export const makeDockerToolsLive = (shell: Shell): DockerTools => {
     Effect.gen(function* () {
       const checkedAt = new Date(yield* Clock.currentTimeMillis);
 
-      const dockerVersion = yield* getDockerVersion().pipe(Effect.mapError(() => healthCheckError("Failed to get docker version", "docker")));
+      const dockerVersion = yield* getDockerVersion().pipe(
+        Effect.mapError(() => healthCheckError("Failed to get docker version", "docker")),
+      );
 
       if (!dockerVersion) {
         return {

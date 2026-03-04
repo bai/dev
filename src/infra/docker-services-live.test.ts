@@ -4,8 +4,8 @@ import { it } from "@effect/vitest";
 import { Effect } from "effect";
 import { describe, expect } from "vitest";
 
-import { FileSystemMock } from "./file-system-mock";
 import { makeDockerServicesLive } from "./docker-services-live";
+import { FileSystemMock } from "./file-system-mock";
 import { makePathServiceMock } from "./path-service-mock";
 import { ShellMock } from "./shell-mock";
 

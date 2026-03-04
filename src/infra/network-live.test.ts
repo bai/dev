@@ -2,8 +2,8 @@ import { it } from "@effect/vitest";
 import { Cause, Effect, Exit, Option } from "effect";
 import { afterEach, describe, expect, vi } from "vitest";
 
-import type { FileSystem } from "../domain/file-system-port";
 import { fileSystemError } from "../domain/errors";
+import type { FileSystem } from "../domain/file-system-port";
 import { makeNetworkLive } from "./network-live";
 
 const createMockFileSystem = (

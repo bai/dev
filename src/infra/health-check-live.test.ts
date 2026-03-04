@@ -19,7 +19,9 @@ const createDatabaseCapture = (): DatabaseCapture => {
   const pruneCalls = { count: 0 };
 
   const fakeDb = {
-    transaction: async (callback: (tx: { insert: (table: unknown) => { values: (row: Record<string, unknown>) => Promise<void> } }) => Promise<void>) => {
+    transaction: async (
+      callback: (tx: { insert: (table: unknown) => { values: (row: Record<string, unknown>) => Promise<void> } }) => Promise<void>,
+    ) => {
       const tx = {
         insert: (_table: unknown) => ({
           values: async (row: Record<string, unknown>) => {

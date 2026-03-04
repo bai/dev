@@ -5,8 +5,8 @@ import { describe, expect } from "vitest";
 
 import { CommandRegistryTag } from "../domain/command-registry-port";
 import { DockerServicesTag, type DockerServices } from "../domain/docker-services-port";
-import { DockerServicesMock } from "../infra/docker-services-mock";
 import { CommandRegistryLiveLayer } from "../infra/command-registry-live";
+import { DockerServicesMock } from "../infra/docker-services-mock";
 import { registerServicesCommand, servicesCommand } from "./services-command";
 
 const runServicesCommand = (args: readonly string[], dockerServices: DockerServices) =>

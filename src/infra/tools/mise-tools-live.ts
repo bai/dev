@@ -1,11 +1,6 @@
 import { Context, Effect, Layer } from "effect";
 
-import {
-  type ExternalToolError,
-  type HealthCheckError,
-  type ShellExecutionError,
-  type UnknownError,
-} from "../../domain/errors";
+import { type ExternalToolError, type HealthCheckError, type ShellExecutionError, type UnknownError } from "../../domain/errors";
 import { type HealthCheckResult } from "../../domain/health-check-port";
 import { MiseTag, type Mise } from "../../domain/mise-port";
 import { ShellTag, type Shell } from "../../domain/shell-port";

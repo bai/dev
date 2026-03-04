@@ -18,8 +18,7 @@ export const makeMultiRepoProvider = (
   const githubProvider = makeGitHubProvider(defaultOrg);
   const gitlabProvider = makeGitLabProvider(defaultOrg);
 
-  const getProviderTypeForOrg = (org: string): GitProviderType =>
-    resolveProviderForOrganization(org, defaultProvider, orgToProvider);
+  const getProviderTypeForOrg = (org: string): GitProviderType => resolveProviderForOrganization(org, defaultProvider, orgToProvider);
 
   /**
    * Select the appropriate provider based on organization

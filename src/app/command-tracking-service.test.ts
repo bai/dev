@@ -58,7 +58,7 @@ describe("command-tracking-service", () => {
 
       expect(runId).toBe("captured-run-id");
       expect(recordedRun?.command_name).toBe("sync");
-      expect(recordedRun?.arguments).toBe("[\"--all\"]");
+      expect(recordedRun?.arguments).toBe('["--all"]');
       expect(recordedRun?.cli_version).toBe("deadbeef");
       expect(recordedRun?.cwd).toBe(process.cwd());
       expect(recordedRun?.started_at).toBeInstanceOf(Date);
@@ -103,7 +103,9 @@ describe("command-tracking-service", () => {
         completeIncompleteRuns: () => unknownError("unknown db error"),
       };
 
-      const configResult = yield* Effect.exit(CommandTrackerLive.gracefulShutdown().pipe(Effect.provide(Layer.succeed(RunStoreTag, configFailingStore))));
+      const configResult = yield* Effect.exit(
+        CommandTrackerLive.gracefulShutdown().pipe(Effect.provide(Layer.succeed(RunStoreTag, configFailingStore))),
+      );
       const unknownResult = yield* Effect.exit(
         CommandTrackerLive.gracefulShutdown().pipe(Effect.provide(Layer.succeed(RunStoreTag, unknownFailingStore))),
       );

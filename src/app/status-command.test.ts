@@ -30,10 +30,7 @@ const createShell = (responses: Record<string, SpawnResult>): { shell: Shell; ca
   };
 };
 
-const createDockerServices = (
-  isAvailable: boolean,
-  statuses: readonly ServiceStatus[] = [],
-): DockerServices => ({
+const createDockerServices = (isAvailable: boolean, statuses: readonly ServiceStatus[] = []): DockerServices => ({
   up: (_services?: readonly ServiceName[]) => Effect.void,
   down: (_services?: readonly ServiceName[]) => Effect.void,
   restart: (_services?: readonly ServiceName[]) => Effect.void,
