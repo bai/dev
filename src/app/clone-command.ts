@@ -1,4 +1,10 @@
 import { Args, Command } from "@effect/cli";
+import {
+  ATTR_FILE_PATH,
+  ATTR_VCS_OWNER_NAME,
+  ATTR_VCS_REPOSITORY_NAME,
+  ATTR_VCS_REPOSITORY_URL_FULL,
+} from "@opentelemetry/semantic-conventions/incubating";
 import { Effect } from "effect";
 
 import { CommandRegistryTag, type RegisteredCommand } from "../domain/command-registry-port";
@@ -36,7 +42,7 @@ export const displayHelp = (): Effect.Effect<void, never, never> =>
 export const cloneCommand = Command.make("clone", { repo }, ({ repo }) =>
   Effect.scoped(
     Effect.gen(function* () {
-      yield* Effect.annotateCurrentSpan("vcs.repository.name", repo);
+      yield* Effect.annotateCurrentSpan(ATTR_VCS_REPOSITORY_NAME, repo);
       // Add cleanup finalizer for failed clone operations
       yield* Effect.addFinalizer(() => Effect.logDebug("Clone command finalizer called - cleanup complete"));
 
@@ -56,8 +62,8 @@ export const cloneCommand = Command.make("clone", { repo }, ({ repo }) =>
         ? Effect.gen(function* () {
             yield* Effect.logInfo(`Cloning from URL: ${repo}`);
             const resolved = yield* repositoryService.parseFullUrlToRepository(repo).pipe(Effect.withSpan("repository.parse_url"));
-            yield* Effect.annotateCurrentSpan("vcs.repository.owner", resolved.organization);
-            yield* Effect.annotateCurrentSpan("vcs.repository.name", resolved.name);
+            yield* Effect.annotateCurrentSpan(ATTR_VCS_OWNER_NAME, resolved.organization);
+            yield* Effect.annotateCurrentSpan(ATTR_VCS_REPOSITORY_NAME, resolved.name);
             return resolved;
           })
         : Effect.gen(function* () {
@@ -72,8 +78,8 @@ export const cloneCommand = Command.make("clone", { repo }, ({ repo }) =>
 
             yield* Effect.logInfo(`Resolving repository: ${org ? `${org}/${repoNameFinal}` : repoNameFinal}`);
 
-            yield* Effect.annotateCurrentSpan("vcs.repository.owner", org || "default");
-            yield* Effect.annotateCurrentSpan("vcs.repository.name", repoNameFinal);
+            yield* Effect.annotateCurrentSpan(ATTR_VCS_OWNER_NAME, org || "default");
+            yield* Effect.annotateCurrentSpan(ATTR_VCS_REPOSITORY_NAME, repoNameFinal);
             return yield* repoProvider.resolveRepository(repoNameFinal, org).pipe(Effect.withSpan("repository.resolve"));
           });
 
@@ -98,8 +104,8 @@ export const cloneCommand = Command.make("clone", { repo }, ({ repo }) =>
       yield* Effect.logInfo(`Cloning ${repository.organization}/${repository.name} to ${relativePath}...`);
 
       // Clone the repository
-      yield* Effect.annotateCurrentSpan("vcs.repository.url", repository.cloneUrl);
-      yield* Effect.annotateCurrentSpan("file.path", destinationPath);
+      yield* Effect.annotateCurrentSpan(ATTR_VCS_REPOSITORY_URL_FULL, repository.cloneUrl);
+      yield* Effect.annotateCurrentSpan(ATTR_FILE_PATH, destinationPath);
       yield* git.cloneRepositoryToPath(repository, destinationPath).pipe(Effect.withSpan("git.clone"));
 
       yield* Effect.logInfo(`Successfully cloned ${repository.organization}/${repository.name} to ${relativePath}`);

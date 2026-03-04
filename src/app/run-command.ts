@@ -1,4 +1,5 @@
 import { Args, Command } from "@effect/cli";
+import { ATTR_PROCESS_WORKING_DIRECTORY } from "@opentelemetry/semantic-conventions/incubating";
 import { Effect } from "effect";
 
 import { CommandRegistryTag, type RegisteredCommand } from "../domain/command-registry-port";
@@ -44,7 +45,7 @@ export const runCommand = Command.make("run", { task, taskArgs }, ({ task, taskA
     }
 
     const cwd = yield* fileSystem.getCwd().pipe(Effect.withSpan("filesystem.get_cwd"));
-    yield* Effect.annotateCurrentSpan("process.working_directory", cwd);
+    yield* Effect.annotateCurrentSpan(ATTR_PROCESS_WORKING_DIRECTORY, cwd);
 
     if (!taskName) {
       // List available tasks

@@ -1,6 +1,7 @@
 import { it } from "@effect/vitest";
 import { BatchSpanProcessor, NoopSpanProcessor } from "@opentelemetry/sdk-trace-base";
 import { ATTR_SERVICE_INSTANCE_ID, ATTR_SERVICE_NAME, ATTR_SERVICE_NAMESPACE } from "@opentelemetry/semantic-conventions";
+import { ATTR_APP_INSTALLATION_ID } from "@opentelemetry/semantic-conventions/incubating";
 import { Effect } from "effect";
 import { describe, expect } from "vitest";
 
@@ -71,7 +72,7 @@ describe("tracing-live", () => {
       expect(String(sdkConfig.resource?.attributes?.[ATTR_SERVICE_INSTANCE_ID]).length).toBe(36);
       expect(String(sdkConfig.resource?.attributes?.[ATTR_SERVICE_INSTANCE_ID])[14]).toBe("7");
       expect(sdkConfig.resource?.attributes?.[ATTR_SERVICE_INSTANCE_ID]).not.toBe("0196ed78-467a-7f2f-bf6b-95e73fd43b8d");
-      expect(sdkConfig.resource?.attributes?.["app.installation.id"]).toBe("0196ed78-467a-7f2f-bf6b-95e73fd43b8d");
+      expect(sdkConfig.resource?.attributes?.[ATTR_APP_INSTALLATION_ID]).toBe("0196ed78-467a-7f2f-bf6b-95e73fd43b8d");
     }),
   );
 

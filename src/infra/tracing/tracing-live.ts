@@ -7,6 +7,7 @@ import {
   ATTR_SERVICE_NAMESPACE,
   ATTR_SERVICE_VERSION,
 } from "@opentelemetry/semantic-conventions";
+import { ATTR_APP_INSTALLATION_ID } from "@opentelemetry/semantic-conventions/incubating";
 import { Effect, Layer } from "effect";
 
 import { ConfigLoaderTag } from "../../domain/config-loader-port";
@@ -18,7 +19,6 @@ import type { RemoteTelemetryConfig, RemoteTelemetryMode } from "./tracing-expor
 
 const OTLP_SERVICE_NAMESPACE = "dev";
 const OTLP_SERVICE_NAME = "cli";
-const OTLP_INSTALL_ID_ATTRIBUTE = "app.installation.id";
 const OTLP_RUNTIME_SERVICE_INSTANCE_ID = Bun.randomUUIDv7();
 
 const createRemoteSpanProcessor = <Mode extends RemoteTelemetryMode>(
@@ -69,7 +69,7 @@ const makeTracingLive = (
         [ATTR_SERVICE_NAME]: OTLP_SERVICE_NAME,
         [ATTR_SERVICE_VERSION]: version,
         [ATTR_SERVICE_INSTANCE_ID]: OTLP_RUNTIME_SERVICE_INSTANCE_ID,
-        [OTLP_INSTALL_ID_ATTRIBUTE]: installId,
+        [ATTR_APP_INSTALLATION_ID]: installId,
       };
 
       const resource = resources.resourceFromAttributes(resourceAttributes);

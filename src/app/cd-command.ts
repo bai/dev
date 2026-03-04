@@ -1,4 +1,5 @@
 import { Args, Command } from "@effect/cli";
+import { ATTR_FILE_PATH } from "@opentelemetry/semantic-conventions/incubating";
 import { Effect } from "effect";
 
 import { CommandRegistryTag, type RegisteredCommand } from "../domain/command-registry-port";
@@ -63,7 +64,7 @@ export function handleDirectCd(folderName: string): Effect.Effect<void, DevError
 
       if (fuzzyMatches.length > 0 && fuzzyMatches[0]) {
         const targetPath = fuzzyMatches[0].str; // This is a relative path
-        yield* Effect.annotateCurrentSpan("file.path", targetPath);
+        yield* Effect.annotateCurrentSpan(ATTR_FILE_PATH, targetPath);
         // Use ShellIntegrationService
         const shellIntegration = yield* ShellIntegrationTag;
         yield* shellIntegration.changeDirectory(targetPath).pipe(Effect.withSpan("directory.change"));
@@ -94,7 +95,7 @@ export function handleInteractiveCd(): Effect.Effect<void, DevError, DirectoryTa
     const selectedPath = yield* selector.selectFromList(directories).pipe(Effect.withSpan("ui.select_interactive"));
 
     if (selectedPath) {
-      yield* Effect.annotateCurrentSpan("file.path", selectedPath);
+      yield* Effect.annotateCurrentSpan(ATTR_FILE_PATH, selectedPath);
       // Use ShellIntegrationService
       const shellIntegration = yield* ShellIntegrationTag;
       yield* shellIntegration.changeDirectory(selectedPath).pipe(Effect.withSpan("directory.change"));
