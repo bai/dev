@@ -51,10 +51,6 @@ const findDirectoriesGlob = (basePath: string, pattern: string): Effect.Effect<s
 
 const getCwd = (): Effect.Effect<string> => Effect.sync(() => process.cwd());
 
-const resolvePath = (filePath: string): string => {
-  return resolveUserPath(filePath);
-};
-
 // Factory function to create FileSystem implementation
 export const makeFileSystemLive = (): FileSystem => ({
   readFile,
@@ -63,7 +59,7 @@ export const makeFileSystemLive = (): FileSystem => ({
   mkdir,
   findDirectoriesGlob,
   getCwd,
-  resolvePath,
+  resolvePath: resolveUserPath,
 });
 
 // Effect Layer for dependency injection with proper resource management

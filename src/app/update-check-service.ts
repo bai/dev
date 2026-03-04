@@ -14,37 +14,38 @@ export interface UpdateChecker {
 }
 
 // Individual functions implementing the service methods
-const runPeriodicUpgradeCheck = Effect.gen(function* () {
-  const runStore = yield* RunStoreTag;
-  const commandName = process.argv[2] || "help";
+const runPeriodicUpgradeCheck = (): Effect.Effect<void, ConfigError | UnknownError, RunStoreTag> =>
+  Effect.gen(function* () {
+    const runStore = yield* RunStoreTag;
+    const commandName = process.argv[2] || "help";
 
-  // Check if we should prompt for an update (only if not running upgrade command)
-  if (commandName !== "upgrade") {
-    const recentRuns = yield* runStore.getRecentRuns(100); // Get recent runs to search
+    // Check if we should prompt for an update (only if not running upgrade command)
+    if (commandName !== "upgrade") {
+      const recentRuns = yield* runStore.getRecentRuns(100); // Get recent runs to search
 
-    // Find the most recent upgrade command
-    const lastUpgradeRun = recentRuns.find((run) => run.command_name === "upgrade");
+      // Find the most recent upgrade command
+      const lastUpgradeRun = recentRuns.find((run) => run.command_name === "upgrade");
 
-    const currentTime = yield* Clock.currentTimeMillis;
-    const shouldUpdate =
-      !lastUpgradeRun || (lastUpgradeRun && currentTime - lastUpgradeRun.started_at.getTime() > Duration.toMillis(upgradeFrequency));
+      const currentTime = yield* Clock.currentTimeMillis;
+      const shouldUpdate =
+        !lastUpgradeRun || (lastUpgradeRun && currentTime - lastUpgradeRun.started_at.getTime() > Duration.toMillis(upgradeFrequency));
 
-    if (shouldUpdate) {
-      yield* Effect.logInfo("🔄 [dev] It's been more than 7 days since your last upgrade.");
-      yield* Effect.logInfo("💡 [dev] Run 'dev upgrade' to update your CLI tool and development environment.");
-      yield* Effect.logInfo("");
+      if (shouldUpdate) {
+        yield* Effect.logInfo("🔄 [dev] It's been more than 7 days since your last upgrade.");
+        yield* Effect.logInfo("💡 [dev] Run 'dev upgrade' to update your CLI tool and development environment.");
+        yield* Effect.logInfo("");
+      }
     }
-  }
-}).pipe(
-  Effect.catchTags({
-    UnknownError: (error) => Effect.logInfo(`WARN: ⚠️  Warning: ${String(error.reason)}`),
-    ConfigError: () => Effect.logInfo("WARN: ⚠️  Warning: Could not check last run timestamp"),
-  }),
-);
+  }).pipe(
+    Effect.catchTags({
+      UnknownError: (error) => Effect.logInfo(`WARN: ⚠️  Warning: ${String(error.reason)}`),
+      ConfigError: () => Effect.logInfo("WARN: ⚠️  Warning: Could not check last run timestamp"),
+    }),
+  );
 
 // Functional service implementation as plain object
 export const UpdateCheckerLive: UpdateChecker = {
-  runPeriodicUpgradeCheck: () => runPeriodicUpgradeCheck,
+  runPeriodicUpgradeCheck: runPeriodicUpgradeCheck,
 };
 
 // Service tag for Effect Context system

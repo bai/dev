@@ -21,29 +21,30 @@ export interface CommandTracker {
 }
 
 // Individual functions implementing the service methods
-const recordCommandRun = Effect.gen(function* () {
-  const runStore = yield* RunStoreTag;
-  const version = yield* VersionTag;
+const recordCommandRun = (): Effect.Effect<string, ConfigError | UnknownError, RunStoreTag | VersionTag | GitTag | PathServiceTag> =>
+  Effect.gen(function* () {
+    const runStore = yield* RunStoreTag;
+    const version = yield* VersionTag;
 
-  // Gather run information
-  const commandName = process.argv[2] || "help";
-  const args = process.argv.slice(3);
-  const cliVersion = yield* version.getCurrentGitCommitSha;
-  const cwd = process.cwd();
-  const startedAtMs = yield* Clock.currentTimeMillis;
-  const startedAt = new Date(startedAtMs);
+    // Gather run information
+    const commandName = process.argv[2] || "help";
+    const args = process.argv.slice(3);
+    const cliVersion = yield* version.getCurrentGitCommitSha;
+    const cwd = process.cwd();
+    const startedAtMs = yield* Clock.currentTimeMillis;
+    const startedAt = new Date(startedAtMs);
 
-  // Record this run
-  const runId = yield* runStore.record({
-    cli_version: cliVersion,
-    command_name: commandName,
-    arguments: args.length > 0 ? JSON.stringify(args) : undefined,
-    cwd,
-    started_at: startedAt,
+    // Record this run
+    const runId = yield* runStore.record({
+      cli_version: cliVersion,
+      command_name: commandName,
+      arguments: args.length > 0 ? JSON.stringify(args) : undefined,
+      cwd,
+      started_at: startedAt,
+    });
+
+    return runId;
   });
-
-  return runId;
-});
 
 const completeCommandRun = (id: string, exitCode: number) =>
   Effect.gen(function* () {
@@ -54,27 +55,28 @@ const completeCommandRun = (id: string, exitCode: number) =>
     yield* runStore.complete(id, exitCode, finishedAt);
   });
 
-const gracefulShutdown = Effect.gen(function* () {
-  yield* Effect.logDebug("🛑 Gracefully shutting down command tracking...");
+const gracefulShutdown = (): Effect.Effect<void, ConfigError | UnknownError, RunStoreTag> =>
+  Effect.gen(function* () {
+    yield* Effect.logDebug("🛑 Gracefully shutting down command tracking...");
 
-  // Try to complete incomplete runs, but don't fail if database is unavailable
-  yield* Effect.gen(function* () {
-    const runStore = yield* RunStoreTag;
-    yield* runStore.completeIncompleteRuns();
-    yield* Effect.logDebug("✅ Command tracking shutdown complete");
-  }).pipe(
-    Effect.catchTags({
-      ConfigError: (error) => Effect.logDebug(`Command tracking shutdown skipped (database unavailable): ${error.reason}`),
-      UnknownError: (error) => Effect.logDebug(`Command tracking shutdown skipped (database unavailable): ${String(error.reason)}`),
-    }),
-  );
-});
+    // Try to complete incomplete runs, but don't fail if database is unavailable
+    yield* Effect.gen(function* () {
+      const runStore = yield* RunStoreTag;
+      yield* runStore.completeIncompleteRuns();
+      yield* Effect.logDebug("✅ Command tracking shutdown complete");
+    }).pipe(
+      Effect.catchTags({
+        ConfigError: (error) => Effect.logDebug(`Command tracking shutdown skipped (database unavailable): ${error.reason}`),
+        UnknownError: (error) => Effect.logDebug(`Command tracking shutdown skipped (database unavailable): ${String(error.reason)}`),
+      }),
+    );
+  });
 
 // Functional service implementation as plain object
 export const CommandTrackerLive: CommandTracker = {
-  recordCommandRun: () => recordCommandRun,
+  recordCommandRun: recordCommandRun,
   completeCommandRun: completeCommandRun,
-  gracefulShutdown: () => gracefulShutdown,
+  gracefulShutdown: gracefulShutdown,
 };
 
 export class CommandTrackerTag extends Context.Tag("CommandTracker")<CommandTrackerTag, CommandTracker>() {}
