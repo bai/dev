@@ -365,8 +365,10 @@ const telemetryConfigSchema = z
 | **cd**              | `dev cd [name]`                          |
 | **clone**           | `dev clone <repo>`                       |
 | **up**              | `dev up`                                 |
-| **status**          | `dev status [--json]`                    |
 | **run**             | `dev run <task>`                         |
+| **services**        | `dev services <subcommand> [services...]` |
+| **status**          | `dev status`                             |
+| **sync**            | `dev sync`                               |
 | **upgrade**         | `dev upgrade`                            |
 
 ---
@@ -396,15 +398,9 @@ src/app/
 
 Use in-memory fakes to avoid I/O.
 
-### 13.2 Integration & E2E Suites
+### 13.2 Integration Coverage
 
-```text
-tests/
-├─ integration/
-└─ e2e/
-```
-
-Integration tests wire multiple layers together with real SQLite; E2E drives the compiled CLI in a temp directory.
+The current repository keeps integration-style tests co-located under `src/` as well (e.g. command wiring tests, layer composition tests, adapter tests with temp files). There is no dedicated top-level `tests/` directory at this time.
 
 ---
 
@@ -415,7 +411,7 @@ Integration tests wire multiple layers together with real SQLite; E2E drives the
 1. **Define / reuse domain models & ports**.
 2. **Implement functional adapter(s)** if new infrastructure is needed.
 3. **Write the command** using @effect/cli Command.make with Effect generators.
-4. **Wire** everything in `index.ts` by adding to the subcommands array.
+4. **Wire** the command by exporting `register<CommandName>Command` from `src/app/*-command.ts` and adding it to `registerAllCommands` in `src/index.ts` (the main command is built dynamically from the command registry).
 
 ### Adding a New Infrastructure Adapter (Example: Redis Cache)
 
