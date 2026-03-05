@@ -23,11 +23,11 @@ export const makeUpdateChecker = (runStore: RunStore): UpdateChecker => {
         const recentRuns = yield* runStore.getRecentRuns(100); // Get recent runs to search
 
         // Find the most recent upgrade command
-        const lastUpgradeRun = recentRuns.find((run) => run.command_name === "upgrade");
+        const lastUpgradeRun = recentRuns.find((run) => run.commandName === "upgrade");
 
         const currentTime = yield* Clock.currentTimeMillis;
         const shouldUpdate =
-          !lastUpgradeRun || (lastUpgradeRun && currentTime - lastUpgradeRun.started_at.getTime() > Duration.toMillis(upgradeFrequency));
+          !lastUpgradeRun || (lastUpgradeRun && currentTime - lastUpgradeRun.startedAt.getTime() > Duration.toMillis(upgradeFrequency));
 
         if (shouldUpdate) {
           yield* Effect.logInfo("🔄 [dev] It's been more than 7 days since your last upgrade.");

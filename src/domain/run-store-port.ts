@@ -7,7 +7,7 @@ export interface RunStore {
   /**
    * Record a new command run
    */
-  record(run: Omit<CommandRun, "id" | "duration_ms">): Effect.Effect<string, ConfigError | UnknownError>;
+  record(run: Omit<CommandRun, "id" | "durationMs">): Effect.Effect<string, ConfigError | UnknownError>;
 
   /**
    * Update a run record with completion details

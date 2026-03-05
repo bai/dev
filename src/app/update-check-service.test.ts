@@ -64,10 +64,10 @@ describe("update-check-service", () => {
             return [
               {
                 id: "upgrade-1",
-                cli_version: "abc",
-                command_name: "upgrade",
+                cliVersion: "abc",
+                commandName: "upgrade",
                 cwd: "/tmp",
-                started_at: new Date(),
+                startedAt: new Date(),
               },
             ] satisfies CommandRun[];
           }),

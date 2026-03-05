@@ -31,11 +31,11 @@ export const makeCommandTracker = (runStore: RunStore, version: Version): Comman
 
       // Record this run
       const runId = yield* runStore.record({
-        cli_version: cliVersion,
-        command_name: commandName,
+        cliVersion,
+        commandName,
         arguments: args.length > 0 ? JSON.stringify(args) : undefined,
         cwd,
-        started_at: startedAt,
+        startedAt,
       });
 
       return runId;

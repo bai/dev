@@ -5,14 +5,14 @@ export type LogLevel = "debug" | "info" | "warning" | "error" | "fatal";
 
 export interface CommandRun {
   readonly id: string;
-  readonly cli_version: string;
-  readonly command_name: string;
+  readonly cliVersion: string;
+  readonly commandName: string;
   readonly arguments?: string;
-  readonly exit_code?: number;
+  readonly exitCode?: number;
   readonly cwd: string;
-  readonly started_at: Date;
-  readonly finished_at?: Date;
-  readonly duration_ms?: number;
+  readonly startedAt: Date;
+  readonly finishedAt?: Date;
+  readonly durationMs?: number;
 }
 
 export interface GitProvider {

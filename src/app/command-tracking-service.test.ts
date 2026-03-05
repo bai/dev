@@ -38,7 +38,7 @@ const withArgv = <A, E, R>(argv: string[], effect: Effect.Effect<A, E, R>): Effe
 describe("command-tracking-service", () => {
   it.effect("records command metadata with serialized arguments", () =>
     Effect.gen(function* () {
-      let recordedRun: Omit<CommandRun, "id" | "duration_ms"> | undefined;
+      let recordedRun: Omit<CommandRun, "id" | "durationMs"> | undefined;
 
       const runStore: RunStore = {
         ...baseRunStore,
@@ -58,11 +58,11 @@ describe("command-tracking-service", () => {
       const runId = yield* withArgv(["bun", "src/index.ts", "sync", "--all"], tracker.recordCommandRun());
 
       expect(runId).toBe("captured-run-id");
-      expect(recordedRun?.command_name).toBe("sync");
+      expect(recordedRun?.commandName).toBe("sync");
       expect(recordedRun?.arguments).toBe('["--all"]');
-      expect(recordedRun?.cli_version).toBe("deadbeef");
+      expect(recordedRun?.cliVersion).toBe("deadbeef");
       expect(recordedRun?.cwd).toBe(process.cwd());
-      expect(recordedRun?.started_at).toBeInstanceOf(Date);
+      expect(recordedRun?.startedAt).toBeInstanceOf(Date);
     }),
   );
 

@@ -8,11 +8,23 @@ import type { CommandRun } from "../domain/models";
 import { RunStoreTag, type RunStore } from "../domain/run-store-port";
 import { annotateErrorTypeOnFailure } from "./tracing/error-type";
 
+const toDomainRun = (row: typeof runs.$inferSelect): CommandRun => ({
+  id: row.id,
+  cliVersion: row.cli_version,
+  commandName: row.command_name,
+  arguments: row.arguments ?? undefined,
+  exitCode: row.exit_code ?? undefined,
+  cwd: row.cwd,
+  startedAt: new Date(row.started_at),
+  finishedAt: row.finished_at ? new Date(row.finished_at) : undefined,
+  durationMs: row.duration_ms ?? undefined,
+});
+
 // Factory function that creates RunStore
 export const makeRunStoreLive = (database: Database): RunStore => {
   // Individual functions implementing the service methods
 
-  const record = (run: Omit<CommandRun, "id" | "duration_ms">): Effect.Effect<string, ConfigError | UnknownError> =>
+  const record = (run: Omit<CommandRun, "id" | "durationMs">): Effect.Effect<string, ConfigError | UnknownError> =>
     database
       .query((db) =>
         Effect.gen(function* () {
@@ -23,13 +35,13 @@ export const makeRunStoreLive = (database: Database): RunStore => {
                 .insert(runs)
                 .values({
                   id: runId,
-                  cli_version: run.cli_version,
-                  command_name: run.command_name,
+                  cli_version: run.cliVersion,
+                  command_name: run.commandName,
                   arguments: run.arguments,
                   cwd: run.cwd,
-                  started_at: run.started_at,
-                  finished_at: run.finished_at,
-                  exit_code: run.exit_code,
+                  started_at: run.startedAt,
+                  finished_at: run.finishedAt,
+                  exit_code: run.exitCode,
                 })
                 .returning({ id: runs.id });
             },
@@ -45,7 +57,7 @@ export const makeRunStoreLive = (database: Database): RunStore => {
           ),
         ),
         annotateErrorTypeOnFailure,
-        Effect.withSpan("run_store.record", { attributes: { "run.command": run.command_name } }),
+        Effect.withSpan("run_store.record", { attributes: { "run.command": run.commandName } }),
       );
 
   const complete = (id: string, exitCode: number, finishedAt: Date): Effect.Effect<void, ConfigError | UnknownError> =>
@@ -91,18 +103,7 @@ export const makeRunStoreLive = (database: Database): RunStore => {
         Effect.tryPromise({
           try: async () => {
             const result = await db.select().from(runs).orderBy(desc(runs.started_at)).limit(limit);
-
-            return result.map((row) => ({
-              id: row.id,
-              cli_version: row.cli_version,
-              command_name: row.command_name,
-              arguments: row.arguments ?? undefined,
-              exit_code: row.exit_code ?? undefined,
-              cwd: row.cwd,
-              started_at: new Date(row.started_at),
-              finished_at: row.finished_at ? new Date(row.finished_at) : undefined,
-              duration_ms: row.duration_ms ?? undefined,
-            }));
+            return result.map(toDomainRun);
           },
           catch: (error) => configError(`Failed to get recent runs: ${error}`),
         }),

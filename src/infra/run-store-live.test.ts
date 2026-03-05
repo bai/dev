@@ -73,18 +73,25 @@ describe("run-store-live", () => {
 
         const runStore = makeRunStoreLive(database);
         const recordedRunId = yield* runStore.record({
-          cli_version: "1.2.3",
-          command_name: "status",
+          cliVersion: "1.2.3",
+          commandName: "status",
           arguments: "--json",
           cwd: "/tmp/dev",
-          started_at: new Date("2026-01-01T10:00:00.000Z"),
-          finished_at: new Date("2026-01-01T10:00:01.000Z"),
-          exit_code: 0,
+          startedAt: new Date("2026-01-01T10:00:00.000Z"),
+          finishedAt: new Date("2026-01-01T10:00:01.000Z"),
+          exitCode: 0,
         });
 
         expect(recordedRunId).toBe(expectedRunId);
         expect(insertedRows).toHaveLength(1);
         expect(insertedRows[0]?.id).toBe(expectedRunId);
+        expect(insertedRows[0]?.cli_version).toBe("1.2.3");
+        expect(insertedRows[0]?.command_name).toBe("status");
+        expect(insertedRows[0]?.arguments).toBe("--json");
+        expect(insertedRows[0]?.cwd).toBe("/tmp/dev");
+        expect(insertedRows[0]?.started_at).toEqual(new Date("2026-01-01T10:00:00.000Z"));
+        expect(insertedRows[0]?.finished_at).toEqual(new Date("2026-01-01T10:00:01.000Z"));
+        expect(insertedRows[0]?.exit_code).toBe(0);
         expect(randomUuidSpy).toHaveBeenCalledTimes(1);
       }),
     );
@@ -110,8 +117,8 @@ describe("run-store-live", () => {
 
         const recentRuns = yield* runStore.getRecentRuns(10);
 
-        expect(recentRuns[0]?.exit_code).toBe(0);
-        expect(recentRuns[0]?.duration_ms).toBe(0);
+        expect(recentRuns[0]?.exitCode).toBe(0);
+        expect(recentRuns[0]?.durationMs).toBe(0);
       }),
     );
 
@@ -135,8 +142,8 @@ describe("run-store-live", () => {
         const recentRuns = yield* runStore.getRecentRuns(10);
 
         expect(recentRuns[0]?.arguments).toBeUndefined();
-        expect(recentRuns[0]?.exit_code).toBeUndefined();
-        expect(recentRuns[0]?.duration_ms).toBeUndefined();
+        expect(recentRuns[0]?.exitCode).toBeUndefined();
+        expect(recentRuns[0]?.durationMs).toBeUndefined();
       }),
     );
   });
