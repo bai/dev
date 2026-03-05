@@ -40,14 +40,16 @@ export const ensureMinimumVersionOrUpgrade = (
   context: VersionedToolContext,
 ): Effect.Effect<void, ExternalToolError | ShellExecutionError> =>
   Effect.gen(function* () {
-    const { isValid, currentVersion } = yield* checkVersionAgainstMinimum(context);
+    const versionCheck = yield* checkVersionAgainstMinimum(context);
 
-    if (isValid) {
+    if (versionCheck.isValid) {
       return;
     }
 
-    if (currentVersion) {
-      yield* Effect.logWarning(`⚠️  ${context.displayName} version ${currentVersion} is older than required ${context.minVersion}`);
+    if (versionCheck.currentVersion) {
+      yield* Effect.logWarning(
+        `⚠️  ${context.displayName} version ${versionCheck.currentVersion} is older than required ${context.minVersion}`,
+      );
     } else {
       yield* Effect.logWarning(`⚠️  Unable to determine ${context.toolId} version`);
     }
@@ -63,25 +65,25 @@ export const ensureMinimumVersionOrUpgrade = (
       return yield* externalToolError(`Failed to update ${context.toolId}`, {
         tool: context.toolId,
         exitCode: 1,
-        stderr: `Required version: ${context.minVersion}, Current: ${currentVersion}`,
+        stderr: `Required version: ${context.minVersion}, Current: ${versionCheck.currentVersion}`,
       });
     }
 
-    const { isValid: isValidAfterUpgrade, currentVersion: versionAfterUpgrade } = yield* checkVersionAgainstMinimum(context);
-    if (!isValidAfterUpgrade) {
+    const versionCheckAfterUpgrade = yield* checkVersionAgainstMinimum(context);
+    if (!versionCheckAfterUpgrade.isValid) {
       yield* Effect.logError(`❌ ${context.displayName} upgrade completed but version still doesn't meet requirement`);
-      if (versionAfterUpgrade) {
-        yield* Effect.logError(`   Current: ${versionAfterUpgrade}, Required: ${context.minVersion}`);
+      if (versionCheckAfterUpgrade.currentVersion) {
+        yield* Effect.logError(`   Current: ${versionCheckAfterUpgrade.currentVersion}, Required: ${context.minVersion}`);
       }
       return yield* externalToolError(`${context.displayName} upgrade failed`, {
         tool: context.toolId,
         exitCode: 1,
-        stderr: `Required: ${context.minVersion}, Got: ${versionAfterUpgrade}`,
+        stderr: `Required: ${context.minVersion}, Got: ${versionCheckAfterUpgrade.currentVersion}`,
       });
     }
 
-    if (versionAfterUpgrade) {
-      yield* Effect.logInfo(`✨ ${context.displayName} successfully upgraded to version ${versionAfterUpgrade}`);
+    if (versionCheckAfterUpgrade.currentVersion) {
+      yield* Effect.logInfo(`✨ ${context.displayName} successfully upgraded to version ${versionCheckAfterUpgrade.currentVersion}`);
     }
   });
 

@@ -67,11 +67,11 @@ export const makeMiseToolsLive = (shell: Shell, mise: Mise): MiseTools => {
 
   const checkVersion = (): Effect.Effect<{ isValid: boolean; currentVersion: string | null }, ShellExecutionError> =>
     Effect.gen(function* () {
-      const { currentVersion, latestVersion } = yield* getVersionInfo();
-      const requiredVersion = resolveRequiredVersion(latestVersion);
+      const versionInfo = yield* getVersionInfo();
+      const requiredVersion = resolveRequiredVersion(versionInfo.latestVersion);
       return yield* checkVersionAgainstMinimum({
         minVersion: requiredVersion,
-        getCurrentVersion: () => Effect.succeed(currentVersion),
+        getCurrentVersion: () => Effect.succeed(versionInfo.currentVersion),
       });
     });
 
@@ -92,15 +92,15 @@ export const makeMiseToolsLive = (shell: Shell, mise: Mise): MiseTools => {
 
   const ensureVersionOrUpgrade = (): Effect.Effect<void, ExternalToolError | ShellExecutionError | UnknownError> =>
     Effect.gen(function* () {
-      const { currentVersion, latestVersion } = yield* getVersionInfo();
-      const requiredVersion = resolveRequiredVersion(latestVersion);
-      const isValid = currentVersion ? compareVersions(currentVersion, requiredVersion) >= 0 : false;
+      const versionInfo = yield* getVersionInfo();
+      const requiredVersion = resolveRequiredVersion(versionInfo.latestVersion);
+      const isValid = versionInfo.currentVersion ? compareVersions(versionInfo.currentVersion, requiredVersion) >= 0 : false;
 
-      if (isValid && currentVersion) {
-        if (latestVersion) {
-          yield* Effect.logInfo(`✅ Mise ${currentVersion} is the latest version`);
+      if (isValid && versionInfo.currentVersion) {
+        if (versionInfo.latestVersion) {
+          yield* Effect.logInfo(`✅ Mise ${versionInfo.currentVersion} is the latest version`);
         } else {
-          yield* Effect.logInfo(`✅ Mise ${currentVersion} meets required version >=${requiredVersion}`);
+          yield* Effect.logInfo(`✅ Mise ${versionInfo.currentVersion} meets required version >=${requiredVersion}`);
         }
         yield* mise.setupGlobalConfig();
         return;

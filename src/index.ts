@@ -3,6 +3,7 @@ import { NodeSdk } from "@effect/opentelemetry";
 import { BunRuntime } from "@effect/platform-bun";
 import { ATTR_SERVICE_NAMESPACE } from "@opentelemetry/semantic-conventions";
 import { Cause, Effect, Layer } from "effect";
+import * as Arr from "effect/Array";
 
 import { registerCdCommand } from "./app/cd-command";
 import { registerCloneCommand } from "./app/clone-command";
@@ -95,29 +96,17 @@ export const checkAndDisplayHelp = (args: readonly string[], registry: CommandRe
     return true;
   });
 
-/**
- * Create the main command dynamically from the registry
- */
-const toNonEmptyReadonlyArray = <A>(values: ReadonlyArray<A>): readonly [A, ...A[]] | null => {
-  const [first, ...remaining] = values;
-  if (first === undefined) {
-    return null;
-  }
-  return [first, ...remaining];
-};
-
 export const createMainCommand = (registry: CommandRegistry) =>
   Effect.gen(function* () {
     const commands = (yield* registry.getCommands()) as ReadonlyArray<CliCommand>;
     const baseCommand = Command.make("dev", {}, () => Effect.logInfo("Use --help to see available commands"));
 
-    const subcommands = toNonEmptyReadonlyArray(commands);
-    if (!subcommands) {
+    if (!Arr.isNonEmptyReadonlyArray(commands)) {
       yield* Effect.logWarning("No commands registered; running without subcommands");
       return baseCommand;
     }
 
-    return baseCommand.pipe(Command.withSubcommands(subcommands));
+    return baseCommand.pipe(Command.withSubcommands(commands));
   });
 
 /**
@@ -271,7 +260,8 @@ export const program = Effect.scoped(
 // Create the main program with tracing
 export const mainProgram = Effect.gen(function* () {
   // Setup application and get the app layer
-  const { appLayer } = yield* setupApplication();
+  const setup = yield* setupApplication();
+  const appLayer = setup.appLayer;
 
   // Get tracing configuration from the tracing service
   const sdkConfig = yield* Effect.gen(function* () {
