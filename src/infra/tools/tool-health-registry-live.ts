@@ -26,15 +26,7 @@ export const makeToolHealthRegistryLive = (toolRegistry: BuiltToolRegistry): Too
 
     checkAllTools: () =>
       Effect.gen(function* () {
-        const tools = Array.from(toolCheckers.keys());
-        const checkEffects = tools.map((toolName) => {
-          const checker = toolCheckers.get(toolName);
-          if (!checker) {
-            // This should never happen since we're iterating over keys from the map
-            return healthCheckError(`Unexpected missing checker for tool: ${toolName}`, toolName);
-          }
-          return checker();
-        });
+        const checkEffects = Array.from(toolCheckers.values()).map((checker) => checker());
 
         return yield* Effect.all(checkEffects, { concurrency: "unbounded" });
       }),
