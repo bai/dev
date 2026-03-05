@@ -1,7 +1,7 @@
 import { Command } from "@effect/cli";
 import { it } from "@effect/vitest";
 import { Effect } from "effect";
-import { afterEach, describe, expect, vi } from "vitest";
+import { describe, expect, vi } from "vitest";
 
 import type { CommandInfo, CommandRegistry, RegisteredCommand } from "./domain/command-registry-port";
 import { configError } from "./domain/errors";
@@ -20,10 +20,6 @@ const makeCommandInfo = (name: string, displayHelp?: () => Effect.Effect<void, n
 });
 
 describe("index", () => {
-  afterEach(() => {
-    process.exitCode = undefined;
-  });
-
   it.effect("checkAndDisplayHelp renders command help when a known command is requested", () =>
     Effect.gen(function* () {
       const displayHelp = vi.fn(() => Effect.void);
@@ -76,17 +72,15 @@ describe("index", () => {
 
   it.effect("handleProgramError maps DevError to domain exit code", () =>
     Effect.gen(function* () {
-      yield* handleProgramError(configError("invalid config"));
-
-      expect(process.exitCode).toBe(2);
+      const code = yield* handleProgramError(configError("invalid config"));
+      expect(code).toBe(2);
     }),
   );
 
   it.effect("handleProgramError maps unknown errors to exit code 1", () =>
     Effect.gen(function* () {
-      yield* handleProgramError(new Error("boom"));
-
-      expect(process.exitCode).toBe(1);
+      const code = yield* handleProgramError(new Error("boom"));
+      expect(code).toBe(1);
     }),
   );
 });

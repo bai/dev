@@ -2,7 +2,7 @@ import { Command } from "@effect/cli";
 import { NodeSdk } from "@effect/opentelemetry";
 import { BunRuntime } from "@effect/platform-bun";
 import { ATTR_SERVICE_NAMESPACE } from "@opentelemetry/semantic-conventions";
-import { Effect, Layer } from "effect";
+import { Cause, Effect, Layer } from "effect";
 
 import { registerCdCommand } from "./app/cd-command";
 import { registerCloneCommand } from "./app/clone-command";
@@ -140,9 +140,6 @@ export const runCli = (
       yield* Effect.addFinalizer(() =>
         Effect.gen(function* () {
           yield* Effect.logDebug("🔧 Cleaning up CLI resources...");
-          if (process.exitCode === 130) {
-            yield* Effect.logDebug("💡 Shutdown initiated by user interrupt (Ctrl+C)");
-          }
           yield* Effect.logDebug("✅ CLI cleanup complete");
         }),
       );
@@ -178,32 +175,30 @@ export const runCli = (
   );
 };
 
-export const handleProgramError = (error: unknown): Effect.Effect<void, never, never> =>
+export const handleProgramError = (error: unknown): Effect.Effect<number, never, never> =>
   Effect.gen(function* () {
     // Try to handle as DevError first
     if (error && typeof error === "object" && "_tag" in error) {
       const devError = error as DevError;
       yield* Effect.logError(`❌ ${devError._tag}: ${extractErrorMessage(devError)}`);
-      yield* Effect.sync(() => {
-        process.exitCode = exitCode(devError);
-      });
-      return;
+      return exitCode(devError);
     }
 
     // Handle unknown errors
     const errorMessage = extractErrorMessage(error);
     yield* Effect.logError(`❌ Unknown error: ${errorMessage}`);
-    yield* Effect.sync(() => {
-      process.exitCode = 1;
-    });
+    return 1;
   });
 
-export const handleProgramCause = (cause: unknown): Effect.Effect<void, never, never> =>
+export const handleProgramCause = (cause: Cause.Cause<unknown>): Effect.Effect<number, never, never> =>
   Effect.gen(function* () {
+    if (Cause.isInterruptedOnly(cause)) {
+      yield* Effect.logDebug("💡 Shutdown initiated by user interrupt (Ctrl+C)");
+      return 130;
+    }
+
     yield* Effect.logError(`❌ Unexpected error: ${String(cause)}`);
-    yield* Effect.sync(() => {
-      process.exitCode = 1;
-    });
+    return 1;
   });
 
 export const program = Effect.scoped(
@@ -212,16 +207,12 @@ export const program = Effect.scoped(
     yield* Effect.addFinalizer(() =>
       Effect.gen(function* () {
         yield* Effect.logDebug("🔧 Cleaning up resources...");
-        if (process.exitCode === 130) {
-          yield* Effect.logDebug("💡 Shutdown initiated by user interrupt (Ctrl+C)");
-          yield* Effect.annotateCurrentSpan("application.shutdown.reason", "user_interrupt");
-        }
         yield* Effect.logDebug("✅ Cleanup complete");
       }).pipe(Effect.withSpan("cleanup")),
     );
 
     // Run CLI with services provided from the outside
-    yield* Effect.gen(function* () {
+    const commandExitCode = yield* Effect.gen(function* () {
       // Get services
       const commandTracker = yield* CommandTrackerTag;
       const updateChecker = yield* UpdateCheckerTag;
@@ -255,23 +246,27 @@ export const program = Effect.scoped(
         description: "A CLI tool for quick navigation and environment management",
       }).pipe(Effect.withSpan("cli.run"));
 
-      yield* cliExecution.pipe(
-        Effect.tap(() =>
-          commandTracker
-            .completeCommandRun(runId, typeof process.exitCode === "number" ? process.exitCode : 0)
-            .pipe(Effect.catchAll((error) => Effect.logWarning(`Failed to complete command run tracking: ${error._tag}`))),
-        ),
-        Effect.tapError(() =>
-          commandTracker
-            .completeCommandRun(runId, typeof process.exitCode === "number" ? process.exitCode : 1)
-            .pipe(Effect.catchAll((error) => Effect.logWarning(`Failed to complete command run tracking: ${error._tag}`))),
-        ),
+      const cliExitCode = yield* cliExecution.pipe(
+        Effect.as(0),
+        Effect.catchAll(handleProgramError),
+        Effect.catchAllCause(handleProgramCause),
       );
+
+      yield* commandTracker
+        .completeCommandRun(runId, cliExitCode)
+        .pipe(Effect.catchAll((error) => Effect.logWarning(`Failed to complete command run tracking: ${error._tag}`)));
+
+      return cliExitCode;
     }).pipe(Effect.withSpan("cli.execute"));
 
+    if (commandExitCode === 130) {
+      yield* Effect.annotateCurrentSpan("application.shutdown.reason", "user_interrupt");
+    }
+
     yield* Effect.logDebug("✅ CLI execution completed");
+    return commandExitCode;
   }).pipe(Effect.withSpan("cli.main")),
-).pipe(Effect.catchAll(handleProgramError), Effect.catchAllCause(handleProgramCause)) as Effect.Effect<void, never, never>;
+).pipe(Effect.catchAll(handleProgramError), Effect.catchAllCause(handleProgramCause)) as Effect.Effect<number, never, never>;
 
 // Create the main program with tracing
 export const mainProgram = Effect.gen(function* () {
@@ -306,11 +301,21 @@ export const mainProgram = Effect.gen(function* () {
   const TracingLive = NodeSdk.layer(() => sdkConfig);
 
   // Run the program with tracing
-  yield* program.pipe(Effect.provide(Layer.mergeAll(TracingLive, appLayer)));
+  return yield* program.pipe(Effect.provide(Layer.mergeAll(TracingLive, appLayer)));
 }).pipe(Effect.scoped);
 
 // Run the program with BunRuntime
-export const runMainProgram = () => BunRuntime.runMain(mainProgram as Effect.Effect<void, never, never>);
+export const runMainProgram = () =>
+  BunRuntime.runMain(
+    mainProgram.pipe(
+      Effect.tap((code) =>
+        Effect.sync(() => {
+          process.exitCode = code;
+        }),
+      ),
+      Effect.asVoid,
+    ) as Effect.Effect<void, never, never>,
+  );
 
 if (import.meta.main) {
   runMainProgram();
