@@ -157,12 +157,13 @@ export const buildAppLayer = (config: Config) => {
   // Database-dependent services
   const runStoreLayer = Layer.provide(RunStoreLiveLayer, Layer.mergeAll(databaseLayer, baseServices));
   const healthCheckLayer = Layer.provide(HealthCheckLiveLayer, Layer.mergeAll(databaseLayer, healthCheckServiceLayer));
+  const appServiceDependencies = Layer.mergeAll(infraLayer, runStoreLayer);
 
   // Final application services
   const appServices = Layer.mergeAll(
-    Layer.provide(ShellIntegrationLiveLayer, infraLayer),
-    Layer.provide(UpdateCheckerLiveLayer, infraLayer),
-    Layer.provide(CommandTrackerLiveLayer, infraLayer),
+    Layer.provide(ShellIntegrationLiveLayer, appServiceDependencies),
+    Layer.provide(UpdateCheckerLiveLayer, appServiceDependencies),
+    Layer.provide(CommandTrackerLiveLayer, appServiceDependencies),
     CommandRegistryLiveLayer,
   );
 
