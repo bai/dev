@@ -10,7 +10,7 @@ import { GitTag } from "../domain/git-port";
 import { MiseTag } from "../domain/mise-port";
 import { PathServiceTag, type PathService } from "../domain/path-service";
 import { ShellTag } from "../domain/shell-port";
-import { ToolManagementTag, type ToolManagement } from "../domain/tool-management-port";
+import { ToolManagementTag, type ToolManager } from "../domain/tool-management-port";
 
 // No options needed for upgrade command
 
@@ -244,16 +244,11 @@ function upgradeEssentialTools(): Effect.Effect<void, DevError, ToolManagementTa
     yield* Effect.logInfo("🛠️ Checking essential tools...");
 
     const toolManagement = yield* ToolManagementTag;
+    const essentialTools = toolManagement.listEssentialTools();
 
     // Check and potentially upgrade tools in parallel
     const toolChecks = yield* Effect.all(
-      [
-        Effect.either(checkTool("Bun", toolManagement.bun)),
-        Effect.either(checkTool("Git", toolManagement.git)),
-        Effect.either(checkTool("Mise", toolManagement.mise)),
-        Effect.either(checkTool("Fzf", toolManagement.fzf)),
-        Effect.either(checkTool("Gcloud", toolManagement.gcloud)),
-      ],
+      essentialTools.map((tool) => Effect.either(checkTool(tool.displayName, tool.manager))),
       { concurrency: "unbounded" },
     );
 
@@ -271,7 +266,7 @@ function upgradeEssentialTools(): Effect.Effect<void, DevError, ToolManagementTa
 /**
  * Generic function to check and upgrade a tool
  */
-export function checkTool(toolName: string, toolManager: ToolManagement[keyof ToolManagement]): Effect.Effect<void, DevError> {
+export function checkTool(toolName: string, toolManager: ToolManager): Effect.Effect<void, DevError> {
   return Effect.gen(function* () {
     yield* Effect.annotateCurrentSpan("tool.name", toolName);
     const { isValid, currentVersion } = yield* toolManager.checkVersion().pipe(

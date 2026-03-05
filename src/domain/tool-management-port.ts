@@ -20,15 +20,20 @@ export interface ToolManager {
   readonly ensureVersionOrUpgrade: () => Effect.Effect<void, ExternalToolError | ShellExecutionError | UnknownError>;
 }
 
+export interface ManagedTool {
+  readonly id: string;
+  readonly displayName: string;
+  readonly essential: boolean;
+  readonly manager: ToolManager;
+}
+
 /**
  * Tool management port that provides access to individual tool managers
  */
 export interface ToolManagement {
-  readonly bun: ToolManager;
-  readonly git: ToolManager;
-  readonly mise: ToolManager;
-  readonly fzf: ToolManager;
-  readonly gcloud: ToolManager;
+  readonly tools: Readonly<Record<string, ToolManager>>;
+  readonly listTools: () => readonly ManagedTool[];
+  readonly listEssentialTools: () => readonly ManagedTool[];
 }
 
 export class ToolManagementTag extends Context.Tag("ToolManagement")<ToolManagementTag, ToolManagement>() {}
