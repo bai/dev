@@ -4,7 +4,7 @@ import { it } from "@effect/vitest";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/bun-sqlite";
 import { Effect } from "effect";
-import { describe, expect } from "vitest";
+import { afterEach, describe, expect, vi } from "vitest";
 
 import { installMetadata } from "../../drizzle/schema";
 import type { Database } from "../domain/database-port";
@@ -56,20 +56,28 @@ const selectSingletonRows = (database: Database) =>
     .pipe(Effect.orDie);
 
 describe("install-identity-live", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it.effect("generates an install id once and reuses it for future calls", () =>
     withTestDatabase((database) =>
       Effect.gen(function* () {
+        const generatedInstallId = "0196ed78-467a-7f2f-bf6b-95e73fd43b93";
+        const randomUuidSpy = vi
+          .spyOn(Bun, "randomUUIDv7")
+          .mockImplementation(() => generatedInstallId as unknown as ReturnType<typeof Bun.randomUUIDv7>);
         const installIdentity = makeInstallIdentityLive(database);
 
         const firstInstallId = yield* installIdentity.getOrCreateInstallId().pipe(Effect.orDie);
         const secondInstallId = yield* installIdentity.getOrCreateInstallId().pipe(Effect.orDie);
         const persistedRows = yield* selectSingletonRows(database);
 
+        expect(firstInstallId).toBe(generatedInstallId);
         expect(firstInstallId).toBe(secondInstallId);
-        expect(firstInstallId.length).toBe(36);
-        expect(firstInstallId[14]).toBe("7");
         expect(persistedRows).toHaveLength(1);
         expect(persistedRows[0]?.install_id).toBe(firstInstallId);
+        expect(randomUuidSpy).toHaveBeenCalledTimes(1);
       }),
     ),
   );
@@ -93,12 +101,14 @@ describe("install-identity-live", () => {
           .pipe(Effect.orDie);
 
         const installIdentity = makeInstallIdentityLive(database);
+        const randomUuidSpy = vi.spyOn(Bun, "randomUUIDv7");
         const resolvedInstallId = yield* installIdentity.getOrCreateInstallId().pipe(Effect.orDie);
         const persistedRows = yield* selectSingletonRows(database);
 
         expect(resolvedInstallId).toBe(expectedInstallId);
         expect(persistedRows).toHaveLength(1);
         expect(persistedRows[0]?.install_id).toBe(expectedInstallId);
+        expect(randomUuidSpy).not.toHaveBeenCalled();
       }),
     ),
   );

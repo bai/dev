@@ -3,7 +3,7 @@ import { BatchSpanProcessor, NoopSpanProcessor } from "@opentelemetry/sdk-trace-
 import { ATTR_SERVICE_INSTANCE_ID, ATTR_SERVICE_NAME, ATTR_SERVICE_NAMESPACE } from "@opentelemetry/semantic-conventions";
 import { ATTR_APP_INSTALLATION_ID } from "@opentelemetry/semantic-conventions/incubating";
 import { Effect } from "effect";
-import { describe, expect } from "vitest";
+import { afterEach, describe, expect, vi } from "vitest";
 
 import type { ConfigLoader } from "../../domain/config-loader-port";
 import { ConfigLoaderTag } from "../../domain/config-loader-port";
@@ -55,6 +55,10 @@ const loadSdkConfig = (config: ReturnType<typeof configSchema.parse>) =>
   );
 
 describe("tracing-live", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it.effect("uses console span processor when telemetry mode is console", () =>
     Effect.gen(function* () {
       const config = configSchema.parse({
@@ -120,6 +124,28 @@ describe("tracing-live", () => {
       });
 
       expect(result.success).toBe(false);
+    }),
+  );
+
+  it.effect("generates a new runtime service instance id on each sdk config call", () =>
+    Effect.gen(function* () {
+      const firstRuntimeId = "0196ed78-467a-7f2f-bf6b-95e73fd43b8e";
+      const secondRuntimeId = "0196ed78-467a-7f2f-bf6b-95e73fd43b8f";
+      const randomUuidSpy = vi
+        .spyOn(Bun, "randomUUIDv7")
+        .mockImplementationOnce(() => firstRuntimeId as unknown as ReturnType<typeof Bun.randomUUIDv7>)
+        .mockImplementationOnce(() => secondRuntimeId as unknown as ReturnType<typeof Bun.randomUUIDv7>);
+
+      const config = configSchema.parse({
+        telemetry: { mode: "disabled" },
+      });
+
+      const firstSdkConfig = yield* loadSdkConfig(config);
+      const secondSdkConfig = yield* loadSdkConfig(config);
+
+      expect(firstSdkConfig.resource?.attributes?.[ATTR_SERVICE_INSTANCE_ID]).toBe(firstRuntimeId);
+      expect(secondSdkConfig.resource?.attributes?.[ATTR_SERVICE_INSTANCE_ID]).toBe(secondRuntimeId);
+      expect(randomUuidSpy).toHaveBeenCalledTimes(2);
     }),
   );
 });

@@ -1,6 +1,6 @@
 import { it } from "@effect/vitest";
 import { Effect } from "effect";
-import { describe, expect } from "vitest";
+import { afterEach, describe, expect, vi } from "vitest";
 
 import type { Database } from "../domain/database-port";
 import type { DrizzleDatabase } from "../domain/drizzle-types";
@@ -41,6 +41,55 @@ const makeMockDatabase = (rows: readonly MockRunRow[]): Database => {
 };
 
 describe("run-store-live", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  describe("record", () => {
+    it.effect("uses runtime-generated uuid for inserted run id", () =>
+      Effect.gen(function* () {
+        const insertedRows: Array<Record<string, unknown>> = [];
+        const expectedRunId = "0196ed78-467a-7f2f-bf6b-95e73fd43b90";
+        const randomUuidSpy = vi
+          .spyOn(Bun, "randomUUIDv7")
+          .mockImplementation(() => expectedRunId as unknown as ReturnType<typeof Bun.randomUUIDv7>);
+
+        const database: Database = {
+          query: (fn) =>
+            fn({
+              insert: (_table: unknown) => ({
+                values: (row: Record<string, unknown>) => {
+                  insertedRows.push(row);
+                  return {
+                    returning: async () => [{ id: row.id as string }],
+                  };
+                },
+              }),
+            } as never),
+          transaction: (fn) => fn({} as never),
+          raw: () => Effect.die("raw database not implemented in test"),
+          migrate: () => Effect.void,
+        };
+
+        const runStore = makeRunStoreLive(database);
+        const recordedRunId = yield* runStore.record({
+          cli_version: "1.2.3",
+          command_name: "status",
+          arguments: "--json",
+          cwd: "/tmp/dev",
+          started_at: new Date("2026-01-01T10:00:00.000Z"),
+          finished_at: new Date("2026-01-01T10:00:01.000Z"),
+          exit_code: 0,
+        });
+
+        expect(recordedRunId).toBe(expectedRunId);
+        expect(insertedRows).toHaveLength(1);
+        expect(insertedRows[0]?.id).toBe(expectedRunId);
+        expect(randomUuidSpy).toHaveBeenCalledTimes(1);
+      }),
+    );
+  });
+
   describe("getRecentRuns", () => {
     it.effect("preserves zero exit code and zero duration", () =>
       Effect.gen(function* () {

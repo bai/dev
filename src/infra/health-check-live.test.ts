@@ -1,6 +1,6 @@
 import { it } from "@effect/vitest";
 import { Cause, Effect, Exit, Option } from "effect";
-import { describe, expect } from "vitest";
+import { afterEach, describe, expect, vi } from "vitest";
 
 import type { Database } from "../domain/database-port";
 import { configError, healthCheckError } from "../domain/errors";
@@ -58,9 +58,19 @@ const createDatabaseCapture = (): DatabaseCapture => {
 };
 
 describe("health-check-live", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it.effect("stores health check results and prunes stale entries", () =>
     Effect.gen(function* () {
       const databaseCapture = createDatabaseCapture();
+      const firstHealthCheckId = "0196ed78-467a-7f2f-bf6b-95e73fd43b91";
+      const secondHealthCheckId = "0196ed78-467a-7f2f-bf6b-95e73fd43b92";
+      const randomUuidSpy = vi
+        .spyOn(Bun, "randomUUIDv7")
+        .mockImplementationOnce(() => firstHealthCheckId as unknown as ReturnType<typeof Bun.randomUUIDv7>)
+        .mockImplementationOnce(() => secondHealthCheckId as unknown as ReturnType<typeof Bun.randomUUIDv7>);
       const results: readonly HealthCheckResult[] = [
         {
           toolName: "git",
@@ -91,7 +101,10 @@ describe("health-check-live", () => {
       expect(databaseCapture.insertedRows).toHaveLength(2);
       expect(databaseCapture.insertedRows[0]?.tool_name).toBe("git");
       expect(databaseCapture.insertedRows[1]?.tool_name).toBe("bun");
+      expect(databaseCapture.insertedRows[0]?.id).toBe(firstHealthCheckId);
+      expect(databaseCapture.insertedRows[1]?.id).toBe(secondHealthCheckId);
       expect(databaseCapture.pruneCalls.count).toBe(1);
+      expect(randomUuidSpy).toHaveBeenCalledTimes(2);
     }),
   );
 
