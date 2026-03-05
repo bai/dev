@@ -2,7 +2,7 @@ import { Database as BunSQLiteDatabase } from "bun:sqlite";
 
 import { drizzle } from "drizzle-orm/bun-sqlite";
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
-import { Effect, Layer } from "effect";
+import { Effect, Exit, Layer } from "effect";
 
 import { DatabaseTag, type Database } from "../domain/database-port";
 import type { DrizzleDatabase } from "../domain/drizzle-types";
@@ -31,22 +31,44 @@ export const makeDatabaseLive = (sqlite: BunSQLiteDatabase, drizzleDb: DrizzleDa
     });
 
   const transaction = <A, E>(fn: (tx: DrizzleDatabase) => Effect.Effect<A, E>): Effect.Effect<A, E | ConfigError | UnknownError> =>
-    Effect.gen(function* () {
-      yield* Effect.logDebug("Starting database transaction");
+    Effect.uninterruptibleMask((restore) =>
+      Effect.gen(function* () {
+        yield* Effect.logDebug("Starting database transaction");
+        yield* Effect.try({
+          try: () => sqlite.exec("BEGIN"),
+          catch: (error) => unknownError(`Failed to begin database transaction: ${error}`),
+        });
 
-      // For simplicity, we'll use the main database connection for now
-      // In a production system, you'd want proper transaction support
-      // For now, this provides the same interface but without true ACID transactions
-      yield* Effect.logWarning("Transaction support is limited - using main database connection");
-      return yield* fn(drizzleDb).pipe(
-        Effect.mapError((error) => {
-          if (error && typeof error === "object" && "_tag" in error) {
-            return error as E;
-          }
-          return unknownError(`Database transaction failed: ${error}`);
-        }),
-      );
-    });
+        const transactionResult = yield* restore(fn(drizzleDb)).pipe(
+          Effect.mapError((error) => {
+            if (error && typeof error === "object" && "_tag" in error) {
+              return error as E;
+            }
+            return unknownError(`Database transaction failed: ${error}`);
+          }),
+          Effect.exit,
+        );
+
+        if (Exit.isSuccess(transactionResult)) {
+          yield* Effect.try({
+            try: () => sqlite.exec("COMMIT"),
+            catch: (error) => unknownError(`Failed to commit database transaction: ${error}`),
+          });
+          return transactionResult.value;
+        }
+
+        const rollbackResult = yield* Effect.try({
+          try: () => sqlite.exec("ROLLBACK"),
+          catch: (error) => unknownError(`Failed to rollback database transaction: ${error}`),
+        }).pipe(Effect.exit);
+
+        if (Exit.isFailure(rollbackResult)) {
+          return yield* Effect.failCause(rollbackResult.cause);
+        }
+
+        return yield* Effect.failCause(transactionResult.cause);
+      }),
+    );
 
   const raw = (): Effect.Effect<BunSQLiteDatabase, ConfigError | UnknownError> => Effect.succeed(sqlite);
 

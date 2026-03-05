@@ -1,6 +1,7 @@
 import { Database as BunSQLiteDatabase } from "bun:sqlite";
 
 import { it } from "@effect/vitest";
+import { sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/bun-sqlite";
 import { Effect, Layer } from "effect";
 import { describe, expect, vi } from "vitest";
@@ -85,6 +86,71 @@ describe("database-live", () => {
         expect(error._tag).toBe("UnknownError");
         expect(String(error.reason)).toContain("Database transaction failed");
       }
+    }),
+  );
+
+  it.effect("transaction commits all writes on success", () =>
+    Effect.gen(function* () {
+      const sqlite = new BunSQLiteDatabase(":memory:");
+      const drizzleDb: DrizzleDatabase = drizzle(sqlite);
+      const database = makeDatabaseLive(sqlite, drizzleDb, "/tmp/migrations");
+
+      yield* Effect.sync(() => {
+        sqlite.exec("create table tx_probe (id integer primary key, value text not null)");
+      });
+
+      yield* database.transaction((tx) =>
+        Effect.sync(() => {
+          tx.run(sql`insert into tx_probe (value) values ('first')`);
+          tx.run(sql`insert into tx_probe (value) values ('second')`);
+        }),
+      );
+
+      const rowCount = yield* Effect.sync(() => {
+        const result = sqlite.query("select count(*) as count from tx_probe").get() as { readonly count: number };
+        return Number(result.count);
+      });
+
+      expect(rowCount).toBe(2);
+      yield* database.close();
+    }),
+  );
+
+  it.effect("transaction rolls back writes when callback fails", () =>
+    Effect.gen(function* () {
+      const sqlite = new BunSQLiteDatabase(":memory:");
+      const drizzleDb: DrizzleDatabase = drizzle(sqlite);
+      const database = makeDatabaseLive(sqlite, drizzleDb, "/tmp/migrations");
+      const taggedFailure = configError("force rollback");
+
+      yield* Effect.sync(() => {
+        sqlite.exec("create table tx_probe (id integer primary key, value text not null)");
+      });
+
+      const error = yield* Effect.flip(
+        database.transaction((tx) =>
+          Effect.gen(function* () {
+            yield* Effect.sync(() => {
+              tx.run(sql`insert into tx_probe (value) values ('first')`);
+            });
+            yield* Effect.promise(() => Promise.resolve());
+            yield* Effect.sync(() => {
+              tx.run(sql`insert into tx_probe (value) values ('second')`);
+            });
+            return yield* Effect.fail(taggedFailure);
+          }),
+        ),
+      );
+
+      expect(error).toBe(taggedFailure);
+
+      const rowCount = yield* Effect.sync(() => {
+        const result = sqlite.query("select count(*) as count from tx_probe").get() as { readonly count: number };
+        return Number(result.count);
+      });
+
+      expect(rowCount).toBe(0);
+      yield* database.close();
     }),
   );
 
