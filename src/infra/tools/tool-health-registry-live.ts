@@ -2,33 +2,13 @@ import { Effect, Layer } from "effect";
 
 import { healthCheckError, type HealthCheckError } from "../../domain/errors";
 import { ToolHealthRegistryTag, type ToolHealthRegistry } from "../../domain/tool-health-registry-port";
-import { BunToolsTag, type BunTools } from "./bun-tools-live";
-import { DockerToolsTag, type DockerTools } from "./docker-tools-live";
-import { FzfToolsTag, type FzfTools } from "./fzf-tools-live";
-import { GcloudToolsTag, type GcloudTools } from "./gcloud-tools-live";
-import { GitToolsTag, type GitTools } from "./git-tools-live";
-import { MiseToolsTag, type MiseTools } from "./mise-tools-live";
-import { createToolRegistry } from "./tool-registry-live";
+import { BuiltToolRegistryTag, type BuiltToolRegistry } from "./tool-registry-live";
 
 /**
  * Factory function to create ToolHealthRegistryPort implementation
  */
-export const makeToolHealthRegistryLive = (
-  bunTools: BunTools,
-  gitTools: GitTools,
-  miseTools: MiseTools,
-  fzfTools: FzfTools,
-  gcloudTools: GcloudTools,
-  dockerTools: DockerTools,
-): ToolHealthRegistry => {
-  const toolCheckers = createToolRegistry({
-    bunTools,
-    dockerTools,
-    fzfTools,
-    gcloudTools,
-    gitTools,
-    miseTools,
-  }).healthCheckers;
+export const makeToolHealthRegistryLive = (toolRegistry: BuiltToolRegistry): ToolHealthRegistry => {
+  const toolCheckers = toolRegistry.healthCheckers;
 
   return {
     getRegisteredTools: () => Effect.succeed(Array.from(toolCheckers.keys())),
@@ -67,13 +47,8 @@ export const makeToolHealthRegistryLive = (
 export const ToolHealthRegistryLiveLayer = Layer.effect(
   ToolHealthRegistryTag,
   Effect.gen(function* () {
-    const bunTools = yield* BunToolsTag;
-    const gitTools = yield* GitToolsTag;
-    const miseTools = yield* MiseToolsTag;
-    const fzfTools = yield* FzfToolsTag;
-    const gcloudTools = yield* GcloudToolsTag;
-    const dockerTools = yield* DockerToolsTag;
+    const toolRegistry = yield* BuiltToolRegistryTag;
 
-    return makeToolHealthRegistryLive(bunTools, gitTools, miseTools, fzfTools, gcloudTools, dockerTools);
+    return makeToolHealthRegistryLive(toolRegistry);
   }),
 );

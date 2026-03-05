@@ -1,14 +1,14 @@
-import { type Effect } from "effect";
+import { Context, Effect, Layer } from "effect";
 
 import { type HealthCheckError } from "../../domain/errors";
 import { type HealthCheckResult } from "../../domain/health-check-port";
 import { type ManagedTool, type ToolManager } from "../../domain/tool-management-port";
-import { type BunTools } from "./bun-tools-live";
-import { type DockerTools } from "./docker-tools-live";
-import { type FzfTools } from "./fzf-tools-live";
-import { type GcloudTools } from "./gcloud-tools-live";
-import { type GitTools } from "./git-tools-live";
-import { type MiseTools } from "./mise-tools-live";
+import { BunToolsTag, type BunTools } from "./bun-tools-live";
+import { DockerToolsTag, type DockerTools } from "./docker-tools-live";
+import { FzfToolsTag, type FzfTools } from "./fzf-tools-live";
+import { GcloudToolsTag, type GcloudTools } from "./gcloud-tools-live";
+import { GitToolsTag, type GitTools } from "./git-tools-live";
+import { MiseToolsTag, type MiseTools } from "./mise-tools-live";
 
 export interface ToolRegistryDependencies {
   readonly bunTools: BunTools;
@@ -121,3 +121,26 @@ export const createToolRegistry = (dependencies: ToolRegistryDependencies): Buil
     healthCheckers: new Map(healthCheckerEntries),
   };
 };
+
+export class BuiltToolRegistryTag extends Context.Tag("BuiltToolRegistry")<BuiltToolRegistryTag, BuiltToolRegistry>() {}
+
+export const BuiltToolRegistryLiveLayer = Layer.effect(
+  BuiltToolRegistryTag,
+  Effect.gen(function* () {
+    const bunTools = yield* BunToolsTag;
+    const dockerTools = yield* DockerToolsTag;
+    const fzfTools = yield* FzfToolsTag;
+    const gcloudTools = yield* GcloudToolsTag;
+    const gitTools = yield* GitToolsTag;
+    const miseTools = yield* MiseToolsTag;
+
+    return createToolRegistry({
+      bunTools,
+      dockerTools,
+      fzfTools,
+      gcloudTools,
+      gitTools,
+      miseTools,
+    });
+  }),
+);

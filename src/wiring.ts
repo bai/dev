@@ -34,6 +34,7 @@ import { GitToolsLiveLayer } from "./infra/tools/git-tools-live";
 import { MiseToolsLiveLayer } from "./infra/tools/mise-tools-live";
 import { ToolHealthRegistryLiveLayer } from "./infra/tools/tool-health-registry-live";
 import { ToolManagementLiveLayer } from "./infra/tools/tool-management-live";
+import { BuiltToolRegistryLiveLayer } from "./infra/tools/tool-registry-live";
 import { TracingLiveLayer } from "./infra/tracing/tracing-live";
 
 interface SetupOptions {
@@ -110,9 +111,10 @@ export const buildAppLayer = (config: Config) => {
     InteractiveSelectorLiveLayer,
   );
 
-  // Tool management and health registry
-  const toolManagementLayer = Layer.provide(ToolManagementLiveLayer, toolLayers);
-  const toolHealthRegistryLayer = Layer.provide(ToolHealthRegistryLiveLayer, toolLayers);
+  // Shared registry + tool management services
+  const builtToolRegistryLayer = Layer.provide(BuiltToolRegistryLiveLayer, toolLayers);
+  const toolManagementLayer = Layer.provide(ToolManagementLiveLayer, builtToolRegistryLayer);
+  const toolHealthRegistryLayer = Layer.provide(ToolHealthRegistryLiveLayer, builtToolRegistryLayer);
 
   // Repository provider
   const repoProviderLayer = MultiRepoProviderLiveLayer(defaultOrg, defaultProvider, orgToProvider);
@@ -134,6 +136,7 @@ export const buildAppLayer = (config: Config) => {
     repositoryServiceLayer,
     configLoaderLayer,
     toolLayers,
+    builtToolRegistryLayer,
     toolManagementLayer,
     toolHealthRegistryLayer,
     repoProviderLayer,

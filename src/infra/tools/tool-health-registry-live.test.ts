@@ -18,6 +18,7 @@ import { GitToolsTag } from "./git-tools-live";
 import type { MiseTools } from "./mise-tools-live";
 import { MiseToolsTag } from "./mise-tools-live";
 import { makeToolHealthRegistryLive, ToolHealthRegistryLiveLayer } from "./tool-health-registry-live";
+import { BuiltToolRegistryLiveLayer, createToolRegistry } from "./tool-registry-live";
 
 const createResult = (toolName: string, status: "ok" | "warning" | "fail"): HealthCheckResult => ({
   toolName,
@@ -50,20 +51,27 @@ const createFixtures = () => {
     setupConfig: () => Effect.void,
   };
   const dockerTools: DockerTools = createDockerToolStub(createResult("docker", "ok"));
+  const toolDependencies = {
+    bunTools,
+    dockerTools,
+    fzfTools,
+    gcloudTools,
+    gitTools,
+    miseTools,
+  };
 
-  const layer = Layer.provide(
-    ToolHealthRegistryLiveLayer,
-    Layer.mergeAll(
-      Layer.succeed(BunToolsTag, bunTools),
-      Layer.succeed(GitToolsTag, gitTools),
-      Layer.succeed(MiseToolsTag, miseTools),
-      Layer.succeed(FzfToolsTag, fzfTools),
-      Layer.succeed(GcloudToolsTag, gcloudTools),
-      Layer.succeed(DockerToolsTag, dockerTools),
-    ),
+  const toolLayer = Layer.mergeAll(
+    Layer.succeed(BunToolsTag, bunTools),
+    Layer.succeed(GitToolsTag, gitTools),
+    Layer.succeed(MiseToolsTag, miseTools),
+    Layer.succeed(FzfToolsTag, fzfTools),
+    Layer.succeed(GcloudToolsTag, gcloudTools),
+    Layer.succeed(DockerToolsTag, dockerTools),
   );
+  const builtToolRegistryLayer = Layer.provide(BuiltToolRegistryLiveLayer, toolLayer);
+  const layer = Layer.provide(ToolHealthRegistryLiveLayer, builtToolRegistryLayer);
 
-  const registry = makeToolHealthRegistryLive(bunTools, gitTools, miseTools, fzfTools, gcloudTools, dockerTools);
+  const registry = makeToolHealthRegistryLive(createToolRegistry(toolDependencies));
 
   return {
     bunTools,
@@ -137,12 +145,14 @@ describe("tool-health-registry-live", () => {
         performHealthCheck: () => Effect.fail(healthCheckError("git health check failed", "git")),
       };
       const registry = makeToolHealthRegistryLive(
-        fixtures.bunTools,
-        failingGitTools,
-        fixtures.miseTools,
-        fixtures.fzfTools,
-        fixtures.gcloudTools,
-        fixtures.dockerTools,
+        createToolRegistry({
+          bunTools: fixtures.bunTools,
+          dockerTools: fixtures.dockerTools,
+          fzfTools: fixtures.fzfTools,
+          gcloudTools: fixtures.gcloudTools,
+          gitTools: failingGitTools,
+          miseTools: fixtures.miseTools,
+        }),
       );
 
       const error = yield* Effect.flip(registry.checkAllTools());
