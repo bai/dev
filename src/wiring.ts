@@ -10,6 +10,7 @@ import { DirectoryTag } from "./domain/directory-port";
 import type { ServiceName } from "./domain/docker-services-port";
 import { createPathService, createPathServiceLiveLayer } from "./domain/path-service";
 import { RepositoryServiceLiveLayer } from "./domain/repository-service";
+import { AutoUpgradeTriggerLiveLayer } from "./infra/auto-upgrade-trigger-live";
 import { CommandRegistryLiveLayer } from "./infra/command-registry-live";
 import { ConfigLoaderLiveLayer } from "./infra/config-loader-live";
 import { DatabaseLiveLayer } from "./infra/database-live";
@@ -79,7 +80,12 @@ export const buildAppLayer = (config: Config) => {
     : [];
 
   // Stage 1: Base foundation services (no dependencies)
-  const baseServices = Layer.mergeAll(FileSystemLiveLayer, ShellLiveLayer, createPathServiceLiveLayer(baseSearchPath));
+  const baseServices = Layer.mergeAll(
+    FileSystemLiveLayer,
+    ShellLiveLayer,
+    AutoUpgradeTriggerLiveLayer,
+    createPathServiceLiveLayer(baseSearchPath),
+  );
 
   // Stage 2: Services that depend on base services
   const networkLayer = Layer.provide(NetworkLiveLayer, baseServices);

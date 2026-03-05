@@ -118,7 +118,7 @@ describe("update-check-service", () => {
             return [] as CommandRun[];
           }),
       };
-      const checker = makeUpdateChecker(runStore);
+      const checker = makeUpdateChecker(runStore, () => Effect.void);
 
       yield* withArgv(["bun", "src/index.ts", "upgrade"], checker.runPeriodicUpgradeCheck());
 
@@ -148,7 +148,7 @@ describe("update-check-service", () => {
             ] satisfies CommandRun[];
           }),
       };
-      const checker = makeUpdateChecker(runStore);
+      const checker = makeUpdateChecker(runStore, () => Effect.void);
 
       yield* withArgv(["bun", "src/index.ts", "status"], checker.runPeriodicUpgradeCheck());
 
@@ -173,7 +173,7 @@ describe("update-check-service", () => {
         ...baseRunStore,
         getRecentRuns: () => configError("database unavailable"),
       };
-      const checker = makeUpdateChecker(runStore);
+      const checker = makeUpdateChecker(runStore, () => Effect.void);
 
       const result = yield* Effect.exit(withArgv(["bun", "src/index.ts", "status"], checker.runPeriodicUpgradeCheck()));
 
@@ -187,7 +187,7 @@ describe("update-check-service", () => {
         ...baseRunStore,
         getRecentRuns: () => unknownError("unexpected failure"),
       };
-      const checker = makeUpdateChecker(runStore);
+      const checker = makeUpdateChecker(runStore, () => Effect.void);
 
       const result = yield* Effect.exit(withArgv(["bun", "src/index.ts", "status"], checker.runPeriodicUpgradeCheck()));
 
