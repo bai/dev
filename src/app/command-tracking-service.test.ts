@@ -45,8 +45,8 @@ describe("command-tracking-service", () => {
       };
 
       const versionService: Version = {
-        getCurrentGitCommitSha: Effect.succeed("deadbeef"),
-        getVersion: Effect.succeed("deadbeef"),
+        getCurrentGitCommitSha: () => Effect.succeed("deadbeef"),
+        getVersion: () => Effect.succeed("deadbeef"),
       };
 
       const layer = Layer.mergeAll(Layer.succeed(RunStoreTag, runStore), Layer.succeed(VersionTag, versionService));
@@ -123,8 +123,8 @@ describe("command-tracking-service", () => {
       };
 
       const versionService: Version = {
-        getCurrentGitCommitSha: Effect.succeed("deadbeef"),
-        getVersion: Effect.succeed("deadbeef"),
+        getCurrentGitCommitSha: () => Effect.succeed("deadbeef"),
+        getVersion: () => Effect.succeed("deadbeef"),
       };
 
       const layer = Layer.mergeAll(Layer.succeed(RunStoreTag, failingStore), Layer.succeed(VersionTag, versionService));

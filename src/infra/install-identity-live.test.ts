@@ -61,8 +61,8 @@ describe("install-identity-live", () => {
       Effect.gen(function* () {
         const installIdentity = makeInstallIdentityLive(database);
 
-        const firstInstallId = yield* installIdentity.getOrCreateInstallId.pipe(Effect.orDie);
-        const secondInstallId = yield* installIdentity.getOrCreateInstallId.pipe(Effect.orDie);
+        const firstInstallId = yield* installIdentity.getOrCreateInstallId().pipe(Effect.orDie);
+        const secondInstallId = yield* installIdentity.getOrCreateInstallId().pipe(Effect.orDie);
         const persistedRows = yield* selectSingletonRows(database);
 
         expect(firstInstallId).toBe(secondInstallId);
@@ -93,7 +93,7 @@ describe("install-identity-live", () => {
           .pipe(Effect.orDie);
 
         const installIdentity = makeInstallIdentityLive(database);
-        const resolvedInstallId = yield* installIdentity.getOrCreateInstallId.pipe(Effect.orDie);
+        const resolvedInstallId = yield* installIdentity.getOrCreateInstallId().pipe(Effect.orDie);
         const persistedRows = yield* selectSingletonRows(database);
 
         expect(resolvedInstallId).toBe(expectedInstallId);

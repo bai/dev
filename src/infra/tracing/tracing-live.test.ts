@@ -19,8 +19,8 @@ import { VersionTag } from "../../domain/version-port";
 import { TracingLiveLayer } from "./tracing-live";
 
 const mockVersion: Version = {
-  getCurrentGitCommitSha: Effect.succeed("deadbeef"),
-  getVersion: Effect.succeed("1.2.3"),
+  getCurrentGitCommitSha: () => Effect.succeed("deadbeef"),
+  getVersion: () => Effect.succeed("1.2.3"),
 };
 
 const mockGit: Git = {
@@ -32,7 +32,7 @@ const mockGit: Git = {
 };
 
 const mockInstallIdentity: InstallIdentity = {
-  getOrCreateInstallId: Effect.succeed("0196ed78-467a-7f2f-bf6b-95e73fd43b8d"),
+  getOrCreateInstallId: () => Effect.succeed("0196ed78-467a-7f2f-bf6b-95e73fd43b8d"),
 };
 
 const makeConfigLoader = (config: ReturnType<typeof configSchema.parse>): ConfigLoader => ({

@@ -27,7 +27,7 @@ const recordCommandRun = (): Effect.Effect<string, ConfigError | UnknownError, R
     // Gather run information
     const commandName = process.argv[2] || "help";
     const args = process.argv.slice(3);
-    const cliVersion = yield* version.getCurrentGitCommitSha;
+    const cliVersion = yield* version.getCurrentGitCommitSha();
     const cwd = process.cwd();
     const startedAtMs = yield* Clock.currentTimeMillis;
     const startedAt = new Date(startedAtMs);

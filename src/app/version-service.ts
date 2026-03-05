@@ -5,11 +5,11 @@ import { PathServiceTag, type PathService } from "../domain/path-service";
 import { VersionTag, type Version } from "../domain/version-port";
 
 export const makeVersionLive = (gitPort: Git, pathService: PathService): Version => {
-  const getCurrentGitCommitSha = gitPort.getCurrentCommitSha(pathService.devDir).pipe(Effect.orElseSucceed(() => "unknown"));
+  const getCurrentGitCommitSha = () => gitPort.getCurrentCommitSha(pathService.devDir).pipe(Effect.orElseSucceed(() => "unknown"));
 
   return {
     getCurrentGitCommitSha,
-    getVersion: getCurrentGitCommitSha,
+    getVersion: () => getCurrentGitCommitSha(),
   };
 };
 

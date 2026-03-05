@@ -42,13 +42,13 @@ const makeTracingLive = (
       const telemetryConfig = appConfig.telemetry;
 
       // Get version from the version service
-      const version = yield* versionService.getVersion.pipe(
+      const version = yield* versionService.getVersion().pipe(
         Effect.orElseSucceed(() => "0.0.1"),
         Effect.withSpan("version.get_cli"),
       );
-      const installId = yield* installIdentityService.getOrCreateInstallId.pipe(
-        Effect.catchAll((error) => new TracingError({ reason: `Failed to get install identity: ${error._tag}` })),
-      );
+      const installId = yield* installIdentityService
+        .getOrCreateInstallId()
+        .pipe(Effect.catchAll((error) => new TracingError({ reason: `Failed to get install identity: ${error._tag}` })));
 
       const spanProcessor = yield* Effect.gen(function* () {
         if (telemetryConfig.mode === "console") {

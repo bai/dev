@@ -227,7 +227,7 @@ export const program = Effect.scoped(
       const updateChecker = yield* UpdateCheckerTag;
       const versionService = yield* VersionTag;
       const registry = yield* CommandRegistryTag;
-      const version = yield* versionService.getVersion;
+      const version = yield* versionService.getVersion();
 
       // Register all commands
       yield* registerAllCommands;

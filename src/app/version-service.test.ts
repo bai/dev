@@ -27,7 +27,7 @@ describe("version-service", () => {
 
     return Effect.gen(function* () {
       const version = yield* VersionTag;
-      const sha = yield* version.getCurrentGitCommitSha;
+      const sha = yield* version.getCurrentGitCommitSha();
 
       expect(sha).toBe("abc123");
       expect(getCurrentCommitSha).toHaveBeenCalledWith(pathService.devDir);
@@ -41,7 +41,7 @@ describe("version-service", () => {
 
     return Effect.gen(function* () {
       const version = yield* VersionTag;
-      const sha = yield* version.getCurrentGitCommitSha;
+      const sha = yield* version.getCurrentGitCommitSha();
 
       expect(sha).toBe("unknown");
       expect(getCurrentCommitSha).toHaveBeenCalledWith(pathService.devDir);
