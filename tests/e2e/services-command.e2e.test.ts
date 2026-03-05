@@ -50,6 +50,38 @@ describe("services command e2e", () => {
   );
 
   it(
+    "runs 'services stop' alias for a specific service",
+    async () =>
+      withFixture(async (fixture) => {
+        const setupResult = await runCli(fixture, ["services", "up"]);
+        expect(setupResult.exitCode).toBe(0);
+
+        const result = await runCli(fixture, ["services", "stop", "postgres17"]);
+        expect(result.exitCode).toBe(0);
+
+        const commandLog = await readCommandLog(fixture);
+        expect(commandLog).toContain("stop postgres17");
+      }),
+    20_000,
+  );
+
+  it(
+    "runs 'services restart' for a specific service",
+    async () =>
+      withFixture(async (fixture) => {
+        const setupResult = await runCli(fixture, ["services", "up"]);
+        expect(setupResult.exitCode).toBe(0);
+
+        const result = await runCli(fixture, ["services", "restart", "postgres17"]);
+        expect(result.exitCode).toBe(0);
+
+        const commandLog = await readCommandLog(fixture);
+        expect(commandLog).toContain("restart postgres17");
+      }),
+    20_000,
+  );
+
+  it(
     "runs 'services logs' with follow and tail options",
     async () =>
       withFixture(async (fixture) => {

@@ -46,4 +46,19 @@ describe("run command e2e", () => {
       }),
     20_000,
   );
+
+  it(
+    "fails 'run' when the task command fails",
+    async () =>
+      withFixture(async (fixture) => {
+        const result = await runCli(fixture, ["run", "build"], {
+          envOverrides: {
+            DEV_E2E_MISE_RUN_FAIL: "1",
+          },
+        });
+        expect(result.exitCode).toBe(9);
+        expect(`${result.stdout}\n${result.stderr}`).toContain("Task 'build' failed");
+      }),
+    20_000,
+  );
 });

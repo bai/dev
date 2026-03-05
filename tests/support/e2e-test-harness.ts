@@ -76,6 +76,10 @@ if [[ "\${1-}" == "rev-parse" && "\${2-}" == "--git-dir" ]]; then
     echo "fatal: not a git repository" >&2
     exit 128
   fi
+  if [[ -n "\${DEV_E2E_GIT_REPO_MISSING_MATCH:-}" && "\${PWD}" == *"\${DEV_E2E_GIT_REPO_MISSING_MATCH}"* ]]; then
+    echo "fatal: not a git repository" >&2
+    exit 128
+  fi
   echo ".git"
   exit 0
 fi
@@ -184,6 +188,10 @@ if [[ -n "\${DEV_E2E_LOG:-}" ]]; then
 fi
 
 if [[ "\${1-}" == "--version" ]]; then
+  if [[ "\${DEV_E2E_DOCKER_OLD_VERSION:-}" == "1" ]]; then
+    echo "Docker version 28.0.0, build deadbeef"
+    exit 0
+  fi
   echo "Docker version 29.2.0, build deadbeef"
   exit 0
 fi

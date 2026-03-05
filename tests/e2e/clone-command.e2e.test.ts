@@ -3,7 +3,7 @@ import path from "path";
 
 import { describe, expect, it } from "vitest";
 
-import { readCommandLog, runCli, withFixture } from "../support/e2e-test-harness";
+import { readCdTargets, readCommandLog, runCli, withFixture } from "../support/e2e-test-harness";
 
 describe("clone command e2e", () => {
   it(
@@ -46,15 +46,20 @@ describe("clone command e2e", () => {
     "runs 'clone' and skips cloning when destination already exists",
     async () =>
       withFixture(async (fixture) => {
-        const existingRepoPath = path.join(fixture.baseSearchPath, "github.com", "acme", "already-there", ".git");
+        const existingRepoRoot = path.join(fixture.baseSearchPath, "github.com", "acme", "already-there");
+        const existingRepoPath = path.join(existingRepoRoot, ".git");
         await fs.mkdir(existingRepoPath, { recursive: true });
         await fs.writeFile(path.join(existingRepoPath, "HEAD"), "ref: refs/heads/main\n", "utf8");
 
         const result = await runCli(fixture, ["clone", "acme/already-there"]);
         expect(result.exitCode).toBe(0);
 
+        const targets = await readCdTargets(fixture);
+        expect(targets).toContain(existingRepoRoot);
+
         const commandLog = await readCommandLog(fixture);
-        expect(commandLog).not.toContain("git clone https://github.com/acme/already-there");
+        const cloneInvocations = commandLog.split("\n").filter((line) => line.startsWith("git clone "));
+        expect(cloneInvocations).toHaveLength(0);
       }),
     20_000,
   );
