@@ -171,7 +171,7 @@ export function ensureCorrectConfigUrl(pathService: PathService): Effect.Effect<
 
     const projectConfigContent = yield* fileSystem.readFile(projectConfigPath);
     const projectConfig = yield* Effect.try({
-      try: () => Bun.JSONC.parse(projectConfigContent) as Config,
+      try: () => configSchema.parse(Bun.JSONC.parse(projectConfigContent)),
       catch: (error) => unknownError(`Invalid project config.json: ${error}`),
     });
 
@@ -187,7 +187,7 @@ export function ensureCorrectConfigUrl(pathService: PathService): Effect.Effect<
       ? yield* fileSystem.readFile(localConfigPath).pipe(
           Effect.flatMap((content) =>
             Effect.try({
-              try: () => Bun.JSONC.parse(content) as Config,
+              try: () => configSchema.parse(Bun.JSONC.parse(content)),
               catch: (error) => unknownError(`Invalid local config.json: ${error}`),
             }),
           ),

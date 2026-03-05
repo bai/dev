@@ -64,5 +64,65 @@ describe("upgrade-command", () => {
         yield* Effect.promise(() => fs.rm(tempDir, { recursive: true, force: true }));
       }),
     );
+
+    it.effect("fails when project config is malformed", () =>
+      Effect.gen(function* () {
+        const tempDir = path.join(os.tmpdir(), `upgrade-command-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+        yield* Effect.promise(() => fs.mkdir(tempDir, { recursive: true }));
+
+        const devDir = path.join(tempDir, ".dev");
+        const configDir = path.join(tempDir, ".config", "dev");
+        const configPath = path.join(configDir, "config.json");
+
+        yield* Effect.promise(() => fs.mkdir(devDir, { recursive: true }));
+        yield* Effect.promise(() => fs.mkdir(configDir, { recursive: true }));
+
+        yield* Effect.promise(() =>
+          fs.writeFile(
+            path.join(devDir, "config.json"),
+            JSON.stringify({
+              configUrl: 123,
+              defaultOrg: "acme",
+            }),
+          ),
+        );
+        yield* Effect.promise(() =>
+          fs.writeFile(
+            configPath,
+            JSON.stringify({
+              configUrl: "https://example.com/old-config.json",
+              defaultOrg: "acme",
+            }),
+          ),
+        );
+
+        const pathService: PathService = {
+          homeDir: tempDir,
+          baseSearchPath: path.join(tempDir, "src"),
+          devDir,
+          configDir,
+          configPath,
+          dataDir: path.join(tempDir, ".local", "share", "dev"),
+          dbPath: path.join(tempDir, ".local", "share", "dev", "dev.db"),
+          cacheDir: path.join(tempDir, ".cache", "dev"),
+          getBasePath: () => path.join(tempDir, "src"),
+        };
+
+        const fileSystem = makeFileSystemLive();
+        const fileSystemLayer = Layer.succeed(FileSystemTag, fileSystem);
+
+        const result = yield* Effect.either(ensureCorrectConfigUrl(pathService).pipe(Effect.provide(fileSystemLayer)));
+
+        expect(result._tag).toBe("Left");
+        if (result._tag === "Left") {
+          expect(result.left._tag).toBe("UnknownError");
+          if (result.left._tag === "UnknownError") {
+            expect(String(result.left.reason)).toContain("Invalid project config.json");
+          }
+        }
+
+        yield* Effect.promise(() => fs.rm(tempDir, { recursive: true, force: true }));
+      }),
+    );
   });
 });
