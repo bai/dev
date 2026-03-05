@@ -55,10 +55,7 @@ describe("command-tracking-service", () => {
       };
       const tracker = makeCommandTracker(runStore, versionService);
 
-      const runId = yield* withArgv(
-        ["bun", "src/index.ts", "sync", "--all"],
-        tracker.recordCommandRun(),
-      );
+      const runId = yield* withArgv(["bun", "src/index.ts", "sync", "--all"], tracker.recordCommandRun());
 
       expect(runId).toBe("captured-run-id");
       expect(recordedRun?.command_name).toBe("sync");
@@ -127,9 +124,7 @@ describe("command-tracking-service", () => {
       };
       const tracker = makeCommandTracker(failingStore, versionService);
 
-      const result = yield* Effect.exit(
-        withArgv(["bun", "src/index.ts", "status"], tracker.recordCommandRun()),
-      );
+      const result = yield* Effect.exit(withArgv(["bun", "src/index.ts", "status"], tracker.recordCommandRun()));
 
       expect(Exit.isFailure(result)).toBe(true);
       if (Exit.isFailure(result)) {

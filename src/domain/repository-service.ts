@@ -1,18 +1,18 @@
 import path from "path";
 
-import { Context, Effect, Layer } from "effect";
+import { Context, Effect, Layer, Option } from "effect";
 
 import { configError, type ConfigError } from "./errors";
 import type { GitProviderType, Repository } from "./models";
 import { resolveRepositoryInput } from "./org-provider-utils";
-import { PathServiceTag } from "./path-service";
+import { PathLive, PathServiceTag, type PathService } from "./path-service";
 
 /**
  * Repository service for handling repository URL parsing and expansion
  * This is domain logic for repository URL handling
  */
 export interface RepositoryService {
-  parseRepoUrlToPath(repoUrl: string): Effect.Effect<string, ConfigError, PathServiceTag>;
+  parseRepoUrlToPath(repoUrl: string): Effect.Effect<string, ConfigError>;
   parseFullUrlToRepository(repoUrl: string): Effect.Effect<Repository, ConfigError, never>;
   expandToFullGitUrl(
     repoInput: string,
@@ -64,30 +64,6 @@ const parseRepositoryCoordinatesFromUrl = (repoUrl: string): Effect.Effect<Parse
     return yield* configError(`URL path does not contain organization and repository: ${repoUrl}`);
   });
 
-// Individual functions implementing the service methods
-const parseRepoUrlToPath = (repoUrl: string): Effect.Effect<string, ConfigError, PathServiceTag> =>
-  Effect.gen(function* () {
-    const pathService = yield* PathServiceTag;
-    const parsedRepository = yield* parseRepositoryCoordinatesFromUrl(repoUrl);
-    return path.join(pathService.baseSearchPath, parsedRepository.domain, parsedRepository.orgName, parsedRepository.repoName);
-  });
-
-const parseFullUrlToRepository = (repoUrl: string): Effect.Effect<Repository, ConfigError, never> =>
-  Effect.gen(function* () {
-    const parsedRepository = yield* parseRepositoryCoordinatesFromUrl(repoUrl);
-    const providerName = parsedRepository.domain.includes("gitlab") ? "gitlab" : "github";
-
-    return {
-      name: parsedRepository.repoName,
-      organization: parsedRepository.orgName,
-      provider: {
-        name: providerName,
-        baseUrl: `https://${parsedRepository.domain}`,
-      },
-      cloneUrl: repoUrl,
-    };
-  });
-
 /**
  * Checks if a string is a full URL (HTTP/HTTPS/SSH/git protocols)
  */
@@ -99,33 +75,66 @@ export const isFullUrl = (str: string): boolean =>
   str.startsWith("git+ssh://") ||
   str.match(/^[^@:/]+@[^:]+:/) !== null; // scp-style git@host:path
 
-const expandToFullGitUrl = (
-  repoInput: string,
-  defaultOrg: string,
-  orgToProvider?: Record<string, GitProviderType>,
-  forceProvider?: "github" | "gitlab",
-): Effect.Effect<string, never> =>
-  Effect.sync(() => {
-    // If it's already a full URL, return as-is
-    if (isFullUrl(repoInput)) {
-      return repoInput;
-    }
-    const resolved = resolveRepositoryInput(repoInput, defaultOrg, "github", orgToProvider ?? {}, forceProvider);
+export const makeRepositoryService = (pathService: PathService): RepositoryService => {
+  const parseRepoUrlToPath = (repoUrl: string): Effect.Effect<string, ConfigError> =>
+    Effect.gen(function* () {
+      const pathServiceFromContext = yield* Effect.serviceOption(PathServiceTag);
+      const activePathService = Option.getOrElse(pathServiceFromContext, () => pathService);
+      const parsedRepository = yield* parseRepositoryCoordinatesFromUrl(repoUrl);
+      return path.join(activePathService.baseSearchPath, parsedRepository.domain, parsedRepository.orgName, parsedRepository.repoName);
+    });
 
-    // Construct the full URL
-    const baseUrl = resolved.provider === "gitlab" ? "https://gitlab.com" : "https://github.com";
-    return `${baseUrl}/${resolved.organization}/${resolved.repositoryName}`;
-  });
+  const parseFullUrlToRepository = (repoUrl: string): Effect.Effect<Repository, ConfigError, never> =>
+    Effect.gen(function* () {
+      const parsedRepository = yield* parseRepositoryCoordinatesFromUrl(repoUrl);
+      const providerName = parsedRepository.domain.includes("gitlab") ? "gitlab" : "github";
 
-// Functional service implementation as plain object
-export const RepositoryLive: RepositoryService = {
-  parseRepoUrlToPath: parseRepoUrlToPath,
-  parseFullUrlToRepository: parseFullUrlToRepository,
-  expandToFullGitUrl: expandToFullGitUrl,
+      return {
+        name: parsedRepository.repoName,
+        organization: parsedRepository.orgName,
+        provider: {
+          name: providerName,
+          baseUrl: `https://${parsedRepository.domain}`,
+        },
+        cloneUrl: repoUrl,
+      };
+    });
+
+  const expandToFullGitUrl = (
+    repoInput: string,
+    defaultOrg: string,
+    orgToProvider?: Record<string, GitProviderType>,
+    forceProvider?: "github" | "gitlab",
+  ): Effect.Effect<string, never> =>
+    Effect.sync(() => {
+      // If it's already a full URL, return as-is
+      if (isFullUrl(repoInput)) {
+        return repoInput;
+      }
+      const resolved = resolveRepositoryInput(repoInput, defaultOrg, "github", orgToProvider ?? {}, forceProvider);
+
+      // Construct the full URL
+      const baseUrl = resolved.provider === "gitlab" ? "https://gitlab.com" : "https://github.com";
+      return `${baseUrl}/${resolved.organization}/${resolved.repositoryName}`;
+    });
+
+  return {
+    parseRepoUrlToPath,
+    parseFullUrlToRepository,
+    expandToFullGitUrl,
+  };
 };
+
+export const RepositoryLive: RepositoryService = makeRepositoryService(PathLive);
 
 // Service tag for Effect Context system
 export class RepositoryServiceTag extends Context.Tag("RepositoryService")<RepositoryServiceTag, RepositoryService>() {}
 
 // Layer that provides RepositoryService
-export const RepositoryServiceLiveLayer = Layer.effect(RepositoryServiceTag, Effect.succeed(RepositoryLive));
+export const RepositoryServiceLiveLayer = Layer.effect(
+  RepositoryServiceTag,
+  Effect.gen(function* () {
+    const pathService = yield* PathServiceTag;
+    return makeRepositoryService(pathService);
+  }),
+);
