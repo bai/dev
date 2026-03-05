@@ -39,10 +39,6 @@ class MockFileSystem implements FileSystem {
   getCwd(): Effect.Effect<string, never, never> {
     return Effect.succeed("/tmp");
   }
-
-  resolvePath(path: string): string {
-    return path;
-  }
 }
 
 const pathService: PathService = {

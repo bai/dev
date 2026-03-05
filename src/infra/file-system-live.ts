@@ -6,7 +6,6 @@ import { Effect, Layer } from "effect";
 
 import { fileSystemError, type FileSystemError, type UnknownError } from "../domain/errors";
 import { FileSystemTag, type FileSystem } from "../domain/file-system-port";
-import { resolveUserPath } from "../domain/path-service";
 import { annotateErrorTypeOnFailure } from "./tracing/error-type";
 
 // Individual functions for each method
@@ -64,7 +63,6 @@ export const makeFileSystemLive = (): FileSystem => ({
   mkdir,
   findDirectoriesGlob,
   getCwd,
-  resolvePath: resolveUserPath,
 });
 
 // Effect Layer for dependency injection with proper resource management

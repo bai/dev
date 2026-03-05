@@ -56,7 +56,6 @@ const makeFileSystem = (cwd: string): FileSystem => ({
   mkdir: () => Effect.void,
   findDirectoriesGlob: () => Effect.succeed([]),
   getCwd: () => Effect.succeed(cwd),
-  resolvePath: (path) => path,
 });
 
 describe("up-command", () => {

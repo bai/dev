@@ -41,10 +41,6 @@ describe("clone-command", () => {
     getCwd(): Effect.Effect<string, never, never> {
       return Effect.succeed("/home/user/dev");
     }
-
-    resolvePath(path: string): string {
-      return path;
-    }
   }
 
   class MockGit implements Git {

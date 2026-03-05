@@ -26,7 +26,6 @@ const makeFileSystem = (cwd = "/test/directory"): FileSystem => ({
   writeFile: () => Effect.void,
   mkdir: () => Effect.void,
   findDirectoriesGlob: () => Effect.succeed([]),
-  resolvePath: (path) => (path.startsWith("~") ? path.replace("~", "/home/user") : path),
 });
 
 const makeMise = (

@@ -72,7 +72,6 @@ const mockFileSystem = {
   readFile: (_path) => Effect.succeed("test content"),
   getCwd: () => Effect.succeed("/test/directory"),
   findDirectoriesGlob: (_basePath, _pattern) => Effect.succeed([]),
-  resolvePath: (path: string) => (path.startsWith("~") ? path.replace("~", "/home/user") : path),
 } satisfies FileSystem;
 
 const mockConfigLoader: ConfigLoader = {

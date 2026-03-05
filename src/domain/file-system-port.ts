@@ -32,11 +32,6 @@ export interface FileSystem {
    * Get the current working directory
    */
   getCwd(): Effect.Effect<string>;
-
-  /**
-   * Resolve a path (expand ~, resolve relative paths, etc.)
-   */
-  resolvePath(path: string): string;
 }
 
 export class FileSystemTag extends Context.Tag("FileSystem")<FileSystemTag, FileSystem>() {}

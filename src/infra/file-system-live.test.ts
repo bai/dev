@@ -255,32 +255,4 @@ describe("file-system-live", () => {
       }),
     );
   });
-
-  describe("resolvePath", () => {
-    it("expands tilde to home directory", () => {
-      const result = fileSystem.resolvePath("~/test");
-      expect(result).toBe(path.join(os.homedir(), "test"));
-    });
-
-    it("expands standalone tilde to home directory", () => {
-      const result = fileSystem.resolvePath("~");
-      expect(result).toBe(os.homedir());
-    });
-
-    it("resolves relative paths", () => {
-      const result = fileSystem.resolvePath("./test");
-      expect(result).toBe(path.resolve("./test"));
-    });
-
-    it("returns absolute paths unchanged", () => {
-      const absolutePath = "/tmp/test";
-      const result = fileSystem.resolvePath(absolutePath);
-      expect(result).toBe(absolutePath);
-    });
-
-    it("resolves complex paths with tilde", () => {
-      const result = fileSystem.resolvePath("~/projects/../documents");
-      expect(result).toBe(path.join(os.homedir(), "documents"));
-    });
-  });
 });

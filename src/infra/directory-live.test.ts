@@ -27,7 +27,6 @@ const makeFileSystem = (overrides: Partial<FileSystem> = {}): FileSystem => ({
   writeFile: () => Effect.void,
   findDirectoriesGlob: () => Effect.succeed([]),
   getCwd: () => Effect.succeed("/current"),
-  resolvePath: (path) => path,
   ...overrides,
 });
 

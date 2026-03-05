@@ -34,7 +34,6 @@ const createMockFileSystem = (
     mkdir: () => Effect.void,
     findDirectoriesGlob: () => Effect.succeed([]),
     getCwd: () => Effect.succeed("/tmp"),
-    resolvePath: (path) => path,
   };
 
   return { fileSystem, writes };
