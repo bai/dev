@@ -1,4 +1,4 @@
-import { Data } from "effect";
+import { Data, absurd } from "effect";
 
 import type { TracingError } from "./tracing-port";
 
@@ -106,8 +106,7 @@ export const exitCode = (error: DevError): number => {
     case "TracingError":
       return 12;
     default:
-      // This should never happen due to exhaustive typing, but satisfies linter
-      return 1;
+      return absurd(error);
   }
 };
 

@@ -1,4 +1,5 @@
 import { Database as BunSQLiteDatabase } from "bun:sqlite";
+import path from "path";
 
 import { drizzle } from "drizzle-orm/bun-sqlite";
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
@@ -109,7 +110,7 @@ const createDatabase = Effect.gen(function* () {
   const dbPath = pathService.dbPath;
 
   // Ensure directory exists
-  yield* fileSystem.mkdir(dbPath.split("/").slice(0, -1).join("/"), true);
+  yield* fileSystem.mkdir(path.dirname(dbPath), true);
 
   // Create database connection
   const sqlite = yield* Effect.try({
