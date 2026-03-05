@@ -1,11 +1,11 @@
 import { it } from "@effect/vitest";
-import { Effect, Exit, Layer } from "effect";
+import { Effect, Exit } from "effect";
 import { describe, expect } from "vitest";
 
 import { configError, unknownError } from "../domain/errors";
 import type { CommandRun } from "../domain/models";
-import { RunStoreTag, type RunStore } from "../domain/run-store-port";
-import { UpdateCheckerLive } from "./update-check-service";
+import type { RunStore } from "../domain/run-store-port";
+import { makeUpdateChecker } from "./update-check-service";
 
 const baseRunStore: RunStore = {
   record: () => Effect.succeed("run-id"),
@@ -42,10 +42,9 @@ describe("update-check-service", () => {
             return [] as CommandRun[];
           }),
       };
+      const checker = makeUpdateChecker(runStore);
 
-      const layer = Layer.succeed(RunStoreTag, runStore);
-
-      yield* withArgv(["bun", "src/index.ts", "upgrade"], UpdateCheckerLive.runPeriodicUpgradeCheck().pipe(Effect.provide(layer)));
+      yield* withArgv(["bun", "src/index.ts", "upgrade"], checker.runPeriodicUpgradeCheck());
 
       expect(getRecentRunsCalls).toBe(0);
     }),
@@ -73,10 +72,9 @@ describe("update-check-service", () => {
             ] satisfies CommandRun[];
           }),
       };
+      const checker = makeUpdateChecker(runStore);
 
-      const layer = Layer.succeed(RunStoreTag, runStore);
-
-      yield* withArgv(["bun", "src/index.ts", "status"], UpdateCheckerLive.runPeriodicUpgradeCheck().pipe(Effect.provide(layer)));
+      yield* withArgv(["bun", "src/index.ts", "status"], checker.runPeriodicUpgradeCheck());
 
       expect(getRecentRunsCalls).toBe(1);
       expect(requestedLimit).toBe(100);
@@ -89,12 +87,9 @@ describe("update-check-service", () => {
         ...baseRunStore,
         getRecentRuns: () => configError("database unavailable"),
       };
+      const checker = makeUpdateChecker(runStore);
 
-      const layer = Layer.succeed(RunStoreTag, runStore);
-
-      const result = yield* Effect.exit(
-        withArgv(["bun", "src/index.ts", "status"], UpdateCheckerLive.runPeriodicUpgradeCheck().pipe(Effect.provide(layer))),
-      );
+      const result = yield* Effect.exit(withArgv(["bun", "src/index.ts", "status"], checker.runPeriodicUpgradeCheck()));
 
       expect(Exit.isSuccess(result)).toBe(true);
     }),
@@ -106,12 +101,9 @@ describe("update-check-service", () => {
         ...baseRunStore,
         getRecentRuns: () => unknownError("unexpected failure"),
       };
+      const checker = makeUpdateChecker(runStore);
 
-      const layer = Layer.succeed(RunStoreTag, runStore);
-
-      const result = yield* Effect.exit(
-        withArgv(["bun", "src/index.ts", "status"], UpdateCheckerLive.runPeriodicUpgradeCheck().pipe(Effect.provide(layer))),
-      );
+      const result = yield* Effect.exit(withArgv(["bun", "src/index.ts", "status"], checker.runPeriodicUpgradeCheck()));
 
       expect(Exit.isSuccess(result)).toBe(true);
     }),
