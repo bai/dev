@@ -1,12 +1,12 @@
 import { it } from "@effect/vitest";
-import { Cause, Effect, Exit, Layer, Option } from "effect";
+import { Cause, Effect, Exit, Option } from "effect";
 import { describe, expect } from "vitest";
 
 import { ConfigError, UnknownError, configError, unknownError } from "../domain/errors";
 import type { CommandRun } from "../domain/models";
-import { RunStoreTag, type RunStore } from "../domain/run-store-port";
-import { VersionTag, type Version } from "../domain/version-port";
-import { CommandTrackerLive } from "./command-tracking-service";
+import type { RunStore } from "../domain/run-store-port";
+import type { Version } from "../domain/version-port";
+import { makeCommandTracker } from "./command-tracking-service";
 
 const baseRunStore: RunStore = {
   record: () => Effect.succeed("run-id"),
@@ -14,6 +14,11 @@ const baseRunStore: RunStore = {
   prune: () => Effect.void,
   getRecentRuns: () => Effect.succeed([]),
   completeIncompleteRuns: () => Effect.void,
+};
+
+const baseVersionService: Version = {
+  getCurrentGitCommitSha: () => Effect.succeed("deadbeef"),
+  getVersion: () => Effect.succeed("deadbeef"),
 };
 
 const withArgv = <A, E, R>(argv: string[], effect: Effect.Effect<A, E, R>): Effect.Effect<A, E, R> =>
@@ -48,12 +53,11 @@ describe("command-tracking-service", () => {
         getCurrentGitCommitSha: () => Effect.succeed("deadbeef"),
         getVersion: () => Effect.succeed("deadbeef"),
       };
-
-      const layer = Layer.mergeAll(Layer.succeed(RunStoreTag, runStore), Layer.succeed(VersionTag, versionService));
+      const tracker = makeCommandTracker(runStore, versionService);
 
       const runId = yield* withArgv(
         ["bun", "src/index.ts", "sync", "--all"],
-        CommandTrackerLive.recordCommandRun().pipe(Effect.provide(layer)),
+        tracker.recordCommandRun(),
       );
 
       expect(runId).toBe("captured-run-id");
@@ -81,9 +85,8 @@ describe("command-tracking-service", () => {
           }),
       };
 
-      const layer = Layer.succeed(RunStoreTag, runStore);
-
-      yield* CommandTrackerLive.completeCommandRun("run-123", 0).pipe(Effect.provide(layer));
+      const tracker = makeCommandTracker(runStore, baseVersionService);
+      yield* tracker.completeCommandRun("run-123", 0);
 
       expect(completedId).toBe("run-123");
       expect(completedExitCode).toBe(0);
@@ -103,12 +106,8 @@ describe("command-tracking-service", () => {
         completeIncompleteRuns: () => unknownError("unknown db error"),
       };
 
-      const configResult = yield* Effect.exit(
-        CommandTrackerLive.gracefulShutdown().pipe(Effect.provide(Layer.succeed(RunStoreTag, configFailingStore))),
-      );
-      const unknownResult = yield* Effect.exit(
-        CommandTrackerLive.gracefulShutdown().pipe(Effect.provide(Layer.succeed(RunStoreTag, unknownFailingStore))),
-      );
+      const configResult = yield* Effect.exit(makeCommandTracker(configFailingStore, baseVersionService).gracefulShutdown());
+      const unknownResult = yield* Effect.exit(makeCommandTracker(unknownFailingStore, baseVersionService).gracefulShutdown());
 
       expect(Exit.isSuccess(configResult)).toBe(true);
       expect(Exit.isSuccess(unknownResult)).toBe(true);
@@ -126,11 +125,10 @@ describe("command-tracking-service", () => {
         getCurrentGitCommitSha: () => Effect.succeed("deadbeef"),
         getVersion: () => Effect.succeed("deadbeef"),
       };
-
-      const layer = Layer.mergeAll(Layer.succeed(RunStoreTag, failingStore), Layer.succeed(VersionTag, versionService));
+      const tracker = makeCommandTracker(failingStore, versionService);
 
       const result = yield* Effect.exit(
-        withArgv(["bun", "src/index.ts", "status"], CommandTrackerLive.recordCommandRun().pipe(Effect.provide(layer))),
+        withArgv(["bun", "src/index.ts", "status"], tracker.recordCommandRun()),
       );
 
       expect(Exit.isFailure(result)).toBe(true);
@@ -151,9 +149,7 @@ describe("command-tracking-service", () => {
         complete: () => unknownError("db crashed"),
       };
 
-      const result = yield* Effect.exit(
-        CommandTrackerLive.completeCommandRun("run-unknown", 2).pipe(Effect.provide(Layer.succeed(RunStoreTag, failingStore))),
-      );
+      const result = yield* Effect.exit(makeCommandTracker(failingStore, baseVersionService).completeCommandRun("run-unknown", 2));
 
       expect(Exit.isFailure(result)).toBe(true);
       if (Exit.isFailure(result)) {
