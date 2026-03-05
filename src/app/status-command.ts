@@ -7,6 +7,7 @@ import { statusCheckError } from "../domain/errors";
 import { GitTag } from "../domain/git-port";
 import { HealthCheckTag } from "../domain/health-check-port";
 import type { EnvironmentInfo, GitInfo } from "../domain/models";
+import { RunStoreTag } from "../domain/run-store-port";
 
 interface StatusItem {
   readonly tool: string;
@@ -43,6 +44,7 @@ export const statusCommand = Command.make("status", {}, () =>
     yield* displayHealthCheckResults(statusItems).pipe(Effect.withSpan("ui.display_health_results"));
 
     yield* showDockerServicesStatus.pipe(Effect.withSpan("ui.show_docker_services"));
+    yield* showLastUpgradedStatus.pipe(Effect.withSpan("ui.show_last_upgraded"));
 
     yield* showSummary(statusItems).pipe(Effect.withSpan("ui.show_summary"));
 
@@ -219,6 +221,37 @@ const showDockerServicesStatus: Effect.Effect<void, never, DockerServicesTag> = 
     }
   }
 
+  yield* Effect.logInfo("");
+});
+
+const formatUpgradeTimestamp = (date: Date): string =>
+  new Intl.DateTimeFormat(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZoneName: "short",
+  }).format(date);
+
+const getLastUpgradeTimestamp = (): Effect.Effect<Date | null, never, RunStoreTag> =>
+  Effect.gen(function* () {
+    const runStore = yield* RunStoreTag;
+    const recentRuns = yield* runStore.getRecentRuns(100).pipe(Effect.orElseSucceed(() => []));
+    const lastUpgradeRun = recentRuns.find((run) => run.commandName === "upgrade");
+    return lastUpgradeRun ? lastUpgradeRun.startedAt : null;
+  });
+
+const showLastUpgradedStatus: Effect.Effect<void, never, RunStoreTag> = Effect.gen(function* () {
+  const lastUpgradeTimestamp = yield* getLastUpgradeTimestamp();
+
+  if (lastUpgradeTimestamp === null) {
+    yield* Effect.logInfo("⬆️ Last Upgraded: Never");
+    yield* Effect.logInfo("");
+    return;
+  }
+
+  yield* Effect.logInfo(`⬆️ Last Upgraded: ${formatUpgradeTimestamp(lastUpgradeTimestamp)}`);
   yield* Effect.logInfo("");
 });
 

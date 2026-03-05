@@ -10,6 +10,9 @@ import { GitTag } from "../domain/git-port";
 import type { HealthCheck } from "../domain/health-check-port";
 import { HealthCheckTag } from "../domain/health-check-port";
 import type { HealthCheckResult } from "../domain/health-check-port";
+import type { CommandRun } from "../domain/models";
+import type { RunStore } from "../domain/run-store-port";
+import { RunStoreTag } from "../domain/run-store-port";
 import { statusCommand } from "./status-command";
 
 const createGit = (branch: string | null, remote: string | null): { git: Git; branchCalls: string[]; remoteCalls: string[] } => {
@@ -58,6 +61,14 @@ const createHealthCheck = (results: readonly HealthCheckResult[]): HealthCheck =
   runHealthChecks: () => Effect.succeed(results),
 });
 
+const createRunStore = (runs: readonly CommandRun[] = []): RunStore => ({
+  record: () => Effect.succeed("run-id"),
+  complete: () => Effect.void,
+  prune: () => Effect.void,
+  getRecentRuns: () => Effect.succeed([...runs]),
+  completeIncompleteRuns: () => Effect.void,
+});
+
 describe("status-command", () => {
   it.effect("succeeds when all health checks are OK", () =>
     Effect.gen(function* () {
@@ -66,6 +77,7 @@ describe("status-command", () => {
       const layer = Layer.mergeAll(
         Layer.succeed(GitTag, gitContext.git),
         Layer.succeed(DockerServicesTag, createDockerServices(false)),
+        Layer.succeed(RunStoreTag, createRunStore()),
         Layer.succeed(
           HealthCheckTag,
           createHealthCheck([
@@ -94,6 +106,7 @@ describe("status-command", () => {
       const layer = Layer.mergeAll(
         Layer.succeed(GitTag, gitContext.git),
         Layer.succeed(DockerServicesTag, createDockerServices(false)),
+        Layer.succeed(RunStoreTag, createRunStore()),
         Layer.succeed(
           HealthCheckTag,
           createHealthCheck([
@@ -120,6 +133,7 @@ describe("status-command", () => {
       const layer = Layer.mergeAll(
         Layer.succeed(GitTag, gitContext.git),
         Layer.succeed(DockerServicesTag, createDockerServices(false)),
+        Layer.succeed(RunStoreTag, createRunStore()),
         Layer.succeed(
           HealthCheckTag,
           createHealthCheck([
@@ -147,6 +161,7 @@ describe("status-command", () => {
       const layer = Layer.mergeAll(
         Layer.succeed(GitTag, gitContext.git),
         Layer.succeed(DockerServicesTag, createDockerServices(false)),
+        Layer.succeed(RunStoreTag, createRunStore()),
         Layer.succeed(
           HealthCheckTag,
           createHealthCheck([
@@ -189,6 +204,7 @@ describe("status-command", () => {
       const layer = Layer.mergeAll(
         Layer.succeed(GitTag, gitContext.git),
         Layer.succeed(DockerServicesTag, createDockerServices(false)),
+        Layer.succeed(RunStoreTag, createRunStore()),
         Layer.succeed(HealthCheckTag, failingHealthCheck),
       );
 
@@ -220,6 +236,7 @@ describe("status-command", () => {
       const layer = Layer.mergeAll(
         Layer.succeed(GitTag, createGit("main", "https://github.com/acme/repo.git").git),
         Layer.succeed(DockerServicesTag, createDockerServices(false)),
+        Layer.succeed(RunStoreTag, createRunStore()),
         Layer.succeed(HealthCheckTag, failingHealthCheck),
       );
 

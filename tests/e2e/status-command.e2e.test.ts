@@ -1,6 +1,22 @@
 import { describe, expect, it } from "vitest";
 
-import { runCli, withFixture } from "../support/e2e-test-harness";
+import { readCommandLog, runCli, withFixture, type E2eFixture } from "../support/e2e-test-harness";
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const waitForCommandLogEntry = async (fixture: E2eFixture, entry: string, timeoutMs = 7_000): Promise<string> => {
+  const deadline = Date.now() + timeoutMs;
+
+  while (Date.now() < deadline) {
+    const commandLog = await readCommandLog(fixture);
+    if (commandLog.includes(entry)) {
+      return commandLog;
+    }
+    await sleep(100);
+  }
+
+  return readCommandLog(fixture);
+};
 
 describe("status command e2e", () => {
   it(
@@ -15,6 +31,8 @@ describe("status command e2e", () => {
         expect(result.stdout).toContain("✅ bun");
         expect(result.stdout).toContain("✅ fzf");
         expect(result.stdout).toContain("✅ gcloud");
+        expect(result.stdout).toContain("⬆️ Last Upgraded:");
+        expect(result.stdout.indexOf("⬆️ Last Upgraded:")).toBeGreaterThan(result.stdout.indexOf("🐳 Docker Services:"));
         expect(result.stdout).toContain("All green.");
       }),
     20_000,
@@ -64,6 +82,35 @@ describe("status command e2e", () => {
         expect(result.exitCode).toBe(0);
         expect(result.stdout).toContain("docker 28.0.0");
         expect(result.stdout).toContain("requires >=29.1.3");
+      }),
+    20_000,
+  );
+
+  it(
+    "runs 'status' and starts background auto-upgrade when no recent upgrade run exists",
+    async () =>
+      withFixture(async (fixture) => {
+        const result = await runCli(fixture, ["status"]);
+
+        expect(result.exitCode).toBe(0);
+        expect(result.stdout).toContain("Starting automatic background upgrade");
+
+        const commandLog = await waitForCommandLogEntry(fixture, "git pull");
+        expect(commandLog).toContain("git pull");
+      }),
+    20_000,
+  );
+
+  it(
+    "runs 'status' and skips background auto-upgrade when the last upgrade run is recent",
+    async () =>
+      withFixture(async (fixture) => {
+        const upgradeResult = await runCli(fixture, ["upgrade"]);
+        expect(upgradeResult.exitCode).toBe(0);
+
+        const result = await runCli(fixture, ["status"]);
+        expect(result.exitCode).toBe(0);
+        expect(result.stdout).not.toContain("Starting automatic background upgrade");
       }),
     20_000,
   );

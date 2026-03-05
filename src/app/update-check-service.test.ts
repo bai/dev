@@ -1,5 +1,5 @@
 import { it } from "@effect/vitest";
-import { Effect, Exit } from "effect";
+import { Clock, Effect, Exit } from "effect";
 import { describe, expect } from "vitest";
 
 import { configError, unknownError } from "../domain/errors";
@@ -30,6 +30,82 @@ const withArgv = <A, E, R>(argv: string[], effect: Effect.Effect<A, E, R>): Effe
   );
 
 describe("update-check-service", () => {
+  it.effect("starts auto-upgrade when no previous upgrade run exists", () =>
+    Effect.gen(function* () {
+      let autoUpgradeCalls = 0;
+
+      const checker = makeUpdateChecker(baseRunStore, () =>
+        Effect.sync(() => {
+          autoUpgradeCalls += 1;
+        }),
+      );
+
+      yield* withArgv(["bun", "src/index.ts", "status"], checker.runPeriodicUpgradeCheck());
+
+      expect(autoUpgradeCalls).toBe(1);
+    }),
+  );
+
+  it.effect("does not start auto-upgrade when last upgrade is within the 1-day window", () =>
+    Effect.gen(function* () {
+      let autoUpgradeCalls = 0;
+      const currentTime = yield* Clock.currentTimeMillis;
+
+      const runStore: RunStore = {
+        ...baseRunStore,
+        getRecentRuns: () =>
+          Effect.succeed([
+            {
+              id: "upgrade-recent",
+              cliVersion: "abc",
+              commandName: "upgrade",
+              cwd: "/tmp",
+              startedAt: new Date(currentTime),
+            },
+          ]),
+      };
+      const checker = makeUpdateChecker(runStore, () =>
+        Effect.sync(() => {
+          autoUpgradeCalls += 1;
+        }),
+      );
+
+      yield* withArgv(["bun", "src/index.ts", "status"], checker.runPeriodicUpgradeCheck());
+
+      expect(autoUpgradeCalls).toBe(0);
+    }),
+  );
+
+  it.effect("starts auto-upgrade when last upgrade is older than the 1-day window", () =>
+    Effect.gen(function* () {
+      let autoUpgradeCalls = 0;
+      const currentTime = yield* Clock.currentTimeMillis;
+
+      const runStore: RunStore = {
+        ...baseRunStore,
+        getRecentRuns: () =>
+          Effect.succeed([
+            {
+              id: "upgrade-old",
+              cliVersion: "abc",
+              commandName: "upgrade",
+              cwd: "/tmp",
+              startedAt: new Date(currentTime - 2 * 24 * 60 * 60 * 1000),
+            },
+          ]),
+      };
+      const checker = makeUpdateChecker(runStore, () =>
+        Effect.sync(() => {
+          autoUpgradeCalls += 1;
+        }),
+      );
+
+      yield* withArgv(["bun", "src/index.ts", "status"], checker.runPeriodicUpgradeCheck());
+
+      expect(autoUpgradeCalls).toBe(1);
+    }),
+  );
+
   it.effect("skips update checks while running the upgrade command", () =>
     Effect.gen(function* () {
       let getRecentRunsCalls = 0;
@@ -78,6 +154,16 @@ describe("update-check-service", () => {
 
       expect(getRecentRunsCalls).toBe(1);
       expect(requestedLimit).toBe(100);
+    }),
+  );
+
+  it.effect("swallows UnknownError from auto-upgrade trigger and does not fail", () =>
+    Effect.gen(function* () {
+      const checker = makeUpdateChecker(baseRunStore, () => unknownError("cannot spawn background process"));
+
+      const result = yield* Effect.exit(withArgv(["bun", "src/index.ts", "status"], checker.runPeriodicUpgradeCheck()));
+
+      expect(Exit.isSuccess(result)).toBe(true);
     }),
   );
 

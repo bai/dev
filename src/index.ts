@@ -223,7 +223,7 @@ export const program = Effect.scoped(
       // Register all commands
       yield* registerAllCommands;
 
-      // Show periodic upgrade hint when applicable
+      // Trigger periodic background auto-upgrade when applicable
       yield* updateChecker.runPeriodicUpgradeCheck().pipe(Effect.withSpan("upgrade.periodic_check"));
 
       // Add cleanup for command tracker
