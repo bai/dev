@@ -8,10 +8,8 @@ import { ConfigLoaderTag } from "./domain/config-loader-port";
 import { type Config } from "./domain/config-schema";
 import { DirectoryTag } from "./domain/directory-port";
 import type { ServiceName } from "./domain/docker-services-port";
-import { HealthCheckServiceTag, makeHealthCheckService } from "./domain/health-check-service";
 import { createPathService, createPathServiceLiveLayer } from "./domain/path-service";
 import { RepositoryServiceLiveLayer } from "./domain/repository-service";
-import { ToolHealthRegistryTag } from "./domain/tool-health-registry-port";
 import { CommandRegistryLiveLayer } from "./infra/command-registry-live";
 import { ConfigLoaderLiveLayer } from "./infra/config-loader-live";
 import { DatabaseLiveLayer } from "./infra/database-live";
@@ -119,15 +117,6 @@ export const buildAppLayer = (config: Config) => {
   // Repository provider
   const repoProviderLayer = MultiRepoProviderLiveLayer(defaultOrg, defaultProvider, orgToProvider);
 
-  // Health check service
-  const healthCheckServiceLayer = Layer.effect(
-    HealthCheckServiceTag,
-    Effect.gen(function* () {
-      const toolHealthRegistry = yield* ToolHealthRegistryTag;
-      return makeHealthCheckService(toolHealthRegistry);
-    }),
-  ).pipe(Layer.provide(toolHealthRegistryLayer));
-
   // Version layer (needs git and path service from infraLayer components)
   const versionLayer = Layer.provide(VersionLiveLayer, Layer.mergeAll(gitLayer, baseServices));
 
@@ -148,7 +137,6 @@ export const buildAppLayer = (config: Config) => {
     toolManagementLayer,
     toolHealthRegistryLayer,
     repoProviderLayer,
-    healthCheckServiceLayer,
     dockerServicesLayer,
     versionLayer,
     tracingLayer,
@@ -156,7 +144,7 @@ export const buildAppLayer = (config: Config) => {
 
   // Database-dependent services
   const runStoreLayer = Layer.provide(RunStoreLiveLayer, Layer.mergeAll(databaseLayer, baseServices));
-  const healthCheckLayer = Layer.provide(HealthCheckLiveLayer, Layer.mergeAll(databaseLayer, healthCheckServiceLayer));
+  const healthCheckLayer = Layer.provide(HealthCheckLiveLayer, Layer.mergeAll(databaseLayer, toolHealthRegistryLayer));
   const appServiceDependencies = Layer.mergeAll(infraLayer, runStoreLayer);
 
   // Final application services

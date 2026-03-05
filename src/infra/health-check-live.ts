@@ -5,7 +5,7 @@ import { toolHealthChecks } from "../../drizzle/schema";
 import { DatabaseTag, type Database } from "../domain/database-port";
 import { healthCheckError, type HealthCheckError } from "../domain/errors";
 import { HealthCheckTag, type HealthCheck, type HealthCheckResult } from "../domain/health-check-port";
-import { HealthCheckServiceTag, type HealthCheckService } from "../domain/health-check-service";
+import { ToolHealthRegistryTag, type ToolHealthRegistry } from "../domain/tool-health-registry-port";
 import { annotateErrorTypeOnFailure } from "./tracing/error-type";
 
 // Health check constants (internal, not user-configurable)
@@ -66,14 +66,14 @@ const storeHealthCheckResults = (results: InternalHealthCheckResult[], database:
       }),
     );
 
-// Factory function that creates HealthCheckService with dependencies
-export const makeHealthCheckLive = (database: Database, healthCheckService: HealthCheckService): HealthCheck => {
+// Factory function that creates HealthCheck service with dependencies
+export const makeHealthCheckLive = (database: Database, toolHealthRegistry: ToolHealthRegistry): HealthCheck => {
   // Individual functions implementing the service methods
   const runHealthChecks = (): Effect.Effect<readonly HealthCheckResult[], HealthCheckError> =>
     Effect.gen(function* () {
       yield* Effect.logDebug("Running health checks synchronously...");
 
-      const results = yield* healthCheckService.runAllHealthChecks();
+      const results = yield* toolHealthRegistry.checkAllTools();
 
       const internalResults: InternalHealthCheckResult[] = results.map((result) => ({
         toolName: result.toolName,
@@ -100,7 +100,7 @@ export const HealthCheckLiveLayer = Layer.effect(
   HealthCheckTag,
   Effect.gen(function* () {
     const database = yield* DatabaseTag;
-    const healthCheckService = yield* HealthCheckServiceTag;
-    return makeHealthCheckLive(database, healthCheckService);
+    const toolHealthRegistry = yield* ToolHealthRegistryTag;
+    return makeHealthCheckLive(database, toolHealthRegistry);
   }),
 );

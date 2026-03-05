@@ -26,23 +26,11 @@ interface ToolRegistryEntry {
   readonly createHealthChecker?: (dependencies: ToolRegistryDependencies) => () => Effect.Effect<HealthCheckResult, HealthCheckError>;
 }
 
-const adaptToolService = (toolService: {
-  getCurrentVersion: ToolManager["getCurrentVersion"];
-  checkVersion: ToolManager["checkVersion"];
-  performUpgrade: ToolManager["performUpgrade"];
-  ensureVersionOrUpgrade: ToolManager["ensureVersionOrUpgrade"];
-}): ToolManager => ({
-  getCurrentVersion: toolService.getCurrentVersion,
-  checkVersion: toolService.checkVersion,
-  performUpgrade: toolService.performUpgrade,
-  ensureVersionOrUpgrade: toolService.ensureVersionOrUpgrade,
-});
-
 export const toolRegistryEntries = {
   bun: {
     displayName: "Bun",
     essential: true,
-    createManager: ({ bunTools }) => adaptToolService(bunTools),
+    createManager: ({ bunTools }) => bunTools,
     createHealthChecker:
       ({ bunTools }) =>
       () =>
@@ -51,7 +39,7 @@ export const toolRegistryEntries = {
   git: {
     displayName: "Git",
     essential: true,
-    createManager: ({ gitTools }) => adaptToolService(gitTools),
+    createManager: ({ gitTools }) => gitTools,
     createHealthChecker:
       ({ gitTools }) =>
       () =>
@@ -60,7 +48,7 @@ export const toolRegistryEntries = {
   mise: {
     displayName: "Mise",
     essential: true,
-    createManager: ({ miseTools }) => adaptToolService(miseTools),
+    createManager: ({ miseTools }) => miseTools,
     createHealthChecker:
       ({ miseTools }) =>
       () =>
@@ -69,7 +57,7 @@ export const toolRegistryEntries = {
   fzf: {
     displayName: "Fzf",
     essential: true,
-    createManager: ({ fzfTools }) => adaptToolService(fzfTools),
+    createManager: ({ fzfTools }) => fzfTools,
     createHealthChecker:
       ({ fzfTools }) =>
       () =>
@@ -78,7 +66,7 @@ export const toolRegistryEntries = {
   gcloud: {
     displayName: "Gcloud",
     essential: true,
-    createManager: ({ gcloudTools }) => adaptToolService(gcloudTools),
+    createManager: ({ gcloudTools }) => gcloudTools,
     createHealthChecker:
       ({ gcloudTools }) =>
       () =>

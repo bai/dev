@@ -5,7 +5,7 @@ import { describe, expect } from "vitest";
 import type { Database } from "../domain/database-port";
 import { configError, healthCheckError } from "../domain/errors";
 import type { HealthCheckResult } from "../domain/health-check-port";
-import type { HealthCheckService } from "../domain/health-check-service";
+import type { ToolHealthRegistry } from "../domain/tool-health-registry-port";
 import { makeHealthCheckLive } from "./health-check-live";
 
 interface DatabaseCapture {
@@ -78,12 +78,13 @@ describe("health-check-live", () => {
         },
       ];
 
-      const healthCheckService: HealthCheckService = {
-        runAllHealthChecks: () => Effect.succeed(results),
+      const toolHealthRegistry: ToolHealthRegistry = {
+        checkAllTools: () => Effect.succeed(results),
+        checkTool: () => healthCheckError("not used in this test"),
         getRegisteredTools: () => Effect.succeed(["git", "bun"]),
       };
 
-      const healthCheck = makeHealthCheckLive(databaseCapture.database, healthCheckService);
+      const healthCheck = makeHealthCheckLive(databaseCapture.database, toolHealthRegistry);
       const returnedResults = yield* healthCheck.runHealthChecks();
 
       expect(returnedResults).toEqual(results);
@@ -134,8 +135,8 @@ describe("health-check-live", () => {
         migrate: () => Effect.void,
       };
 
-      const healthCheckService: HealthCheckService = {
-        runAllHealthChecks: () =>
+      const toolHealthRegistry: ToolHealthRegistry = {
+        checkAllTools: () =>
           Effect.succeed([
             {
               toolName: "git",
@@ -143,10 +144,11 @@ describe("health-check-live", () => {
               checkedAt: new Date(),
             } satisfies HealthCheckResult,
           ]),
+        checkTool: () => healthCheckError("not used in this test"),
         getRegisteredTools: () => Effect.succeed(["git"]),
       };
 
-      const healthCheck = makeHealthCheckLive(database, healthCheckService);
+      const healthCheck = makeHealthCheckLive(database, toolHealthRegistry);
       yield* healthCheck.runHealthChecks();
 
       expect(databaseTransactionCalls).toBe(1);
@@ -164,8 +166,8 @@ describe("health-check-live", () => {
         migrate: () => Effect.void,
       };
 
-      const healthCheckService: HealthCheckService = {
-        runAllHealthChecks: () =>
+      const toolHealthRegistry: ToolHealthRegistry = {
+        checkAllTools: () =>
           Effect.succeed([
             {
               toolName: "git",
@@ -173,10 +175,11 @@ describe("health-check-live", () => {
               checkedAt: new Date(),
             } satisfies HealthCheckResult,
           ]),
+        checkTool: () => healthCheckError("not used in this test"),
         getRegisteredTools: () => Effect.succeed(["git"]),
       };
 
-      const healthCheck = makeHealthCheckLive(failingDatabase, healthCheckService);
+      const healthCheck = makeHealthCheckLive(failingDatabase, toolHealthRegistry);
       const result = yield* Effect.exit(healthCheck.runHealthChecks());
 
       expect(Exit.isFailure(result)).toBe(true);
@@ -195,12 +198,13 @@ describe("health-check-live", () => {
     Effect.gen(function* () {
       const databaseCapture = createDatabaseCapture();
 
-      const healthCheckService: HealthCheckService = {
-        runAllHealthChecks: () => healthCheckError("tool registry unavailable"),
+      const toolHealthRegistry: ToolHealthRegistry = {
+        checkAllTools: () => healthCheckError("tool registry unavailable"),
+        checkTool: () => healthCheckError("not used in this test"),
         getRegisteredTools: () => Effect.succeed([]),
       };
 
-      const healthCheck = makeHealthCheckLive(databaseCapture.database, healthCheckService);
+      const healthCheck = makeHealthCheckLive(databaseCapture.database, toolHealthRegistry);
       const result = yield* Effect.exit(healthCheck.runHealthChecks());
 
       expect(Exit.isFailure(result)).toBe(true);
