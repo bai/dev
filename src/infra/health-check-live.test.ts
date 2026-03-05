@@ -31,6 +31,11 @@ const createDatabaseCapture = (): DatabaseCapture => {
       };
       await callback(tx);
     },
+    insert: (_table: unknown) => ({
+      values: async (row: Record<string, unknown>) => {
+        insertedRows.push(row);
+      },
+    }),
     delete: (_table: unknown) => ({
       where: async (_condition: unknown) => {
         pruneCalls.count += 1;
@@ -89,11 +94,72 @@ describe("health-check-live", () => {
     }),
   );
 
+  it.effect("uses Database.transaction instead of raw drizzle transaction", () =>
+    Effect.gen(function* () {
+      const insertedRows: Array<Record<string, unknown>> = [];
+      let databaseTransactionCalls = 0;
+      let rawDrizzleTransactionCalls = 0;
+
+      const fakeDb = {
+        transaction: async (
+          callback: (tx: { insert: (table: unknown) => { values: (row: Record<string, unknown>) => Promise<void> } }) => Promise<void>,
+        ) => {
+          rawDrizzleTransactionCalls += 1;
+          const tx = {
+            insert: (_table: unknown) => ({
+              values: async (row: Record<string, unknown>) => {
+                insertedRows.push(row);
+              },
+            }),
+          };
+          await callback(tx);
+        },
+        insert: (_table: unknown) => ({
+          values: async (row: Record<string, unknown>) => {
+            insertedRows.push(row);
+          },
+        }),
+        delete: (_table: unknown) => ({
+          where: async (_condition: unknown) => undefined,
+        }),
+      };
+
+      const database: Database = {
+        query: (fn) => fn(fakeDb as never),
+        transaction: (fn) => {
+          databaseTransactionCalls += 1;
+          return fn(fakeDb as never);
+        },
+        raw: () => Effect.succeed({} as never),
+        migrate: () => Effect.void,
+      };
+
+      const healthCheckService: HealthCheckService = {
+        runAllHealthChecks: () =>
+          Effect.succeed([
+            {
+              toolName: "git",
+              status: "ok",
+              checkedAt: new Date(),
+            } satisfies HealthCheckResult,
+          ]),
+        getRegisteredTools: () => Effect.succeed(["git"]),
+      };
+
+      const healthCheck = makeHealthCheckLive(database, healthCheckService);
+      yield* healthCheck.runHealthChecks();
+
+      expect(databaseTransactionCalls).toBe(1);
+      expect(rawDrizzleTransactionCalls).toBe(0);
+      expect(insertedRows).toHaveLength(1);
+    }),
+  );
+
   it.effect("maps database-level failures to HealthCheckError", () =>
     Effect.gen(function* () {
       const failingDatabase: Database = {
-        query: () => configError("database unavailable"),
-        transaction: (fn) => fn({} as never),
+        query: (fn) => fn({} as never),
+        transaction: () => configError("database unavailable"),
         raw: () => Effect.succeed({} as never),
         migrate: () => Effect.void,
       };

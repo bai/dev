@@ -23,13 +23,14 @@ interface InternalHealthCheckResult {
 // Store health check results using Database
 const storeHealthCheckResults = (results: InternalHealthCheckResult[], database: Database): Effect.Effect<void, HealthCheckError> =>
   database
-    .query((db) =>
+    .transaction((tx) =>
       Effect.gen(function* () {
         // Insert all results in a transaction
-        yield* Effect.tryPromise({
-          try: async () => {
-            await db.transaction(async (tx) => {
-              for (const result of results) {
+        yield* Effect.forEach(
+          results,
+          (result) =>
+            Effect.tryPromise({
+              try: async () => {
                 await tx.insert(toolHealthChecks).values({
                   id: Bun.randomUUIDv7(),
                   tool_name: result.toolName,
@@ -38,11 +39,11 @@ const storeHealthCheckResults = (results: InternalHealthCheckResult[], database:
                   notes: result.notes || null,
                   checked_at: new Date(result.checkedAt),
                 });
-              }
-            });
-          },
-          catch: (error) => healthCheckError(`Failed to insert health check results: ${error}`),
-        });
+              },
+              catch: (error) => healthCheckError(`Failed to insert health check results: ${error}`),
+            }),
+          { discard: true },
+        );
 
         yield* Effect.logDebug(`Stored ${results.length} health check results`);
 
@@ -52,7 +53,7 @@ const storeHealthCheckResults = (results: InternalHealthCheckResult[], database:
 
         yield* Effect.tryPromise({
           try: async () => {
-            await db.delete(toolHealthChecks).where(sql`checked_at < ${cutoffDate}`);
+            await tx.delete(toolHealthChecks).where(sql`checked_at < ${cutoffDate}`);
           },
           catch: (error) => healthCheckError(`Failed to prune old records: ${error}`),
         });
