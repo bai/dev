@@ -3,19 +3,17 @@ import os from "os";
 import path from "path";
 import { fileURLToPath } from "url";
 
-import { describe, expect, it } from "vitest";
-
 const CURRENT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(CURRENT_DIR, "..", "..");
 const CLI_ENTRYPOINT = path.join(REPO_ROOT, "src", "index.ts");
 
-interface CliRunResult {
+export interface CliRunResult {
   readonly exitCode: number;
   readonly stdout: string;
   readonly stderr: string;
 }
 
-interface E2eFixture {
+export interface E2eFixture {
   readonly rootDir: string;
   readonly homeDir: string;
   readonly configHome: string;
@@ -26,8 +24,13 @@ interface E2eFixture {
   readonly commandLogPath: string;
 }
 
-interface FixtureOptions {
+export interface FixtureOptions {
   readonly includeLocalConfig?: boolean;
+  readonly seedDefaultRepositories?: boolean;
+}
+
+export interface CliRunOptions {
+  readonly envOverrides?: Readonly<Record<string, string>>;
 }
 
 const writeExecutable = async (filePath: string, content: string): Promise<void> => {
@@ -60,11 +63,19 @@ if [[ "\${1-}" == "clone" ]]; then
 fi
 
 if [[ "\${1-}" == "pull" ]]; then
+  if [[ "\${DEV_E2E_GIT_PULL_FAIL:-}" == "1" ]]; then
+    echo "simulated git pull failure" >&2
+    exit 1
+  fi
   echo "Already up to date."
   exit 0
 fi
 
 if [[ "\${1-}" == "rev-parse" && "\${2-}" == "--git-dir" ]]; then
+  if [[ "\${DEV_E2E_GIT_REPO_MISSING:-}" == "1" ]]; then
+    echo "fatal: not a git repository" >&2
+    exit 128
+  fi
   echo ".git"
   exit 0
 fi
@@ -76,6 +87,11 @@ fi
 
 if [[ "\${1-}" == "remote" && "\${2-}" == "get-url" && "\${3-}" == "origin" ]]; then
   echo "https://github.com/acme/sample.git"
+  exit 0
+fi
+
+if [[ "\${1-}" == "rev-parse" && "\${2-}" == "--abbrev-ref" && "\${3-}" == "HEAD" ]]; then
+  echo "main"
   exit 0
 fi
 
@@ -99,6 +115,10 @@ if [[ -n "\${DEV_E2E_LOG:-}" ]]; then
 fi
 
 if [[ "\${1-}" == "--version" ]]; then
+  if [[ "\${DEV_E2E_MISE_MISSING:-}" == "1" ]]; then
+    echo "mise: command not found" >&2
+    exit 127
+  fi
   echo "2026.2.0 macos-arm64 (2026-02-10)"
   exit 0
 fi
@@ -109,16 +129,27 @@ if [[ "\${1-}" == "current" ]]; then
 fi
 
 if [[ "\${1-}" == "install" ]]; then
+  if [[ "\${DEV_E2E_MISE_INSTALL_FAIL:-}" == "1" ]]; then
+    echo "simulated mise install failure" >&2
+    exit 1
+  fi
   echo "mise install ok"
   exit 0
 fi
 
 if [[ "\${1-}" == "tasks" && "\${2-}" == "--list" ]]; then
+  if [[ "\${DEV_E2E_MISE_NO_TASKS:-}" == "1" ]]; then
+    exit 0
+  fi
   printf 'build\\nstart\\ntest\\n'
   exit 0
 fi
 
 if [[ "\${1-}" == "run" ]]; then
+  if [[ "\${DEV_E2E_MISE_RUN_FAIL:-}" == "1" ]]; then
+    echo "simulated mise run failure" >&2
+    exit 1
+  fi
   echo "mise run \${2-}"
   exit 0
 fi
@@ -158,6 +189,10 @@ if [[ "\${1-}" == "--version" ]]; then
 fi
 
 if [[ "\${1-}" == "info" ]]; then
+  if [[ "\${DEV_E2E_DOCKER_INFO_FAIL:-}" == "1" ]]; then
+    echo "Cannot connect to the Docker daemon" >&2
+    exit 1
+  fi
   echo "Docker Engine - Community"
   exit 0
 fi
@@ -178,6 +213,14 @@ if [[ "\${1-}" == "-f" ]]; then
 fi
 
 if [[ "\${1-}" == "up" || "\${1-}" == "down" || "\${1-}" == "stop" || "\${1-}" == "restart" || "\${1-}" == "logs" ]]; then
+  if [[ "\${DEV_E2E_DOCKER_COMPOSE_FAIL:-}" == "1" ]]; then
+    echo "simulated docker compose failure for \${1-}" >&2
+    exit 1
+  fi
+  if [[ "\${1-}" == "logs" && "\${DEV_E2E_DOCKER_LOGS_FAIL:-}" == "1" ]]; then
+    echo "simulated docker compose logs failure" >&2
+    exit 1
+  fi
   exit 0
 fi
 
@@ -252,12 +295,34 @@ if [[ -n "\${DEV_E2E_LOG:-}" ]]; then
 fi
 
 if [[ "\${1-}" == "version" ]]; then
+  if [[ "\${DEV_E2E_GCLOUD_MISSING:-}" == "1" ]]; then
+    echo "gcloud: command not found" >&2
+    exit 127
+  fi
   echo "Google Cloud SDK 552.1.0"
   exit 0
 fi
 
 echo "unsupported gcloud invocation: $*" >&2
 exit 1
+`,
+  );
+
+  await writeExecutable(
+    path.join(fakeBinDir, "sh"),
+    `#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ -n "\${DEV_E2E_LOG:-}" ]]; then
+  printf 'sh %s\\n' "$*" >> "\${DEV_E2E_LOG}"
+fi
+
+if [[ "\${DEV_E2E_SH_FAIL:-}" == "1" ]]; then
+  echo "simulated sh failure" >&2
+  exit 1
+fi
+
+exit 0
 `,
   );
 
@@ -275,7 +340,7 @@ echo "/usr/bin/\${1-}"
   );
 };
 
-const createFixture = async (options: FixtureOptions = {}): Promise<E2eFixture> => {
+export const createFixture = async (options: FixtureOptions = {}): Promise<E2eFixture> => {
   const rootDir = await fs.mkdtemp(path.join(os.tmpdir(), "dev-e2e-"));
   const homeDir = path.join(rootDir, "home");
   const configHome = path.join(rootDir, "xdg-config");
@@ -322,8 +387,10 @@ const createFixture = async (options: FixtureOptions = {}): Promise<E2eFixture> 
     await fs.writeFile(localConfigPath, JSON.stringify(projectConfig, null, 2), "utf8");
   }
 
-  await fs.mkdir(path.join(baseSearchPath, "github.com", "acme", "alpha"), { recursive: true });
-  await fs.mkdir(path.join(baseSearchPath, "github.com", "acme", "bravo"), { recursive: true });
+  if (options.seedDefaultRepositories !== false) {
+    await fs.mkdir(path.join(baseSearchPath, "github.com", "acme", "alpha"), { recursive: true });
+    await fs.mkdir(path.join(baseSearchPath, "github.com", "acme", "bravo"), { recursive: true });
+  }
 
   await createStubBinaries(fakeBinDir);
 
@@ -339,7 +406,7 @@ const createFixture = async (options: FixtureOptions = {}): Promise<E2eFixture> 
   };
 };
 
-const runCli = async (fixture: E2eFixture, args: readonly string[]): Promise<CliRunResult> => {
+export const runCli = async (fixture: E2eFixture, args: readonly string[], options: CliRunOptions = {}): Promise<CliRunResult> => {
   const inheritedPath = process.env.PATH ? `:${process.env.PATH}` : "";
   const env = {
     ...process.env,
@@ -350,6 +417,7 @@ const runCli = async (fixture: E2eFixture, args: readonly string[]): Promise<Cli
     PATH: `${fixture.fakeBinDir}${inheritedPath}`,
     DEV_E2E_LOG: fixture.commandLogPath,
     NO_COLOR: "1",
+    ...options.envOverrides,
   };
 
   const proc = Bun.spawn([process.execPath, CLI_ENTRYPOINT, ...args], {
@@ -368,7 +436,7 @@ const runCli = async (fixture: E2eFixture, args: readonly string[]): Promise<Cli
   };
 };
 
-const readCommandLog = async (fixture: E2eFixture): Promise<string> => {
+export const readCommandLog = async (fixture: E2eFixture): Promise<string> => {
   try {
     return await fs.readFile(fixture.commandLogPath, "utf8");
   } catch {
@@ -376,7 +444,35 @@ const readCommandLog = async (fixture: E2eFixture): Promise<string> => {
   }
 };
 
-const withFixture = async (run: (fixture: E2eFixture) => Promise<void>, options: FixtureOptions = {}): Promise<void> => {
+export const readCdTargets = async (fixture: E2eFixture): Promise<string[]> => {
+  const candidateDirectories = [
+    path.join(fixture.dataHome, "dev"),
+    path.join(fixture.homeDir, ".local", "share", "dev"),
+    path.join(os.homedir(), ".local", "share", "dev"),
+  ];
+
+  const targets: string[] = [];
+
+  for (const directoryPath of candidateDirectories) {
+    const files = await fs.readdir(directoryPath).catch(() => [] as string[]);
+    const targetFiles = files.filter((fileName) => fileName.startsWith("cd_target."));
+
+    for (const targetFile of targetFiles) {
+      const targetPath = await fs
+        .readFile(path.join(directoryPath, targetFile), "utf8")
+        .then((content) => content.trim())
+        .catch(() => "");
+
+      if (targetPath.length > 0) {
+        targets.push(targetPath);
+      }
+    }
+  }
+
+  return targets;
+};
+
+export const withFixture = async (run: (fixture: E2eFixture) => Promise<void>, options: FixtureOptions = {}): Promise<void> => {
   const fixture = await createFixture(options);
   try {
     await run(fixture);
@@ -384,164 +480,3 @@ const withFixture = async (run: (fixture: E2eFixture) => Promise<void>, options:
     await fs.rm(fixture.rootDir, { recursive: true, force: true });
   }
 };
-
-describe("cli commands e2e smoke", () => {
-  it("shows main help output for --help", async () =>
-    withFixture(async (fixture) => {
-      const result = await runCli(fixture, ["--help"]);
-      expect(result.exitCode).toBe(0);
-      expect(result.stdout).toContain("USAGE");
-      expect(result.stdout).toContain("dev <command> [options]");
-    }));
-
-  it("shows command-specific help for known commands", async () =>
-    withFixture(async (fixture) => {
-      const result = await runCli(fixture, ["clone", "--help"]);
-      expect(result.exitCode).toBe(0);
-      expect(result.stdout).toContain("dev clone <repo>");
-    }));
-
-  it("falls back to main help for unknown command help requests", async () =>
-    withFixture(async (fixture) => {
-      const result = await runCli(fixture, ["unknown-command", "--help"]);
-      expect(result.exitCode).toBe(0);
-      expect(result.stdout).toContain("COMMANDS");
-      expect(result.stdout).toContain("Use 'dev <command> --help'");
-    }));
-
-  it("bootstraps local configuration when config file is missing", async () =>
-    withFixture(
-      async (fixture) => {
-        const result = await runCli(fixture, ["--help"]);
-        expect(result.exitCode).toBe(0);
-
-        const configPath = path.join(fixture.configHome, "dev", "config.json");
-        const configExists = await fs
-          .access(configPath)
-          .then(() => true)
-          .catch(() => false);
-
-        expect(configExists).toBe(true);
-      },
-      { includeLocalConfig: false },
-    ));
-
-  it("runs 'cd' and writes shell integration target", async () =>
-    withFixture(async (fixture) => {
-      const result = await runCli(fixture, ["cd", "alpha"]);
-      expect(result.exitCode).toBe(0);
-
-      const expectedTarget = path.join(fixture.baseSearchPath, "github.com", "acme", "alpha");
-      const candidateDirectories = [
-        path.join(fixture.dataHome, "dev"),
-        path.join(fixture.homeDir, ".local", "share", "dev"),
-        path.join(os.homedir(), ".local", "share", "dev"),
-      ];
-
-      let matchedTarget: string | null = null;
-
-      for (const directoryPath of candidateDirectories) {
-        const files = await fs.readdir(directoryPath).catch(() => [] as string[]);
-        const targetFiles = files.filter((fileName) => fileName.startsWith("cd_target."));
-
-        for (const targetFile of targetFiles) {
-          const targetPath = await fs
-            .readFile(path.join(directoryPath, targetFile), "utf8")
-            .then((content) => content.trim())
-            .catch(() => "");
-
-          if (targetPath === expectedTarget) {
-            matchedTarget = targetPath;
-            break;
-          }
-        }
-
-        if (matchedTarget) {
-          break;
-        }
-      }
-
-      expect(matchedTarget).toBe(expectedTarget);
-    }));
-
-  it("runs 'clone' and creates the destination repository path", async () =>
-    withFixture(async (fixture) => {
-      const result = await runCli(fixture, ["clone", "acme/newrepo"]);
-      expect(result.exitCode).toBe(0);
-
-      const clonedPath = path.join(fixture.baseSearchPath, "github.com", "acme", "newrepo", ".git", "HEAD");
-      const exists = await fs
-        .access(clonedPath)
-        .then(() => true)
-        .catch(() => false);
-
-      expect(exists).toBe(true);
-    }));
-
-  it("runs 'up' and executes mise install", async () =>
-    withFixture(async (fixture) => {
-      const result = await runCli(fixture, ["up"]);
-      expect(result.exitCode).toBe(0);
-      expect(result.stdout).toContain("Development environment setup complete");
-
-      const commandLog = await readCommandLog(fixture);
-      expect(commandLog).toContain("mise install");
-    }));
-
-  it("runs 'run' with task arguments", async () =>
-    withFixture(async (fixture) => {
-      const result = await runCli(fixture, ["run", "build", "prod"]);
-      expect(result.exitCode).toBe(0);
-      expect(result.stdout).toContain("Task 'build prod' completed successfully");
-
-      const commandLog = await readCommandLog(fixture);
-      expect(commandLog).toContain("mise run build prod");
-    }));
-
-  it("runs 'services up' and invokes docker compose", async () =>
-    withFixture(async (fixture) => {
-      const result = await runCli(fixture, ["services", "up"]);
-      expect(result.exitCode).toBe(0);
-
-      const commandLog = await readCommandLog(fixture);
-      expect(commandLog).toContain("docker compose -f");
-      expect(commandLog).toContain("up -d postgres17 valkey");
-    }));
-
-  it("runs 'status' with all checks healthy", async () =>
-    withFixture(async (fixture) => {
-      const result = await runCli(fixture, ["status"]);
-      expect(result.exitCode).toBe(0);
-      expect(result.stdout).toContain("All green.");
-    }));
-
-  it("runs 'sync' and attempts git pulls", async () =>
-    withFixture(async (fixture) => {
-      const result = await runCli(fixture, ["sync"]);
-      expect(result.exitCode).toBe(0);
-      expect(result.stdout).toContain("Sync complete!");
-
-      const commandLog = await readCommandLog(fixture);
-      expect(commandLog).toContain("git pull");
-    }));
-
-  it("runs 'upgrade' and completes full upgrade workflow", async () =>
-    withFixture(async (fixture) => {
-      const result = await runCli(fixture, ["upgrade"]);
-      expect(result.exitCode).toBe(0);
-      expect(result.stdout).toContain("Upgrade completed successfully");
-
-      const miseConfigPath = path.join(fixture.homeDir, ".config", "mise", "config.toml");
-      const miseConfigExists = await fs
-        .access(miseConfigPath)
-        .then(() => true)
-        .catch(() => false);
-
-      expect(miseConfigExists).toBe(true);
-
-      const commandLog = await readCommandLog(fixture);
-      expect(commandLog).toContain("git pull");
-      expect(commandLog).toContain("bun install");
-      expect(commandLog).toContain("mise version --json");
-    }));
-});
