@@ -1,7 +1,7 @@
 import { ExportResultCode, type ExportResult } from "@opentelemetry/core";
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
 import { BatchSpanProcessor, ConsoleSpanExporter, type ReadableSpan, type SpanExporter } from "@opentelemetry/sdk-trace-base";
-import { Effect, Runtime } from "effect";
+import { Effect, Option, Runtime } from "effect";
 
 import type { Config } from "../../domain/config-schema";
 import type { TracingExporterFactory } from "./tracing-exporter-types";
@@ -20,16 +20,14 @@ type AxiomTelemetryConfig = Extract<Config["telemetry"], { readonly mode: "axiom
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null;
 
+const parseJson = Option.liftThrowable((jsonString: string) => JSON.parse(jsonString) as unknown);
+
 const parsePayload = (value: unknown): unknown => {
   if (typeof value !== "string") {
     return value;
   }
 
-  try {
-    return JSON.parse(value);
-  } catch {
-    return value;
-  }
+  return Option.getOrElse(parseJson(value), () => value);
 };
 
 const extractErrorMessage = (value: unknown): string | undefined => {
