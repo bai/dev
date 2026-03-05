@@ -3,9 +3,10 @@ import os from "os";
 import path from "path";
 
 import { it } from "@effect/vitest";
-import { Effect } from "effect";
+import { Cause, Effect, Exit, Option } from "effect";
 import { afterEach, beforeEach, describe, expect } from "vitest";
 
+import { configSchema } from "../domain/config-schema";
 import type { Network } from "../domain/network-port";
 import { makeConfigLoaderLive } from "./config-loader-live";
 import { makeFileSystemLive } from "./file-system-live";
@@ -108,6 +109,120 @@ describe("config-loader-live", () => {
 
         expect(config.defaultOrg).toBe("testorg");
         expect(config.services).toEqual({ postgres17: {}, valkey: {} });
+      }),
+    );
+  });
+
+  describe("refresh", () => {
+    it.effect("updates local config with validated remote config", () =>
+      Effect.gen(function* () {
+        const localConfig = {
+          configUrl: "https://example.com/remote-config.json",
+          defaultOrg: "local-org",
+          telemetry: { mode: "disabled" },
+        };
+        yield* Effect.promise(() => fs.writeFile(configPath, JSON.stringify(localConfig, null, 2)));
+
+        const remoteNetwork: Network = {
+          get: () =>
+            Effect.succeed({
+              status: 200,
+              statusText: "OK",
+              body: JSON.stringify({
+                configUrl: "https://example.com/remote-config.json",
+                defaultOrg: "remote-org",
+                telemetry: { mode: "disabled" },
+                services: { postgres17: {} },
+              }),
+              headers: {},
+            }),
+          downloadFile: () => Effect.void,
+          checkConnectivity: () => Effect.succeed(true),
+        };
+
+        const configLoader = makeConfigLoaderLive(fileSystem, remoteNetwork, configPath);
+        const refreshedConfig = yield* configLoader.refresh();
+
+        expect(refreshedConfig.defaultOrg).toBe("remote-org");
+        expect(refreshedConfig.services).toEqual({ postgres17: {} });
+
+        const persistedConfig = yield* Effect.promise(() => fs.readFile(configPath, "utf8"));
+        const parsedPersistedConfig = configSchema.parse(Bun.JSONC.parse(persistedConfig));
+        expect(parsedPersistedConfig.defaultOrg).toBe("remote-org");
+      }),
+    );
+
+    it.effect("fails fast for invalid remote config and keeps local config unchanged", () =>
+      Effect.gen(function* () {
+        const localConfig = {
+          configUrl: "https://example.com/remote-config.json",
+          defaultOrg: "local-org",
+          telemetry: { mode: "disabled" },
+        };
+        yield* Effect.promise(() => fs.writeFile(configPath, JSON.stringify(localConfig, null, 2)));
+
+        const invalidRemoteNetwork: Network = {
+          get: () =>
+            Effect.succeed({
+              status: 200,
+              statusText: "OK",
+              body: "{ invalid-json",
+              headers: {},
+            }),
+          downloadFile: () => Effect.void,
+          checkConnectivity: () => Effect.succeed(true),
+        };
+
+        const configLoader = makeConfigLoaderLive(fileSystem, invalidRemoteNetwork, configPath);
+        const result = yield* Effect.exit(configLoader.refresh());
+
+        expect(Exit.isFailure(result)).toBe(true);
+        if (Exit.isFailure(result)) {
+          const failure = Cause.failureOption(result.cause);
+          expect(Option.isSome(failure)).toBe(true);
+          if (Option.isSome(failure)) {
+            expect(failure.value._tag).toBe("ConfigError");
+          }
+        }
+
+        const persistedConfig = yield* Effect.promise(() => fs.readFile(configPath, "utf8"));
+        const parsedPersistedConfig = configSchema.parse(Bun.JSONC.parse(persistedConfig));
+        expect(parsedPersistedConfig.defaultOrg).toBe("local-org");
+      }),
+    );
+
+    it.effect("fails fast for non-200 remote responses", () =>
+      Effect.gen(function* () {
+        const localConfig = {
+          configUrl: "https://example.com/remote-config.json",
+          defaultOrg: "local-org",
+          telemetry: { mode: "disabled" },
+        };
+        yield* Effect.promise(() => fs.writeFile(configPath, JSON.stringify(localConfig, null, 2)));
+
+        const failingRemoteNetwork: Network = {
+          get: () =>
+            Effect.succeed({
+              status: 503,
+              statusText: "Service Unavailable",
+              body: "{}",
+              headers: {},
+            }),
+          downloadFile: () => Effect.void,
+          checkConnectivity: () => Effect.succeed(true),
+        };
+
+        const configLoader = makeConfigLoaderLive(fileSystem, failingRemoteNetwork, configPath);
+        const result = yield* Effect.exit(configLoader.refresh());
+
+        expect(Exit.isFailure(result)).toBe(true);
+        if (Exit.isFailure(result)) {
+          const failure = Cause.failureOption(result.cause);
+          expect(Option.isSome(failure)).toBe(true);
+          if (Option.isSome(failure)) {
+            expect(failure.value._tag).toBe("ConfigError");
+          }
+        }
       }),
     );
   });

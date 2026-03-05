@@ -8,6 +8,7 @@ import { GitTag } from "../domain/git-port";
 import { HealthCheckTag } from "../domain/health-check-port";
 import type { EnvironmentInfo, GitInfo } from "../domain/models";
 import { RunStoreTag } from "../domain/run-store-port";
+import { RuntimeContextTag } from "../domain/runtime-context-port";
 
 interface StatusItem {
   readonly tool: string;
@@ -57,7 +58,7 @@ export const statusCommand = Command.make("status", {}, () =>
 /**
  * Show environment information
  */
-const showEnvironmentInfo: Effect.Effect<void, never, GitTag> = Effect.gen(function* () {
+const showEnvironmentInfo: Effect.Effect<void, never, GitTag | RuntimeContextTag> = Effect.gen(function* () {
   yield* Effect.logInfo("🌍 Environment Information:");
   yield* Effect.logInfo("");
 
@@ -80,9 +81,10 @@ const showEnvironmentInfo: Effect.Effect<void, never, GitTag> = Effect.gen(funct
 /**
  * Get comprehensive environment information
  */
-const getEnvironmentInfo = (): Effect.Effect<EnvironmentInfo, never, GitTag> =>
+const getEnvironmentInfo = (): Effect.Effect<EnvironmentInfo, never, GitTag | RuntimeContextTag> =>
   Effect.gen(function* () {
-    const currentDir = process.cwd();
+    const runtimeContext = yield* RuntimeContextTag;
+    const currentDir = runtimeContext.getCwd();
 
     const gitInfo = yield* getGitInfo(currentDir);
 

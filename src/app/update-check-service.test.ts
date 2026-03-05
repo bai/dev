@@ -5,6 +5,7 @@ import { describe, expect } from "vitest";
 import { configError, unknownError } from "../domain/errors";
 import type { CommandRun } from "../domain/models";
 import type { RunStore } from "../domain/run-store-port";
+import type { RuntimeContext } from "../domain/runtime-context-port";
 import { makeUpdateChecker } from "./update-check-service";
 
 const baseRunStore: RunStore = {
@@ -15,32 +16,26 @@ const baseRunStore: RunStore = {
   completeIncompleteRuns: () => Effect.void,
 };
 
-const withArgv = <A, E, R>(argv: string[], effect: Effect.Effect<A, E, R>): Effect.Effect<A, E, R> =>
-  Effect.acquireUseRelease(
-    Effect.sync(() => {
-      const previous = [...process.argv];
-      process.argv = argv;
-      return previous;
-    }),
-    () => effect,
-    (previous) =>
-      Effect.sync(() => {
-        process.argv = previous;
-      }),
-  );
+const makeRuntimeContext = (argv: readonly string[]): RuntimeContext => ({
+  getArgv: () => argv,
+  getCwd: () => "/workspace/repo",
+});
 
 describe("update-check-service", () => {
   it.effect("starts auto-upgrade when no previous upgrade run exists", () =>
     Effect.gen(function* () {
       let autoUpgradeCalls = 0;
 
-      const checker = makeUpdateChecker(baseRunStore, () =>
-        Effect.sync(() => {
-          autoUpgradeCalls += 1;
-        }),
+      const checker = makeUpdateChecker(
+        baseRunStore,
+        () =>
+          Effect.sync(() => {
+            autoUpgradeCalls += 1;
+          }),
+        makeRuntimeContext(["bun", "src/index.ts", "status"]),
       );
 
-      yield* withArgv(["bun", "src/index.ts", "status"], checker.runPeriodicUpgradeCheck());
+      yield* checker.runPeriodicUpgradeCheck();
 
       expect(autoUpgradeCalls).toBe(1);
     }),
@@ -64,13 +59,16 @@ describe("update-check-service", () => {
             },
           ]),
       };
-      const checker = makeUpdateChecker(runStore, () =>
-        Effect.sync(() => {
-          autoUpgradeCalls += 1;
-        }),
+      const checker = makeUpdateChecker(
+        runStore,
+        () =>
+          Effect.sync(() => {
+            autoUpgradeCalls += 1;
+          }),
+        makeRuntimeContext(["bun", "src/index.ts", "status"]),
       );
 
-      yield* withArgv(["bun", "src/index.ts", "status"], checker.runPeriodicUpgradeCheck());
+      yield* checker.runPeriodicUpgradeCheck();
 
       expect(autoUpgradeCalls).toBe(0);
     }),
@@ -94,13 +92,16 @@ describe("update-check-service", () => {
             },
           ]),
       };
-      const checker = makeUpdateChecker(runStore, () =>
-        Effect.sync(() => {
-          autoUpgradeCalls += 1;
-        }),
+      const checker = makeUpdateChecker(
+        runStore,
+        () =>
+          Effect.sync(() => {
+            autoUpgradeCalls += 1;
+          }),
+        makeRuntimeContext(["bun", "src/index.ts", "status"]),
       );
 
-      yield* withArgv(["bun", "src/index.ts", "status"], checker.runPeriodicUpgradeCheck());
+      yield* checker.runPeriodicUpgradeCheck();
 
       expect(autoUpgradeCalls).toBe(1);
     }),
@@ -118,9 +119,9 @@ describe("update-check-service", () => {
             return [] as CommandRun[];
           }),
       };
-      const checker = makeUpdateChecker(runStore, () => Effect.void);
+      const checker = makeUpdateChecker(runStore, () => Effect.void, makeRuntimeContext(["bun", "src/index.ts", "upgrade"]));
 
-      yield* withArgv(["bun", "src/index.ts", "upgrade"], checker.runPeriodicUpgradeCheck());
+      yield* checker.runPeriodicUpgradeCheck();
 
       expect(getRecentRunsCalls).toBe(0);
     }),
@@ -148,9 +149,9 @@ describe("update-check-service", () => {
             ] satisfies CommandRun[];
           }),
       };
-      const checker = makeUpdateChecker(runStore, () => Effect.void);
+      const checker = makeUpdateChecker(runStore, () => Effect.void, makeRuntimeContext(["bun", "src/index.ts", "status"]));
 
-      yield* withArgv(["bun", "src/index.ts", "status"], checker.runPeriodicUpgradeCheck());
+      yield* checker.runPeriodicUpgradeCheck();
 
       expect(getRecentRunsCalls).toBe(1);
       expect(requestedLimit).toBe(100);
@@ -159,9 +160,13 @@ describe("update-check-service", () => {
 
   it.effect("swallows UnknownError from auto-upgrade trigger and does not fail", () =>
     Effect.gen(function* () {
-      const checker = makeUpdateChecker(baseRunStore, () => unknownError("cannot spawn background process"));
+      const checker = makeUpdateChecker(
+        baseRunStore,
+        () => unknownError("cannot spawn background process"),
+        makeRuntimeContext(["bun", "src/index.ts", "status"]),
+      );
 
-      const result = yield* Effect.exit(withArgv(["bun", "src/index.ts", "status"], checker.runPeriodicUpgradeCheck()));
+      const result = yield* Effect.exit(checker.runPeriodicUpgradeCheck());
 
       expect(Exit.isSuccess(result)).toBe(true);
     }),
@@ -173,9 +178,9 @@ describe("update-check-service", () => {
         ...baseRunStore,
         getRecentRuns: () => configError("database unavailable"),
       };
-      const checker = makeUpdateChecker(runStore, () => Effect.void);
+      const checker = makeUpdateChecker(runStore, () => Effect.void, makeRuntimeContext(["bun", "src/index.ts", "status"]));
 
-      const result = yield* Effect.exit(withArgv(["bun", "src/index.ts", "status"], checker.runPeriodicUpgradeCheck()));
+      const result = yield* Effect.exit(checker.runPeriodicUpgradeCheck());
 
       expect(Exit.isSuccess(result)).toBe(true);
     }),
@@ -187,9 +192,9 @@ describe("update-check-service", () => {
         ...baseRunStore,
         getRecentRuns: () => unknownError("unexpected failure"),
       };
-      const checker = makeUpdateChecker(runStore, () => Effect.void);
+      const checker = makeUpdateChecker(runStore, () => Effect.void, makeRuntimeContext(["bun", "src/index.ts", "status"]));
 
-      const result = yield* Effect.exit(withArgv(["bun", "src/index.ts", "status"], checker.runPeriodicUpgradeCheck()));
+      const result = yield* Effect.exit(checker.runPeriodicUpgradeCheck());
 
       expect(Exit.isSuccess(result)).toBe(true);
     }),

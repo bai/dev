@@ -128,7 +128,7 @@ export const makeMiseLive = (shell: Shell, fileSystem: FileSystem, configLoader:
 
       // Write mise global config if it exists in the loaded config
       if (config.miseGlobalConfig) {
-        const tomlContent = stringify(config.miseGlobalConfig as Record<string, any>);
+        const tomlContent = stringify(config.miseGlobalConfig as Parameters<typeof stringify>[0]);
 
         yield* fileSystem.writeFile(miseConfigFile, tomlContent).pipe(
           Effect.mapError((error) => {

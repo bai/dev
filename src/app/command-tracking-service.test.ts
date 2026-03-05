@@ -5,6 +5,7 @@ import { describe, expect } from "vitest";
 import { ConfigError, UnknownError, configError, unknownError } from "../domain/errors";
 import type { CommandRun } from "../domain/models";
 import type { RunStore } from "../domain/run-store-port";
+import type { RuntimeContext } from "../domain/runtime-context-port";
 import type { Version } from "../domain/version-port";
 import { makeCommandTracker } from "./command-tracking-service";
 
@@ -21,19 +22,10 @@ const baseVersionService: Version = {
   getVersion: () => Effect.succeed("deadbeef"),
 };
 
-const withArgv = <A, E, R>(argv: string[], effect: Effect.Effect<A, E, R>): Effect.Effect<A, E, R> =>
-  Effect.acquireUseRelease(
-    Effect.sync(() => {
-      const previous = [...process.argv];
-      process.argv = argv;
-      return previous;
-    }),
-    () => effect,
-    (previous) =>
-      Effect.sync(() => {
-        process.argv = previous;
-      }),
-  );
+const makeRuntimeContext = (argv: readonly string[], cwd: string): RuntimeContext => ({
+  getArgv: () => argv,
+  getCwd: () => cwd,
+});
 
 describe("command-tracking-service", () => {
   it.effect("records command metadata with serialized arguments", () =>
@@ -53,15 +45,16 @@ describe("command-tracking-service", () => {
         getCurrentGitCommitSha: () => Effect.succeed("deadbeef"),
         getVersion: () => Effect.succeed("deadbeef"),
       };
-      const tracker = makeCommandTracker(runStore, versionService);
+      const runtimeContext = makeRuntimeContext(["bun", "src/index.ts", "sync", "--all"], "/workspace/repo");
+      const tracker = makeCommandTracker(runStore, versionService, runtimeContext);
 
-      const runId = yield* withArgv(["bun", "src/index.ts", "sync", "--all"], tracker.recordCommandRun());
+      const runId = yield* tracker.recordCommandRun();
 
       expect(runId).toBe("captured-run-id");
       expect(recordedRun?.commandName).toBe("sync");
       expect(recordedRun?.arguments).toBe('["--all"]');
       expect(recordedRun?.cliVersion).toBe("deadbeef");
-      expect(recordedRun?.cwd).toBe(process.cwd());
+      expect(recordedRun?.cwd).toBe("/workspace/repo");
       expect(recordedRun?.startedAt).toBeInstanceOf(Date);
     }),
   );
@@ -82,7 +75,11 @@ describe("command-tracking-service", () => {
           }),
       };
 
-      const tracker = makeCommandTracker(runStore, baseVersionService);
+      const tracker = makeCommandTracker(
+        runStore,
+        baseVersionService,
+        makeRuntimeContext(["bun", "src/index.ts", "help"], "/workspace/repo"),
+      );
       yield* tracker.completeCommandRun("run-123", 0);
 
       expect(completedId).toBe("run-123");
@@ -103,8 +100,13 @@ describe("command-tracking-service", () => {
         completeIncompleteRuns: () => unknownError("unknown db error"),
       };
 
-      const configResult = yield* Effect.exit(makeCommandTracker(configFailingStore, baseVersionService).gracefulShutdown());
-      const unknownResult = yield* Effect.exit(makeCommandTracker(unknownFailingStore, baseVersionService).gracefulShutdown());
+      const runtimeContext = makeRuntimeContext(["bun", "src/index.ts", "help"], "/workspace/repo");
+      const configResult = yield* Effect.exit(
+        makeCommandTracker(configFailingStore, baseVersionService, runtimeContext).gracefulShutdown(),
+      );
+      const unknownResult = yield* Effect.exit(
+        makeCommandTracker(unknownFailingStore, baseVersionService, runtimeContext).gracefulShutdown(),
+      );
 
       expect(Exit.isSuccess(configResult)).toBe(true);
       expect(Exit.isSuccess(unknownResult)).toBe(true);
@@ -122,9 +124,13 @@ describe("command-tracking-service", () => {
         getCurrentGitCommitSha: () => Effect.succeed("deadbeef"),
         getVersion: () => Effect.succeed("deadbeef"),
       };
-      const tracker = makeCommandTracker(failingStore, versionService);
+      const tracker = makeCommandTracker(
+        failingStore,
+        versionService,
+        makeRuntimeContext(["bun", "src/index.ts", "status"], "/workspace/repo"),
+      );
 
-      const result = yield* Effect.exit(withArgv(["bun", "src/index.ts", "status"], tracker.recordCommandRun()));
+      const result = yield* Effect.exit(tracker.recordCommandRun());
 
       expect(Exit.isFailure(result)).toBe(true);
       if (Exit.isFailure(result)) {
@@ -144,7 +150,13 @@ describe("command-tracking-service", () => {
         complete: () => unknownError("db crashed"),
       };
 
-      const result = yield* Effect.exit(makeCommandTracker(failingStore, baseVersionService).completeCommandRun("run-unknown", 2));
+      const result = yield* Effect.exit(
+        makeCommandTracker(
+          failingStore,
+          baseVersionService,
+          makeRuntimeContext(["bun", "src/index.ts", "status"], "/workspace/repo"),
+        ).completeCommandRun("run-unknown", 2),
+      );
 
       expect(Exit.isFailure(result)).toBe(true);
       if (Exit.isFailure(result)) {

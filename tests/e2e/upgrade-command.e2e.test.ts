@@ -45,7 +45,35 @@ describe("upgrade command e2e", () => {
 
         const rewrittenConfigContent = await fs.readFile(localConfigPath, "utf8");
         const rewrittenConfig = JSON.parse(rewrittenConfigContent) as Record<string, unknown>;
-        expect(rewrittenConfig["configUrl"]).toBe("http://127.0.0.1:1/config.json");
+        expect(rewrittenConfig["configUrl"]).toBe("https://config.example.invalid/dev/config.json");
+      }),
+    20_000,
+  );
+
+  it(
+    "fails 'upgrade' when remote config is invalid and preserves local config",
+    async () =>
+      withFixture(async (fixture) => {
+        const invalidRemoteConfigUrl = "data:application/json,%7B%22defaultOrg%22%3A";
+        const projectConfigPath = path.join(fixture.homeDir, ".dev", "config.json");
+        const localConfigPath = path.join(fixture.configHome, "dev", "config.json");
+
+        const projectConfigContent = await fs.readFile(projectConfigPath, "utf8");
+        const projectConfig = JSON.parse(projectConfigContent) as Record<string, unknown>;
+        await fs.writeFile(projectConfigPath, JSON.stringify({ ...projectConfig, configUrl: invalidRemoteConfigUrl }, null, 2), "utf8");
+
+        const localConfigContent = await fs.readFile(localConfigPath, "utf8");
+        const localConfig = JSON.parse(localConfigContent) as Record<string, unknown>;
+        await fs.writeFile(localConfigPath, JSON.stringify({ ...localConfig, configUrl: invalidRemoteConfigUrl }, null, 2), "utf8");
+        const baselineLocalConfig = await fs.readFile(localConfigPath, "utf8");
+
+        const result = await runCli(fixture, ["upgrade"]);
+        expect(result.exitCode).not.toBe(0);
+        expect(result.stdout).not.toContain("Upgrade completed successfully");
+        expect(result.stdout).not.toContain("Configuration refreshed successfully");
+
+        const finalLocalConfig = await fs.readFile(localConfigPath, "utf8");
+        expect(finalLocalConfig).toBe(baselineLocalConfig);
       }),
     20_000,
   );

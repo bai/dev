@@ -13,6 +13,7 @@ import type { HealthCheckResult } from "../domain/health-check-port";
 import type { CommandRun } from "../domain/models";
 import type { RunStore } from "../domain/run-store-port";
 import { RunStoreTag } from "../domain/run-store-port";
+import { RuntimeContextTag } from "../domain/runtime-context-port";
 import { statusCommand } from "./status-command";
 
 const createGit = (branch: string | null, remote: string | null): { git: Git; branchCalls: string[]; remoteCalls: string[] } => {
@@ -69,6 +70,11 @@ const createRunStore = (runs: readonly CommandRun[] = []): RunStore => ({
   completeIncompleteRuns: () => Effect.void,
 });
 
+const runtimeContextLayer = Layer.succeed(RuntimeContextTag, {
+  getArgv: () => ["bun", "src/index.ts", "status"] as const,
+  getCwd: () => "/workspace/repo",
+});
+
 describe("status-command", () => {
   it.effect("succeeds when all health checks are OK", () =>
     Effect.gen(function* () {
@@ -78,6 +84,7 @@ describe("status-command", () => {
         Layer.succeed(GitTag, gitContext.git),
         Layer.succeed(DockerServicesTag, createDockerServices(false)),
         Layer.succeed(RunStoreTag, createRunStore()),
+        runtimeContextLayer,
         Layer.succeed(
           HealthCheckTag,
           createHealthCheck([
@@ -95,7 +102,7 @@ describe("status-command", () => {
 
       expect(Exit.isSuccess(result)).toBe(true);
       expect(gitContext.branchCalls).toHaveLength(1);
-      expect(gitContext.remoteCalls).toEqual([`${process.cwd()}:origin`]);
+      expect(gitContext.remoteCalls).toEqual(["/workspace/repo:origin"]);
     }),
   );
 
@@ -107,6 +114,7 @@ describe("status-command", () => {
         Layer.succeed(GitTag, gitContext.git),
         Layer.succeed(DockerServicesTag, createDockerServices(false)),
         Layer.succeed(RunStoreTag, createRunStore()),
+        runtimeContextLayer,
         Layer.succeed(
           HealthCheckTag,
           createHealthCheck([
@@ -134,6 +142,7 @@ describe("status-command", () => {
         Layer.succeed(GitTag, gitContext.git),
         Layer.succeed(DockerServicesTag, createDockerServices(false)),
         Layer.succeed(RunStoreTag, createRunStore()),
+        runtimeContextLayer,
         Layer.succeed(
           HealthCheckTag,
           createHealthCheck([
@@ -162,6 +171,7 @@ describe("status-command", () => {
         Layer.succeed(GitTag, gitContext.git),
         Layer.succeed(DockerServicesTag, createDockerServices(false)),
         Layer.succeed(RunStoreTag, createRunStore()),
+        runtimeContextLayer,
         Layer.succeed(
           HealthCheckTag,
           createHealthCheck([
@@ -205,6 +215,7 @@ describe("status-command", () => {
         Layer.succeed(GitTag, gitContext.git),
         Layer.succeed(DockerServicesTag, createDockerServices(false)),
         Layer.succeed(RunStoreTag, createRunStore()),
+        runtimeContextLayer,
         Layer.succeed(HealthCheckTag, failingHealthCheck),
       );
 
@@ -237,6 +248,7 @@ describe("status-command", () => {
         Layer.succeed(GitTag, createGit("main", "https://github.com/acme/repo.git").git),
         Layer.succeed(DockerServicesTag, createDockerServices(false)),
         Layer.succeed(RunStoreTag, createRunStore()),
+        runtimeContextLayer,
         Layer.succeed(HealthCheckTag, failingHealthCheck),
       );
 

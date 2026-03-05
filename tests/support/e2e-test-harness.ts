@@ -33,6 +33,8 @@ export interface CliRunOptions {
   readonly envOverrides?: Readonly<Record<string, string>>;
 }
 
+const REMOTE_CONFIG_CANONICAL_URL = "https://config.example.invalid/dev/config.json";
+
 const writeExecutable = async (filePath: string, content: string): Promise<void> => {
   await fs.writeFile(filePath, content, "utf8");
   await fs.chmod(filePath, 0o755);
@@ -371,8 +373,8 @@ export const createFixture = async (options: FixtureOptions = {}): Promise<E2eFi
   await fs.mkdir(path.dirname(migrationsDestination), { recursive: true });
   await fs.cp(migrationsSource, migrationsDestination, { recursive: true });
 
-  const projectConfig = {
-    configUrl: "http://127.0.0.1:1/config.json",
+  const remoteConfig = {
+    configUrl: REMOTE_CONFIG_CANONICAL_URL,
     defaultOrg: "acme",
     defaultProvider: "github",
     baseSearchPath,
@@ -386,6 +388,11 @@ export const createFixture = async (options: FixtureOptions = {}): Promise<E2eFi
       postgres17: {},
       valkey: {},
     },
+  };
+  const remoteConfigFetchUrl = `data:application/json,${encodeURIComponent(JSON.stringify(remoteConfig))}`;
+  const projectConfig = {
+    ...remoteConfig,
+    configUrl: remoteConfigFetchUrl,
   };
   await fs.writeFile(path.join(devDir, "config.json"), JSON.stringify(projectConfig, null, 2), "utf8");
 

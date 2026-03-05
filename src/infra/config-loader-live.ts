@@ -57,7 +57,6 @@ export const makeConfigLoaderLive = (fileSystem: FileSystem, network: Network, c
               catch: (error) => configError(`Invalid remote config: ${error}`),
             }).pipe(Effect.flatMap((validatedConfig) => save(validatedConfig).pipe(Effect.map(() => validatedConfig))));
           }),
-          Effect.orElseSucceed(() => currentConfig),
         );
       }),
       annotateErrorTypeOnFailure,

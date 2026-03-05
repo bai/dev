@@ -26,6 +26,7 @@ import { MiseLiveLayer } from "./infra/mise-live";
 import { MultiRepoProviderLiveLayer } from "./infra/multi-repo-provider-live";
 import { NetworkLiveLayer } from "./infra/network-live";
 import { RunStoreLiveLayer } from "./infra/run-store-live";
+import { RuntimeContextLiveLayer } from "./infra/runtime-context-live";
 import { ShellLiveLayer } from "./infra/shell-live";
 import { BunToolsLiveLayer } from "./infra/tools/bun-tools-live";
 import { DockerToolsLiveLayer } from "./infra/tools/docker-tools-live";
@@ -68,9 +69,10 @@ export const loadConfiguration = (options: SetupOptions = {}) =>
 /**
  * Build the complete application layer
  */
-export const buildAppLayer = (config: Config) => {
+export const buildAppLayer = (config: Config, options: SetupOptions = {}) => {
   // Extract configuration values
   const defaults = createPathService();
+  const configPath = options.configPath ?? defaults.configPath;
   const defaultOrg = config.defaultOrg;
   const baseSearchPath = defaults.getBasePath(config);
   const defaultProvider = config.defaultProvider;
@@ -85,6 +87,7 @@ export const buildAppLayer = (config: Config) => {
     ShellLiveLayer,
     AutoUpgradeTriggerLiveLayer,
     createPathServiceLiveLayer(baseSearchPath),
+    RuntimeContextLiveLayer,
   );
 
   // Stage 2: Services that depend on base services
@@ -96,7 +99,7 @@ export const buildAppLayer = (config: Config) => {
   const repositoryServiceLayer = Layer.provide(RepositoryServiceLiveLayer, baseServices);
 
   // Config loader needs filesystem and network
-  const configLoaderLayer = Layer.provide(ConfigLoaderLiveLayer(defaults.configPath), Layer.mergeAll(baseServices, networkLayer));
+  const configLoaderLayer = Layer.provide(ConfigLoaderLiveLayer(configPath), Layer.mergeAll(baseServices, networkLayer));
 
   // Docker services layer (depends on base services)
   const dockerServicesLayer = Layer.provide(DockerServicesLiveLayer(enabledServices), baseServices);
@@ -180,7 +183,7 @@ export const setupApplication = (options: SetupOptions = {}) =>
 
     // Build layers
     yield* Effect.logDebug("🔨 Building application layers...");
-    const appLayer = buildAppLayer(config);
+    const appLayer = buildAppLayer(config, options);
     const baseSearchPath = defaults.getBasePath(config);
     const directorySetupLayer = Layer.provide(
       DirectoryLiveLayer,

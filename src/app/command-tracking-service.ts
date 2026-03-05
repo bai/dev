@@ -2,6 +2,7 @@ import { Clock, Context, Effect, Layer } from "effect";
 
 import { type ConfigError, type UnknownError } from "../domain/errors";
 import { RunStoreTag, type RunStore } from "../domain/run-store-port";
+import { RuntimeContextTag, type RuntimeContext } from "../domain/runtime-context-port";
 import { VersionTag, type Version } from "../domain/version-port";
 
 /**
@@ -18,14 +19,15 @@ export interface CommandTracker {
   gracefulShutdown(): Effect.Effect<void, ConfigError | UnknownError>;
 }
 
-export const makeCommandTracker = (runStore: RunStore, version: Version): CommandTracker => {
+export const makeCommandTracker = (runStore: RunStore, version: Version, runtimeContext: RuntimeContext): CommandTracker => {
   const recordCommandRun = (): Effect.Effect<string, ConfigError | UnknownError> =>
     Effect.gen(function* () {
       // Gather run information
-      const commandName = process.argv[2] || "help";
-      const args = process.argv.slice(3);
+      const argv = runtimeContext.getArgv();
+      const commandName = argv[2] || "help";
+      const args = argv.slice(3);
       const cliVersion = yield* version.getCurrentGitCommitSha();
-      const cwd = process.cwd();
+      const cwd = runtimeContext.getCwd();
       const startedAtMs = yield* Clock.currentTimeMillis;
       const startedAt = new Date(startedAtMs);
 
@@ -76,6 +78,7 @@ export const CommandTrackerLiveLayer = Layer.effect(
   Effect.gen(function* () {
     const runStore = yield* RunStoreTag;
     const version = yield* VersionTag;
-    return makeCommandTracker(runStore, version);
+    const runtimeContext = yield* RuntimeContextTag;
+    return makeCommandTracker(runStore, version, runtimeContext);
   }),
 );

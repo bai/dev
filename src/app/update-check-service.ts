@@ -3,6 +3,7 @@ import { Clock, Context, Duration, Effect, Layer } from "effect";
 import { AutoUpgradeTriggerTag } from "../domain/auto-upgrade-trigger-port";
 import { type ConfigError, type UnknownError } from "../domain/errors";
 import { RunStoreTag, type RunStore } from "../domain/run-store-port";
+import { RuntimeContextTag, type RuntimeContext } from "../domain/runtime-context-port";
 
 const upgradeFrequency = Duration.decode("1 day");
 export type TriggerAutoUpgrade = () => Effect.Effect<void, UnknownError>;
@@ -15,10 +16,14 @@ export interface UpdateChecker {
   runPeriodicUpgradeCheck(): Effect.Effect<void, ConfigError | UnknownError>;
 }
 
-export const makeUpdateChecker = (runStore: RunStore, triggerAutoUpgrade: TriggerAutoUpgrade): UpdateChecker => {
+export const makeUpdateChecker = (
+  runStore: RunStore,
+  triggerAutoUpgrade: TriggerAutoUpgrade,
+  runtimeContext: RuntimeContext,
+): UpdateChecker => {
   const runPeriodicUpgradeCheck = (): Effect.Effect<void, ConfigError | UnknownError> =>
     Effect.gen(function* () {
-      const commandName = process.argv[2] || "help";
+      const commandName = runtimeContext.getArgv()[2] || "help";
 
       // Check if we should auto-upgrade (only if not running upgrade command)
       if (commandName !== "upgrade") {
@@ -62,6 +67,7 @@ export const UpdateCheckerLiveLayer = Layer.effect(
   Effect.gen(function* () {
     const runStore = yield* RunStoreTag;
     const autoUpgradeTrigger = yield* AutoUpgradeTriggerTag;
-    return makeUpdateChecker(runStore, () => autoUpgradeTrigger.trigger());
+    const runtimeContext = yield* RuntimeContextTag;
+    return makeUpdateChecker(runStore, () => autoUpgradeTrigger.trigger(), runtimeContext);
   }),
 );
