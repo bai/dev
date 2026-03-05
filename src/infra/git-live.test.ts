@@ -206,29 +206,57 @@ describe("git-live", () => {
     );
   });
 
-  describe("getRemoteOriginUrl", () => {
-    it.effect("gets remote origin URL successfully", () =>
+  describe("getCurrentBranch", () => {
+    it.effect("gets current branch successfully", () =>
       Effect.gen(function* () {
-        mockShell.setResponse("git", ["config", "--get", "remote.origin.url"], {
+        mockShell.setResponse("git", ["rev-parse", "--abbrev-ref", "HEAD"], {
+          exitCode: 0,
+          stdout: "main\n",
+          stderr: "",
+        });
+
+        const result = yield* git.getCurrentBranch("/tmp/test-repo");
+        expect(result).toBe("main");
+      }),
+    );
+
+    it.effect("fails when branch cannot be resolved", () =>
+      Effect.gen(function* () {
+        mockShell.setResponse("git", ["rev-parse", "--abbrev-ref", "HEAD"], {
+          exitCode: 128,
+          stdout: "",
+          stderr: "fatal: not a git repository",
+        });
+
+        const result = yield* Effect.flip(git.getCurrentBranch("/tmp/test-repo"));
+        expect(result).toEqual(gitError("Failed to get current branch: fatal: not a git repository"));
+      }),
+    );
+  });
+
+  describe("getRemoteUrl", () => {
+    it.effect("gets remote URL successfully", () =>
+      Effect.gen(function* () {
+        mockShell.setResponse("git", ["remote", "get-url", "origin"], {
           exitCode: 0,
           stdout: "https://github.com/test-org/test-repo.git\n",
           stderr: "",
         });
 
-        const result = yield* git.getRemoteOriginUrl("/tmp/test-repo");
+        const result = yield* git.getRemoteUrl("/tmp/test-repo", "origin");
         expect(result).toBe("https://github.com/test-org/test-repo.git");
       }),
     );
 
-    it.effect("fails when remote origin is not configured", () =>
+    it.effect("fails when remote is not configured", () =>
       Effect.gen(function* () {
-        mockShell.setResponse("git", ["config", "--get", "remote.origin.url"], {
+        mockShell.setResponse("git", ["remote", "get-url", "origin"], {
           exitCode: 1,
           stdout: "",
           stderr: "",
         });
 
-        const result = yield* Effect.flip(git.getRemoteOriginUrl("/tmp/test-repo"));
+        const result = yield* Effect.flip(git.getRemoteUrl("/tmp/test-repo", "origin"));
         expect(result).toEqual(gitError("Failed to get remote URL: "));
       }),
     );

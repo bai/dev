@@ -4,9 +4,9 @@ import { Effect } from "effect";
 import { CommandRegistryTag, type RegisteredCommand } from "../domain/command-registry-port";
 import { DockerServicesTag, type ServiceStatus } from "../domain/docker-services-port";
 import { statusCheckError } from "../domain/errors";
+import { GitTag } from "../domain/git-port";
 import { HealthCheckTag } from "../domain/health-check-port";
 import type { EnvironmentInfo, GitInfo } from "../domain/models";
-import { ShellTag } from "../domain/shell-port";
 
 interface StatusItem {
   readonly tool: string;
@@ -55,7 +55,7 @@ export const statusCommand = Command.make("status", {}, () =>
 /**
  * Show environment information
  */
-const showEnvironmentInfo: Effect.Effect<void, never, ShellTag> = Effect.gen(function* () {
+const showEnvironmentInfo: Effect.Effect<void, never, GitTag> = Effect.gen(function* () {
   yield* Effect.logInfo("🌍 Environment Information:");
   yield* Effect.logInfo("");
 
@@ -78,7 +78,7 @@ const showEnvironmentInfo: Effect.Effect<void, never, ShellTag> = Effect.gen(fun
 /**
  * Get comprehensive environment information
  */
-const getEnvironmentInfo = (): Effect.Effect<EnvironmentInfo, never, ShellTag> =>
+const getEnvironmentInfo = (): Effect.Effect<EnvironmentInfo, never, GitTag> =>
   Effect.gen(function* () {
     const currentDir = process.cwd();
 
@@ -93,53 +93,16 @@ const getEnvironmentInfo = (): Effect.Effect<EnvironmentInfo, never, ShellTag> =
 /**
  * Get git information
  */
-const getGitInfo = (cwd: string): Effect.Effect<GitInfo, never, ShellTag> =>
+const getGitInfo = (cwd: string): Effect.Effect<GitInfo, never, GitTag> =>
   Effect.gen(function* () {
-    const branch = yield* getGitBranch(cwd);
-    const remote = yield* getGitRemote(cwd);
+    const git = yield* GitTag;
+    const branch = yield* git.getCurrentBranch(cwd).pipe(Effect.orElseSucceed(() => null));
+    const remote = yield* git.getRemoteUrl(cwd, "origin").pipe(Effect.orElseSucceed(() => null));
 
     return {
       branch,
       remote,
     };
-  });
-
-/**
- * Get git branch information
- */
-const getGitBranch = (cwd: string): Effect.Effect<string | null, never, ShellTag> =>
-  executeCommand(["git", "rev-parse", "--abbrev-ref", "HEAD"], { cwd }).pipe(
-    Effect.map((result) => (result.exitCode === 0 ? result.stdout.trim() : null)),
-  );
-
-/**
- * Get git remote information
- */
-const getGitRemote = (cwd: string): Effect.Effect<string | null, never, ShellTag> =>
-  executeCommand(["git", "remote", "get-url", "origin"], { cwd }).pipe(
-    Effect.map((result) => (result.exitCode === 0 ? result.stdout.trim() : null)),
-  );
-
-/**
- * Execute a command and return structured result
- */
-const executeCommand = (
-  command: readonly string[],
-  options: { readonly cwd?: string } = {},
-): Effect.Effect<{ readonly exitCode: number; readonly stdout: string; readonly stderr: string }, never, ShellTag> =>
-  Effect.gen(function* () {
-    const shell = yield* ShellTag;
-    const [cmd, ...args] = command;
-
-    if (!cmd) {
-      return { exitCode: -1, stdout: "", stderr: "No command provided" } as const;
-    }
-
-    const result = yield* shell
-      .exec(cmd, args, options)
-      .pipe(Effect.orElseSucceed(() => ({ exitCode: -1, stdout: "", stderr: "" }) as const));
-
-    return result;
   });
 
 /**

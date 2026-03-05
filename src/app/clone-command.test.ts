@@ -63,7 +63,11 @@ describe("clone-command", () => {
       return Effect.succeed("abc123");
     }
 
-    getRemoteOriginUrl(_repositoryPath: string): Effect.Effect<string, never, never> {
+    getCurrentBranch(_repositoryPath: string): Effect.Effect<string, never, never> {
+      return Effect.succeed("main");
+    }
+
+    getRemoteUrl(_repositoryPath: string, _remoteName: string): Effect.Effect<string, never, never> {
       return Effect.succeed("https://github.com/org/repo.git");
     }
   }

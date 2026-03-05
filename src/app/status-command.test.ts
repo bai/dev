@@ -4,28 +4,36 @@ import { describe, expect } from "vitest";
 
 import type { DockerServices, ServiceName, ServiceStatus } from "../domain/docker-services-port";
 import { DockerServicesTag } from "../domain/docker-services-port";
-import { HealthCheckError, healthCheckError } from "../domain/errors";
+import { HealthCheckError, gitError, healthCheckError } from "../domain/errors";
+import type { Git } from "../domain/git-port";
+import { GitTag } from "../domain/git-port";
 import type { HealthCheck } from "../domain/health-check-port";
 import { HealthCheckTag } from "../domain/health-check-port";
 import type { HealthCheckResult } from "../domain/health-check-port";
-import type { Shell, SpawnResult } from "../domain/shell-port";
-import { ShellTag } from "../domain/shell-port";
 import { statusCommand } from "./status-command";
 
-const createShell = (responses: Record<string, SpawnResult>): { shell: Shell; calls: string[] } => {
-  const calls: string[] = [];
+const createGit = (branch: string | null, remote: string | null): { git: Git; branchCalls: string[]; remoteCalls: string[] } => {
+  const branchCalls: string[] = [];
+  const remoteCalls: string[] = [];
 
   return {
-    calls,
-    shell: {
-      exec: (command, args = []) =>
-        Effect.sync(() => {
-          const key = [command, ...args].join(" ");
-          calls.push(key);
-          return responses[key] ?? { exitCode: 1, stdout: "", stderr: "" };
-        }),
-      execInteractive: () => Effect.succeed(0),
-      setProcessCwd: () => Effect.void,
+    branchCalls,
+    remoteCalls,
+    git: {
+      cloneRepositoryToPath: () => Effect.void,
+      pullLatestChanges: () => Effect.void,
+      isGitRepository: () => Effect.succeed(true),
+      getCurrentCommitSha: () => Effect.succeed("deadbeef"),
+      getCurrentBranch: (repositoryPath) => {
+        branchCalls.push(repositoryPath);
+        if (branch === null) return gitError("not a git repository");
+        return Effect.succeed(branch);
+      },
+      getRemoteUrl: (repositoryPath, remoteName) => {
+        remoteCalls.push(`${repositoryPath}:${remoteName}`);
+        if (remote === null) return gitError("remote origin not found");
+        return Effect.succeed(remote);
+      },
     },
   };
 };
@@ -53,13 +61,10 @@ const createHealthCheck = (results: readonly HealthCheckResult[]): HealthCheck =
 describe("status-command", () => {
   it.effect("succeeds when all health checks are OK", () =>
     Effect.gen(function* () {
-      const shellContext = createShell({
-        "git rev-parse --abbrev-ref HEAD": { exitCode: 0, stdout: "main", stderr: "" },
-        "git remote get-url origin": { exitCode: 0, stdout: "https://github.com/acme/repo.git", stderr: "" },
-      });
+      const gitContext = createGit("main", "https://github.com/acme/repo.git");
 
       const layer = Layer.mergeAll(
-        Layer.succeed(ShellTag, shellContext.shell),
+        Layer.succeed(GitTag, gitContext.git),
         Layer.succeed(DockerServicesTag, createDockerServices(false)),
         Layer.succeed(
           HealthCheckTag,
@@ -77,18 +82,17 @@ describe("status-command", () => {
       const result = yield* Effect.exit(statusCommand.handler({}).pipe(Effect.provide(layer)));
 
       expect(Exit.isSuccess(result)).toBe(true);
+      expect(gitContext.branchCalls).toHaveLength(1);
+      expect(gitContext.remoteCalls).toEqual([`${process.cwd()}:origin`]);
     }),
   );
 
   it.effect("succeeds without resolving tool path in status command", () =>
     Effect.gen(function* () {
-      const shellContext = createShell({
-        "git rev-parse --abbrev-ref HEAD": { exitCode: 0, stdout: "main", stderr: "" },
-        "git remote get-url origin": { exitCode: 0, stdout: "https://github.com/acme/repo.git", stderr: "" },
-      });
+      const gitContext = createGit("main", "https://github.com/acme/repo.git");
 
       const layer = Layer.mergeAll(
-        Layer.succeed(ShellTag, shellContext.shell),
+        Layer.succeed(GitTag, gitContext.git),
         Layer.succeed(DockerServicesTag, createDockerServices(false)),
         Layer.succeed(
           HealthCheckTag,
@@ -111,13 +115,10 @@ describe("status-command", () => {
 
   it.effect("succeeds when only warnings are present", () =>
     Effect.gen(function* () {
-      const shellContext = createShell({
-        "git rev-parse --abbrev-ref HEAD": { exitCode: 0, stdout: "main", stderr: "" },
-        "git remote get-url origin": { exitCode: 0, stdout: "https://github.com/acme/repo.git", stderr: "" },
-      });
+      const gitContext = createGit("main", "https://github.com/acme/repo.git");
 
       const layer = Layer.mergeAll(
-        Layer.succeed(ShellTag, shellContext.shell),
+        Layer.succeed(GitTag, gitContext.git),
         Layer.succeed(DockerServicesTag, createDockerServices(false)),
         Layer.succeed(
           HealthCheckTag,
@@ -141,13 +142,10 @@ describe("status-command", () => {
 
   it.effect("fails when health check results contain failing tools", () =>
     Effect.gen(function* () {
-      const shellContext = createShell({
-        "git rev-parse --abbrev-ref HEAD": { exitCode: 0, stdout: "main", stderr: "" },
-        "git remote get-url origin": { exitCode: 0, stdout: "https://github.com/acme/repo.git", stderr: "" },
-      });
+      const gitContext = createGit("main", "https://github.com/acme/repo.git");
 
       const layer = Layer.mergeAll(
-        Layer.succeed(ShellTag, shellContext.shell),
+        Layer.succeed(GitTag, gitContext.git),
         Layer.succeed(DockerServicesTag, createDockerServices(false)),
         Layer.succeed(
           HealthCheckTag,
@@ -182,17 +180,14 @@ describe("status-command", () => {
 
   it.effect("fails when health-check execution fails (synthetic health-check-runtime item)", () =>
     Effect.gen(function* () {
-      const shellContext = createShell({
-        "git rev-parse --abbrev-ref HEAD": { exitCode: 1, stdout: "", stderr: "" },
-        "git remote get-url origin": { exitCode: 1, stdout: "", stderr: "" },
-      });
+      const gitContext = createGit(null, null);
 
       const failingHealthCheck: HealthCheck = {
         runHealthChecks: () => healthCheckError("registry unavailable"),
       };
 
       const layer = Layer.mergeAll(
-        Layer.succeed(ShellTag, shellContext.shell),
+        Layer.succeed(GitTag, gitContext.git),
         Layer.succeed(DockerServicesTag, createDockerServices(false)),
         Layer.succeed(HealthCheckTag, failingHealthCheck),
       );
@@ -223,7 +218,7 @@ describe("status-command", () => {
       };
 
       const layer = Layer.mergeAll(
-        Layer.succeed(ShellTag, createShell({}).shell),
+        Layer.succeed(GitTag, createGit("main", "https://github.com/acme/repo.git").git),
         Layer.succeed(DockerServicesTag, createDockerServices(false)),
         Layer.succeed(HealthCheckTag, failingHealthCheck),
       );

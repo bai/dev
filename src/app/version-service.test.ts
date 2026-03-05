@@ -13,7 +13,8 @@ const createGitMock = (getCurrentCommitShaImpl: Git["getCurrentCommitSha"]): Git
   pullLatestChanges: () => Effect.void,
   isGitRepository: () => Effect.succeed(true),
   getCurrentCommitSha: getCurrentCommitShaImpl,
-  getRemoteOriginUrl: () => Effect.succeed("git@github.com:acme/dev.git"),
+  getCurrentBranch: () => Effect.succeed("main"),
+  getRemoteUrl: () => Effect.succeed("git@github.com:acme/dev.git"),
 });
 
 const makeVersionLayer = (git: Git, pathService = createPathService("/tmp/src")) =>

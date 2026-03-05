@@ -52,7 +52,11 @@ class MockGit implements Git {
     return Effect.succeed("commit-sha");
   }
 
-  getRemoteOriginUrl() {
+  getCurrentBranch() {
+    return Effect.succeed("main");
+  }
+
+  getRemoteUrl() {
     return Effect.succeed("https://example.com/repo.git");
   }
 }

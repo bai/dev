@@ -25,9 +25,14 @@ export interface Git {
   getCurrentCommitSha(repositoryPath?: string): Effect.Effect<string, GitError | ShellExecutionError>;
 
   /**
-   * Get the remote origin URL of a repository
+   * Get the current branch name of a repository
    */
-  getRemoteOriginUrl(repositoryPath: string): Effect.Effect<string, GitError | ShellExecutionError>;
+  getCurrentBranch(repositoryPath: string): Effect.Effect<string, GitError | ShellExecutionError>;
+
+  /**
+   * Get the remote URL of a repository
+   */
+  getRemoteUrl(repositoryPath: string, remoteName: string): Effect.Effect<string, GitError | ShellExecutionError>;
 }
 
 export class GitTag extends Context.Tag("Git")<GitTag, Git>() {}

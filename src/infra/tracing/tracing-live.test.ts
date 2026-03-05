@@ -28,7 +28,8 @@ const mockGit: Git = {
   pullLatestChanges: () => Effect.void,
   isGitRepository: () => Effect.succeed(true),
   getCurrentCommitSha: () => Effect.succeed("deadbeef"),
-  getRemoteOriginUrl: () => Effect.succeed("https://github.com/acme/repo"),
+  getCurrentBranch: () => Effect.succeed("main"),
+  getRemoteUrl: () => Effect.succeed("https://github.com/acme/repo"),
 };
 
 const mockInstallIdentity: InstallIdentity = {

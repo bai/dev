@@ -47,8 +47,18 @@ export const makeGitLive = (shell: Shell): Git => ({
       }),
     ),
 
-  getRemoteOriginUrl: (repositoryPath: string): Effect.Effect<string, GitError | ShellExecutionError> =>
-    shell.exec("git", ["config", "--get", "remote.origin.url"], { cwd: repositoryPath }).pipe(
+  getCurrentBranch: (repositoryPath: string): Effect.Effect<string, GitError | ShellExecutionError> =>
+    shell.exec("git", ["rev-parse", "--abbrev-ref", "HEAD"], { cwd: repositoryPath }).pipe(
+      Effect.flatMap((result) => {
+        if (result.exitCode !== 0) {
+          return gitError(`Failed to get current branch: ${result.stderr}`);
+        }
+        return Effect.succeed(result.stdout.trim());
+      }),
+    ),
+
+  getRemoteUrl: (repositoryPath: string, remoteName: string): Effect.Effect<string, GitError | ShellExecutionError> =>
+    shell.exec("git", ["remote", "get-url", remoteName], { cwd: repositoryPath }).pipe(
       Effect.flatMap((result) => {
         if (result.exitCode !== 0) {
           return gitError(`Failed to get remote URL: ${result.stderr}`);
