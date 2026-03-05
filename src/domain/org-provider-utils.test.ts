@@ -64,4 +64,16 @@ describe("org-provider-utils", () => {
       provider: "github",
     });
   });
+
+  it("falls back to default organization when slash input is not org/repo", () => {
+    const resolved = resolveRepositoryInput("acmesoftware/dev/extra", "default-org", "github", {
+      acmesoftware: "gitlab",
+    });
+
+    expect(resolved).toEqual({
+      organization: "default-org",
+      repositoryName: "acmesoftware/dev/extra",
+      provider: "github",
+    });
+  });
 });

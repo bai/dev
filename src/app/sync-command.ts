@@ -44,11 +44,8 @@ export const syncCommand = Command.make("sync", {}, () =>
 
     yield* Effect.logInfo(`Found ${directories.length} repositories. Starting sync...`);
 
-    let successCount = 0;
-    let failureCount = 0;
-
     // Process repositories in parallel with limited concurrency
-    yield* Effect.forEach(
+    const syncResults = yield* Effect.forEach(
       directories,
       (dir) =>
         Effect.gen(function* () {
@@ -61,29 +58,28 @@ export const syncCommand = Command.make("sync", {}, () =>
 
           if (!isGit) {
             yield* Effect.logDebug(`Skipping ${dir} (not a git repository)`);
-            return;
+            return "skipped" as const;
           }
 
           // Pull changes
-          yield* git.pullLatestChanges(absolutePath).pipe(
-            Effect.tap(() => {
-              successCount++;
-              return Effect.logInfo(`✅ Synced ${dir}`);
-            }),
+          return yield* git.pullLatestChanges(absolutePath).pipe(
+            Effect.as("success" as const),
+            Effect.tap(() => Effect.logInfo(`✅ Synced ${dir}`)),
             Effect.catchTags({
               GitError: (error) => {
-                failureCount++;
-                return Effect.logError(`❌ Failed to sync ${dir}: ${extractErrorMessage(error.reason)}`);
+                return Effect.logError(`❌ Failed to sync ${dir}: ${extractErrorMessage(error.reason)}`).pipe(Effect.as("failed" as const));
               },
               ShellExecutionError: (error) => {
-                failureCount++;
-                return Effect.logError(`❌ Failed to sync ${dir}: ${extractErrorMessage(error.reason)}`);
+                return Effect.logError(`❌ Failed to sync ${dir}: ${extractErrorMessage(error.reason)}`).pipe(Effect.as("failed" as const));
               },
             }),
           );
         }).pipe(Effect.withSpan("sync.repo", { attributes: { repo: dir } })),
       { concurrency: 5 }, // reasonable concurrency limit
     ).pipe(Effect.withSpan("sync.process_all"));
+
+    const successCount = syncResults.filter((result) => result === "success").length;
+    const failureCount = syncResults.filter((result) => result === "failed").length;
 
     yield* Effect.logInfo("\nSync complete!");
     yield* Effect.logInfo(`Success: ${successCount}`);

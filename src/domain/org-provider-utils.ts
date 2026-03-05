@@ -28,16 +28,9 @@ export const resolveRepositoryInput = (
   readonly repositoryName: string;
   readonly provider: GitProviderType;
 } => {
-  let organization = defaultOrg;
-  let repositoryName = repoInput;
-
-  if (repoInput.includes("/")) {
-    const parts = repoInput.split("/");
-    if (parts.length === 2 && parts[0] && parts[1]) {
-      organization = parts[0];
-      repositoryName = parts[1];
-    }
-  }
+  const parts = repoInput.split("/");
+  const [organization, repositoryName] =
+    parts.length === 2 && parts[0] && parts[1] ? ([parts[0], parts[1]] as const) : ([defaultOrg, repoInput] as const);
 
   const provider = forceProvider ?? resolveProviderForOrganization(organization, defaultProvider, orgToProvider);
 

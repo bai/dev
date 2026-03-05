@@ -1,7 +1,7 @@
 import path from "path";
 
 import { it } from "@effect/vitest";
-import { Effect, Exit, Layer } from "effect";
+import { Effect, Exit, Layer, Logger } from "effect";
 import { describe, expect } from "vitest";
 
 import { DirectoryTag, type Directory } from "../domain/directory-port";
@@ -110,6 +110,34 @@ describe("sync-command", () => {
 
       expect(Exit.isSuccess(result)).toBe(true);
       expect(git.pullCalls).toEqual([repo]);
+    }),
+  );
+
+  it.effect("reports accurate success and failure totals for mixed outcomes", () =>
+    Effect.gen(function* () {
+      const baseSearchPath = "/tmp/src";
+      const successRepo = path.join(baseSearchPath, "github.com/acme/success");
+      const failingRepo = path.join(baseSearchPath, "github.com/acme/failing");
+      const nonGitRepo = path.join(baseSearchPath, "github.com/acme/not-git");
+      const git = new MockGit(new Set([successRepo, failingRepo]), new Set([failingRepo]));
+      const loggedMessages: string[] = [];
+      const logger = Logger.make(({ message }) => {
+        loggedMessages.push(String(message));
+      });
+
+      const testLayer = Layer.mergeAll(
+        Layer.succeed(DirectoryTag, new MockDirectory(["github.com/acme/success", "github.com/acme/failing", "github.com/acme/not-git"])),
+        Layer.succeed(GitTag, git),
+        Layer.succeed(PathServiceTag, makePathService(baseSearchPath)),
+        Logger.replace(Logger.defaultLogger, logger),
+      );
+
+      yield* syncCommand.handler({}).pipe(Effect.provide(testLayer));
+
+      expect(git.pullCalls).toEqual([successRepo, failingRepo]);
+      expect(git.pullCalls).not.toContain(nonGitRepo);
+      expect(loggedMessages).toContain("Success: 1");
+      expect(loggedMessages).toContain("Failed: 1");
     }),
   );
 });
