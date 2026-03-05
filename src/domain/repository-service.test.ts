@@ -1,11 +1,11 @@
 import { it } from "@effect/vitest";
-import { Effect, Exit, Layer } from "effect";
+import { Effect, Exit } from "effect";
 import { describe, expect, it as vitestIt } from "vitest";
 
 import type { Config } from "./config-schema";
 import type { GitProviderType } from "./models";
 import { PathServiceTag, type PathService } from "./path-service";
-import { isFullUrl, RepositoryLive } from "./repository-service";
+import { isFullUrl, makeRepositoryService, RepositoryLive } from "./repository-service";
 
 describe("repository-service", () => {
   // Mock PathService implementation
@@ -24,13 +24,13 @@ describe("repository-service", () => {
     }
   }
 
+  const createRepositoryService = (pathService: PathService = new MockPathService()) => makeRepositoryService(pathService);
+
   describe("parseRepoUrlToPath", () => {
     it.effect("parses SSH URL with scp-style syntax", () =>
       Effect.gen(function* () {
-        const pathService = new MockPathService();
-        const testLayer = Layer.succeed(PathServiceTag, pathService);
-
-        const result = yield* RepositoryLive.parseRepoUrlToPath("git@github.com:myorg/myrepo.git").pipe(Effect.provide(testLayer));
+        const repositoryService = createRepositoryService();
+        const result = yield* repositoryService.parseRepoUrlToPath("git@github.com:myorg/myrepo.git");
 
         expect(result).toBe("/home/user/dev/github.com/myorg/myrepo");
       }),
@@ -38,10 +38,8 @@ describe("repository-service", () => {
 
     it.effect("parses SSH URL without .git extension", () =>
       Effect.gen(function* () {
-        const pathService = new MockPathService();
-        const testLayer = Layer.succeed(PathServiceTag, pathService);
-
-        const result = yield* RepositoryLive.parseRepoUrlToPath("git@github.com:myorg/myrepo").pipe(Effect.provide(testLayer));
+        const repositoryService = createRepositoryService();
+        const result = yield* repositoryService.parseRepoUrlToPath("git@github.com:myorg/myrepo");
 
         expect(result).toBe("/home/user/dev/github.com/myorg/myrepo");
       }),
@@ -49,10 +47,8 @@ describe("repository-service", () => {
 
     it.effect("parses GitLab SSH URL", () =>
       Effect.gen(function* () {
-        const pathService = new MockPathService();
-        const testLayer = Layer.succeed(PathServiceTag, pathService);
-
-        const result = yield* RepositoryLive.parseRepoUrlToPath("git@gitlab.com:mygroup/myproject.git").pipe(Effect.provide(testLayer));
+        const repositoryService = createRepositoryService();
+        const result = yield* repositoryService.parseRepoUrlToPath("git@gitlab.com:mygroup/myproject.git");
 
         expect(result).toBe("/home/user/dev/gitlab.com/mygroup/myproject");
       }),
@@ -60,10 +56,8 @@ describe("repository-service", () => {
 
     it.effect("parses HTTPS URL", () =>
       Effect.gen(function* () {
-        const pathService = new MockPathService();
-        const testLayer = Layer.succeed(PathServiceTag, pathService);
-
-        const result = yield* RepositoryLive.parseRepoUrlToPath("https://github.com/myorg/myrepo.git").pipe(Effect.provide(testLayer));
+        const repositoryService = createRepositoryService();
+        const result = yield* repositoryService.parseRepoUrlToPath("https://github.com/myorg/myrepo.git");
 
         expect(result).toBe("/home/user/dev/github.com/myorg/myrepo");
       }),
@@ -71,10 +65,8 @@ describe("repository-service", () => {
 
     it.effect("parses HTTPS URL without .git extension", () =>
       Effect.gen(function* () {
-        const pathService = new MockPathService();
-        const testLayer = Layer.succeed(PathServiceTag, pathService);
-
-        const result = yield* RepositoryLive.parseRepoUrlToPath("https://github.com/myorg/myrepo").pipe(Effect.provide(testLayer));
+        const repositoryService = createRepositoryService();
+        const result = yield* repositoryService.parseRepoUrlToPath("https://github.com/myorg/myrepo");
 
         expect(result).toBe("/home/user/dev/github.com/myorg/myrepo");
       }),
@@ -82,12 +74,8 @@ describe("repository-service", () => {
 
     it.effect("parses git+ssh:// URL", () =>
       Effect.gen(function* () {
-        const pathService = new MockPathService();
-        const testLayer = Layer.succeed(PathServiceTag, pathService);
-
-        const result = yield* RepositoryLive.parseRepoUrlToPath("git+ssh://git@github.com/myorg/myrepo.git").pipe(
-          Effect.provide(testLayer),
-        );
+        const repositoryService = createRepositoryService();
+        const result = yield* repositoryService.parseRepoUrlToPath("git+ssh://git@github.com/myorg/myrepo.git");
 
         expect(result).toBe("/home/user/dev/github.com/myorg/myrepo");
       }),
@@ -95,10 +83,8 @@ describe("repository-service", () => {
 
     it.effect("parses ssh:// URL", () =>
       Effect.gen(function* () {
-        const pathService = new MockPathService();
-        const testLayer = Layer.succeed(PathServiceTag, pathService);
-
-        const result = yield* RepositoryLive.parseRepoUrlToPath("ssh://git@github.com/myorg/myrepo.git").pipe(Effect.provide(testLayer));
+        const repositoryService = createRepositoryService();
+        const result = yield* repositoryService.parseRepoUrlToPath("ssh://git@github.com/myorg/myrepo.git");
 
         expect(result).toBe("/home/user/dev/github.com/myorg/myrepo");
       }),
@@ -106,12 +92,8 @@ describe("repository-service", () => {
 
     it.effect("parses URL with custom port", () =>
       Effect.gen(function* () {
-        const pathService = new MockPathService();
-        const testLayer = Layer.succeed(PathServiceTag, pathService);
-
-        const result = yield* RepositoryLive.parseRepoUrlToPath("ssh://git@github.com:2222/myorg/myrepo.git").pipe(
-          Effect.provide(testLayer),
-        );
+        const repositoryService = createRepositoryService();
+        const result = yield* repositoryService.parseRepoUrlToPath("ssh://git@github.com:2222/myorg/myrepo.git");
 
         expect(result).toBe("/home/user/dev/github.com/myorg/myrepo");
       }),
@@ -119,10 +101,8 @@ describe("repository-service", () => {
 
     it.effect("fails with invalid URL format", () =>
       Effect.gen(function* () {
-        const pathService = new MockPathService();
-        const testLayer = Layer.succeed(PathServiceTag, pathService);
-
-        const result = yield* Effect.exit(RepositoryLive.parseRepoUrlToPath("not-a-valid-url").pipe(Effect.provide(testLayer)));
+        const repositoryService = createRepositoryService();
+        const result = yield* Effect.exit(repositoryService.parseRepoUrlToPath("not-a-valid-url"));
 
         expect(Exit.isFailure(result)).toBe(true);
       }),
@@ -130,10 +110,8 @@ describe("repository-service", () => {
 
     it.effect("fails when URL missing org/repo", () =>
       Effect.gen(function* () {
-        const pathService = new MockPathService();
-        const testLayer = Layer.succeed(PathServiceTag, pathService);
-
-        const result = yield* Effect.exit(RepositoryLive.parseRepoUrlToPath("https://github.com/").pipe(Effect.provide(testLayer)));
+        const repositoryService = createRepositoryService();
+        const result = yield* Effect.exit(repositoryService.parseRepoUrlToPath("https://github.com/"));
 
         expect(Exit.isFailure(result)).toBe(true);
       }),
@@ -141,10 +119,8 @@ describe("repository-service", () => {
 
     it.effect("handles repositories with hyphens and underscores", () =>
       Effect.gen(function* () {
-        const pathService = new MockPathService();
-        const testLayer = Layer.succeed(PathServiceTag, pathService);
-
-        const result = yield* RepositoryLive.parseRepoUrlToPath("git@github.com:my-org/my_repo-2.0.git").pipe(Effect.provide(testLayer));
+        const repositoryService = createRepositoryService();
+        const result = yield* repositoryService.parseRepoUrlToPath("git@github.com:my-org/my_repo-2.0.git");
 
         expect(result).toBe("/home/user/dev/github.com/my-org/my_repo-2.0");
       }),
@@ -152,10 +128,8 @@ describe("repository-service", () => {
 
     it.effect("preserves repository name casing in filesystem path", () =>
       Effect.gen(function* () {
-        const pathService = new MockPathService();
-        const testLayer = Layer.succeed(PathServiceTag, pathService);
-
-        const result = yield* RepositoryLive.parseRepoUrlToPath("https://github.com/myorg/MyRepo.git").pipe(Effect.provide(testLayer));
+        const repositoryService = createRepositoryService();
+        const result = yield* repositoryService.parseRepoUrlToPath("https://github.com/myorg/MyRepo.git");
 
         expect(result).toBe("/home/user/dev/github.com/myorg/MyRepo");
       }),
@@ -167,12 +141,33 @@ describe("repository-service", () => {
           baseSearchPath = "/custom/projects";
         }
 
-        const pathService = new CustomPathService();
-        const testLayer = Layer.succeed(PathServiceTag, pathService);
-
-        const result = yield* RepositoryLive.parseRepoUrlToPath("git@github.com:myorg/myrepo.git").pipe(Effect.provide(testLayer));
+        const repositoryService = createRepositoryService(new CustomPathService());
+        const result = yield* repositoryService.parseRepoUrlToPath("git@github.com:myorg/myrepo.git");
 
         expect(result).toBe("/custom/projects/github.com/myorg/myrepo");
+      }),
+    );
+
+    it.effect("uses factory-injected PathService even when a different one exists in context", () =>
+      Effect.gen(function* () {
+        const repositoryService = createRepositoryService(new MockPathService());
+        const contextPathService: PathService = {
+          homeDir: "/ctx/home",
+          baseSearchPath: "/ctx/projects",
+          devDir: "/ctx/.dev",
+          configDir: "/ctx/.config/dev",
+          configPath: "/ctx/.config/dev/config.json",
+          dataDir: "/ctx/.local/share/dev",
+          dbPath: "/ctx/.local/share/dev/dev.db",
+          cacheDir: "/ctx/.cache/dev",
+          getBasePath: () => "/ctx/projects",
+        };
+
+        const result = yield* repositoryService
+          .parseRepoUrlToPath("git@github.com:myorg/myrepo.git")
+          .pipe(Effect.provideService(PathServiceTag, contextPathService));
+
+        expect(result).toBe("/home/user/dev/github.com/myorg/myrepo");
       }),
     );
   });
@@ -482,10 +477,8 @@ describe("repository-service", () => {
   describe("edge cases", () => {
     it.effect("handles git:// protocol URLs", () =>
       Effect.gen(function* () {
-        const pathService = new MockPathService();
-        const testLayer = Layer.succeed(PathServiceTag, pathService);
-
-        const result = yield* RepositoryLive.parseRepoUrlToPath("git://github.com/myorg/myrepo.git").pipe(Effect.provide(testLayer));
+        const repositoryService = createRepositoryService();
+        const result = yield* repositoryService.parseRepoUrlToPath("git://github.com/myorg/myrepo.git");
 
         expect(result).toBe("/home/user/dev/github.com/myorg/myrepo");
       }),
@@ -493,10 +486,8 @@ describe("repository-service", () => {
 
     it.effect("handles http:// protocol URLs", () =>
       Effect.gen(function* () {
-        const pathService = new MockPathService();
-        const testLayer = Layer.succeed(PathServiceTag, pathService);
-
-        const result = yield* RepositoryLive.parseRepoUrlToPath("http://github.com/myorg/myrepo.git").pipe(Effect.provide(testLayer));
+        const repositoryService = createRepositoryService();
+        const result = yield* repositoryService.parseRepoUrlToPath("http://github.com/myorg/myrepo.git");
 
         expect(result).toBe("/home/user/dev/github.com/myorg/myrepo");
       }),
@@ -504,12 +495,8 @@ describe("repository-service", () => {
 
     it.effect("handles enterprise GitHub URLs", () =>
       Effect.gen(function* () {
-        const pathService = new MockPathService();
-        const testLayer = Layer.succeed(PathServiceTag, pathService);
-
-        const result = yield* RepositoryLive.parseRepoUrlToPath("git@github.enterprise.com:myorg/myrepo.git").pipe(
-          Effect.provide(testLayer),
-        );
+        const repositoryService = createRepositoryService();
+        const result = yield* repositoryService.parseRepoUrlToPath("git@github.enterprise.com:myorg/myrepo.git");
 
         expect(result).toBe("/home/user/dev/github.enterprise.com/myorg/myrepo");
       }),
@@ -517,12 +504,8 @@ describe("repository-service", () => {
 
     it.effect("handles deeply nested repository paths", () =>
       Effect.gen(function* () {
-        const pathService = new MockPathService();
-        const testLayer = Layer.succeed(PathServiceTag, pathService);
-
-        const result = yield* RepositoryLive.parseRepoUrlToPath("https://gitlab.com/group/subgroup/project.git").pipe(
-          Effect.provide(testLayer),
-        );
+        const repositoryService = createRepositoryService();
+        const result = yield* repositoryService.parseRepoUrlToPath("https://gitlab.com/group/subgroup/project.git");
 
         expect(result).toBe("/home/user/dev/gitlab.com/group/subgroup");
       }),
@@ -530,10 +513,8 @@ describe("repository-service", () => {
 
     it.effect("handles SSH URLs with dots in repository name", () =>
       Effect.gen(function* () {
-        const pathService = new MockPathService();
-        const testLayer = Layer.succeed(PathServiceTag, pathService);
-
-        const result = yield* RepositoryLive.parseRepoUrlToPath("git@github.com:foo/my.repo.git").pipe(Effect.provide(testLayer));
+        const repositoryService = createRepositoryService();
+        const result = yield* repositoryService.parseRepoUrlToPath("git@github.com:foo/my.repo.git");
 
         expect(result).toBe("/home/user/dev/github.com/foo/my.repo");
       }),
@@ -541,10 +522,8 @@ describe("repository-service", () => {
 
     it.effect("fails with empty string", () =>
       Effect.gen(function* () {
-        const pathService = new MockPathService();
-        const testLayer = Layer.succeed(PathServiceTag, pathService);
-
-        const result = yield* Effect.exit(RepositoryLive.parseRepoUrlToPath("").pipe(Effect.provide(testLayer)));
+        const repositoryService = createRepositoryService();
+        const result = yield* Effect.exit(repositoryService.parseRepoUrlToPath(""));
 
         expect(Exit.isFailure(result)).toBe(true);
       }),
@@ -552,10 +531,8 @@ describe("repository-service", () => {
 
     it.effect("fails for malformed SSH URL without username", () =>
       Effect.gen(function* () {
-        const pathService = new MockPathService();
-        const testLayer = Layer.succeed(PathServiceTag, pathService);
-
-        const result = yield* Effect.exit(RepositoryLive.parseRepoUrlToPath("@github.com:foo/repo.git").pipe(Effect.provide(testLayer)));
+        const repositoryService = createRepositoryService();
+        const result = yield* Effect.exit(repositoryService.parseRepoUrlToPath("@github.com:foo/repo.git"));
 
         expect(Exit.isFailure(result)).toBe(true);
       }),
@@ -563,10 +540,8 @@ describe("repository-service", () => {
 
     it.effect("fails for malformed SSH URL without host", () =>
       Effect.gen(function* () {
-        const pathService = new MockPathService();
-        const testLayer = Layer.succeed(PathServiceTag, pathService);
-
-        const result = yield* Effect.exit(RepositoryLive.parseRepoUrlToPath("git@:foo/repo.git").pipe(Effect.provide(testLayer)));
+        const repositoryService = createRepositoryService();
+        const result = yield* Effect.exit(repositoryService.parseRepoUrlToPath("git@:foo/repo.git"));
 
         expect(Exit.isFailure(result)).toBe(true);
       }),
@@ -574,10 +549,8 @@ describe("repository-service", () => {
 
     it.effect("fails for SSH URL with missing org", () =>
       Effect.gen(function* () {
-        const pathService = new MockPathService();
-        const testLayer = Layer.succeed(PathServiceTag, pathService);
-
-        const result = yield* Effect.exit(RepositoryLive.parseRepoUrlToPath("git@github.com:repo.git").pipe(Effect.provide(testLayer)));
+        const repositoryService = createRepositoryService();
+        const result = yield* Effect.exit(repositoryService.parseRepoUrlToPath("git@github.com:repo.git"));
 
         expect(Exit.isFailure(result)).toBe(true);
       }),
@@ -585,10 +558,8 @@ describe("repository-service", () => {
 
     it.effect("fails for SSH URL with missing repo", () =>
       Effect.gen(function* () {
-        const pathService = new MockPathService();
-        const testLayer = Layer.succeed(PathServiceTag, pathService);
-
-        const result = yield* Effect.exit(RepositoryLive.parseRepoUrlToPath("git@github.com:foo/").pipe(Effect.provide(testLayer)));
+        const repositoryService = createRepositoryService();
+        const result = yield* Effect.exit(repositoryService.parseRepoUrlToPath("git@github.com:foo/"));
 
         expect(Exit.isFailure(result)).toBe(true);
       }),
@@ -596,10 +567,8 @@ describe("repository-service", () => {
 
     it.effect("fails for URL with empty path segments", () =>
       Effect.gen(function* () {
-        const pathService = new MockPathService();
-        const testLayer = Layer.succeed(PathServiceTag, pathService);
-
-        const result = yield* Effect.exit(RepositoryLive.parseRepoUrlToPath("https://github.com//").pipe(Effect.provide(testLayer)));
+        const repositoryService = createRepositoryService();
+        const result = yield* Effect.exit(repositoryService.parseRepoUrlToPath("https://github.com//"));
 
         expect(Exit.isFailure(result)).toBe(true);
       }),
@@ -609,16 +578,15 @@ describe("repository-service", () => {
   describe("integration: expandToFullGitUrl and parseRepoUrlToPath", () => {
     it.effect("handles simple repo name clone", () =>
       Effect.gen(function* () {
-        const pathService = new MockPathService();
-        const testLayer = Layer.succeed(PathServiceTag, pathService);
+        const repositoryService = createRepositoryService();
 
         const defaultOrg = "myorg";
         const orgToProvider: Record<string, GitProviderType> = {
           "gitlab-org": "gitlab",
         };
 
-        const fullUrl = yield* RepositoryLive.expandToFullGitUrl("myrepo", defaultOrg, orgToProvider);
-        const localPath = yield* RepositoryLive.parseRepoUrlToPath(fullUrl).pipe(Effect.provide(testLayer));
+        const fullUrl = yield* repositoryService.expandToFullGitUrl("myrepo", defaultOrg, orgToProvider);
+        const localPath = yield* repositoryService.parseRepoUrlToPath(fullUrl);
 
         expect(fullUrl).toBe("https://github.com/myorg/myrepo");
         expect(localPath).toBe("/home/user/dev/github.com/myorg/myrepo");
@@ -627,16 +595,15 @@ describe("repository-service", () => {
 
     it.effect("handles org/repo clone", () =>
       Effect.gen(function* () {
-        const pathService = new MockPathService();
-        const testLayer = Layer.succeed(PathServiceTag, pathService);
+        const repositoryService = createRepositoryService();
 
         const defaultOrg = "myorg";
         const orgToProvider: Record<string, GitProviderType> = {
           "gitlab-org": "gitlab",
         };
 
-        const fullUrl = yield* RepositoryLive.expandToFullGitUrl("someorg/myrepo", defaultOrg, orgToProvider);
-        const localPath = yield* RepositoryLive.parseRepoUrlToPath(fullUrl).pipe(Effect.provide(testLayer));
+        const fullUrl = yield* repositoryService.expandToFullGitUrl("someorg/myrepo", defaultOrg, orgToProvider);
+        const localPath = yield* repositoryService.parseRepoUrlToPath(fullUrl);
 
         expect(fullUrl).toBe("https://github.com/someorg/myrepo");
         expect(localPath).toBe("/home/user/dev/github.com/someorg/myrepo");
@@ -645,16 +612,15 @@ describe("repository-service", () => {
 
     it.effect("handles GitLab org/repo clone", () =>
       Effect.gen(function* () {
-        const pathService = new MockPathService();
-        const testLayer = Layer.succeed(PathServiceTag, pathService);
+        const repositoryService = createRepositoryService();
 
         const defaultOrg = "myorg";
         const orgToProvider: Record<string, GitProviderType> = {
           "gitlab-org": "gitlab",
         };
 
-        const fullUrl = yield* RepositoryLive.expandToFullGitUrl("gitlab-org/myrepo", defaultOrg, orgToProvider);
-        const localPath = yield* RepositoryLive.parseRepoUrlToPath(fullUrl).pipe(Effect.provide(testLayer));
+        const fullUrl = yield* repositoryService.expandToFullGitUrl("gitlab-org/myrepo", defaultOrg, orgToProvider);
+        const localPath = yield* repositoryService.parseRepoUrlToPath(fullUrl);
 
         expect(fullUrl).toBe("https://gitlab.com/gitlab-org/myrepo");
         expect(localPath).toBe("/home/user/dev/gitlab.com/gitlab-org/myrepo");
@@ -663,16 +629,15 @@ describe("repository-service", () => {
 
     it.effect("handles forced GitLab provider", () =>
       Effect.gen(function* () {
-        const pathService = new MockPathService();
-        const testLayer = Layer.succeed(PathServiceTag, pathService);
+        const repositoryService = createRepositoryService();
 
         const defaultOrg = "myorg";
         const orgToProvider: Record<string, GitProviderType> = {
           "gitlab-org": "gitlab",
         };
 
-        const fullUrl = yield* RepositoryLive.expandToFullGitUrl("myrepo", defaultOrg, orgToProvider, "gitlab");
-        const localPath = yield* RepositoryLive.parseRepoUrlToPath(fullUrl).pipe(Effect.provide(testLayer));
+        const fullUrl = yield* repositoryService.expandToFullGitUrl("myrepo", defaultOrg, orgToProvider, "gitlab");
+        const localPath = yield* repositoryService.parseRepoUrlToPath(fullUrl);
 
         expect(fullUrl).toBe("https://gitlab.com/myorg/myrepo");
         expect(localPath).toBe("/home/user/dev/gitlab.com/myorg/myrepo");
@@ -681,16 +646,15 @@ describe("repository-service", () => {
 
     it.effect("handles forced GitHub provider with GitLab org", () =>
       Effect.gen(function* () {
-        const pathService = new MockPathService();
-        const testLayer = Layer.succeed(PathServiceTag, pathService);
+        const repositoryService = createRepositoryService();
 
         const defaultOrg = "myorg";
         const orgToProvider: Record<string, GitProviderType> = {
           "gitlab-org": "gitlab",
         };
 
-        const fullUrl = yield* RepositoryLive.expandToFullGitUrl("gitlab-org/myrepo", defaultOrg, orgToProvider, "github");
-        const localPath = yield* RepositoryLive.parseRepoUrlToPath(fullUrl).pipe(Effect.provide(testLayer));
+        const fullUrl = yield* repositoryService.expandToFullGitUrl("gitlab-org/myrepo", defaultOrg, orgToProvider, "github");
+        const localPath = yield* repositoryService.parseRepoUrlToPath(fullUrl);
 
         expect(fullUrl).toBe("https://github.com/gitlab-org/myrepo");
         expect(localPath).toBe("/home/user/dev/github.com/gitlab-org/myrepo");

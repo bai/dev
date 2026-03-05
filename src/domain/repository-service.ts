@@ -1,6 +1,6 @@
 import path from "path";
 
-import { Context, Effect, Layer, Option } from "effect";
+import { Context, Effect, Layer } from "effect";
 
 import { configError, type ConfigError } from "./errors";
 import type { GitProviderType, Repository } from "./models";
@@ -78,10 +78,8 @@ export const isFullUrl = (str: string): boolean =>
 export const makeRepositoryService = (pathService: PathService): RepositoryService => {
   const parseRepoUrlToPath = (repoUrl: string): Effect.Effect<string, ConfigError> =>
     Effect.gen(function* () {
-      const pathServiceFromContext = yield* Effect.serviceOption(PathServiceTag);
-      const activePathService = Option.getOrElse(pathServiceFromContext, () => pathService);
       const parsedRepository = yield* parseRepositoryCoordinatesFromUrl(repoUrl);
-      return path.join(activePathService.baseSearchPath, parsedRepository.domain, parsedRepository.orgName, parsedRepository.repoName);
+      return path.join(pathService.baseSearchPath, parsedRepository.domain, parsedRepository.orgName, parsedRepository.repoName);
     });
 
   const parseFullUrlToRepository = (repoUrl: string): Effect.Effect<Repository, ConfigError, never> =>

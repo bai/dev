@@ -1,9 +1,9 @@
-import { Effect, Layer } from "effect";
+import { Effect } from "effect";
 import { bench, describe } from "vitest";
 
 import type { GitProviderType } from "./models";
-import { PathServiceTag, type PathService } from "./path-service";
-import { RepositoryLive } from "./repository-service";
+import type { PathService } from "./path-service";
+import { makeRepositoryService } from "./repository-service";
 
 describe("repository URL parsing performance", () => {
   // Mock PathService for benchmarks
@@ -19,30 +19,30 @@ describe("repository URL parsing performance", () => {
     getBasePath: () => "/home/user/dev",
   };
 
-  const testLayer = Layer.succeed(PathServiceTag, mockPathService);
+  const repositoryService = makeRepositoryService(mockPathService);
 
   bench("parse SSH URL", () => {
-    const effect = RepositoryLive.parseRepoUrlToPath("git@github.com:facebook/react.git").pipe(Effect.provide(testLayer));
+    const effect = repositoryService.parseRepoUrlToPath("git@github.com:facebook/react.git");
     Effect.runSync(effect);
   });
 
   bench("parse HTTPS URL", () => {
-    const effect = RepositoryLive.parseRepoUrlToPath("https://github.com/microsoft/vscode.git").pipe(Effect.provide(testLayer));
+    const effect = repositoryService.parseRepoUrlToPath("https://github.com/microsoft/vscode.git");
     Effect.runSync(effect);
   });
 
   bench("parse SSH URL with port", () => {
-    const effect = RepositoryLive.parseRepoUrlToPath("ssh://git@gitlab.com:2222/company/project.git").pipe(Effect.provide(testLayer));
+    const effect = repositoryService.parseRepoUrlToPath("ssh://git@gitlab.com:2222/company/project.git");
     Effect.runSync(effect);
   });
 
   bench("expand simple repo name", () => {
-    const effect = RepositoryLive.expandToFullGitUrl("myrepo", "myorg");
+    const effect = repositoryService.expandToFullGitUrl("myrepo", "myorg");
     Effect.runSync(effect);
   });
 
   bench("expand org/repo format", () => {
-    const effect = RepositoryLive.expandToFullGitUrl("facebook/react", "defaultorg");
+    const effect = repositoryService.expandToFullGitUrl("facebook/react", "defaultorg");
     Effect.runSync(effect);
   });
 
@@ -51,7 +51,7 @@ describe("repository URL parsing performance", () => {
       "gitlab-org": "gitlab",
       "github-org": "github",
     };
-    const effect = RepositoryLive.expandToFullGitUrl("gitlab-org/project", "defaultorg", orgMapping);
+    const effect = repositoryService.expandToFullGitUrl("gitlab-org/project", "defaultorg", orgMapping);
     Effect.runSync(effect);
   });
 });
