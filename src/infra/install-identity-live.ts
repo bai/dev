@@ -42,7 +42,8 @@ export const makeInstallIdentityLive = (database: Database): InstallIdentity => 
         const existingInstallId = existingRows[0]?.installId;
         if (existingInstallId) return existingInstallId;
 
-        yield* insertInstallMetadataRow(db, Bun.randomUUIDv7());
+        const newInstallId = yield* Effect.sync(() => Bun.randomUUIDv7());
+        yield* insertInstallMetadataRow(db, newInstallId);
 
         const persistedRows = yield* selectInstallMetadataRow(db);
         const persistedInstallId = persistedRows[0]?.installId;

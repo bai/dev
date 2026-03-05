@@ -19,7 +19,6 @@ import type { RemoteTelemetryConfig, RemoteTelemetryMode } from "./tracing-expor
 
 const OTLP_SERVICE_NAMESPACE = "dev";
 const OTLP_SERVICE_NAME = "cli";
-const OTLP_RUNTIME_SERVICE_INSTANCE_ID = Bun.randomUUIDv7();
 
 const createRemoteSpanProcessor = <Mode extends RemoteTelemetryMode>(
   telemetryConfig: Extract<RemoteTelemetryConfig, { readonly mode: Mode }>,
@@ -36,6 +35,7 @@ const makeTracingLive = (
 ): Tracing => ({
   createSdkConfig: () =>
     Effect.gen(function* () {
+      const runtimeServiceInstanceId = yield* Effect.sync(() => Bun.randomUUIDv7());
       const appConfig = yield* configLoader
         .load()
         .pipe(Effect.catchAll((error) => new TracingError({ reason: `Failed to load config: ${error._tag}` })));
@@ -68,7 +68,7 @@ const makeTracingLive = (
         [ATTR_SERVICE_NAMESPACE]: OTLP_SERVICE_NAMESPACE,
         [ATTR_SERVICE_NAME]: OTLP_SERVICE_NAME,
         [ATTR_SERVICE_VERSION]: version,
-        [ATTR_SERVICE_INSTANCE_ID]: OTLP_RUNTIME_SERVICE_INSTANCE_ID,
+        [ATTR_SERVICE_INSTANCE_ID]: runtimeServiceInstanceId,
         [ATTR_APP_INSTALLATION_ID]: installId,
       };
 

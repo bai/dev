@@ -29,18 +29,21 @@ const storeHealthCheckResults = (results: InternalHealthCheckResult[], database:
         yield* Effect.forEach(
           results,
           (result) =>
-            Effect.tryPromise({
-              try: async () => {
-                await tx.insert(toolHealthChecks).values({
-                  id: Bun.randomUUIDv7(),
-                  tool_name: result.toolName,
-                  version: result.version || null,
-                  status: result.status,
-                  notes: result.notes || null,
-                  checked_at: new Date(result.checkedAt),
-                });
-              },
-              catch: (error) => healthCheckError(`Failed to insert health check results: ${error}`),
+            Effect.gen(function* () {
+              const healthCheckId = yield* Effect.sync(() => Bun.randomUUIDv7());
+              yield* Effect.tryPromise({
+                try: async () => {
+                  await tx.insert(toolHealthChecks).values({
+                    id: healthCheckId,
+                    tool_name: result.toolName,
+                    version: result.version || null,
+                    status: result.status,
+                    notes: result.notes || null,
+                    checked_at: new Date(result.checkedAt),
+                  });
+                },
+                catch: (error) => healthCheckError(`Failed to insert health check results: ${error}`),
+              });
             }),
           { discard: true },
         );
