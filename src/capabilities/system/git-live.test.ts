@@ -1,11 +1,11 @@
 import { it } from "@effect/vitest";
-import { Effect } from "effect";
+import { Effect, Layer } from "effect";
 import { afterEach, beforeEach, describe, expect, vi } from "vitest";
 
-import { makeGitLive } from "~/capabilities/system/git-live";
-import type { Git } from "~/capabilities/system/git-port";
+import { GitLiveLayer } from "~/capabilities/system/git-live";
+import { GitTag, type Git } from "~/capabilities/system/git-port";
 import { ShellMock } from "~/capabilities/system/shell-mock";
-import type { SpawnResult } from "~/capabilities/system/shell-port";
+import { ShellTag, type SpawnResult } from "~/capabilities/system/shell-port";
 import { gitError } from "~/core/errors";
 import type { Repository } from "~/core/models";
 
@@ -22,11 +22,14 @@ class MockShell extends ShellMock {
 
 describe("git-live", () => {
   let mockShell: MockShell;
-  let git: Git;
+
+  const makeGit = (shell: MockShell): Effect.Effect<Git> =>
+    Effect.gen(function* () {
+      return yield* GitTag;
+    }).pipe(Effect.provide(Layer.provide(GitLiveLayer, Layer.succeed(ShellTag, shell))));
 
   beforeEach(() => {
     mockShell = new MockShell();
-    git = makeGitLive(mockShell);
   });
 
   afterEach(() => {
@@ -49,6 +52,7 @@ describe("git-live", () => {
           stderr: "",
         });
 
+        const git = yield* makeGit(mockShell);
         const result = yield* git.cloneRepositoryToPath(repository, "/tmp/test-repo");
         expect(result).toBeUndefined();
       }),
@@ -69,6 +73,7 @@ describe("git-live", () => {
           stderr: "fatal: repository not found",
         });
 
+        const git = yield* makeGit(mockShell);
         const result = yield* Effect.flip(git.cloneRepositoryToPath(repository, "/tmp/test-repo"));
         expect(result).toEqual(gitError("Failed to clone repository: fatal: repository not found"));
       }),
@@ -84,6 +89,7 @@ describe("git-live", () => {
           stderr: "",
         });
 
+        const git = yield* makeGit(mockShell);
         const result = yield* git.pullLatestChanges("/tmp/test-repo");
         expect(result).toBeUndefined();
       }),
@@ -97,6 +103,7 @@ describe("git-live", () => {
           stderr: "fatal: not a git repository",
         });
 
+        const git = yield* makeGit(mockShell);
         const result = yield* Effect.flip(git.pullLatestChanges("/tmp/test-repo"));
         expect(result).toEqual(gitError("Failed to pull: fatal: not a git repository"));
       }),
@@ -112,6 +119,7 @@ describe("git-live", () => {
           stderr: "",
         });
 
+        const git = yield* makeGit(mockShell);
         const result = yield* git.isGitRepository("/tmp/test-repo");
         expect(result).toBe(true);
       }),
@@ -125,6 +133,7 @@ describe("git-live", () => {
           stderr: "fatal: not a git repository",
         });
 
+        const git = yield* makeGit(mockShell);
         const result = yield* git.isGitRepository("/tmp/not-a-repo");
         expect(result).toBe(false);
       }),
@@ -134,6 +143,7 @@ describe("git-live", () => {
       Effect.gen(function* () {
         mockShell.setResponse("git", ["rev-parse", "--git-dir"], new Error("Command failed"));
 
+        const git = yield* makeGit(mockShell);
         const result = yield* git.isGitRepository("/tmp/test-repo");
         expect(result).toBe(false);
       }),
@@ -149,6 +159,7 @@ describe("git-live", () => {
           stderr: "",
         });
 
+        const git = yield* makeGit(mockShell);
         const result = yield* git.getCurrentCommitSha("/tmp/test-repo");
         expect(result).toBe("abc123def456");
       }),
@@ -162,6 +173,7 @@ describe("git-live", () => {
           stderr: "",
         });
 
+        const git = yield* makeGit(mockShell);
         const result = yield* git.getCurrentCommitSha();
         expect(result).toBe("xyz789");
       }),
@@ -175,6 +187,7 @@ describe("git-live", () => {
           stderr: "fatal: ambiguous argument 'HEAD'",
         });
 
+        const git = yield* makeGit(mockShell);
         const result = yield* Effect.flip(git.getCurrentCommitSha());
         expect(result).toEqual(gitError("Failed to get current commit SHA: fatal: ambiguous argument 'HEAD'"));
       }),
@@ -190,6 +203,7 @@ describe("git-live", () => {
           stderr: "",
         });
 
+        const git = yield* makeGit(mockShell);
         const result = yield* git.getCurrentBranch("/tmp/test-repo");
         expect(result).toBe("main");
       }),
@@ -203,6 +217,7 @@ describe("git-live", () => {
           stderr: "fatal: not a git repository",
         });
 
+        const git = yield* makeGit(mockShell);
         const result = yield* Effect.flip(git.getCurrentBranch("/tmp/test-repo"));
         expect(result).toEqual(gitError("Failed to get current branch: fatal: not a git repository"));
       }),
@@ -218,6 +233,7 @@ describe("git-live", () => {
           stderr: "",
         });
 
+        const git = yield* makeGit(mockShell);
         const result = yield* git.getRemoteUrl("/tmp/test-repo", "origin");
         expect(result).toBe("https://github.com/test-org/test-repo.git");
       }),
@@ -231,6 +247,7 @@ describe("git-live", () => {
           stderr: "",
         });
 
+        const git = yield* makeGit(mockShell);
         const result = yield* Effect.flip(git.getRemoteUrl("/tmp/test-repo", "origin"));
         expect(result).toEqual(gitError("Failed to get remote URL: "));
       }),

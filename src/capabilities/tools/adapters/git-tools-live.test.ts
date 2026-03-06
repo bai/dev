@@ -1,11 +1,17 @@
 import { it } from "@effect/vitest";
-import { Effect } from "effect";
+import { Effect, Layer } from "effect";
 import { describe, expect } from "vitest";
 
 import { ShellMock } from "~/capabilities/system/shell-mock";
-import { GIT_MIN_VERSION, makeGitToolsLive } from "~/capabilities/tools/adapters/git-tools-live";
+import { ShellTag } from "~/capabilities/system/shell-port";
+import { GIT_MIN_VERSION, GitToolsTag } from "~/capabilities/tools/adapters/git-tools-live";
 
 describe("git-tools-live", () => {
+  const makeGitTools = (shell: ShellMock) =>
+    Effect.gen(function* () {
+      return yield* GitToolsTag;
+    }).pipe(Effect.provide(Layer.provide(GitToolsTag.DefaultWithoutDependencies, Layer.succeed(ShellTag, shell))));
+
   it.effect("parses git version from shell output", () =>
     Effect.gen(function* () {
       const shell = new ShellMock();
@@ -15,7 +21,7 @@ describe("git-tools-live", () => {
         stderr: "",
       });
 
-      const gitTools = makeGitToolsLive(shell);
+      const gitTools = yield* makeGitTools(shell);
       const version = yield* gitTools.getCurrentVersion();
 
       expect(version).toBe("2.60.1");
@@ -27,7 +33,7 @@ describe("git-tools-live", () => {
       const shell = new ShellMock();
       shell.setExecFailure("git", ["--version"]);
 
-      const gitTools = makeGitToolsLive(shell);
+      const gitTools = yield* makeGitTools(shell);
       const version = yield* gitTools.getCurrentVersion();
 
       expect(version).toBeNull();
@@ -43,7 +49,7 @@ describe("git-tools-live", () => {
         stderr: "",
       });
 
-      const gitTools = makeGitToolsLive(shell);
+      const gitTools = yield* makeGitTools(shell);
       const upgraded = yield* gitTools.performUpgrade();
 
       expect(upgraded).toBe(true);
@@ -61,7 +67,7 @@ describe("git-tools-live", () => {
         stderr: "failed",
       });
 
-      const gitTools = makeGitToolsLive(shell);
+      const gitTools = yield* makeGitTools(shell);
       const upgraded = yield* gitTools.performUpgrade();
 
       expect(upgraded).toBe(false);
@@ -77,7 +83,7 @@ describe("git-tools-live", () => {
         stderr: "",
       });
 
-      const gitTools = makeGitToolsLive(shell);
+      const gitTools = yield* makeGitTools(shell);
       const result = yield* gitTools.performHealthCheck();
 
       expect(result.toolName).toBe("git");

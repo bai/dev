@@ -15,7 +15,7 @@ import { GitToolsTag } from "~/capabilities/tools/adapters/git-tools-live";
 import type { MiseTools } from "~/capabilities/tools/adapters/mise-tools-live";
 import { MiseToolsTag } from "~/capabilities/tools/adapters/mise-tools-live";
 import type { HealthCheckResult } from "~/capabilities/tools/health-check-port";
-import { makeToolHealthRegistryLive, ToolHealthRegistryLiveLayer } from "~/capabilities/tools/tool-health-registry-live";
+import { ToolHealthRegistryLiveLayer } from "~/capabilities/tools/tool-health-registry-live";
 import { ToolHealthRegistryTag } from "~/capabilities/tools/tool-health-registry-port";
 import { BuiltToolRegistryTag, createToolRegistry } from "~/capabilities/tools/tool-registry-live";
 import { healthCheckError } from "~/core/errors";
@@ -71,8 +71,6 @@ const createFixtures = () => {
   const builtToolRegistryLayer = Layer.provide(BuiltToolRegistryTag.DefaultWithoutDependencies, toolLayer);
   const layer = Layer.provide(ToolHealthRegistryLiveLayer, builtToolRegistryLayer);
 
-  const registry = makeToolHealthRegistryLive(createToolRegistry(toolDependencies));
-
   return {
     bunTools,
     gitTools,
@@ -81,16 +79,22 @@ const createFixtures = () => {
     gcloudTools,
     dockerTools,
     layer,
-    registry,
+    toolDependencies,
   };
 };
 
 describe("tool-health-registry-live", () => {
+  const loadRegistry = (layer: Layer.Layer<ToolHealthRegistryTag>) =>
+    Effect.gen(function* () {
+      return yield* ToolHealthRegistryTag;
+    }).pipe(Effect.provide(layer));
+
   it.effect("returns all registered tools in stable order", () =>
     Effect.gen(function* () {
       const fixtures = createFixtures();
+      const registry = yield* loadRegistry(fixtures.layer);
 
-      const tools = yield* fixtures.registry.getRegisteredTools();
+      const tools = yield* registry.getRegisteredTools();
 
       expect(tools).toEqual(["bun", "docker", "fzf", "gcloud", "git", "mise"]);
     }),
@@ -99,8 +103,9 @@ describe("tool-health-registry-live", () => {
   it.effect("delegates specific tool checks and returns the tool result", () =>
     Effect.gen(function* () {
       const fixtures = createFixtures();
+      const registry = yield* loadRegistry(fixtures.layer);
 
-      const result = yield* fixtures.registry.checkTool("git");
+      const result = yield* registry.checkTool("git");
 
       expect(result.toolName).toBe("git");
       expect(result.status).toBe("ok");
@@ -112,8 +117,9 @@ describe("tool-health-registry-live", () => {
   it.effect("fails with HealthCheckError for unknown tools", () =>
     Effect.gen(function* () {
       const fixtures = createFixtures();
+      const registry = yield* loadRegistry(fixtures.layer);
 
-      const error = yield* Effect.flip(fixtures.registry.checkTool("not-registered"));
+      const error = yield* Effect.flip(registry.checkTool("not-registered"));
 
       expect(error._tag).toBe("HealthCheckError");
       expect(error.tool).toBe("not-registered");
@@ -124,8 +130,9 @@ describe("tool-health-registry-live", () => {
   it.effect("checks all tools and invokes all health checkers once", () =>
     Effect.gen(function* () {
       const fixtures = createFixtures();
+      const registry = yield* loadRegistry(fixtures.layer);
 
-      const results = yield* fixtures.registry.checkAllTools();
+      const results = yield* registry.checkAllTools();
 
       expect(results.map((result) => result.toolName)).toEqual(["bun", "docker", "fzf", "gcloud", "git", "mise"]);
       expect(fixtures.bunTools.performHealthCheck).toHaveBeenCalledTimes(1);
@@ -144,15 +151,16 @@ describe("tool-health-registry-live", () => {
         ...fixtures.gitTools,
         performHealthCheck: () => Effect.fail(healthCheckError("git health check failed", "git")),
       };
-      const registry = makeToolHealthRegistryLive(
-        createToolRegistry({
-          bunTools: fixtures.bunTools,
-          dockerTools: fixtures.dockerTools,
-          fzfTools: fixtures.fzfTools,
-          gcloudTools: fixtures.gcloudTools,
-          gitTools: failingGitTools,
-          miseTools: fixtures.miseTools,
-        }),
+      const toolLayer = Layer.mergeAll(
+        Layer.succeed(BunToolsTag, fixtures.bunTools),
+        Layer.succeed(DockerToolsTag, fixtures.dockerTools),
+        Layer.succeed(FzfToolsTag, fixtures.fzfTools),
+        Layer.succeed(GcloudToolsTag, fixtures.gcloudTools),
+        Layer.succeed(GitToolsTag, failingGitTools),
+        Layer.succeed(MiseToolsTag, fixtures.miseTools),
+      );
+      const registry = yield* loadRegistry(
+        Layer.provide(ToolHealthRegistryLiveLayer, Layer.provide(BuiltToolRegistryTag.DefaultWithoutDependencies, toolLayer)),
       );
 
       const error = yield* Effect.flip(registry.checkAllTools());

@@ -1,12 +1,15 @@
 import path from "path";
 
 import { it } from "@effect/vitest";
-import { Effect } from "effect";
+import { Effect, Layer } from "effect";
 import { describe, expect } from "vitest";
 
 import { FileSystemMock } from "~/capabilities/system/file-system-mock";
+import { FileSystemTag } from "~/capabilities/system/file-system-port";
 import { ShellMock } from "~/capabilities/system/shell-mock";
-import { makeGcloudToolsLive } from "~/capabilities/tools/adapters/gcloud-tools-live";
+import { ShellTag } from "~/capabilities/system/shell-port";
+import { GcloudToolsTag } from "~/capabilities/tools/adapters/gcloud-tools-live";
+import { HostPathsTag } from "~/core/runtime/path-service";
 import { makeHostPathsMock } from "~/core/runtime/path-service-mock";
 
 const makeSubject = () => {
@@ -19,8 +22,17 @@ const makeSubject = () => {
     xdgCacheHome: "/custom/cache",
     devDir: "/custom/home/.dev",
   });
-  const gcloudTools = makeGcloudToolsLive(shell, fileSystem, hostPaths);
   const configDir = path.join(path.dirname(hostPaths.configDir), "gcloud");
+  const gcloudTools = Effect.gen(function* () {
+    return yield* GcloudToolsTag;
+  }).pipe(
+    Effect.provide(
+      Layer.provide(
+        GcloudToolsTag.DefaultWithoutDependencies,
+        Layer.mergeAll(Layer.succeed(ShellTag, shell), Layer.succeed(FileSystemTag, fileSystem), Layer.succeed(HostPathsTag, hostPaths)),
+      ),
+    ),
+  );
 
   return {
     fileSystem,
@@ -34,7 +46,8 @@ describe("gcloud-tools-live", () => {
     Effect.gen(function* () {
       const { fileSystem, gcloudTools, configDir } = makeSubject();
 
-      yield* gcloudTools.setupConfig();
+      const tools = yield* gcloudTools;
+      yield* tools.setupConfig();
 
       expect(fileSystem.existsCalls).toContain(configDir);
       expect(fileSystem.mkdirCalls).toEqual([{ path: configDir, recursive: true }]);
@@ -46,7 +59,8 @@ describe("gcloud-tools-live", () => {
       const { fileSystem, gcloudTools, configDir } = makeSubject();
       fileSystem.existingPaths.add(configDir);
 
-      yield* gcloudTools.setupConfig();
+      const tools = yield* gcloudTools;
+      yield* tools.setupConfig();
 
       expect(fileSystem.existsCalls).toContain(configDir);
       expect(fileSystem.mkdirCalls).toHaveLength(0);

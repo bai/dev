@@ -12,14 +12,13 @@ import { configError, unknownError, type ConfigError, type UnknownError } from "
 import { HostPathsTag } from "~/core/runtime/path-service";
 
 // Extended interface for internal use with close method
-interface DatabaseWithClose extends Database {
+export interface DatabaseWithClose extends Database {
   readonly close: () => Effect.Effect<void>;
 }
 
 type DatabaseAccessSemaphore = ReturnType<typeof Effect.unsafeMakeSemaphore>;
 
-// Factory function that creates Database service
-export const makeDatabaseLive = (
+export const createDatabaseService = (
   sqlite: BunSQLiteDatabase,
   drizzleDb: DrizzleDatabase,
   migrationsPath: string,
@@ -149,7 +148,7 @@ const createDatabase = Effect.gen(function* () {
   const accessSemaphore = yield* Effect.makeSemaphore(1);
 
   // Create the database service
-  const database = makeDatabaseLive(sqlite, drizzleDb, migrationsPath, accessSemaphore);
+  const database = createDatabaseService(sqlite, drizzleDb, migrationsPath, accessSemaphore);
 
   // Run migrations
   yield* database.migrate();

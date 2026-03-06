@@ -55,15 +55,14 @@ const findDirectoriesGlob = (basePath: string, pattern: string): Effect.Effect<s
 
 const getCwd = (): Effect.Effect<string> => Effect.sync(() => process.cwd());
 
-// Factory function to create FileSystem implementation
-export const makeFileSystemLive = (): FileSystem => ({
+export const FileSystemLive: FileSystem = {
   readFile,
   writeFile,
   exists,
   mkdir,
   findDirectoriesGlob,
   getCwd,
-});
+};
 
 // Effect Layer for dependency injection with proper resource management
-export const FileSystemLiveLayer = Layer.succeed(FileSystemTag, makeFileSystemLive());
+export const FileSystemLiveLayer = Layer.succeed(FileSystemTag, FileSystemLive);

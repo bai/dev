@@ -1,7 +1,7 @@
 import { desc, eq, isNull, lt } from "drizzle-orm";
 import { Clock, Effect, Layer } from "effect";
 
-import { DatabaseTag, type Database } from "~/capabilities/persistence/database-port";
+import { DatabaseTag } from "~/capabilities/persistence/database-port";
 import { RunStoreTag, type RunStore } from "~/capabilities/persistence/run-store-port";
 import { configError, type ConfigError, type UnknownError } from "~/core/errors";
 import type { CommandRun } from "~/core/models";
@@ -21,141 +21,120 @@ const toDomainRun = (row: typeof runs.$inferSelect): CommandRun => ({
   durationMs: row.duration_ms ?? undefined,
 });
 
-// Factory function that creates RunStore
-export const makeRunStoreLive = (database: Database): RunStore => {
-  // Individual functions implementing the service methods
-
-  const record = (run: Omit<CommandRun, "id" | "durationMs">): Effect.Effect<string, ConfigError | UnknownError> =>
-    database
-      .query((db) =>
-        Effect.gen(function* () {
-          const runId = yield* Effect.sync(() => Bun.randomUUIDv7());
-          return yield* Effect.tryPromise({
-            try: async () => {
-              return await db
-                .insert(runs)
-                .values({
-                  id: runId,
-                  cli_version: run.cliVersion,
-                  command_name: run.commandName,
-                  arguments: run.arguments,
-                  cwd: run.cwd,
-                  started_at: run.startedAt,
-                  finished_at: run.finishedAt,
-                  exit_code: run.exitCode,
-                })
-                .returning({ id: runs.id });
-            },
-            catch: (error) => configError(`Failed to record command run: ${error}`),
-          });
-        }),
-      )
-      .pipe(
-        Effect.flatMap((result) =>
-          Effect.fromNullable(result[0]).pipe(
-            Effect.orElseFail(() => configError("Insert operation did not return a record")),
-            Effect.map((insertedRun) => insertedRun.id),
-          ),
-        ),
-        annotateErrorTypeOnFailure,
-        Effect.withSpan("run_store.record", { attributes: { "run.command": run.commandName } }),
-      );
-
-  const complete = (id: string, exitCode: number, finishedAt: Date): Effect.Effect<void, ConfigError | UnknownError> =>
-    database
-      .query((db) =>
-        Effect.tryPromise({
-          try: async () => {
-            await db
-              .update(runs)
-              .set({
-                exit_code: exitCode,
-                finished_at: finishedAt,
-              })
-              .where(eq(runs.id, id));
-          },
-          catch: (error) => configError(`Failed to complete command run: ${error}`),
-        }),
-      )
-      .pipe(annotateErrorTypeOnFailure, Effect.withSpan("run_store.complete", { attributes: { "run.id": id, "run.exit_code": exitCode } }));
-
-  const prune = (keepDays: number): Effect.Effect<void, ConfigError | UnknownError> =>
-    Clock.currentTimeMillis.pipe(
-      Effect.flatMap((currentTimeMs) => {
-        const cutoffDate = new Date(currentTimeMs);
-        cutoffDate.setDate(cutoffDate.getDate() - keepDays);
-
-        return database.query((db) =>
-          Effect.tryPromise({
-            try: async () => {
-              await db.delete(runs).where(lt(runs.started_at, cutoffDate));
-            },
-            catch: (error) => configError(`Failed to prune old runs: ${error}`),
-          }),
-        );
-      }),
-      annotateErrorTypeOnFailure,
-      Effect.withSpan("run_store.prune", { attributes: { "run_store.keep_days": keepDays } }),
-    );
-
-  const getRecentRuns = (limit: number): Effect.Effect<CommandRun[], ConfigError | UnknownError> =>
-    database
-      .query((db) =>
-        Effect.tryPromise({
-          try: async () => {
-            const result = await db.select().from(runs).orderBy(desc(runs.started_at)).limit(limit);
-            return result.map(toDomainRun);
-          },
-          catch: (error) => configError(`Failed to get recent runs: ${error}`),
-        }),
-      )
-      .pipe(annotateErrorTypeOnFailure, Effect.withSpan("run_store.get_recent", { attributes: { "run_store.limit": limit } }));
-
-  const completeIncompleteRuns = (): Effect.Effect<void, ConfigError | UnknownError> =>
-    Clock.currentTimeMillis.pipe(
-      Effect.flatMap((currentTimeMs) => {
-        const now = new Date(currentTimeMs);
-
-        return database.query((db) =>
-          Effect.tryPromise({
-            try: async () => {
-              await db
-                .update(runs)
-                .set({
-                  exit_code: 130,
-                  finished_at: now,
-                })
-                .where(isNull(runs.finished_at));
-            },
-            catch: (error) => configError(`Failed to complete incomplete runs: ${error}`),
-          }),
-        );
-      }),
-      annotateErrorTypeOnFailure,
-      Effect.withSpan("run_store.complete_incomplete"),
-    );
-
-  return {
-    record,
-    complete,
-    prune,
-    getRecentRuns,
-    completeIncompleteRuns,
-  };
-};
-
 // Effect Layer for dependency injection
 export const RunStoreLiveLayer = Layer.scoped(
   RunStoreTag,
   Effect.gen(function* () {
     const database = yield* DatabaseTag;
+    return {
+      record: (run: Omit<CommandRun, "id" | "durationMs">): Effect.Effect<string, ConfigError | UnknownError> =>
+        database
+          .query((db) =>
+            Effect.gen(function* () {
+              const runId = yield* Effect.sync(() => Bun.randomUUIDv7());
+              return yield* Effect.tryPromise({
+                try: async () => {
+                  return await db
+                    .insert(runs)
+                    .values({
+                      id: runId,
+                      cli_version: run.cliVersion,
+                      command_name: run.commandName,
+                      arguments: run.arguments,
+                      cwd: run.cwd,
+                      started_at: run.startedAt,
+                      finished_at: run.finishedAt,
+                      exit_code: run.exitCode,
+                    })
+                    .returning({ id: runs.id });
+                },
+                catch: (error) => configError(`Failed to record command run: ${error}`),
+              });
+            }),
+          )
+          .pipe(
+            Effect.flatMap((result) =>
+              Effect.fromNullable(result[0]).pipe(
+                Effect.orElseFail(() => configError("Insert operation did not return a record")),
+                Effect.map((insertedRun) => insertedRun.id),
+              ),
+            ),
+            annotateErrorTypeOnFailure,
+            Effect.withSpan("run_store.record", { attributes: { "run.command": run.commandName } }),
+          ),
+      complete: (id: string, exitCode: number, finishedAt: Date): Effect.Effect<void, ConfigError | UnknownError> =>
+        database
+          .query((db) =>
+            Effect.tryPromise({
+              try: async () => {
+                await db
+                  .update(runs)
+                  .set({
+                    exit_code: exitCode,
+                    finished_at: finishedAt,
+                  })
+                  .where(eq(runs.id, id));
+              },
+              catch: (error) => configError(`Failed to complete command run: ${error}`),
+            }),
+          )
+          .pipe(
+            annotateErrorTypeOnFailure,
+            Effect.withSpan("run_store.complete", { attributes: { "run.id": id, "run.exit_code": exitCode } }),
+          ),
+      prune: (keepDays: number): Effect.Effect<void, ConfigError | UnknownError> =>
+        Clock.currentTimeMillis.pipe(
+          Effect.flatMap((currentTimeMs) => {
+            const cutoffDate = new Date(currentTimeMs);
+            cutoffDate.setDate(cutoffDate.getDate() - keepDays);
 
-    // Create the service
-    const runStore = makeRunStoreLive(database);
+            return database.query((db) =>
+              Effect.tryPromise({
+                try: async () => {
+                  await db.delete(runs).where(lt(runs.started_at, cutoffDate));
+                },
+                catch: (error) => configError(`Failed to prune old runs: ${error}`),
+              }),
+            );
+          }),
+          annotateErrorTypeOnFailure,
+          Effect.withSpan("run_store.prune", { attributes: { "run_store.keep_days": keepDays } }),
+        ),
+      getRecentRuns: (limit: number): Effect.Effect<CommandRun[], ConfigError | UnknownError> =>
+        database
+          .query((db) =>
+            Effect.tryPromise({
+              try: async () => {
+                const result = await db.select().from(runs).orderBy(desc(runs.started_at)).limit(limit);
+                return result.map(toDomainRun);
+              },
+              catch: (error) => configError(`Failed to get recent runs: ${error}`),
+            }),
+          )
+          .pipe(annotateErrorTypeOnFailure, Effect.withSpan("run_store.get_recent", { attributes: { "run_store.limit": limit } })),
+      completeIncompleteRuns: (): Effect.Effect<void, ConfigError | UnknownError> =>
+        Clock.currentTimeMillis.pipe(
+          Effect.flatMap((currentTimeMs) => {
+            const now = new Date(currentTimeMs);
 
-    // Note: Graceful shutdown of incomplete runs is handled by the main application
-    // in index.ts to ensure proper ordering with database shutdown
-
-    return runStore;
+            return database.query((db) =>
+              Effect.tryPromise({
+                try: async () => {
+                  await db
+                    .update(runs)
+                    .set({
+                      exit_code: 130,
+                      finished_at: now,
+                    })
+                    .where(isNull(runs.finished_at));
+                },
+                catch: (error) => configError(`Failed to complete incomplete runs: ${error}`),
+              }),
+            );
+          }),
+          annotateErrorTypeOnFailure,
+          Effect.withSpan("run_store.complete_incomplete"),
+        ),
+    } satisfies RunStore;
   }),
 );

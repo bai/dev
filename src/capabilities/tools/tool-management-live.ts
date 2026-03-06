@@ -4,32 +4,24 @@ import { ToolManagementTag, type ToolManagement, type ToolManager } from "~/capa
 import { BuiltToolRegistryTag, type BuiltToolRegistry } from "~/capabilities/tools/tool-registry-live";
 
 /**
- * Factory function that creates the ToolManagementService implementation
- */
-const makeToolManagementLive = (toolRegistry: BuiltToolRegistry): ToolManagement => {
-  const tools = toolRegistry.managedTools.reduce<Record<string, ToolManager>>(
-    (allTools, tool) => ({
-      ...allTools,
-      [tool.id]: tool.manager,
-    }),
-    {},
-  );
-
-  return {
-    tools,
-    listTools: () => toolRegistry.managedTools,
-    listEssentialTools: () => toolRegistry.essentialManagedTools,
-  };
-};
-
-/**
  * Effect Layer that provides the ToolManagementService implementation
  */
 export const ToolManagementLiveLayer = Layer.effect(
   ToolManagementTag,
   Effect.gen(function* () {
     const toolRegistry = yield* BuiltToolRegistryTag;
+    const tools = toolRegistry.managedTools.reduce<Record<string, ToolManager>>(
+      (allTools, tool) => ({
+        ...allTools,
+        [tool.id]: tool.manager,
+      }),
+      {},
+    );
 
-    return makeToolManagementLive(toolRegistry);
+    return {
+      tools,
+      listTools: () => toolRegistry.managedTools,
+      listEssentialTools: () => toolRegistry.essentialManagedTools,
+    } satisfies ToolManagement;
   }),
 );

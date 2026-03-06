@@ -35,31 +35,29 @@ const insertInstallMetadataRow = (db: DrizzleDatabase, installId: string) =>
     catch: (error) => configError(`Failed to insert install identity: ${error}`),
   });
 
-export const makeInstallIdentityLive = (database: Database): InstallIdentity => ({
-  getOrCreateInstallId: () =>
-    database.query((db) =>
-      Effect.gen(function* () {
-        const existingRows = yield* selectInstallMetadataRow(db);
-        const existingInstallId = existingRows[0]?.installId;
-        if (existingInstallId) return existingInstallId;
-
-        const newInstallId = yield* Effect.sync(() => Bun.randomUUIDv7());
-        yield* insertInstallMetadataRow(db, newInstallId);
-
-        const persistedRows = yield* selectInstallMetadataRow(db);
-        const persistedInstallId = persistedRows[0]?.installId;
-        if (!persistedInstallId) {
-          return yield* Effect.fail(configError("Install identity row was not found after insert"));
-        }
-        return persistedInstallId;
-      }),
-    ),
-});
-
 export const InstallIdentityLiveLayer = Layer.effect(
   InstallIdentityTag,
   Effect.gen(function* () {
     const database = yield* DatabaseTag;
-    return makeInstallIdentityLive(database);
+    return {
+      getOrCreateInstallId: () =>
+        database.query((db) =>
+          Effect.gen(function* () {
+            const existingRows = yield* selectInstallMetadataRow(db);
+            const existingInstallId = existingRows[0]?.installId;
+            if (existingInstallId) return existingInstallId;
+
+            const newInstallId = yield* Effect.sync(() => Bun.randomUUIDv7());
+            yield* insertInstallMetadataRow(db, newInstallId);
+
+            const persistedRows = yield* selectInstallMetadataRow(db);
+            const persistedInstallId = persistedRows[0]?.installId;
+            if (!persistedInstallId) {
+              return yield* Effect.fail(configError("Install identity row was not found after insert"));
+            }
+            return persistedInstallId;
+          }),
+        ),
+    } satisfies InstallIdentity;
   }),
 );

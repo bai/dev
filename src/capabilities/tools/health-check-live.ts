@@ -70,41 +70,33 @@ const storeHealthCheckResults = (results: InternalHealthCheckResult[], database:
       }),
     );
 
-// Factory function that creates HealthCheck service with dependencies
-export const makeHealthCheckLive = (database: Database, toolHealthRegistry: ToolHealthRegistry): HealthCheck => {
-  // Individual functions implementing the service methods
-  const runHealthChecks = (): Effect.Effect<readonly HealthCheckResult[], HealthCheckError> =>
-    Effect.gen(function* () {
-      yield* Effect.logDebug("Running health checks synchronously...");
-
-      const results = yield* toolHealthRegistry.checkAllTools();
-
-      const internalResults: InternalHealthCheckResult[] = results.map((result) => ({
-        toolName: result.toolName,
-        version: result.version,
-        status: result.status,
-        notes: result.notes,
-        checkedAt: result.checkedAt.getTime(),
-      }));
-
-      yield* storeHealthCheckResults(internalResults, database);
-
-      yield* Effect.logDebug("Health checks completed successfully");
-
-      return results;
-    }).pipe(annotateErrorTypeOnFailure, Effect.withSpan("health_check.run_all"));
-
-  return {
-    runHealthChecks,
-  };
-};
-
 // Effect Layer for dependency injection
 export const HealthCheckLiveLayer = Layer.effect(
   HealthCheckTag,
   Effect.gen(function* () {
     const database = yield* DatabaseTag;
     const toolHealthRegistry = yield* ToolHealthRegistryTag;
-    return makeHealthCheckLive(database, toolHealthRegistry);
+    return {
+      runHealthChecks: (): Effect.Effect<readonly HealthCheckResult[], HealthCheckError> =>
+        Effect.gen(function* () {
+          yield* Effect.logDebug("Running health checks synchronously...");
+
+          const results = yield* toolHealthRegistry.checkAllTools();
+
+          const internalResults: InternalHealthCheckResult[] = results.map((result) => ({
+            toolName: result.toolName,
+            version: result.version,
+            status: result.status,
+            notes: result.notes,
+            checkedAt: result.checkedAt.getTime(),
+          }));
+
+          yield* storeHealthCheckResults(internalResults, database);
+
+          yield* Effect.logDebug("Health checks completed successfully");
+
+          return results;
+        }).pipe(annotateErrorTypeOnFailure, Effect.withSpan("health_check.run_all")),
+    } satisfies HealthCheck;
   }),
 );

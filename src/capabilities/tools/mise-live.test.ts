@@ -1,13 +1,18 @@
 import { it } from "@effect/vitest";
-import { Effect, Exit } from "effect";
+import { Effect, Exit, Layer } from "effect";
 import { beforeEach, describe, expect } from "vitest";
 
+import { FileSystemTag } from "~/capabilities/system/file-system-port";
 import type { FileSystem } from "~/capabilities/system/file-system-port";
 import { ShellMock } from "~/capabilities/system/shell-mock";
-import { makeMiseLive } from "~/capabilities/tools/mise-live";
+import { ShellTag } from "~/capabilities/system/shell-port";
+import { MiseLiveLayer } from "~/capabilities/tools/mise-live";
+import { MiseTag, type Mise } from "~/capabilities/tools/mise-port";
+import { ConfigLoaderTag } from "~/core/config/config-loader-port";
 import type { ConfigLoader } from "~/core/config/config-loader-port";
 import { configSchema } from "~/core/config/config-schema";
 import { configError } from "~/core/errors";
+import { HostPathsTag, type HostPaths } from "~/core/runtime/path-service";
 import { makeHostPathsMock } from "~/core/runtime/path-service-mock";
 
 const mockShell = new ShellMock();
@@ -87,7 +92,32 @@ const mockHostPaths = makeHostPathsMock({
 });
 
 describe("mise-live", () => {
-  const mise = makeMiseLive(mockShell, mockFileSystem, mockConfigLoader, mockHostPaths);
+  const makeMise = ({
+    shell = mockShell,
+    fileSystem = mockFileSystem,
+    configLoader = mockConfigLoader,
+    hostPaths = mockHostPaths,
+  }: {
+    readonly shell?: ShellMock;
+    readonly fileSystem?: FileSystem;
+    readonly configLoader?: ConfigLoader;
+    readonly hostPaths?: HostPaths;
+  } = {}): Effect.Effect<Mise> =>
+    Effect.gen(function* () {
+      return yield* MiseTag;
+    }).pipe(
+      Effect.provide(
+        Layer.provide(
+          MiseLiveLayer,
+          Layer.mergeAll(
+            Layer.succeed(ShellTag, shell),
+            Layer.succeed(FileSystemTag, fileSystem),
+            Layer.succeed(ConfigLoaderTag, configLoader),
+            Layer.succeed(HostPathsTag, hostPaths),
+          ),
+        ),
+      ),
+    );
 
   beforeEach(() => {
     seedMockShell();
@@ -95,6 +125,7 @@ describe("mise-live", () => {
 
   it.effect("runs a task without arguments", () =>
     Effect.gen(function* () {
+      const mise = yield* makeMise();
       yield* mise.runTask("lint");
 
       expect(getLastInteractiveCall()).toEqual({
@@ -107,6 +138,7 @@ describe("mise-live", () => {
 
   it.effect("runs a task with single argument", () =>
     Effect.gen(function* () {
+      const mise = yield* makeMise();
       yield* mise.runTask("test", ["--watch"]);
 
       expect(getLastInteractiveCall()).toEqual({
@@ -119,6 +151,7 @@ describe("mise-live", () => {
 
   it.effect("runs a task with multiple arguments", () =>
     Effect.gen(function* () {
+      const mise = yield* makeMise();
       yield* mise.runTask("secrets", ["decrypt", "--env", "prod"], "/custom/path");
 
       expect(getLastInteractiveCall()).toEqual({
@@ -131,6 +164,7 @@ describe("mise-live", () => {
 
   it.effect("runs a task with empty args array", () =>
     Effect.gen(function* () {
+      const mise = yield* makeMise();
       yield* mise.runTask("build", []);
 
       expect(getLastInteractiveCall()).toEqual({
@@ -146,7 +180,7 @@ describe("mise-live", () => {
       const failingShell = new ShellMock();
       failingShell.setExecInteractiveResponse("mise", ["run", "failing-task"], 1);
 
-      const failingMise = makeMiseLive(failingShell, mockFileSystem, mockConfigLoader, mockHostPaths);
+      const failingMise = yield* makeMise({ shell: failingShell });
       const result = yield* Effect.exit(failingMise.runTask("failing-task"));
 
       expect(Exit.isFailure(result)).toBe(true);
@@ -155,6 +189,7 @@ describe("mise-live", () => {
 
   it.effect("checks installation and parses version correctly", () =>
     Effect.gen(function* () {
+      const mise = yield* makeMise();
       const result = yield* mise.checkInstallation();
 
       expect(result).toEqual({
@@ -169,6 +204,7 @@ describe("mise-live", () => {
 
   it.effect("gets tasks list correctly", () =>
     Effect.gen(function* () {
+      const mise = yield* makeMise();
       const result = yield* mise.getTasks();
 
       expect(result).toEqual(["lint", "test", "build", "secrets"]);
@@ -177,6 +213,7 @@ describe("mise-live", () => {
 
   it.effect("installs tools with correct arguments", () =>
     Effect.gen(function* () {
+      const mise = yield* makeMise();
       yield* mise.installTools("/custom/path");
 
       expect(getLastExecCall()).toEqual({
@@ -189,6 +226,7 @@ describe("mise-live", () => {
 
   it.effect("installs mise using shell pipeline execution", () =>
     Effect.gen(function* () {
+      const mise = yield* makeMise();
       yield* mise.install();
 
       expect(getLastExecCall()).toEqual({
@@ -201,6 +239,7 @@ describe("mise-live", () => {
 
   it.effect("handles missing cwd parameter correctly", () =>
     Effect.gen(function* () {
+      const mise = yield* makeMise();
       yield* mise.runTask("test", ["--help"]);
 
       expect(getLastInteractiveCall()?.options?.cwd).toBeUndefined();
@@ -209,6 +248,7 @@ describe("mise-live", () => {
 
   it.effect("preserves argument order when running tasks", () =>
     Effect.gen(function* () {
+      const mise = yield* makeMise();
       const args = ["subcommand", "--flag1", "value1", "--flag2", "value2"];
       yield* mise.runTask("complex-task", args);
 
@@ -218,6 +258,7 @@ describe("mise-live", () => {
 
   it.effect("handles undefined args parameter", () =>
     Effect.gen(function* () {
+      const mise = yield* makeMise();
       yield* mise.runTask("simple-task", undefined);
 
       expect(getLastInteractiveCall()?.args).toEqual(["run", "simple-task"]);
@@ -246,7 +287,7 @@ describe("mise-live", () => {
         },
       };
 
-      const trackingMise = makeMiseLive(mockShell, trackingFileSystem, mockConfigLoader, mockHostPaths);
+      const trackingMise = yield* makeMise({ fileSystem: trackingFileSystem });
       yield* trackingMise.setupGlobalConfig();
 
       expect(existsCalls).toContain("/xdg/config/mise");
@@ -275,7 +316,7 @@ describe("mise-live", () => {
         },
       };
 
-      const trackingMise = makeMiseLive(mockShell, trackingFileSystem, mockConfigLoader, mockHostPaths);
+      const trackingMise = yield* makeMise({ fileSystem: trackingFileSystem });
       yield* trackingMise.setupGlobalConfig();
 
       expect(mkdirCalls).toHaveLength(0);

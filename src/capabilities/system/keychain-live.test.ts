@@ -1,10 +1,11 @@
 import { it } from "@effect/vitest";
-import { Cause, Effect, Exit, Option } from "effect";
+import { Cause, Effect, Exit, Layer, Option } from "effect";
 import { describe, expect } from "vitest";
 
-import { makeKeychainLive } from "~/capabilities/system/keychain-live";
+import { KeychainLiveLayer } from "~/capabilities/system/keychain-live";
+import { KeychainTag } from "~/capabilities/system/keychain-port";
 import { ShellMock } from "~/capabilities/system/shell-mock";
-import type { SpawnResult } from "~/capabilities/system/shell-port";
+import { ShellTag, type SpawnResult } from "~/capabilities/system/shell-port";
 
 const createShell = (responses: Record<string, SpawnResult>) => {
   const shell = new ShellMock();
@@ -18,6 +19,11 @@ const createShell = (responses: Record<string, SpawnResult>) => {
 };
 
 describe("keychain-live", () => {
+  const makeKeychain = (shell: ShellMock) =>
+    Effect.gen(function* () {
+      return yield* KeychainTag;
+    }).pipe(Effect.provide(Layer.provide(KeychainLiveLayer, Layer.succeed(ShellTag, shell))));
+
   it.effect("stores credentials when security command succeeds", () =>
     Effect.gen(function* () {
       const shell = createShell({
@@ -28,7 +34,7 @@ describe("keychain-live", () => {
         },
       });
 
-      const keychain = makeKeychainLive(shell);
+      const keychain = yield* makeKeychain(shell);
       const result = yield* Effect.exit(keychain.setCredential("dev", "me", "secret"));
 
       expect(Exit.isSuccess(result)).toBe(true);
@@ -45,7 +51,7 @@ describe("keychain-live", () => {
         },
       });
 
-      const keychain = makeKeychainLive(shell);
+      const keychain = yield* makeKeychain(shell);
       const result = yield* Effect.exit(keychain.setCredential("dev", "me", "secret"));
 
       expect(Exit.isFailure(result)).toBe(true);
@@ -69,7 +75,7 @@ describe("keychain-live", () => {
         },
       });
 
-      const keychain = makeKeychainLive(shell);
+      const keychain = yield* makeKeychain(shell);
       const credential = yield* keychain.getCredential("dev", "me");
 
       expect(credential).toBe("secret-value");
@@ -81,7 +87,7 @@ describe("keychain-live", () => {
       const shell = new ShellMock();
       shell.setExecFailure("security", ["find-generic-password", "-s", "dev", "-a", "me"]);
 
-      const keychain = makeKeychainLive(shell);
+      const keychain = yield* makeKeychain(shell);
       const hasCredential = yield* keychain.hasCredential("dev", "me");
 
       expect(hasCredential).toBe(false);
@@ -98,7 +104,7 @@ describe("keychain-live", () => {
         },
       });
 
-      const keychain = makeKeychainLive(shell);
+      const keychain = yield* makeKeychain(shell);
       const result = yield* Effect.exit(keychain.removeCredential("dev", "me"));
 
       expect(Exit.isFailure(result)).toBe(true);

@@ -1,11 +1,17 @@
 import { it } from "@effect/vitest";
-import { Effect } from "effect";
+import { Effect, Layer } from "effect";
 import { describe, expect } from "vitest";
 
 import { ShellMock } from "~/capabilities/system/shell-mock";
-import { BUN_MIN_VERSION, makeBunToolsLive } from "~/capabilities/tools/adapters/bun-tools-live";
+import { ShellTag } from "~/capabilities/system/shell-port";
+import { BUN_MIN_VERSION, BunToolsTag } from "~/capabilities/tools/adapters/bun-tools-live";
 
 describe("bun-tools-live", () => {
+  const makeBunTools = (shell: ShellMock) =>
+    Effect.gen(function* () {
+      return yield* BunToolsTag;
+    }).pipe(Effect.provide(Layer.provide(BunToolsTag.DefaultWithoutDependencies, Layer.succeed(ShellTag, shell))));
+
   it.effect("parses bun version from shell output", () =>
     Effect.gen(function* () {
       const shell = new ShellMock();
@@ -15,7 +21,7 @@ describe("bun-tools-live", () => {
         stderr: "",
       });
 
-      const bunTools = makeBunToolsLive(shell);
+      const bunTools = yield* makeBunTools(shell);
       const version = yield* bunTools.getCurrentVersion();
 
       expect(version).toBe("1.4.2");
@@ -27,7 +33,7 @@ describe("bun-tools-live", () => {
       const shell = new ShellMock();
       shell.setExecFailure("bun", ["--version"]);
 
-      const bunTools = makeBunToolsLive(shell);
+      const bunTools = yield* makeBunTools(shell);
       const version = yield* bunTools.getCurrentVersion();
 
       expect(version).toBeNull();
@@ -43,7 +49,7 @@ describe("bun-tools-live", () => {
         stderr: "",
       });
 
-      const bunTools = makeBunToolsLive(shell);
+      const bunTools = yield* makeBunTools(shell);
       const upgraded = yield* bunTools.performUpgrade();
 
       expect(upgraded).toBe(true);
@@ -59,7 +65,7 @@ describe("bun-tools-live", () => {
         stderr: "failed",
       });
 
-      const bunTools = makeBunToolsLive(shell);
+      const bunTools = yield* makeBunTools(shell);
       const upgraded = yield* bunTools.performUpgrade();
 
       expect(upgraded).toBe(false);
@@ -75,7 +81,7 @@ describe("bun-tools-live", () => {
         stderr: "",
       });
 
-      const bunTools = makeBunToolsLive(shell);
+      const bunTools = yield* makeBunTools(shell);
       const result = yield* bunTools.performHealthCheck();
 
       expect(result.toolName).toBe("bun");

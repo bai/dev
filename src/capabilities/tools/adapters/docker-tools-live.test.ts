@@ -1,11 +1,17 @@
 import { it } from "@effect/vitest";
-import { Effect } from "effect";
+import { Effect, Layer } from "effect";
 import { describe, expect } from "vitest";
 
 import { ShellMock } from "~/capabilities/system/shell-mock";
-import { DOCKER_MIN_VERSION, makeDockerToolsLive } from "~/capabilities/tools/adapters/docker-tools-live";
+import { ShellTag } from "~/capabilities/system/shell-port";
+import { DOCKER_MIN_VERSION, DockerToolsTag } from "~/capabilities/tools/adapters/docker-tools-live";
 
 describe("docker-tools-live", () => {
+  const makeDockerTools = (shell: ShellMock) =>
+    Effect.gen(function* () {
+      return yield* DockerToolsTag;
+    }).pipe(Effect.provide(Layer.provide(DockerToolsTag.DefaultWithoutDependencies, Layer.succeed(ShellTag, shell))));
+
   it.effect("parses docker and compose versions", () =>
     Effect.gen(function* () {
       const shell = new ShellMock();
@@ -20,7 +26,7 @@ describe("docker-tools-live", () => {
         stderr: "",
       });
 
-      const dockerTools = makeDockerToolsLive(shell);
+      const dockerTools = yield* makeDockerTools(shell);
       const dockerVersion = yield* dockerTools.getDockerVersion();
       const composeVersion = yield* dockerTools.getComposeVersion();
 
@@ -34,7 +40,7 @@ describe("docker-tools-live", () => {
       const shell = new ShellMock();
       shell.setExecFailure("docker", ["--version"]);
 
-      const dockerTools = makeDockerToolsLive(shell);
+      const dockerTools = yield* makeDockerTools(shell);
       const result = yield* dockerTools.performHealthCheck();
 
       expect(result.toolName).toBe("docker");
@@ -57,7 +63,7 @@ describe("docker-tools-live", () => {
         stderr: "",
       });
 
-      const dockerTools = makeDockerToolsLive(shell);
+      const dockerTools = yield* makeDockerTools(shell);
       const result = yield* dockerTools.performHealthCheck();
 
       expect(result.toolName).toBe("docker");
@@ -81,7 +87,7 @@ describe("docker-tools-live", () => {
         stderr: "",
       });
 
-      const dockerTools = makeDockerToolsLive(shell);
+      const dockerTools = yield* makeDockerTools(shell);
       const result = yield* dockerTools.performHealthCheck();
 
       expect(result.toolName).toBe("docker");

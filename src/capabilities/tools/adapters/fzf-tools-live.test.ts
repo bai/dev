@@ -1,11 +1,17 @@
 import { it } from "@effect/vitest";
-import { Effect } from "effect";
+import { Effect, Layer } from "effect";
 import { describe, expect } from "vitest";
 
 import { ShellMock } from "~/capabilities/system/shell-mock";
-import { FZF_MIN_VERSION, makeFzfToolsLive } from "~/capabilities/tools/adapters/fzf-tools-live";
+import { ShellTag } from "~/capabilities/system/shell-port";
+import { FZF_MIN_VERSION, FzfToolsTag } from "~/capabilities/tools/adapters/fzf-tools-live";
 
 describe("fzf-tools-live", () => {
+  const makeFzfTools = (shell: ShellMock) =>
+    Effect.gen(function* () {
+      return yield* FzfToolsTag;
+    }).pipe(Effect.provide(Layer.provide(FzfToolsTag.DefaultWithoutDependencies, Layer.succeed(ShellTag, shell))));
+
   it.effect("parses fzf version from shell output", () =>
     Effect.gen(function* () {
       const shell = new ShellMock();
@@ -15,7 +21,7 @@ describe("fzf-tools-live", () => {
         stderr: "",
       });
 
-      const fzfTools = makeFzfToolsLive(shell);
+      const fzfTools = yield* makeFzfTools(shell);
       const version = yield* fzfTools.getCurrentVersion();
 
       expect(version).toBe("0.67.1");
@@ -27,7 +33,7 @@ describe("fzf-tools-live", () => {
       const shell = new ShellMock();
       shell.setExecFailure("fzf", ["--version"]);
 
-      const fzfTools = makeFzfToolsLive(shell);
+      const fzfTools = yield* makeFzfTools(shell);
       const version = yield* fzfTools.getCurrentVersion();
 
       expect(version).toBeNull();
@@ -43,7 +49,7 @@ describe("fzf-tools-live", () => {
         stderr: "",
       });
 
-      const fzfTools = makeFzfToolsLive(shell);
+      const fzfTools = yield* makeFzfTools(shell);
       const upgraded = yield* fzfTools.performUpgrade();
 
       expect(upgraded).toBe(true);
@@ -61,7 +67,7 @@ describe("fzf-tools-live", () => {
         stderr: "failed",
       });
 
-      const fzfTools = makeFzfToolsLive(shell);
+      const fzfTools = yield* makeFzfTools(shell);
       const upgraded = yield* fzfTools.performUpgrade();
 
       expect(upgraded).toBe(false);
@@ -77,7 +83,7 @@ describe("fzf-tools-live", () => {
         stderr: "",
       });
 
-      const fzfTools = makeFzfToolsLive(shell);
+      const fzfTools = yield* makeFzfTools(shell);
       const result = yield* fzfTools.performHealthCheck();
 
       expect(result.toolName).toBe("fzf");

@@ -49,8 +49,8 @@ const trigger = (): Effect.Effect<void, UnknownError> =>
     });
   });
 
-export const makeAutoUpgradeTriggerLive = (): AutoUpgradeTrigger => ({
+export const AutoUpgradeTriggerLive: AutoUpgradeTrigger = {
   trigger,
-});
+};
 
-export const AutoUpgradeTriggerLiveLayer = Layer.effect(AutoUpgradeTriggerTag, Effect.succeed(makeAutoUpgradeTriggerLive()));
+export const AutoUpgradeTriggerLiveLayer = Layer.succeed(AutoUpgradeTriggerTag, AutoUpgradeTriggerLive);

@@ -12,11 +12,12 @@ import {
   HTTP_REQUEST_METHOD_VALUE_HEAD,
 } from "@opentelemetry/semantic-conventions";
 import { ATTR_FILE_PATH } from "@opentelemetry/semantic-conventions/incubating";
-import { Cause, Effect, Exit, Option } from "effect";
+import { Cause, Effect, Exit, Layer, Option } from "effect";
 import { afterEach, describe, expect, vi } from "vitest";
 
-import type { FileSystem } from "~/capabilities/system/file-system-port";
-import { makeNetworkLive } from "~/capabilities/system/network-live";
+import { FileSystemTag, type FileSystem } from "~/capabilities/system/file-system-port";
+import { NetworkLiveLayer } from "~/capabilities/system/network-live";
+import { NetworkTag } from "~/capabilities/system/network-port";
 import { fileSystemError } from "~/core/errors";
 
 const createMockFileSystem = (
@@ -48,6 +49,11 @@ const createTelemetryLayer = (exporter: InMemorySpanExporter) =>
   }));
 
 describe("network-live", () => {
+  const makeNetwork = (fileSystem: FileSystem) =>
+    Effect.gen(function* () {
+      return yield* NetworkTag;
+    }).pipe(Effect.provide(Layer.provide(NetworkLiveLayer, Layer.succeed(FileSystemTag, fileSystem))));
+
   afterEach(() => {
     vi.restoreAllMocks();
   });
@@ -64,7 +70,7 @@ describe("network-live", () => {
         }),
       );
 
-      const network = makeNetworkLive(createMockFileSystem().fileSystem);
+      const network = yield* makeNetwork(createMockFileSystem().fileSystem);
       const response = yield* network.get("https://example.com/config.json", { headers: { Authorization: "Bearer abc" } });
 
       expect(response.status).toBe(200);
@@ -79,7 +85,7 @@ describe("network-live", () => {
     Effect.gen(function* () {
       vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("network down"));
 
-      const network = makeNetworkLive(createMockFileSystem().fileSystem);
+      const network = yield* makeNetwork(createMockFileSystem().fileSystem);
       const result = yield* Effect.exit(network.get("https://example.com/fail"));
 
       expect(Exit.isFailure(result)).toBe(true);
@@ -103,7 +109,7 @@ describe("network-live", () => {
       );
 
       const mock = createMockFileSystem();
-      const network = makeNetworkLive(mock.fileSystem);
+      const network = yield* makeNetwork(mock.fileSystem);
 
       yield* network.downloadFile("https://example.com/file.txt", "/tmp/file.txt");
 
@@ -120,7 +126,7 @@ describe("network-live", () => {
         }),
       );
 
-      const network = makeNetworkLive(createMockFileSystem().fileSystem);
+      const network = yield* makeNetwork(createMockFileSystem().fileSystem);
       const result = yield* Effect.exit(network.downloadFile("https://example.com/missing", "/tmp/out.txt"));
 
       expect(Exit.isFailure(result)).toBe(true);
@@ -144,7 +150,7 @@ describe("network-live", () => {
       );
 
       const mock = createMockFileSystem(() => Effect.fail(fileSystemError("disk full", "/tmp/out.txt")));
-      const network = makeNetworkLive(mock.fileSystem);
+      const network = yield* makeNetwork(mock.fileSystem);
       const result = yield* Effect.exit(network.downloadFile("https://example.com/file", "/tmp/out.txt"));
 
       expect(Exit.isFailure(result)).toBe(true);
@@ -163,7 +169,7 @@ describe("network-live", () => {
     Effect.gen(function* () {
       vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("network down"));
 
-      const network = makeNetworkLive(createMockFileSystem().fileSystem);
+      const network = yield* makeNetwork(createMockFileSystem().fileSystem);
       const connected = yield* network.checkConnectivity("https://example.com/health");
 
       expect(connected).toBe(false);
@@ -181,7 +187,7 @@ describe("network-live", () => {
     );
 
     return Effect.gen(function* () {
-      const network = makeNetworkLive(createMockFileSystem().fileSystem);
+      const network = yield* makeNetwork(createMockFileSystem().fileSystem);
       yield* network.get("https://example.com:8443/config.json");
 
       const span = exporter.getFinishedSpans().find((candidate) => candidate.name === "http.get");
@@ -201,7 +207,7 @@ describe("network-live", () => {
     vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("invalid url"));
 
     return Effect.gen(function* () {
-      const network = makeNetworkLive(createMockFileSystem().fileSystem);
+      const network = yield* makeNetwork(createMockFileSystem().fileSystem);
       yield* Effect.exit(network.get("not-a-url"));
 
       const span = exporter.getFinishedSpans().find((candidate) => candidate.name === "http.get");
@@ -226,7 +232,7 @@ describe("network-live", () => {
     );
 
     return Effect.gen(function* () {
-      const network = makeNetworkLive(createMockFileSystem().fileSystem);
+      const network = yield* makeNetwork(createMockFileSystem().fileSystem);
       yield* Effect.exit(network.downloadFile("https://example.com:8443/missing", "/tmp/out.txt"));
 
       const span = exporter.getFinishedSpans().find((candidate) => candidate.name === "http.download_file");
@@ -252,7 +258,7 @@ describe("network-live", () => {
     );
 
     return Effect.gen(function* () {
-      const network = makeNetworkLive(createMockFileSystem().fileSystem);
+      const network = yield* makeNetwork(createMockFileSystem().fileSystem);
       yield* network.checkConnectivity("https://example.com:8443/health");
 
       const span = exporter.getFinishedSpans().find((candidate) => candidate.name === "http.check_connectivity");

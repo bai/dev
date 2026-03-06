@@ -3,16 +3,19 @@ import os from "os";
 import path from "path";
 
 import { it } from "@effect/vitest";
-import { Cause, Effect, Exit, Option } from "effect";
+import { Cause, Effect, Exit, Layer, Option } from "effect";
 import { afterEach, beforeEach, describe, expect } from "vitest";
 
-import { makeFileSystemLive } from "~/capabilities/system/file-system-live";
-import type { Network } from "~/capabilities/system/network-port";
-import { makeConfigLoaderLive } from "~/core/config/config-loader-live";
+import { FileSystemLive } from "~/capabilities/system/file-system-live";
+import { FileSystemTag } from "~/capabilities/system/file-system-port";
+import { NetworkTag, type Network } from "~/capabilities/system/network-port";
+import { ConfigLoaderLiveLayer } from "~/core/config/config-loader-live";
+import { ConfigLoaderTag } from "~/core/config/config-loader-port";
 import { configSchema } from "~/core/config/config-schema";
+import { HostPathsTag } from "~/core/runtime/path-service";
+import { makeHostPathsMock } from "~/core/runtime/path-service-mock";
 
 describe("config-loader-live", () => {
-  const fileSystem = makeFileSystemLive();
   let tempDir: string;
   let configPath: string;
 
@@ -22,6 +25,22 @@ describe("config-loader-live", () => {
     downloadFile: () => Effect.void,
     checkConnectivity: () => Effect.succeed(true),
   };
+
+  const makeConfigLoader = (network: Network) =>
+    Effect.gen(function* () {
+      return yield* ConfigLoaderTag;
+    }).pipe(
+      Effect.provide(
+        Layer.provide(
+          ConfigLoaderLiveLayer,
+          Layer.mergeAll(
+            Layer.succeed(FileSystemTag, FileSystemLive),
+            Layer.succeed(NetworkTag, network),
+            Layer.succeed(HostPathsTag, makeHostPathsMock({ configPath })),
+          ),
+        ),
+      ),
+    );
 
   beforeEach(async () => {
     tempDir = path.join(os.tmpdir(), `config-test-${Date.now()}-${Math.random().toString(36).substring(7)}`);
@@ -46,7 +65,7 @@ describe("config-loader-live", () => {
 }`;
         yield* Effect.promise(() => fs.writeFile(configPath, content));
 
-        const configLoader = makeConfigLoaderLive(fileSystem, mockNetwork, configPath);
+        const configLoader = yield* makeConfigLoader(mockNetwork);
         const config = yield* configLoader.load();
 
         expect(config.defaultOrg).toBe("testorg");
@@ -62,7 +81,7 @@ describe("config-loader-live", () => {
 }`;
         yield* Effect.promise(() => fs.writeFile(configPath, content));
 
-        const configLoader = makeConfigLoaderLive(fileSystem, mockNetwork, configPath);
+        const configLoader = yield* makeConfigLoader(mockNetwork);
         const config = yield* configLoader.load();
 
         expect(config.defaultOrg).toBe("testorg");
@@ -80,7 +99,7 @@ describe("config-loader-live", () => {
 }`;
         yield* Effect.promise(() => fs.writeFile(configPath, content));
 
-        const configLoader = makeConfigLoaderLive(fileSystem, mockNetwork, configPath);
+        const configLoader = yield* makeConfigLoader(mockNetwork);
         const config = yield* configLoader.load();
 
         expect(config.defaultOrg).toBe("testorg");
@@ -104,7 +123,7 @@ describe("config-loader-live", () => {
 }`;
         yield* Effect.promise(() => fs.writeFile(configPath, content));
 
-        const configLoader = makeConfigLoaderLive(fileSystem, mockNetwork, configPath);
+        const configLoader = yield* makeConfigLoader(mockNetwork);
         const config = yield* configLoader.load();
 
         expect(config.defaultOrg).toBe("testorg");
@@ -140,7 +159,7 @@ describe("config-loader-live", () => {
           checkConnectivity: () => Effect.succeed(true),
         };
 
-        const configLoader = makeConfigLoaderLive(fileSystem, remoteNetwork, configPath);
+        const configLoader = yield* makeConfigLoader(remoteNetwork);
         const refreshedConfig = yield* configLoader.refresh();
 
         expect(refreshedConfig.defaultOrg).toBe("remote-org");
@@ -173,7 +192,7 @@ describe("config-loader-live", () => {
           checkConnectivity: () => Effect.succeed(true),
         };
 
-        const configLoader = makeConfigLoaderLive(fileSystem, invalidRemoteNetwork, configPath);
+        const configLoader = yield* makeConfigLoader(invalidRemoteNetwork);
         const result = yield* Effect.exit(configLoader.refresh());
 
         expect(Exit.isFailure(result)).toBe(true);
@@ -212,7 +231,7 @@ describe("config-loader-live", () => {
           checkConnectivity: () => Effect.succeed(true),
         };
 
-        const configLoader = makeConfigLoaderLive(fileSystem, failingRemoteNetwork, configPath);
+        const configLoader = yield* makeConfigLoader(failingRemoteNetwork);
         const result = yield* Effect.exit(configLoader.refresh());
 
         expect(Exit.isFailure(result)).toBe(true);

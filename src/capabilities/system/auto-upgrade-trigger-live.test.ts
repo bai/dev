@@ -2,7 +2,7 @@ import { it } from "@effect/vitest";
 import { Cause, Effect, Exit, Option } from "effect";
 import { afterEach, describe, expect } from "vitest";
 
-import { makeAutoUpgradeTriggerLive, resolveAutoUpgradeInvocation } from "~/capabilities/system/auto-upgrade-trigger-live";
+import { AutoUpgradeTriggerLive, resolveAutoUpgradeInvocation } from "~/capabilities/system/auto-upgrade-trigger-live";
 import { UnknownError } from "~/core/errors";
 
 const withArgv = <A, E, R>(argv: string[], effect: Effect.Effect<A, E, R>): Effect.Effect<A, E, R> =>
@@ -43,7 +43,7 @@ describe("auto-upgrade-trigger-live", () => {
         } as unknown as ReturnType<typeof Bun.spawn>;
       }) as typeof Bun.spawn;
 
-      const trigger = makeAutoUpgradeTriggerLive();
+      const trigger = AutoUpgradeTriggerLive;
 
       yield* withArgv(["bun", "src/index.ts", "status"], trigger.trigger());
 
@@ -61,7 +61,7 @@ describe("auto-upgrade-trigger-live", () => {
 
   it.effect("fails with UnknownError when CLI invocation cannot be determined", () =>
     Effect.gen(function* () {
-      const trigger = makeAutoUpgradeTriggerLive();
+      const trigger = AutoUpgradeTriggerLive;
       const result = yield* Effect.exit(withArgv(["bun"], trigger.trigger()));
 
       expect(Exit.isFailure(result)).toBe(true);
@@ -81,7 +81,7 @@ describe("auto-upgrade-trigger-live", () => {
         throw new Error("spawn failed");
       }) as typeof Bun.spawn;
 
-      const trigger = makeAutoUpgradeTriggerLive();
+      const trigger = AutoUpgradeTriggerLive;
       const result = yield* Effect.exit(withArgv(["bun", "src/index.ts", "status"], trigger.trigger()));
 
       expect(Exit.isFailure(result)).toBe(true);

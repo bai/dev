@@ -6,7 +6,7 @@ import { drizzle } from "drizzle-orm/bun-sqlite";
 import { Deferred, Effect, Fiber, Layer } from "effect";
 import { describe, expect, vi } from "vitest";
 
-import { DatabaseLiveLayer, makeDatabaseLive } from "~/capabilities/persistence/database-live";
+import { createDatabaseService, DatabaseLiveLayer } from "~/capabilities/persistence/database-live";
 import { DatabaseTag } from "~/capabilities/persistence/database-port";
 import type { DrizzleDatabase } from "~/capabilities/persistence/drizzle-types";
 import { FileSystemMock } from "~/capabilities/system/file-system-mock";
@@ -34,7 +34,7 @@ const createSqliteMock = () => {
 const makeTestDatabase = (sqlite: BunSQLiteDatabase, drizzleDb: DrizzleDatabase, migrationsPath: string) =>
   Effect.gen(function* () {
     const accessSemaphore = yield* Effect.makeSemaphore(1);
-    return makeDatabaseLive(sqlite, drizzleDb, migrationsPath, accessSemaphore);
+    return createDatabaseService(sqlite, drizzleDb, migrationsPath, accessSemaphore);
   });
 
 describe("database-live", () => {

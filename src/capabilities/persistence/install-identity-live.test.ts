@@ -3,13 +3,15 @@ import { Database as BunSQLiteDatabase } from "bun:sqlite";
 import { it } from "@effect/vitest";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/bun-sqlite";
-import { Effect } from "effect";
+import { Effect, Layer } from "effect";
 import { afterEach, describe, expect, vi } from "vitest";
 
 import { DatabaseMock } from "~/capabilities/persistence/database-mock";
+import { DatabaseTag } from "~/capabilities/persistence/database-port";
 import type { Database } from "~/capabilities/persistence/database-port";
 import type { DrizzleDatabase } from "~/capabilities/persistence/drizzle-types";
-import { makeInstallIdentityLive } from "~/capabilities/persistence/install-identity-live";
+import { InstallIdentityLiveLayer } from "~/capabilities/persistence/install-identity-live";
+import { InstallIdentityTag, type InstallIdentity } from "~/capabilities/persistence/install-identity-port";
 
 import { installMetadata } from "../../../drizzle/schema";
 
@@ -57,6 +59,11 @@ const selectSingletonRows = (database: Database) =>
     .pipe(Effect.orDie);
 
 describe("install-identity-live", () => {
+  const makeInstallIdentity = (database: DatabaseMock): Effect.Effect<InstallIdentity> =>
+    Effect.gen(function* () {
+      return yield* InstallIdentityTag;
+    }).pipe(Effect.provide(Layer.provide(InstallIdentityLiveLayer, Layer.succeed(DatabaseTag, database))));
+
   afterEach(() => {
     vi.restoreAllMocks();
   });
@@ -68,7 +75,7 @@ describe("install-identity-live", () => {
         const randomUuidSpy = vi
           .spyOn(Bun, "randomUUIDv7")
           .mockImplementation(() => generatedInstallId as unknown as ReturnType<typeof Bun.randomUUIDv7>);
-        const installIdentity = makeInstallIdentityLive(database);
+        const installIdentity = yield* makeInstallIdentity(database);
 
         const firstInstallId = yield* installIdentity.getOrCreateInstallId().pipe(Effect.orDie);
         const secondInstallId = yield* installIdentity.getOrCreateInstallId().pipe(Effect.orDie);
@@ -101,7 +108,7 @@ describe("install-identity-live", () => {
           )
           .pipe(Effect.orDie);
 
-        const installIdentity = makeInstallIdentityLive(database);
+        const installIdentity = yield* makeInstallIdentity(database);
         const randomUuidSpy = vi.spyOn(Bun, "randomUUIDv7");
         const resolvedInstallId = yield* installIdentity.getOrCreateInstallId().pipe(Effect.orDie);
         const persistedRows = yield* selectSingletonRows(database);

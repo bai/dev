@@ -7,7 +7,7 @@ import { it } from "@effect/vitest";
 import { Effect } from "effect";
 import { afterEach, beforeEach, describe, expect } from "vitest";
 
-import { makeFileSystemLive } from "~/capabilities/system/file-system-live";
+import { FileSystemLive } from "~/capabilities/system/file-system-live";
 import type { FileSystem } from "~/capabilities/system/file-system-port";
 
 // Mock Bun.Glob for testing since we're running in Node/Vitest
@@ -55,7 +55,7 @@ if (!globalThis.Bun) {
 }
 
 describe("file-system-live", () => {
-  const fileSystem: FileSystem = makeFileSystemLive();
+  const fileSystem: FileSystem = FileSystemLive;
   let tempDir: string;
 
   beforeEach(async () => {

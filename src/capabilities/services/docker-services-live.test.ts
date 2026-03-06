@@ -1,12 +1,16 @@
 import path from "path";
 
 import { it } from "@effect/vitest";
-import { Effect } from "effect";
+import { Effect, Layer } from "effect";
 import { describe, expect } from "vitest";
 
-import { makeDockerServicesLive } from "~/capabilities/services/docker-services-live";
+import { createDockerServicesLiveLayer } from "~/capabilities/services/docker-services-live";
+import { DockerServicesTag } from "~/capabilities/services/docker-services-port";
 import { FileSystemMock } from "~/capabilities/system/file-system-mock";
+import { FileSystemTag } from "~/capabilities/system/file-system-port";
 import { ShellMock } from "~/capabilities/system/shell-mock";
+import { ShellTag } from "~/capabilities/system/shell-port";
+import { HostPathsTag } from "~/core/runtime/path-service";
 import { makeHostPathsMock } from "~/core/runtime/path-service-mock";
 
 const makeSubject = () => {
@@ -18,8 +22,17 @@ const makeSubject = () => {
     dbPath: "/tmp/dev-data/dev.db",
     cacheDir: "/tmp/dev-cache",
   });
-  const dockerServices = makeDockerServicesLive(shell, fileSystem, hostPaths);
   const composeFilePath = path.join(hostPaths.dataDir, "docker", "docker-compose.yml");
+  const dockerServices = Effect.gen(function* () {
+    return yield* DockerServicesTag;
+  }).pipe(
+    Effect.provide(
+      Layer.provide(
+        createDockerServicesLiveLayer(),
+        Layer.mergeAll(Layer.succeed(ShellTag, shell), Layer.succeed(FileSystemTag, fileSystem), Layer.succeed(HostPathsTag, hostPaths)),
+      ),
+    ),
+  );
 
   return {
     shell,
@@ -41,7 +54,8 @@ describe("docker-services-live", () => {
         stderr: "",
       });
 
-      yield* dockerServices.up(["postgres17"]);
+      const service = yield* dockerServices;
+      yield* service.up(["postgres17"]);
 
       expect(fileSystem.mkdirCalls).toEqual([{ path: composeDir, recursive: true }]);
       expect(fileSystem.writeFileCalls[0]?.path).toBe(composeFilePath);
@@ -61,7 +75,8 @@ describe("docker-services-live", () => {
         stderr: "compose ps failed",
       });
 
-      const error = yield* Effect.flip(dockerServices.status());
+      const service = yield* dockerServices;
+      const error = yield* Effect.flip(service.status());
 
       expect(error).toMatchObject({
         _tag: "DockerServiceError",
@@ -79,7 +94,8 @@ describe("docker-services-live", () => {
 
       shell.setExecInteractiveResponse("docker", ["compose", "-f", composeFilePath, "logs", "-f", "--tail", "20", "valkey"], 130);
 
-      yield* dockerServices.logs("valkey", { follow: true, tail: 20 });
+      const service = yield* dockerServices;
+      yield* service.logs("valkey", { follow: true, tail: 20 });
 
       expect(shell.execInteractiveCalls[0]?.args).toEqual(["compose", "-f", composeFilePath, "logs", "-f", "--tail", "20", "valkey"]);
     }),
@@ -90,7 +106,8 @@ describe("docker-services-live", () => {
       const { shell, dockerServices } = makeSubject();
       shell.setExecFailure("docker", ["info"]);
 
-      const isAvailable = yield* dockerServices.isDockerAvailable();
+      const service = yield* dockerServices;
+      const isAvailable = yield* service.isDockerAvailable();
 
       expect(isAvailable).toBe(false);
     }),

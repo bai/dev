@@ -1,7 +1,7 @@
 import { Effect } from "effect";
 
 import { ShellLiveLayer } from "~/capabilities/system/shell-live";
-import { ShellTag, type Shell } from "~/capabilities/system/shell-port";
+import { ShellTag } from "~/capabilities/system/shell-port";
 import {
   buildMinimumVersionHealthCheck,
   checkVersionAgainstMinimum,
@@ -20,79 +20,66 @@ export interface FzfTools {
   performHealthCheck(): Effect.Effect<HealthCheckResult, HealthCheckError>;
 }
 
-// Factory function to create FzfTools implementation
-export const makeFzfToolsLive = (shell: Shell): FzfTools => {
-  const getBinaryPath = (): Effect.Effect<string | undefined, never> =>
-    shell.exec("which", ["fzf"]).pipe(
-      Effect.map((result) => (result.exitCode === 0 && result.stdout ? result.stdout.trim() : undefined)),
-      Effect.orElseSucceed(() => undefined),
-    );
-
-  const getCurrentVersion = (): Effect.Effect<string | null, ShellExecutionError> =>
-    shell.exec("fzf", ["--version"]).pipe(
-      Effect.map((result) => {
-        if (result.exitCode === 0 && result.stdout) {
-          const output = result.stdout.trim();
-          // Fzf version output is like "0.35.0 (homebrew)"
-          const match = output.match(/(\d+\.\d+\.\d+)/);
-          return match && match[1] ? match[1] : null;
-        }
-        return null;
-      }),
-      Effect.orElseSucceed(() => null),
-    );
-
-  const performUpgrade = (): Effect.Effect<boolean, ShellExecutionError> =>
-    Effect.gen(function* () {
-      yield* Effect.logInfo("🔄 Updating fzf via mise...");
-
-      const result = yield* shell.exec("mise", ["install", "fzf@latest"]);
-
-      if (result.exitCode === 0) {
-        yield* Effect.logInfo("✅ Fzf updated successfully via mise");
-        return true;
-      } else {
-        yield* Effect.logError(`❌ Fzf update failed with exit code: ${result.exitCode}`);
-        return false;
-      }
-    });
-
-  const checkVersion = (): Effect.Effect<{ isValid: boolean; currentVersion: string | null }, ShellExecutionError> =>
-    checkVersionAgainstMinimum({ minVersion: FZF_MIN_VERSION, getCurrentVersion });
-
-  const ensureVersionOrUpgrade = (): Effect.Effect<void, ExternalToolError | ShellExecutionError> =>
-    ensureMinimumVersionOrUpgrade({
-      toolId: "fzf",
-      displayName: "Fzf",
-      minVersion: FZF_MIN_VERSION,
-      getCurrentVersion,
-      performUpgrade,
-      manualUpgradeHint: "Try manually installing fzf via mise: mise install fzf@latest",
-    });
-
-  const performHealthCheck = (): Effect.Effect<HealthCheckResult, HealthCheckError> =>
-    buildMinimumVersionHealthCheck({
-      toolId: "fzf",
-      displayName: "Fzf",
-      minVersion: FZF_MIN_VERSION,
-      getCurrentVersion,
-      getBinaryPath,
-    });
-
-  return {
-    getCurrentVersion,
-    checkVersion,
-    performUpgrade,
-    ensureVersionOrUpgrade,
-    performHealthCheck,
-  };
-};
-
 export class FzfToolsTag extends Effect.Service<FzfTools>()("FzfTools", {
   dependencies: [ShellLiveLayer],
   effect: Effect.gen(function* () {
     const shell = yield* ShellTag;
-    return makeFzfToolsLive(shell);
+    const getBinaryPath = (): Effect.Effect<string | undefined, never> =>
+      shell.exec("which", ["fzf"]).pipe(
+        Effect.map((result) => (result.exitCode === 0 && result.stdout ? result.stdout.trim() : undefined)),
+        Effect.orElseSucceed(() => undefined),
+      );
+
+    const getCurrentVersion = (): Effect.Effect<string | null, ShellExecutionError> =>
+      shell.exec("fzf", ["--version"]).pipe(
+        Effect.map((result) => {
+          if (result.exitCode === 0 && result.stdout) {
+            const output = result.stdout.trim();
+            const match = output.match(/(\d+\.\d+\.\d+)/);
+            return match && match[1] ? match[1] : null;
+          }
+          return null;
+        }),
+        Effect.orElseSucceed(() => null),
+      );
+
+    const performUpgrade = (): Effect.Effect<boolean, ShellExecutionError> =>
+      Effect.gen(function* () {
+        yield* Effect.logInfo("🔄 Updating fzf via mise...");
+
+        const result = yield* shell.exec("mise", ["install", "fzf@latest"]);
+
+        if (result.exitCode === 0) {
+          yield* Effect.logInfo("✅ Fzf updated successfully via mise");
+          return true;
+        }
+
+        yield* Effect.logError(`❌ Fzf update failed with exit code: ${result.exitCode}`);
+        return false;
+      });
+
+    return {
+      getCurrentVersion,
+      checkVersion: () => checkVersionAgainstMinimum({ minVersion: FZF_MIN_VERSION, getCurrentVersion }),
+      performUpgrade,
+      ensureVersionOrUpgrade: () =>
+        ensureMinimumVersionOrUpgrade({
+          toolId: "fzf",
+          displayName: "Fzf",
+          minVersion: FZF_MIN_VERSION,
+          getCurrentVersion,
+          performUpgrade,
+          manualUpgradeHint: "Try manually installing fzf via mise: mise install fzf@latest",
+        }),
+      performHealthCheck: () =>
+        buildMinimumVersionHealthCheck({
+          toolId: "fzf",
+          displayName: "Fzf",
+          minVersion: FZF_MIN_VERSION,
+          getCurrentVersion,
+          getBinaryPath,
+        }),
+    } satisfies FzfTools;
   }),
 }) {}
 

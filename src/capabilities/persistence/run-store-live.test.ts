@@ -1,10 +1,12 @@
 import { it } from "@effect/vitest";
-import { Effect } from "effect";
+import { Effect, Layer } from "effect";
 import { afterEach, describe, expect, vi } from "vitest";
 
 import { DatabaseMock } from "~/capabilities/persistence/database-mock";
+import { DatabaseTag } from "~/capabilities/persistence/database-port";
 import type { DrizzleDatabase } from "~/capabilities/persistence/drizzle-types";
-import { makeRunStoreLive } from "~/capabilities/persistence/run-store-live";
+import { RunStoreLiveLayer } from "~/capabilities/persistence/run-store-live";
+import { RunStoreTag, type RunStore } from "~/capabilities/persistence/run-store-port";
 
 interface MockRunRow {
   readonly id: string;
@@ -42,6 +44,11 @@ const makeMockDatabase = (rows: readonly MockRunRow[]) => {
 };
 
 describe("run-store-live", () => {
+  const makeRunStore = (database: DatabaseMock): Effect.Effect<RunStore> =>
+    Effect.gen(function* () {
+      return yield* RunStoreTag;
+    }).pipe(Effect.provide(Layer.provide(RunStoreLiveLayer, Layer.succeed(DatabaseTag, database))));
+
   afterEach(() => {
     vi.restoreAllMocks();
   });
@@ -72,7 +79,7 @@ describe("run-store-live", () => {
           },
         });
 
-        const runStore = makeRunStoreLive(database);
+        const runStore = yield* makeRunStore(database);
         const recordedRunId = yield* runStore.record({
           cliVersion: "1.2.3",
           commandName: "status",
@@ -114,7 +121,7 @@ describe("run-store-live", () => {
             duration_ms: 0,
           },
         ];
-        const runStore = makeRunStoreLive(makeMockDatabase(mockRows));
+        const runStore = yield* makeRunStore(makeMockDatabase(mockRows));
 
         const recentRuns = yield* runStore.getRecentRuns(10);
 
@@ -138,7 +145,7 @@ describe("run-store-live", () => {
             duration_ms: null,
           },
         ];
-        const runStore = makeRunStoreLive(makeMockDatabase(mockRows));
+        const runStore = yield* makeRunStore(makeMockDatabase(mockRows));
 
         const recentRuns = yield* runStore.getRecentRuns(10);
 

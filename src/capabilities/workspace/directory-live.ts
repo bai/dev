@@ -35,18 +35,15 @@ const findDirs = (workspacePaths: WorkspacePaths, fileSystem: FileSystem): Effec
     return directories;
   });
 
-// Factory function to create Directory implementation
-export const makeDirectoryLive = (workspacePaths: WorkspacePaths, fileSystem: FileSystem): Directory => ({
-  ensureBaseDirectoryExists: () => ensureBaseDirectoryExists(workspacePaths, fileSystem),
-  findDirs: () => findDirs(workspacePaths, fileSystem),
-});
-
 // Layer that provides DirectoryService with proper dependency injection
 export const DirectoryLiveLayer = Layer.effect(
   DirectoryTag,
   Effect.gen(function* () {
     const workspacePaths = yield* WorkspacePathsTag;
     const fileSystem = yield* FileSystemTag;
-    return makeDirectoryLive(workspacePaths, fileSystem);
+    return {
+      ensureBaseDirectoryExists: () => ensureBaseDirectoryExists(workspacePaths, fileSystem),
+      findDirs: () => findDirs(workspacePaths, fileSystem),
+    } satisfies Directory;
   }),
 );

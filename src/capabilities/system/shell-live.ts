@@ -71,12 +71,11 @@ const setProcessCwd = (path: string): Effect.Effect<void> =>
     process.chdir(path);
   });
 
-// Factory function to create Shell implementation
-export const makeShellLive = (): Shell => ({
+export const ShellLive: Shell = {
   exec,
   execInteractive,
   setProcessCwd,
-});
+};
 
 // Effect Layer for dependency injection with proper resource management
-export const ShellLiveLayer = Layer.effect(ShellTag, Effect.succeed(makeShellLive()));
+export const ShellLiveLayer = Layer.succeed(ShellTag, ShellLive);

@@ -6,17 +6,19 @@ import { it } from "@effect/vitest";
 import { Deferred, Effect, Fiber, Layer, Ref } from "effect";
 import { describe, expect } from "vitest";
 
-import { makeFileSystemLive } from "~/capabilities/system/file-system-live";
+import { FileSystemLive } from "~/capabilities/system/file-system-live";
 import { FileSystemTag } from "~/capabilities/system/file-system-port";
 import { GitMock } from "~/capabilities/system/git-mock";
 import { GitTag } from "~/capabilities/system/git-port";
-import type { Network } from "~/capabilities/system/network-port";
+import { NetworkTag, type Network } from "~/capabilities/system/network-port";
 import { ShellMock } from "~/capabilities/system/shell-mock";
 import { ShellTag } from "~/capabilities/system/shell-port";
 import type { ManagedTool, ToolManagement, ToolManager } from "~/capabilities/tools/tool-management-port";
 import { ToolManagementTag } from "~/capabilities/tools/tool-management-port";
-import { makeConfigLoaderLive } from "~/core/config/config-loader-live";
+import { ConfigLoaderLiveLayer } from "~/core/config/config-loader-live";
+import { ConfigLoaderTag } from "~/core/config/config-loader-port";
 import { gitError, shellExecutionError } from "~/core/errors";
+import { HostPathsTag } from "~/core/runtime/path-service";
 import { makeHostPathsMock } from "~/core/runtime/path-service-mock";
 import { checkTool, ensureCorrectConfigUrl, selfUpdateCli, upgradeEssentialTools } from "~/features/upgrade/upgrade-command";
 
@@ -32,6 +34,22 @@ const createManagedTool = (id: string, displayName: string, manager: ToolManager
   essential: true,
   manager,
 });
+
+const makeConfigLoader = (hostPaths: ReturnType<typeof makeHostPathsMock>, network: Network) =>
+  Effect.gen(function* () {
+    return yield* ConfigLoaderTag;
+  }).pipe(
+    Effect.provide(
+      Layer.provide(
+        ConfigLoaderLiveLayer,
+        Layer.mergeAll(
+          Layer.succeed(FileSystemTag, FileSystemLive),
+          Layer.succeed(NetworkTag, network),
+          Layer.succeed(HostPathsTag, hostPaths),
+        ),
+      ),
+    ),
+  );
 
 describe("upgrade-command", () => {
   describe("ensureCorrectConfigUrl", () => {
@@ -71,9 +89,8 @@ describe("upgrade-command", () => {
           cacheDir: path.join(tempDir, ".cache", "dev"),
         });
 
-        const fileSystem = makeFileSystemLive();
-        const fileSystemLayer = Layer.succeed(FileSystemTag, fileSystem);
-        const configLoader = makeConfigLoaderLive(fileSystem, unusedNetwork, configPath);
+        const fileSystemLayer = Layer.succeed(FileSystemTag, FileSystemLive);
+        const configLoader = yield* makeConfigLoader(hostPaths, unusedNetwork);
 
         yield* ensureCorrectConfigUrl(hostPaths, configLoader).pipe(Effect.provide(fileSystemLayer));
 
@@ -127,9 +144,8 @@ describe("upgrade-command", () => {
           cacheDir: path.join(tempDir, ".cache", "dev"),
         });
 
-        const fileSystem = makeFileSystemLive();
-        const fileSystemLayer = Layer.succeed(FileSystemTag, fileSystem);
-        const configLoader = makeConfigLoaderLive(fileSystem, unusedNetwork, configPath);
+        const fileSystemLayer = Layer.succeed(FileSystemTag, FileSystemLive);
+        const configLoader = yield* makeConfigLoader(hostPaths, unusedNetwork);
 
         const result = yield* Effect.either(ensureCorrectConfigUrl(hostPaths, configLoader).pipe(Effect.provide(fileSystemLayer)));
 

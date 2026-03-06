@@ -3,7 +3,7 @@ import { Effect, Layer } from "effect";
 import { describe, expect } from "vitest";
 
 import { FileSystemTag, type FileSystem } from "~/capabilities/system/file-system-port";
-import { DirectoryLiveLayer, makeDirectoryLive } from "~/capabilities/workspace/directory-live";
+import { DirectoryLiveLayer } from "~/capabilities/workspace/directory-live";
 import { DirectoryTag } from "~/capabilities/workspace/directory-port";
 import { fileSystemError } from "~/core/errors";
 import { WorkspacePathsTag, type WorkspacePaths } from "~/core/runtime/path-service";
@@ -25,19 +25,23 @@ const makeFileSystem = (overrides: Partial<FileSystem> = {}): FileSystem => ({
 const makeDeps = (fileSystem: FileSystem, workspacePaths = makeWorkspacePaths()) =>
   Layer.mergeAll(Layer.succeed(FileSystemTag, fileSystem), Layer.succeed(WorkspacePathsTag, workspacePaths));
 
+const makeDirectory = (fileSystem: FileSystem, workspacePaths = makeWorkspacePaths()) =>
+  Effect.gen(function* () {
+    return yield* DirectoryTag;
+  }).pipe(Effect.provide(Layer.provide(DirectoryLiveLayer, makeDeps(fileSystem, workspacePaths))));
+
 describe("directory-live", () => {
-  describe("makeDirectoryLive", () => {
-    it("creates a Directory implementation", () => {
-      const workspacePaths = makeWorkspacePaths();
-      const fileSystem = makeFileSystem();
+  describe("DirectoryLiveLayer", () => {
+    it.effect("creates a Directory implementation", () =>
+      Effect.gen(function* () {
+        const directory = yield* makeDirectory(makeFileSystem());
 
-      const directory = makeDirectoryLive(workspacePaths, fileSystem);
-
-      expect(directory).toHaveProperty("ensureBaseDirectoryExists");
-      expect(directory).toHaveProperty("findDirs");
-      expect(typeof directory.ensureBaseDirectoryExists).toBe("function");
-      expect(typeof directory.findDirs).toBe("function");
-    });
+        expect(directory).toHaveProperty("ensureBaseDirectoryExists");
+        expect(directory).toHaveProperty("findDirs");
+        expect(typeof directory.ensureBaseDirectoryExists).toBe("function");
+        expect(typeof directory.findDirs).toBe("function");
+      }),
+    );
   });
 
   describe("ensureBaseDirectoryExists", () => {
@@ -53,7 +57,7 @@ describe("directory-live", () => {
             }),
         });
 
-        const directory = makeDirectoryLive(workspacePaths, fileSystem);
+        const directory = yield* makeDirectory(fileSystem, workspacePaths);
         yield* directory.ensureBaseDirectoryExists();
 
         expect(mkdirCalls).toEqual([{ path: "/home/user/dev", recursive: true }]);
@@ -72,7 +76,7 @@ describe("directory-live", () => {
             }),
         });
 
-        const directory = makeDirectoryLive(workspacePaths, fileSystem);
+        const directory = yield* makeDirectory(fileSystem, workspacePaths);
         yield* directory.ensureBaseDirectoryExists();
 
         expect(mkdirCalled).toBe(false);
@@ -87,7 +91,7 @@ describe("directory-live", () => {
           mkdir: () => Effect.fail(fileSystemError("Permission denied", "/home/user/dev")),
         });
 
-        const directory = makeDirectoryLive(workspacePaths, fileSystem);
+        const directory = yield* makeDirectory(fileSystem, workspacePaths);
         const error = yield* Effect.flip(directory.ensureBaseDirectoryExists());
 
         expect(error).toMatchObject({
@@ -119,7 +123,7 @@ describe("directory-live", () => {
             }),
         });
 
-        const directory = makeDirectoryLive(workspacePaths, fileSystem);
+        const directory = yield* makeDirectory(fileSystem, workspacePaths);
         const directories = yield* directory.findDirs();
 
         expect(directories).toEqual([]);
@@ -145,7 +149,7 @@ describe("directory-live", () => {
             }),
         });
 
-        const directory = makeDirectoryLive(workspacePaths, fileSystem);
+        const directory = yield* makeDirectory(fileSystem, workspacePaths);
         const directories = yield* directory.findDirs();
 
         expect(directories).toEqual(expectedDirectories);
@@ -162,7 +166,7 @@ describe("directory-live", () => {
           findDirectoriesGlob: () => Effect.fail(fileSystemError("Glob search failed", "/home/user/dev")),
         });
 
-        const directory = makeDirectoryLive(workspacePaths, fileSystem);
+        const directory = yield* makeDirectory(fileSystem, workspacePaths);
         const error = yield* Effect.flip(directory.findDirs());
 
         expect(error).toMatchObject({
@@ -206,7 +210,7 @@ describe("directory-live", () => {
           findDirectoriesGlob: () => Effect.succeed(expectedDirectories),
         });
 
-        const directory = makeDirectoryLive(workspacePaths, fileSystem);
+        const directory = yield* makeDirectory(fileSystem, workspacePaths);
         const directories = yield* directory.findDirs();
 
         expect(directories).toEqual(expectedDirectories);
@@ -220,7 +224,7 @@ describe("directory-live", () => {
           findDirectoriesGlob: () => Effect.succeed([]),
         });
 
-        const directory = makeDirectoryLive(workspacePaths, fileSystem);
+        const directory = yield* makeDirectory(fileSystem, workspacePaths);
         const directories = yield* directory.findDirs();
 
         expect(directories).toEqual([]);

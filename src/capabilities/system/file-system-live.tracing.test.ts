@@ -10,7 +10,7 @@ import { ATTR_FILE_PATH } from "@opentelemetry/semantic-conventions/incubating";
 import { Effect } from "effect";
 import { afterEach, beforeEach, describe, expect } from "vitest";
 
-import { makeFileSystemLive } from "~/capabilities/system/file-system-live";
+import { FileSystemLive } from "~/capabilities/system/file-system-live";
 
 const createTelemetryLayer = (exporter: InMemorySpanExporter) =>
   NodeSdk.layer(() => ({
@@ -37,7 +37,7 @@ describe("file-system-live", () => {
     const telemetryLayer = createTelemetryLayer(exporter);
 
     return Effect.gen(function* () {
-      const fileSystem = makeFileSystemLive();
+      const fileSystem = FileSystemLive;
       const filePath = path.join(tempDir, "read-target.txt");
       yield* Effect.promise(() => fs.writeFile(filePath, "payload"));
 
@@ -55,7 +55,7 @@ describe("file-system-live", () => {
     const telemetryLayer = createTelemetryLayer(exporter);
 
     return Effect.gen(function* () {
-      const fileSystem = makeFileSystemLive();
+      const fileSystem = FileSystemLive;
       const filePath = path.join(tempDir, "write-target.txt");
       yield* fileSystem.writeFile(filePath, "payload");
 
@@ -70,7 +70,7 @@ describe("file-system-live", () => {
     const telemetryLayer = createTelemetryLayer(exporter);
 
     return Effect.gen(function* () {
-      const fileSystem = makeFileSystemLive();
+      const fileSystem = FileSystemLive;
       const filePath = path.join(tempDir, "exists-target.txt");
       yield* fileSystem.exists(filePath);
 
@@ -85,7 +85,7 @@ describe("file-system-live", () => {
     const telemetryLayer = createTelemetryLayer(exporter);
 
     return Effect.gen(function* () {
-      const fileSystem = makeFileSystemLive();
+      const fileSystem = FileSystemLive;
       const dirPath = path.join(tempDir, "mkdir-target");
       yield* fileSystem.mkdir(dirPath, true);
 
@@ -100,7 +100,7 @@ describe("file-system-live", () => {
     const telemetryLayer = createTelemetryLayer(exporter);
 
     return Effect.gen(function* () {
-      const fileSystem = makeFileSystemLive();
+      const fileSystem = FileSystemLive;
       yield* Effect.promise(() => fs.mkdir(path.join(tempDir, "project-one"), { recursive: true }));
       yield* Effect.promise(() => fs.mkdir(path.join(tempDir, "project-two"), { recursive: true }));
 
@@ -118,7 +118,7 @@ describe("file-system-live", () => {
     const telemetryLayer = createTelemetryLayer(exporter);
 
     return Effect.gen(function* () {
-      const fileSystem = makeFileSystemLive();
+      const fileSystem = FileSystemLive;
       const missingPath = path.join(tempDir, "missing.txt");
       yield* Effect.exit(fileSystem.readFile(missingPath));
 
