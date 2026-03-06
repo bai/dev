@@ -1,22 +1,22 @@
 import { Effect } from "effect";
 
-import { BunToolsLiveLayer, BunToolsTag, type BunTools } from "~/capabilities/tools/adapters/bun-tools-live";
-import { DockerToolsLiveLayer, DockerToolsTag, type DockerTools } from "~/capabilities/tools/adapters/docker-tools-live";
-import { FzfToolsLiveLayer, FzfToolsTag, type FzfTools } from "~/capabilities/tools/adapters/fzf-tools-live";
-import { GcloudToolsLiveLayer, GcloudToolsTag, type GcloudTools } from "~/capabilities/tools/adapters/gcloud-tools-live";
-import { GitToolsLiveLayer, GitToolsTag, type GitTools } from "~/capabilities/tools/adapters/git-tools-live";
-import { MiseToolsLiveLayer, MiseToolsTag, type MiseTools } from "~/capabilities/tools/adapters/mise-tools-live";
+import { BunToolsLiveLayer, BunTools, type BunToolsService } from "~/capabilities/tools/adapters/bun-tools-live";
+import { DockerToolsLiveLayer, DockerTools, type DockerToolsService } from "~/capabilities/tools/adapters/docker-tools-live";
+import { FzfToolsLiveLayer, FzfTools, type FzfToolsService } from "~/capabilities/tools/adapters/fzf-tools-live";
+import { GcloudToolsLiveLayer, GcloudTools, type GcloudToolsService } from "~/capabilities/tools/adapters/gcloud-tools-live";
+import { GitToolsLiveLayer, GitTools, type GitToolsService } from "~/capabilities/tools/adapters/git-tools-live";
+import { MiseToolsLiveLayer, MiseTools, type MiseToolsService } from "~/capabilities/tools/adapters/mise-tools-live";
 import { type HealthCheckResult } from "~/capabilities/tools/health-check-port";
 import { type ManagedTool, type ToolManager } from "~/capabilities/tools/tool-management-port";
 import { type HealthCheckError } from "~/core/errors";
 
 export interface ToolRegistryDependencies {
-  readonly bunTools: BunTools;
-  readonly dockerTools: DockerTools;
-  readonly fzfTools: FzfTools;
-  readonly gcloudTools: GcloudTools;
-  readonly gitTools: GitTools;
-  readonly miseTools: MiseTools;
+  readonly bunTools: BunToolsService;
+  readonly dockerTools: DockerToolsService;
+  readonly fzfTools: FzfToolsService;
+  readonly gcloudTools: GcloudToolsService;
+  readonly gitTools: GitToolsService;
+  readonly miseTools: MiseToolsService;
 }
 
 interface ToolRegistryEntry {
@@ -82,13 +82,13 @@ export const toolRegistryEntries = {
   },
 } as const satisfies Readonly<Record<string, ToolRegistryEntry>>;
 
-export interface BuiltToolRegistry {
+export interface BuiltToolRegistryService {
   readonly managedTools: readonly ManagedTool[];
   readonly essentialManagedTools: readonly ManagedTool[];
   readonly healthCheckers: ReadonlyMap<string, () => Effect.Effect<HealthCheckResult, HealthCheckError>>;
 }
 
-export const createToolRegistry = (dependencies: ToolRegistryDependencies): BuiltToolRegistry => {
+export const createToolRegistry = (dependencies: ToolRegistryDependencies): BuiltToolRegistryService => {
   const entries: ReadonlyArray<readonly [string, ToolRegistryEntry]> = Object.entries(toolRegistryEntries);
   const managedTools = entries.flatMap(([id, entry]) => {
     if (!entry.createManager) {
@@ -122,15 +122,15 @@ export const createToolRegistry = (dependencies: ToolRegistryDependencies): Buil
   };
 };
 
-export class BuiltToolRegistryTag extends Effect.Service<BuiltToolRegistry>()("BuiltToolRegistry", {
+export class BuiltToolRegistry extends Effect.Service<BuiltToolRegistryService>()("BuiltToolRegistry", {
   dependencies: [BunToolsLiveLayer, DockerToolsLiveLayer, FzfToolsLiveLayer, GcloudToolsLiveLayer, GitToolsLiveLayer, MiseToolsLiveLayer],
   effect: Effect.gen(function* () {
-    const bunTools = yield* BunToolsTag;
-    const dockerTools = yield* DockerToolsTag;
-    const fzfTools = yield* FzfToolsTag;
-    const gcloudTools = yield* GcloudToolsTag;
-    const gitTools = yield* GitToolsTag;
-    const miseTools = yield* MiseToolsTag;
+    const bunTools = yield* BunTools;
+    const dockerTools = yield* DockerTools;
+    const fzfTools = yield* FzfTools;
+    const gcloudTools = yield* GcloudTools;
+    const gitTools = yield* GitTools;
+    const miseTools = yield* MiseTools;
 
     return createToolRegistry({
       bunTools,
@@ -143,4 +143,4 @@ export class BuiltToolRegistryTag extends Effect.Service<BuiltToolRegistry>()("B
   }),
 }) {}
 
-export const BuiltToolRegistryLiveLayer = BuiltToolRegistryTag.Default;
+export const BuiltToolRegistryLiveLayer = BuiltToolRegistry.Default;

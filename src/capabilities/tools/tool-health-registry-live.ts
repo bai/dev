@@ -1,16 +1,16 @@
 import { Effect, Layer } from "effect";
 
-import { ToolHealthRegistryTag, type ToolHealthRegistry } from "~/capabilities/tools/tool-health-registry-port";
-import { BuiltToolRegistryTag, type BuiltToolRegistry } from "~/capabilities/tools/tool-registry-live";
+import { ToolHealthRegistry, type ToolHealthRegistryService } from "~/capabilities/tools/tool-health-registry-port";
+import { BuiltToolRegistry, type BuiltToolRegistryService } from "~/capabilities/tools/tool-registry-live";
 import { healthCheckError, type HealthCheckError } from "~/core/errors";
 
 /**
  * Effect Layer for dependency injection
  */
 export const ToolHealthRegistryLiveLayer = Layer.effect(
-  ToolHealthRegistryTag,
+  ToolHealthRegistry,
   Effect.gen(function* () {
-    const toolRegistry = yield* BuiltToolRegistryTag;
+    const toolRegistry = yield* BuiltToolRegistry;
     const toolCheckers = toolRegistry.healthCheckers;
 
     return {
@@ -30,6 +30,6 @@ export const ToolHealthRegistryLiveLayer = Layer.effect(
           const checkEffects = Array.from(toolCheckers.values()).map((checker) => checker());
           return yield* Effect.all(checkEffects, { concurrency: "unbounded" });
         }),
-    } satisfies ToolHealthRegistry;
+    } satisfies ToolHealthRegistryService;
   }),
 );

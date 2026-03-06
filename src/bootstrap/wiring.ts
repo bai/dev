@@ -21,21 +21,21 @@ import { ToolHealthRegistryLiveLayer } from "~/capabilities/tools/tool-health-re
 import { ToolManagementLiveLayer } from "~/capabilities/tools/tool-management-live";
 import { BuiltToolRegistryLiveLayer } from "~/capabilities/tools/tool-registry-live";
 import { DirectoryLiveLayer } from "~/capabilities/workspace/directory-live";
-import { DirectoryTag } from "~/capabilities/workspace/directory-port";
+import { Directory } from "~/capabilities/workspace/directory-port";
 import { ShellIntegrationLiveLayer } from "~/capabilities/workspace/shell-integration-service";
-import { AppConfigTag } from "~/core/config/app-config-port";
+import { AppConfig } from "~/core/config/app-config-port";
 import { ConfigLoaderLiveLayer } from "~/core/config/config-loader-live";
-import { ConfigLoaderTag } from "~/core/config/config-loader-port";
+import { ConfigLoader } from "~/core/config/config-loader-port";
 import { type Config } from "~/core/config/config-schema";
 import { TracingLiveLayer } from "~/core/observability/tracing-live";
 import {
-  EnvironmentPathsTag,
-  type EnvironmentPaths,
-  InstallPathsTag,
-  type InstallPaths,
-  StatePathsTag,
-  type StatePaths,
-  WorkspacePathsTag,
+  EnvironmentPaths,
+  type EnvironmentPathsService,
+  InstallPaths,
+  type InstallPathsService,
+  StatePaths,
+  type StatePathsService,
+  WorkspacePaths,
 } from "~/core/runtime/path-service";
 import {
   createEnvironmentPathsLiveLayer,
@@ -49,19 +49,19 @@ import { UpdateCheckerLiveLayer } from "~/features/upgrade/update-check-service"
 
 interface SetupOptions {
   readonly configPath?: string;
-  readonly environmentPaths?: EnvironmentPaths;
-  readonly installPaths?: InstallPaths;
-  readonly statePaths?: StatePaths;
+  readonly environmentPaths?: EnvironmentPathsService;
+  readonly installPaths?: InstallPathsService;
+  readonly statePaths?: StatePathsService;
 }
 
 const buildEnvironmentPathsLayer = (options: SetupOptions) =>
-  options.environmentPaths ? Layer.succeed(EnvironmentPathsTag, options.environmentPaths) : createEnvironmentPathsLiveLayer();
+  options.environmentPaths ? Layer.succeed(EnvironmentPaths, options.environmentPaths) : createEnvironmentPathsLiveLayer();
 
 const buildInstallPathsLayer = (options: SetupOptions) =>
-  options.installPaths ? Layer.succeed(InstallPathsTag, options.installPaths) : createInstallPathsLiveLayer();
+  options.installPaths ? Layer.succeed(InstallPaths, options.installPaths) : createInstallPathsLiveLayer();
 
 const buildStatePathsLayer = (options: SetupOptions) =>
-  options.statePaths ? Layer.succeed(StatePathsTag, options.statePaths) : createStatePathsLiveLayer(options.configPath);
+  options.statePaths ? Layer.succeed(StatePaths, options.statePaths) : createStatePathsLiveLayer(options.configPath);
 
 const buildBootstrapLayer = (options: SetupOptions) => {
   const statePathsLayer = buildStatePathsLayer(options);
@@ -74,7 +74,7 @@ const buildContextLayer = (config: Config, options: SetupOptions) => {
   const environmentPathsLayer = buildEnvironmentPathsLayer(options);
   const installPathsLayer = buildInstallPathsLayer(options);
   const statePathsLayer = buildStatePathsLayer(options);
-  const appConfigLayer = Layer.succeed(AppConfigTag, config);
+  const appConfigLayer = Layer.succeed(AppConfig, config);
   const baseLayer = Layer.mergeAll(
     environmentPathsLayer,
     installPathsLayer,
@@ -130,7 +130,7 @@ export const loadConfiguration = (options: SetupOptions = {}) =>
 
     // Provide the bootstrap layer and load config
     return yield* Effect.gen(function* () {
-      const configLoader = yield* ConfigLoaderTag;
+      const configLoader = yield* ConfigLoader;
       const config = yield* configLoader.load();
       yield* Effect.logDebug(`✅ Configuration loaded successfully (org: ${config.defaultOrg})`);
       return config;
@@ -164,8 +164,8 @@ export const setupApplication = (options: SetupOptions = {}) =>
     // Ensure base directory exists
     yield* Effect.gen(function* () {
       yield* Effect.logDebug("📁 Ensuring base directory exists...");
-      const directoryService = yield* DirectoryTag;
-      const workspacePaths = yield* WorkspacePathsTag;
+      const directoryService = yield* Directory;
+      const workspacePaths = yield* WorkspacePaths;
       yield* directoryService.ensureBaseDirectoryExists();
       yield* Effect.logDebug(`✅ Base directory ready at: ${workspacePaths.baseSearchPath}`);
     }).pipe(Effect.provide(directorySetupLayer), Effect.withSpan("directory.ensure_base"));

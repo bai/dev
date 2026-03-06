@@ -3,11 +3,11 @@ import { Cause, Effect, Exit, Layer, Option } from "effect";
 import { afterEach, describe, expect, vi } from "vitest";
 
 import { DatabaseMock } from "~/capabilities/persistence/database-mock";
-import { DatabaseTag } from "~/capabilities/persistence/database-port";
+import { Database } from "~/capabilities/persistence/database-port";
 import { HealthCheckLiveLayer } from "~/capabilities/tools/health-check-live";
-import { HealthCheckTag, type HealthCheck, type HealthCheckResult } from "~/capabilities/tools/health-check-port";
-import { ToolHealthRegistryTag } from "~/capabilities/tools/tool-health-registry-port";
-import type { ToolHealthRegistry } from "~/capabilities/tools/tool-health-registry-port";
+import { HealthCheck, type HealthCheckService, type HealthCheckResult } from "~/capabilities/tools/health-check-port";
+import { ToolHealthRegistry } from "~/capabilities/tools/tool-health-registry-port";
+import type { ToolHealthRegistryService } from "~/capabilities/tools/tool-health-registry-port";
 import { configError, healthCheckError } from "~/core/errors";
 
 interface DatabaseCapture {
@@ -58,14 +58,14 @@ const createDatabaseCapture = (): DatabaseCapture => {
 };
 
 describe("health-check-live", () => {
-  const makeHealthCheck = (database: DatabaseMock, toolHealthRegistry: ToolHealthRegistry): Effect.Effect<HealthCheck> =>
+  const makeHealthCheck = (database: DatabaseMock, toolHealthRegistry: ToolHealthRegistryService): Effect.Effect<HealthCheckService> =>
     Effect.gen(function* () {
-      return yield* HealthCheckTag;
+      return yield* HealthCheck;
     }).pipe(
       Effect.provide(
         Layer.provide(
           HealthCheckLiveLayer,
-          Layer.mergeAll(Layer.succeed(DatabaseTag, database), Layer.succeed(ToolHealthRegistryTag, toolHealthRegistry)),
+          Layer.mergeAll(Layer.succeed(Database, database), Layer.succeed(ToolHealthRegistry, toolHealthRegistry)),
         ),
       ),
     );
@@ -100,7 +100,7 @@ describe("health-check-live", () => {
         },
       ];
 
-      const toolHealthRegistry: ToolHealthRegistry = {
+      const toolHealthRegistry: ToolHealthRegistryService = {
         checkAllTools: () => Effect.succeed(results),
         checkTool: () => healthCheckError("not used in this test"),
         getRegisteredTools: () => Effect.succeed(["git", "bun"]),
@@ -154,7 +154,7 @@ describe("health-check-live", () => {
         transactionDb: fakeDb as never,
       });
 
-      const toolHealthRegistry: ToolHealthRegistry = {
+      const toolHealthRegistry: ToolHealthRegistryService = {
         checkAllTools: () =>
           Effect.succeed([
             {
@@ -185,7 +185,7 @@ describe("health-check-live", () => {
         },
       });
 
-      const toolHealthRegistry: ToolHealthRegistry = {
+      const toolHealthRegistry: ToolHealthRegistryService = {
         checkAllTools: () =>
           Effect.succeed([
             {
@@ -218,7 +218,7 @@ describe("health-check-live", () => {
     Effect.gen(function* () {
       const databaseCapture = createDatabaseCapture();
 
-      const toolHealthRegistry: ToolHealthRegistry = {
+      const toolHealthRegistry: ToolHealthRegistryService = {
         checkAllTools: () => healthCheckError("tool registry unavailable"),
         checkTool: () => healthCheckError("not used in this test"),
         getRegisteredTools: () => Effect.succeed([]),

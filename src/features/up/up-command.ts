@@ -2,9 +2,9 @@ import { Command } from "@effect/cli";
 import { ATTR_PROCESS_WORKING_DIRECTORY } from "@opentelemetry/semantic-conventions/incubating";
 import { Effect } from "effect";
 
-import { CommandRegistryTag } from "~/bootstrap/command-registry-port";
-import { FileSystemTag } from "~/capabilities/system/file-system-port";
-import { MiseTag } from "~/capabilities/tools/mise-port";
+import { CommandRegistry } from "~/bootstrap/command-registry-port";
+import { FileSystem } from "~/capabilities/system/file-system-port";
+import { Mise } from "~/capabilities/tools/mise-port";
 
 /**
  * Display help for the up command
@@ -24,8 +24,8 @@ export const displayHelp = (): Effect.Effect<void, never, never> =>
 // Create the up command using @effect/cli (no arguments needed)
 export const upCommand = Command.make("up", {}, () =>
   Effect.gen(function* () {
-    const mise = yield* MiseTag;
-    const fileSystem = yield* FileSystemTag;
+    const mise = yield* Mise;
+    const fileSystem = yield* FileSystem;
 
     yield* Effect.logInfo("Setting up development environment...");
 
@@ -56,8 +56,8 @@ export const upCommand = Command.make("up", {}, () =>
 /**
  * Register the up command with the command registry
  */
-export const registerUpCommand: Effect.Effect<void, never, CommandRegistryTag> = Effect.gen(function* () {
-  const registry = yield* CommandRegistryTag;
+export const registerUpCommand: Effect.Effect<void, never, CommandRegistry> = Effect.gen(function* () {
+  const registry = yield* CommandRegistry;
   yield* registry.register({
     name: "up",
     command: upCommand,

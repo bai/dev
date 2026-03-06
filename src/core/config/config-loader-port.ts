@@ -3,8 +3,8 @@ import { Effect } from "effect";
 import type { Config } from "~/core/config/config-schema";
 import type { ConfigError, FileSystemError, NetworkError, UnknownError } from "~/core/errors";
 
-export class ConfigLoaderTag extends Effect.Tag("ConfigLoader")<
-  ConfigLoaderTag,
+export class ConfigLoader extends Effect.Tag("ConfigLoader")<
+  ConfigLoader,
   {
     parse(content: string, source?: string): Effect.Effect<Config, ConfigError>;
     load(): Effect.Effect<Config, ConfigError | FileSystemError | UnknownError>;
@@ -13,4 +13,4 @@ export class ConfigLoaderTag extends Effect.Tag("ConfigLoader")<
   }
 >() {}
 
-export type ConfigLoader = (typeof ConfigLoaderTag)["Service"];
+export type ConfigLoaderService = (typeof ConfigLoader)["Service"];

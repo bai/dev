@@ -17,8 +17,8 @@ export interface ServiceStatus {
   readonly uptime?: string;
 }
 
-export class DockerServicesTag extends Effect.Tag("DockerServices")<
-  DockerServicesTag,
+export class DockerServices extends Effect.Tag("DockerServices")<
+  DockerServices,
   {
     up(services?: readonly ServiceName[]): Effect.Effect<void, DockerServiceError | ShellExecutionError>;
     down(services?: readonly ServiceName[]): Effect.Effect<void, DockerServiceError | ShellExecutionError>;
@@ -34,4 +34,4 @@ export class DockerServicesTag extends Effect.Tag("DockerServices")<
   }
 >() {}
 
-export type DockerServices = (typeof DockerServicesTag)["Service"];
+export type DockerServicesService = (typeof DockerServices)["Service"];

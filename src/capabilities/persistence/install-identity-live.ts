@@ -1,9 +1,9 @@
 import { eq } from "drizzle-orm";
 import { Effect, Layer } from "effect";
 
-import { DatabaseTag, type Database } from "~/capabilities/persistence/database-port";
+import { Database, type DatabaseService } from "~/capabilities/persistence/database-port";
 import type { DrizzleDatabase } from "~/capabilities/persistence/drizzle-types";
-import { InstallIdentityTag, type InstallIdentity } from "~/capabilities/persistence/install-identity-port";
+import { InstallIdentity, type InstallIdentityService } from "~/capabilities/persistence/install-identity-port";
 import { configError } from "~/core/errors";
 
 import { installMetadata } from "../../../drizzle/schema";
@@ -36,9 +36,9 @@ const insertInstallMetadataRow = (db: DrizzleDatabase, installId: string) =>
   });
 
 export const InstallIdentityLiveLayer = Layer.effect(
-  InstallIdentityTag,
+  InstallIdentity,
   Effect.gen(function* () {
-    const database = yield* DatabaseTag;
+    const database = yield* Database;
     return {
       getOrCreateInstallId: () =>
         database.query((db) =>
@@ -58,6 +58,6 @@ export const InstallIdentityLiveLayer = Layer.effect(
             return persistedInstallId;
           }),
         ),
-    } satisfies InstallIdentity;
+    } satisfies InstallIdentityService;
   }),
 );

@@ -1,8 +1,8 @@
 import { desc, eq, isNull, lt } from "drizzle-orm";
 import { Clock, Effect, Layer } from "effect";
 
-import { DatabaseTag } from "~/capabilities/persistence/database-port";
-import { RunStoreTag, type RunStore } from "~/capabilities/persistence/run-store-port";
+import { Database } from "~/capabilities/persistence/database-port";
+import { RunStore, type RunStoreService } from "~/capabilities/persistence/run-store-port";
 import { configError, type ConfigError, type UnknownError } from "~/core/errors";
 import type { CommandRun } from "~/core/models";
 import { annotateErrorTypeOnFailure } from "~/core/observability/error-type";
@@ -23,9 +23,9 @@ const toDomainRun = (row: typeof runs.$inferSelect): CommandRun => ({
 
 // Effect Layer for dependency injection
 export const RunStoreLiveLayer = Layer.scoped(
-  RunStoreTag,
+  RunStore,
   Effect.gen(function* () {
-    const database = yield* DatabaseTag;
+    const database = yield* Database;
     return {
       record: (run: Omit<CommandRun, "id" | "durationMs">): Effect.Effect<string, ConfigError | UnknownError> =>
         database
@@ -135,6 +135,6 @@ export const RunStoreLiveLayer = Layer.scoped(
           annotateErrorTypeOnFailure,
           Effect.withSpan("run_store.complete_incomplete"),
         ),
-    } satisfies RunStore;
+    } satisfies RunStoreService;
   }),
 );

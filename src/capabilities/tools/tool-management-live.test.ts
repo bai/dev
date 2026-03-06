@@ -2,21 +2,21 @@ import { it } from "@effect/vitest";
 import { Effect, Layer } from "effect";
 import { describe, expect, vi } from "vitest";
 
-import type { BunTools } from "~/capabilities/tools/adapters/bun-tools-live";
-import { BunToolsTag } from "~/capabilities/tools/adapters/bun-tools-live";
-import type { DockerTools } from "~/capabilities/tools/adapters/docker-tools-live";
-import { DockerToolsTag } from "~/capabilities/tools/adapters/docker-tools-live";
-import type { FzfTools } from "~/capabilities/tools/adapters/fzf-tools-live";
-import { FzfToolsTag } from "~/capabilities/tools/adapters/fzf-tools-live";
-import type { GcloudTools } from "~/capabilities/tools/adapters/gcloud-tools-live";
-import { GcloudToolsTag } from "~/capabilities/tools/adapters/gcloud-tools-live";
-import type { GitTools } from "~/capabilities/tools/adapters/git-tools-live";
-import { GitToolsTag } from "~/capabilities/tools/adapters/git-tools-live";
-import type { MiseTools } from "~/capabilities/tools/adapters/mise-tools-live";
-import { MiseToolsTag } from "~/capabilities/tools/adapters/mise-tools-live";
+import type { BunToolsService } from "~/capabilities/tools/adapters/bun-tools-live";
+import { BunTools } from "~/capabilities/tools/adapters/bun-tools-live";
+import type { DockerToolsService } from "~/capabilities/tools/adapters/docker-tools-live";
+import { DockerTools } from "~/capabilities/tools/adapters/docker-tools-live";
+import type { FzfToolsService } from "~/capabilities/tools/adapters/fzf-tools-live";
+import { FzfTools } from "~/capabilities/tools/adapters/fzf-tools-live";
+import type { GcloudToolsService } from "~/capabilities/tools/adapters/gcloud-tools-live";
+import { GcloudTools } from "~/capabilities/tools/adapters/gcloud-tools-live";
+import type { GitToolsService } from "~/capabilities/tools/adapters/git-tools-live";
+import { GitTools } from "~/capabilities/tools/adapters/git-tools-live";
+import type { MiseToolsService } from "~/capabilities/tools/adapters/mise-tools-live";
+import { MiseTools } from "~/capabilities/tools/adapters/mise-tools-live";
 import { ToolManagementLiveLayer } from "~/capabilities/tools/tool-management-live";
-import { ToolManagementTag } from "~/capabilities/tools/tool-management-port";
-import { BuiltToolRegistryTag } from "~/capabilities/tools/tool-registry-live";
+import { ToolManagement } from "~/capabilities/tools/tool-management-port";
+import { BuiltToolRegistry } from "~/capabilities/tools/tool-registry-live";
 
 const createVersionedToolMock = (version: string, isValid: boolean) => ({
   getCurrentVersion: vi.fn(() => Effect.succeed(version)),
@@ -34,11 +34,11 @@ const createVersionedToolMock = (version: string, isValid: boolean) => ({
 });
 
 const createFixtures = () => {
-  const bunTools: BunTools = createVersionedToolMock("1.4.2", true);
-  const gitTools: GitTools = createVersionedToolMock("2.60.1", true);
-  const miseTools: MiseTools = createVersionedToolMock("2026.2.1", true);
-  const fzfTools: FzfTools = createVersionedToolMock("0.20.0", false);
-  const dockerTools: DockerTools = {
+  const bunTools: BunToolsService = createVersionedToolMock("1.4.2", true);
+  const gitTools: GitToolsService = createVersionedToolMock("2.60.1", true);
+  const miseTools: MiseToolsService = createVersionedToolMock("2026.2.1", true);
+  const fzfTools: FzfToolsService = createVersionedToolMock("0.20.0", false);
+  const dockerTools: DockerToolsService = {
     getDockerVersion: vi.fn(() => Effect.succeed("29.1.3")),
     getComposeVersion: vi.fn(() => Effect.succeed("2.32.4")),
     performHealthCheck: vi.fn(() =>
@@ -50,20 +50,20 @@ const createFixtures = () => {
       }),
     ),
   };
-  const gcloudTools: GcloudTools = {
+  const gcloudTools: GcloudToolsService = {
     ...createVersionedToolMock("552.0.0", true),
     setupConfig: vi.fn(() => Effect.void),
   };
 
   const dependencies = Layer.mergeAll(
-    Layer.succeed(BunToolsTag, bunTools),
-    Layer.succeed(DockerToolsTag, dockerTools),
-    Layer.succeed(GitToolsTag, gitTools),
-    Layer.succeed(MiseToolsTag, miseTools),
-    Layer.succeed(FzfToolsTag, fzfTools),
-    Layer.succeed(GcloudToolsTag, gcloudTools),
+    Layer.succeed(BunTools, bunTools),
+    Layer.succeed(DockerTools, dockerTools),
+    Layer.succeed(GitTools, gitTools),
+    Layer.succeed(MiseTools, miseTools),
+    Layer.succeed(FzfTools, fzfTools),
+    Layer.succeed(GcloudTools, gcloudTools),
   );
-  const builtToolRegistryLayer = Layer.provide(BuiltToolRegistryTag.DefaultWithoutDependencies, dependencies);
+  const builtToolRegistryLayer = Layer.provide(BuiltToolRegistry.DefaultWithoutDependencies, dependencies);
 
   return {
     bunTools,
@@ -80,7 +80,7 @@ describe("tool-management-live", () => {
   it.effect("wires each tool manager to its matching tool service", () =>
     Effect.gen(function* () {
       const fixtures = createFixtures();
-      const toolManagement = yield* ToolManagementTag.pipe(Effect.provide(fixtures.layer));
+      const toolManagement = yield* ToolManagement.pipe(Effect.provide(fixtures.layer));
       const bunManager = yield* Effect.fromNullable(toolManagement.tools["bun"]).pipe(
         Effect.orElseFail(() => new Error("Missing bun tool manager")),
       );
@@ -119,7 +119,7 @@ describe("tool-management-live", () => {
   it.effect("delegates upgrade calls without cross-wiring other tools", () =>
     Effect.gen(function* () {
       const fixtures = createFixtures();
-      const toolManagement = yield* ToolManagementTag.pipe(Effect.provide(fixtures.layer));
+      const toolManagement = yield* ToolManagement.pipe(Effect.provide(fixtures.layer));
       const gitManager = yield* Effect.fromNullable(toolManagement.tools["git"]).pipe(
         Effect.orElseFail(() => new Error("Missing git tool manager")),
       );
@@ -138,7 +138,7 @@ describe("tool-management-live", () => {
   it.effect("preserves checkVersion result payloads from tool services", () =>
     Effect.gen(function* () {
       const fixtures = createFixtures();
-      const toolManagement = yield* ToolManagementTag.pipe(Effect.provide(fixtures.layer));
+      const toolManagement = yield* ToolManagement.pipe(Effect.provide(fixtures.layer));
       const fzfManager = yield* Effect.fromNullable(toolManagement.tools["fzf"]).pipe(
         Effect.orElseFail(() => new Error("Missing fzf tool manager")),
       );
@@ -156,7 +156,7 @@ describe("tool-management-live", () => {
   it.effect("exposes essential tool metadata from the registry", () =>
     Effect.gen(function* () {
       const fixtures = createFixtures();
-      const toolManagement = yield* ToolManagementTag.pipe(Effect.provide(fixtures.layer));
+      const toolManagement = yield* ToolManagement.pipe(Effect.provide(fixtures.layer));
 
       const essentialToolIds = toolManagement.listEssentialTools().map((tool) => tool.id);
 

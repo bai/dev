@@ -1,16 +1,16 @@
 import { Effect } from "effect";
 
-import type { Git } from "~/capabilities/system/git-port";
+import type { GitService } from "~/capabilities/system/git-port";
 import { gitError } from "~/core/errors";
 import type { Repository } from "~/core/models";
 
 interface GitMockOverrides {
-  readonly cloneRepositoryToPath?: Git["cloneRepositoryToPath"];
-  readonly pullLatestChanges?: Git["pullLatestChanges"];
-  readonly isGitRepository?: Git["isGitRepository"];
-  readonly getCurrentCommitSha?: Git["getCurrentCommitSha"];
-  readonly getCurrentBranch?: Git["getCurrentBranch"];
-  readonly getRemoteUrl?: Git["getRemoteUrl"];
+  readonly cloneRepositoryToPath?: GitService["cloneRepositoryToPath"];
+  readonly pullLatestChanges?: GitService["pullLatestChanges"];
+  readonly isGitRepository?: GitService["isGitRepository"];
+  readonly getCurrentCommitSha?: GitService["getCurrentCommitSha"];
+  readonly getCurrentBranch?: GitService["getCurrentBranch"];
+  readonly getRemoteUrl?: GitService["getRemoteUrl"];
 }
 
 interface GitMockOptions {
@@ -23,7 +23,7 @@ interface GitMockOptions {
   readonly overrides?: GitMockOverrides;
 }
 
-export class GitMock implements Git {
+export class GitMock implements GitService {
   public readonly clonedRepos: Array<{ readonly repository: Repository; readonly destinationPath: string }> = [];
   public readonly pullCalls: string[] = [];
   public readonly isGitRepositoryCalls: string[] = [];

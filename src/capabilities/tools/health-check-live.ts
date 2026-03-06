@@ -1,9 +1,9 @@
 import { sql } from "drizzle-orm";
 import { Clock, Effect, Layer } from "effect";
 
-import { DatabaseTag, type Database } from "~/capabilities/persistence/database-port";
-import { HealthCheckTag, type HealthCheck, type HealthCheckResult } from "~/capabilities/tools/health-check-port";
-import { ToolHealthRegistryTag, type ToolHealthRegistry } from "~/capabilities/tools/tool-health-registry-port";
+import { Database, type DatabaseService } from "~/capabilities/persistence/database-port";
+import { HealthCheck, type HealthCheckService, type HealthCheckResult } from "~/capabilities/tools/health-check-port";
+import { ToolHealthRegistry, type ToolHealthRegistryService } from "~/capabilities/tools/tool-health-registry-port";
 import { healthCheckError, type HealthCheckError } from "~/core/errors";
 import { annotateErrorTypeOnFailure } from "~/core/observability/error-type";
 
@@ -22,7 +22,7 @@ interface InternalHealthCheckResult {
 }
 
 // Store health check results using Database
-const storeHealthCheckResults = (results: InternalHealthCheckResult[], database: Database): Effect.Effect<void, HealthCheckError> =>
+const storeHealthCheckResults = (results: InternalHealthCheckResult[], database: DatabaseService): Effect.Effect<void, HealthCheckError> =>
   database
     .transaction((tx) =>
       Effect.gen(function* () {
@@ -72,10 +72,10 @@ const storeHealthCheckResults = (results: InternalHealthCheckResult[], database:
 
 // Effect Layer for dependency injection
 export const HealthCheckLiveLayer = Layer.effect(
-  HealthCheckTag,
+  HealthCheck,
   Effect.gen(function* () {
-    const database = yield* DatabaseTag;
-    const toolHealthRegistry = yield* ToolHealthRegistryTag;
+    const database = yield* Database;
+    const toolHealthRegistry = yield* ToolHealthRegistry;
     return {
       runHealthChecks: (): Effect.Effect<readonly HealthCheckResult[], HealthCheckError> =>
         Effect.gen(function* () {
@@ -97,6 +97,6 @@ export const HealthCheckLiveLayer = Layer.effect(
 
           return results;
         }).pipe(annotateErrorTypeOnFailure, Effect.withSpan("health_check.run_all")),
-    } satisfies HealthCheck;
+    } satisfies HealthCheckService;
   }),
 );

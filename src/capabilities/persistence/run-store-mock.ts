@@ -1,14 +1,14 @@
 import { Effect } from "effect";
 
-import type { RunStore } from "~/capabilities/persistence/run-store-port";
+import type { RunStoreService } from "~/capabilities/persistence/run-store-port";
 import type { CommandRun } from "~/core/models";
 
 interface RunStoreMockOverrides {
-  readonly record?: RunStore["record"];
-  readonly complete?: RunStore["complete"];
-  readonly prune?: RunStore["prune"];
-  readonly getRecentRuns?: RunStore["getRecentRuns"];
-  readonly completeIncompleteRuns?: RunStore["completeIncompleteRuns"];
+  readonly record?: RunStoreService["record"];
+  readonly complete?: RunStoreService["complete"];
+  readonly prune?: RunStoreService["prune"];
+  readonly getRecentRuns?: RunStoreService["getRecentRuns"];
+  readonly completeIncompleteRuns?: RunStoreService["completeIncompleteRuns"];
 }
 
 interface RunStoreMockOptions {
@@ -17,7 +17,7 @@ interface RunStoreMockOptions {
   readonly overrides?: RunStoreMockOverrides;
 }
 
-export class RunStoreMock implements RunStore {
+export class RunStoreMock implements RunStoreService {
   public readonly recordCalls: Array<Omit<CommandRun, "id" | "durationMs">> = [];
   public readonly completeCalls: Array<{ readonly id: string; readonly exitCode: number; readonly finishedAt: Date }> = [];
   public readonly pruneCalls: number[] = [];

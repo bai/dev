@@ -1,10 +1,10 @@
 import { Effect, Layer } from "effect";
 
-import { GitTag, type Git } from "~/capabilities/system/git-port";
-import { InstallPathsTag, type InstallPaths } from "~/core/runtime/path-service";
-import { VersionTag, type Version } from "~/core/runtime/version-port";
+import { Git, type GitService } from "~/capabilities/system/git-port";
+import { InstallPaths, type InstallPathsService } from "~/core/runtime/path-service";
+import { Version, type VersionService } from "~/core/runtime/version-port";
 
-export const makeVersionLive = (gitPort: Git, installPaths: InstallPaths): Version => {
+export const makeVersionLive = (gitPort: GitService, installPaths: InstallPathsService): VersionService => {
   const getCurrentGitCommitSha = () =>
     installPaths.installMode === "repo"
       ? gitPort.getCurrentCommitSha(installPaths.installDir).pipe(Effect.orElseSucceed(() => "unknown"))
@@ -18,10 +18,10 @@ export const makeVersionLive = (gitPort: Git, installPaths: InstallPaths): Versi
 
 // Layer that provides VersionService
 export const VersionLiveLayer = Layer.effect(
-  VersionTag,
+  Version,
   Effect.gen(function* () {
-    const installPaths = yield* InstallPathsTag;
-    const gitPort = yield* GitTag;
+    const installPaths = yield* InstallPaths;
+    const gitPort = yield* Git;
     return makeVersionLive(gitPort, installPaths);
   }),
 );

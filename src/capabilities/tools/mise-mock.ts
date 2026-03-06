@@ -1,15 +1,15 @@
 import { Effect } from "effect";
 
-import type { Mise, MiseInfo } from "~/capabilities/tools/mise-port";
+import type { MiseService, MiseInfo } from "~/capabilities/tools/mise-port";
 import { shellExecutionError } from "~/core/errors";
 
 interface MiseMockOverrides {
-  readonly checkInstallation?: Mise["checkInstallation"];
-  readonly install?: Mise["install"];
-  readonly installTools?: Mise["installTools"];
-  readonly runTask?: Mise["runTask"];
-  readonly getTasks?: Mise["getTasks"];
-  readonly setupGlobalConfig?: Mise["setupGlobalConfig"];
+  readonly checkInstallation?: MiseService["checkInstallation"];
+  readonly install?: MiseService["install"];
+  readonly installTools?: MiseService["installTools"];
+  readonly runTask?: MiseService["runTask"];
+  readonly getTasks?: MiseService["getTasks"];
+  readonly setupGlobalConfig?: MiseService["setupGlobalConfig"];
 }
 
 interface MiseMockOptions {
@@ -19,7 +19,7 @@ interface MiseMockOptions {
   readonly overrides?: MiseMockOverrides;
 }
 
-export class MiseMock implements Mise {
+export class MiseMock implements MiseService {
   public checkInstallationCalls = 0;
   public installCalls = 0;
   public readonly installToolsCalls: Array<string | undefined> = [];

@@ -7,8 +7,8 @@ export interface MiseInfo {
   runtimeVersions: Record<string, string>;
 }
 
-export class MiseTag extends Effect.Tag("Mise")<
-  MiseTag,
+export class Mise extends Effect.Tag("Mise")<
+  Mise,
   {
     /**
      * Check if mise is installed and get version info
@@ -42,4 +42,4 @@ export class MiseTag extends Effect.Tag("Mise")<
   }
 >() {}
 
-export type Mise = (typeof MiseTag)["Service"];
+export type MiseService = (typeof Mise)["Service"];

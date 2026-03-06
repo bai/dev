@@ -1,8 +1,8 @@
 import { Effect } from "effect";
 
-import type { FileSystem } from "~/capabilities/system/file-system-port";
+import type { FileSystemService } from "~/capabilities/system/file-system-port";
 
-export class FileSystemMock implements FileSystem {
+export class FileSystemMock implements FileSystemService {
   public readonly existingPaths = new Set<string>();
   public readonly existsCalls: string[] = [];
   public readonly mkdirCalls: Array<{ readonly path: string; readonly recursive?: boolean }> = [];

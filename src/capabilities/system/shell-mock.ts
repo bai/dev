@@ -1,9 +1,9 @@
 import { Effect } from "effect";
 
-import type { Shell, SpawnResult } from "~/capabilities/system/shell-port";
+import type { ShellService, SpawnResult } from "~/capabilities/system/shell-port";
 import { shellExecutionError } from "~/core/errors";
 
-export class ShellMock implements Shell {
+export class ShellMock implements ShellService {
   public readonly execCalls: Array<{
     readonly command: string;
     readonly args: readonly string[];

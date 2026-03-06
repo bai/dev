@@ -1,10 +1,10 @@
 import { Clock, Duration, Effect, Layer } from "effect";
 
-import { RunStoreTag, type RunStore } from "~/capabilities/persistence/run-store-port";
-import { AutoUpgradeTriggerTag } from "~/capabilities/system/auto-upgrade-trigger-port";
+import { RunStore, type RunStoreService } from "~/capabilities/persistence/run-store-port";
+import { AutoUpgradeTrigger } from "~/capabilities/system/auto-upgrade-trigger-port";
 import { type ConfigError, type UnknownError } from "~/core/errors";
-import { InstallPathsTag, type InstallPaths } from "~/core/runtime/path-service";
-import { RuntimeContextTag, type RuntimeContext } from "~/core/runtime/runtime-context-port";
+import { InstallPaths, type InstallPathsService } from "~/core/runtime/path-service";
+import { RuntimeContext, type RuntimeContextService } from "~/core/runtime/runtime-context-port";
 
 const upgradeFrequency = Duration.decode("1 day");
 export type TriggerAutoUpgrade = () => Effect.Effect<void, UnknownError>;
@@ -13,16 +13,16 @@ export type TriggerAutoUpgrade = () => Effect.Effect<void, UnknownError>;
  * Update check service for managing upgrade prompts
  * This is app-level logic for upgrade checking
  */
-export interface UpdateChecker {
+export interface UpdateCheckerService {
   runPeriodicUpgradeCheck(): Effect.Effect<void, ConfigError | UnknownError>;
 }
 
 export const makeUpdateChecker = (
-  runStore: RunStore,
+  runStore: RunStoreService,
   triggerAutoUpgrade: TriggerAutoUpgrade,
-  runtimeContext: RuntimeContext,
-  installPaths: InstallPaths,
-): UpdateChecker => {
+  runtimeContext: RuntimeContextService,
+  installPaths: InstallPathsService,
+): UpdateCheckerService => {
   const runPeriodicUpgradeCheck = (): Effect.Effect<void, ConfigError | UnknownError> =>
     Effect.gen(function* () {
       if (!installPaths.upgradeCapable) {
@@ -62,20 +62,15 @@ export const makeUpdateChecker = (
   };
 };
 
-export class UpdateCheckerTag extends Effect.Service<UpdateChecker>()("UpdateChecker", {
-  dependencies: [
-    Layer.service(RunStoreTag),
-    Layer.service(AutoUpgradeTriggerTag),
-    Layer.service(RuntimeContextTag),
-    Layer.service(InstallPathsTag),
-  ],
+export class UpdateChecker extends Effect.Service<UpdateCheckerService>()("UpdateChecker", {
+  dependencies: [Layer.service(RunStore), Layer.service(AutoUpgradeTrigger), Layer.service(RuntimeContext), Layer.service(InstallPaths)],
   effect: Effect.gen(function* () {
-    const runStore = yield* RunStoreTag;
-    const autoUpgradeTrigger = yield* AutoUpgradeTriggerTag;
-    const runtimeContext = yield* RuntimeContextTag;
-    const installPaths = yield* InstallPathsTag;
+    const runStore = yield* RunStore;
+    const autoUpgradeTrigger = yield* AutoUpgradeTrigger;
+    const runtimeContext = yield* RuntimeContext;
+    const installPaths = yield* InstallPaths;
     return makeUpdateChecker(runStore, () => autoUpgradeTrigger.trigger(), runtimeContext, installPaths);
   }),
 }) {}
 
-export const UpdateCheckerLiveLayer = UpdateCheckerTag.Default;
+export const UpdateCheckerLiveLayer = UpdateChecker.Default;

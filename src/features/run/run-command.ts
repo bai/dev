@@ -2,9 +2,9 @@ import { Args, Command } from "@effect/cli";
 import { ATTR_PROCESS_WORKING_DIRECTORY } from "@opentelemetry/semantic-conventions/incubating";
 import { Effect } from "effect";
 
-import { CommandRegistryTag } from "~/bootstrap/command-registry-port";
-import { FileSystemTag } from "~/capabilities/system/file-system-port";
-import { MiseTag } from "~/capabilities/tools/mise-port";
+import { CommandRegistry } from "~/bootstrap/command-registry-port";
+import { FileSystem } from "~/capabilities/system/file-system-port";
+import { Mise } from "~/capabilities/tools/mise-port";
 
 /**
  * Display help for the run command
@@ -36,8 +36,8 @@ const taskArgs = Args.text({ name: "args" }).pipe(Args.repeated);
 export const runCommand = Command.make("run", { task, taskArgs }, ({ task, taskArgs }) =>
   Effect.gen(function* () {
     yield* Effect.logInfo("Running command...");
-    const mise = yield* MiseTag;
-    const fileSystem = yield* FileSystemTag;
+    const mise = yield* Mise;
+    const fileSystem = yield* FileSystem;
     const taskName = task._tag === "Some" ? task.value : undefined;
     yield* Effect.annotateCurrentSpan("operation.type", taskName ? "run" : "list");
     if (taskName) {
@@ -81,8 +81,8 @@ export const runCommand = Command.make("run", { task, taskArgs }, ({ task, taskA
 /**
  * Register the run command with the command registry
  */
-export const registerRunCommand: Effect.Effect<void, never, CommandRegistryTag> = Effect.gen(function* () {
-  const registry = yield* CommandRegistryTag;
+export const registerRunCommand: Effect.Effect<void, never, CommandRegistry> = Effect.gen(function* () {
+  const registry = yield* CommandRegistry;
   yield* registry.register({
     name: "run",
     command: runCommand,

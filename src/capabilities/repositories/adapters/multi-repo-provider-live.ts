@@ -3,8 +3,8 @@ import { Effect, Layer } from "effect";
 import { makeGitHubProvider } from "~/capabilities/repositories/adapters/github-provider-live";
 import { makeGitLabProvider } from "~/capabilities/repositories/adapters/gitlab-provider-live";
 import { resolveProviderForOrganization } from "~/capabilities/repositories/org-provider-utils";
-import { RepoProviderTag, type RepoProvider } from "~/capabilities/repositories/repo-provider-port";
-import { AppConfigTag } from "~/core/config/app-config-port";
+import { RepoProvider, type RepoProviderService } from "~/capabilities/repositories/repo-provider-port";
+import { AppConfig } from "~/core/config/app-config-port";
 import type { GitProviderType } from "~/core/models";
 
 /**
@@ -14,7 +14,7 @@ export const makeMultiRepoProvider = (
   defaultOrg: string,
   defaultProvider: GitProviderType,
   orgToProvider: Record<string, GitProviderType>,
-): RepoProvider => {
+): RepoProviderService => {
   // Create provider instances using the factory functions
   const githubProvider = makeGitHubProvider(defaultOrg);
   const gitlabProvider = makeGitLabProvider(defaultOrg);
@@ -24,7 +24,7 @@ export const makeMultiRepoProvider = (
   /**
    * Select the appropriate provider based on organization
    */
-  const selectProvider = (org: string): RepoProvider => {
+  const selectProvider = (org: string): RepoProviderService => {
     const providerType = getProviderTypeForOrg(org);
     return providerType === "gitlab" ? gitlabProvider : githubProvider;
   };
@@ -65,12 +65,12 @@ export const MultiRepoProviderLiveLayer = (
   defaultOrg: string,
   defaultProvider: GitProviderType,
   orgToProvider: Record<string, GitProviderType>,
-) => Layer.succeed(RepoProviderTag, makeMultiRepoProvider(defaultOrg, defaultProvider, orgToProvider));
+) => Layer.succeed(RepoProvider, makeMultiRepoProvider(defaultOrg, defaultProvider, orgToProvider));
 
 export const RepoProviderLiveLayer = Layer.effect(
-  RepoProviderTag,
+  RepoProvider,
   Effect.gen(function* () {
-    const config = yield* AppConfigTag;
+    const config = yield* AppConfig;
     return makeMultiRepoProvider(config.defaultOrg, config.defaultProvider, config.orgToProvider);
   }),
 );

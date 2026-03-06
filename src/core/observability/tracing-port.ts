@@ -16,8 +16,8 @@ export class TracingError extends Schema.TaggedError<TracingError>()("TracingErr
  * Port for OpenTelemetry telemetry configuration (tracing)
  * This abstracts the telemetry implementation details from the application layer
  */
-export class TracingTag extends Effect.Tag("Tracing")<
-  TracingTag,
+export class Tracing extends Effect.Tag("Tracing")<
+  Tracing,
   {
     /**
      * Creates and returns the NodeSdk configuration for telemetry
@@ -26,4 +26,4 @@ export class TracingTag extends Effect.Tag("Tracing")<
   }
 >() {}
 
-export type Tracing = (typeof TracingTag)["Service"];
+export type TracingService = (typeof Tracing)["Service"];

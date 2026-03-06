@@ -1,7 +1,7 @@
 import { Effect } from "effect";
 
 import { ShellLiveLayer } from "~/capabilities/system/shell-live";
-import { ShellTag } from "~/capabilities/system/shell-port";
+import { Shell } from "~/capabilities/system/shell-port";
 import {
   buildMinimumVersionHealthCheck,
   checkVersionAgainstMinimum,
@@ -12,7 +12,7 @@ import { type ExternalToolError, type HealthCheckError, type ShellExecutionError
 
 export const FZF_MIN_VERSION = "0.67.0";
 
-export interface FzfTools {
+export interface FzfToolsService {
   getCurrentVersion(): Effect.Effect<string | null, ShellExecutionError>;
   checkVersion(): Effect.Effect<{ isValid: boolean; currentVersion: string | null }, ShellExecutionError>;
   performUpgrade(): Effect.Effect<boolean, ShellExecutionError>;
@@ -20,10 +20,10 @@ export interface FzfTools {
   performHealthCheck(): Effect.Effect<HealthCheckResult, HealthCheckError>;
 }
 
-export class FzfToolsTag extends Effect.Service<FzfTools>()("FzfTools", {
+export class FzfTools extends Effect.Service<FzfToolsService>()("FzfTools", {
   dependencies: [ShellLiveLayer],
   effect: Effect.gen(function* () {
-    const shell = yield* ShellTag;
+    const shell = yield* Shell;
     const getBinaryPath = (): Effect.Effect<string | undefined, never> =>
       shell.exec("which", ["fzf"]).pipe(
         Effect.map((result) => (result.exitCode === 0 && result.stdout ? result.stdout.trim() : undefined)),
@@ -79,8 +79,8 @@ export class FzfToolsTag extends Effect.Service<FzfTools>()("FzfTools", {
           getCurrentVersion,
           getBinaryPath,
         }),
-    } satisfies FzfTools;
+    } satisfies FzfToolsService;
   }),
 }) {}
 
-export const FzfToolsLiveLayer = FzfToolsTag.Default;
+export const FzfToolsLiveLayer = FzfTools.Default;

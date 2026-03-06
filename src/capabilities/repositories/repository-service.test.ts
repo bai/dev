@@ -4,13 +4,13 @@ import { describe, expect, it as vitestIt } from "vitest";
 
 import { isFullUrl, makeRepositoryService } from "~/capabilities/repositories/repository-service";
 import type { GitProviderType } from "~/core/models";
-import { WorkspacePathsTag, type WorkspacePaths } from "~/core/runtime/path-service";
+import { WorkspacePaths, type WorkspacePathsService } from "~/core/runtime/path-service";
 import { makeWorkspacePathsMock } from "~/core/runtime/path-service-mock";
 
 describe("repository-service", () => {
-  const makeWorkspacePaths = (baseSearchPath = "/home/user/dev"): WorkspacePaths => makeWorkspacePathsMock(baseSearchPath);
+  const makeWorkspacePaths = (baseSearchPath = "/home/user/dev"): WorkspacePathsService => makeWorkspacePathsMock(baseSearchPath);
 
-  const createRepositoryService = (workspacePaths: WorkspacePaths = makeWorkspacePaths()) => makeRepositoryService(workspacePaths);
+  const createRepositoryService = (workspacePaths: WorkspacePathsService = makeWorkspacePaths()) => makeRepositoryService(workspacePaths);
 
   describe("parseRepoUrlToPath", () => {
     it.effect("parses SSH URL with scp-style syntax", () =>
@@ -137,7 +137,7 @@ describe("repository-service", () => {
 
         const result = yield* repositoryService
           .parseRepoUrlToPath("git@github.com:myorg/myrepo.git")
-          .pipe(Effect.provideService(WorkspacePathsTag, contextWorkspacePaths));
+          .pipe(Effect.provideService(WorkspacePaths, contextWorkspacePaths));
 
         expect(result).toBe("/home/user/dev/github.com/myorg/myrepo");
       }),

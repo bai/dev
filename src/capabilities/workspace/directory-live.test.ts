@@ -2,17 +2,17 @@ import { it } from "@effect/vitest";
 import { Effect, Layer } from "effect";
 import { describe, expect } from "vitest";
 
-import { FileSystemTag, type FileSystem } from "~/capabilities/system/file-system-port";
+import { FileSystem, type FileSystemService } from "~/capabilities/system/file-system-port";
 import { DirectoryLiveLayer } from "~/capabilities/workspace/directory-live";
-import { DirectoryTag } from "~/capabilities/workspace/directory-port";
+import { Directory } from "~/capabilities/workspace/directory-port";
 import { fileSystemError } from "~/core/errors";
-import { WorkspacePathsTag, type WorkspacePaths } from "~/core/runtime/path-service";
+import { WorkspacePaths, type WorkspacePathsService } from "~/core/runtime/path-service";
 
-const makeWorkspacePaths = (baseSearchPath = "/home/user/dev"): WorkspacePaths => ({
+const makeWorkspacePaths = (baseSearchPath = "/home/user/dev"): WorkspacePathsService => ({
   baseSearchPath,
 });
 
-const makeFileSystem = (overrides: Partial<FileSystem> = {}): FileSystem => ({
+const makeFileSystem = (overrides: Partial<FileSystemService> = {}): FileSystemService => ({
   exists: () => Effect.succeed(true),
   mkdir: () => Effect.void,
   readFile: () => Effect.succeed(""),
@@ -22,12 +22,12 @@ const makeFileSystem = (overrides: Partial<FileSystem> = {}): FileSystem => ({
   ...overrides,
 });
 
-const makeDeps = (fileSystem: FileSystem, workspacePaths = makeWorkspacePaths()) =>
-  Layer.mergeAll(Layer.succeed(FileSystemTag, fileSystem), Layer.succeed(WorkspacePathsTag, workspacePaths));
+const makeDeps = (fileSystem: FileSystemService, workspacePaths = makeWorkspacePaths()) =>
+  Layer.mergeAll(Layer.succeed(FileSystem, fileSystem), Layer.succeed(WorkspacePaths, workspacePaths));
 
-const makeDirectory = (fileSystem: FileSystem, workspacePaths = makeWorkspacePaths()) =>
+const makeDirectory = (fileSystem: FileSystemService, workspacePaths = makeWorkspacePaths()) =>
   Effect.gen(function* () {
-    return yield* DirectoryTag;
+    return yield* Directory;
   }).pipe(Effect.provide(Layer.provide(DirectoryLiveLayer, makeDeps(fileSystem, workspacePaths))));
 
 describe("directory-live", () => {
@@ -187,7 +187,7 @@ describe("directory-live", () => {
         const testLayer = DirectoryLiveLayer.pipe(Layer.provide(makeDeps(fileSystem, workspacePaths)));
 
         const directories = yield* Effect.gen(function* () {
-          const directory = yield* DirectoryTag;
+          const directory = yield* Directory;
           return yield* directory.findDirs();
         }).pipe(Effect.provide(testLayer));
 

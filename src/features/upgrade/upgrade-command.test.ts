@@ -7,22 +7,22 @@ import { Deferred, Effect, Fiber, Layer, Ref } from "effect";
 import { describe, expect, it as vitestIt } from "vitest";
 
 import { FileSystemLive } from "~/capabilities/system/file-system-live";
-import { FileSystemTag } from "~/capabilities/system/file-system-port";
+import { FileSystem } from "~/capabilities/system/file-system-port";
 import { GitMock } from "~/capabilities/system/git-mock";
-import { GitTag } from "~/capabilities/system/git-port";
-import { NetworkTag, type Network } from "~/capabilities/system/network-port";
+import { Git } from "~/capabilities/system/git-port";
+import { Network, type NetworkService } from "~/capabilities/system/network-port";
 import { ShellMock } from "~/capabilities/system/shell-mock";
-import { ShellTag } from "~/capabilities/system/shell-port";
-import type { ManagedTool, ToolManagement, ToolManager } from "~/capabilities/tools/tool-management-port";
-import { ToolManagementTag } from "~/capabilities/tools/tool-management-port";
+import { Shell } from "~/capabilities/system/shell-port";
+import type { ManagedTool, ToolManagementService, ToolManager } from "~/capabilities/tools/tool-management-port";
+import { ToolManagement } from "~/capabilities/tools/tool-management-port";
 import { ConfigLoaderLiveLayer } from "~/core/config/config-loader-live";
-import { ConfigLoaderTag } from "~/core/config/config-loader-port";
+import { ConfigLoader } from "~/core/config/config-loader-port";
 import { gitError, shellExecutionError } from "~/core/errors";
-import { StatePathsTag, type InstallPaths } from "~/core/runtime/path-service";
+import { StatePaths, type InstallPathsService } from "~/core/runtime/path-service";
 import { makeInstallPathsMock, makeStatePathsMock } from "~/core/runtime/path-service-mock";
 import { checkTool, ensureCorrectConfigUrl, selfUpdateCli, upgradeEssentialTools } from "~/features/upgrade/upgrade-command";
 
-const unusedNetwork: Network = {
+const unusedNetwork: NetworkService = {
   get: () => Effect.die("Network should not be used in this test"),
   downloadFile: () => Effect.die("Network should not be used in this test"),
   checkConnectivity: () => Effect.succeed(true),
@@ -45,22 +45,22 @@ const makeTestStatePaths = (tempDir: string) =>
     runDir: path.join(tempDir, "state", "run"),
   });
 
-const writeProjectConfig = (installPaths: InstallPaths, projectConfigContent: string) =>
+const writeProjectConfig = (installPaths: InstallPathsService, projectConfigContent: string) =>
   fs
     .mkdir(installPaths.installDir, { recursive: true })
     .then(() => fs.writeFile(path.join(installPaths.installDir, "config.json"), projectConfigContent));
 
-const makeConfigLoader = (configPath: string, network: Network) =>
+const makeConfigLoader = (configPath: string, network: NetworkService) =>
   Effect.gen(function* () {
-    return yield* ConfigLoaderTag;
+    return yield* ConfigLoader;
   }).pipe(
     Effect.provide(
       Layer.provide(
         ConfigLoaderLiveLayer,
         Layer.mergeAll(
-          Layer.succeed(FileSystemTag, FileSystemLive),
-          Layer.succeed(NetworkTag, network),
-          Layer.succeed(StatePathsTag, makeStatePathsMock({ configPath })),
+          Layer.succeed(FileSystem, FileSystemLive),
+          Layer.succeed(Network, network),
+          Layer.succeed(StatePaths, makeStatePathsMock({ configPath })),
         ),
       ),
     ),
@@ -88,7 +88,7 @@ describe("upgrade-command", () => {
         yield* Effect.promise(() => fs.writeFile(statePaths.configPath, localConfigWithComments));
         yield* Effect.promise(() => writeProjectConfig(installPaths, projectConfigWithComments));
 
-        const fileSystemLayer = Layer.succeed(FileSystemTag, FileSystemLive);
+        const fileSystemLayer = Layer.succeed(FileSystem, FileSystemLive);
         const configLoader = yield* makeConfigLoader(statePaths.configPath, unusedNetwork);
 
         yield* ensureCorrectConfigUrl(statePaths, installPaths, configLoader).pipe(Effect.provide(fileSystemLayer));
@@ -128,7 +128,7 @@ describe("upgrade-command", () => {
           ),
         );
 
-        const fileSystemLayer = Layer.succeed(FileSystemTag, FileSystemLive);
+        const fileSystemLayer = Layer.succeed(FileSystem, FileSystemLive);
         const configLoader = yield* makeConfigLoader(statePaths.configPath, unusedNetwork);
         const result = yield* Effect.either(
           ensureCorrectConfigUrl(statePaths, installPaths, configLoader).pipe(Effect.provide(fileSystemLayer)),
@@ -175,7 +175,7 @@ describe("upgrade-command", () => {
       const git = new GitMock({ gitRepositories: ["/tmp/dist"] });
       const shell = new ShellMock();
 
-      yield* selfUpdateCli(installPaths).pipe(Effect.provideService(GitTag, git), Effect.provideService(ShellTag, shell));
+      yield* selfUpdateCli(installPaths).pipe(Effect.provideService(Git, git), Effect.provideService(Shell, shell));
 
       expect(git.isGitRepositoryCalls).toEqual([]);
       expect(git.pullCalls).toEqual([]);
@@ -197,7 +197,7 @@ describe("upgrade-command", () => {
       });
 
       const error = yield* Effect.flip(
-        selfUpdateCli(installPaths).pipe(Effect.provideService(GitTag, git), Effect.provideService(ShellTag, shell)),
+        selfUpdateCli(installPaths).pipe(Effect.provideService(Git, git), Effect.provideService(Shell, shell)),
       );
 
       expect(error._tag).toBe("ExternalToolError");
@@ -222,7 +222,7 @@ describe("upgrade-command", () => {
       });
       const shell = new ShellMock();
 
-      yield* selfUpdateCli(installPaths).pipe(Effect.provideService(GitTag, git), Effect.provideService(ShellTag, shell));
+      yield* selfUpdateCli(installPaths).pipe(Effect.provideService(Git, git), Effect.provideService(Shell, shell));
 
       expect(git.pullCalls).toEqual([tempDir]);
       expect(shell.execCalls).toContainEqual({
@@ -246,7 +246,7 @@ describe("upgrade-command", () => {
       });
       const shell = new ShellMock();
 
-      yield* selfUpdateCli(installPaths).pipe(Effect.provideService(GitTag, git), Effect.provideService(ShellTag, shell));
+      yield* selfUpdateCli(installPaths).pipe(Effect.provideService(Git, git), Effect.provideService(Shell, shell));
 
       expect(git.pullCalls).toEqual([tempDir]);
       expect(shell.execCalls).toContainEqual({
@@ -271,7 +271,7 @@ describe("upgrade-command", () => {
       const shell = new ShellMock();
 
       const error = yield* Effect.flip(
-        selfUpdateCli(installPaths).pipe(Effect.provideService(GitTag, git), Effect.provideService(ShellTag, shell)),
+        selfUpdateCli(installPaths).pipe(Effect.provideService(Git, git), Effect.provideService(Shell, shell)),
       );
 
       expect(error._tag).toBe("ShellExecutionError");
@@ -294,7 +294,7 @@ describe("upgrade-command", () => {
         void fs.rm(installLockPath, { recursive: true, force: true });
       }, 50);
 
-      await Effect.runPromise(selfUpdateCli(installPaths).pipe(Effect.provideService(GitTag, git), Effect.provideService(ShellTag, shell)));
+      await Effect.runPromise(selfUpdateCli(installPaths).pipe(Effect.provideService(Git, git), Effect.provideService(Shell, shell)));
 
       clearTimeout(lockReleaseTimer);
 
@@ -325,13 +325,13 @@ describe("upgrade-command", () => {
         performUpgrade: () => Effect.succeed(true),
         ensureVersionOrUpgrade: () => Effect.void,
       };
-      const toolManagement: ToolManagement = {
+      const toolManagement: ToolManagementService = {
         tools: {},
         listTools: () => [],
         listEssentialTools: () => [createManagedTool("git", "Git", failingTool), createManagedTool("bun", "Bun", untouchedTool)],
       };
 
-      const error = yield* Effect.flip(upgradeEssentialTools().pipe(Effect.provideService(ToolManagementTag, toolManagement)));
+      const error = yield* Effect.flip(upgradeEssentialTools().pipe(Effect.provideService(ToolManagement, toolManagement)));
 
       expect(error._tag).toBe("ShellExecutionError");
       expect(yield* Ref.get(secondToolChecks)).toBe(0);
@@ -362,13 +362,13 @@ describe("upgrade-command", () => {
         performUpgrade: () => Effect.succeed(true),
         ensureVersionOrUpgrade: () => Effect.void,
       };
-      const toolManagement: ToolManagement = {
+      const toolManagement: ToolManagementService = {
         tools: {},
         listTools: () => [],
         listEssentialTools: () => [createManagedTool("git", "Git", firstTool), createManagedTool("bun", "Bun", secondTool)],
       };
 
-      const fiber = yield* Effect.fork(upgradeEssentialTools().pipe(Effect.provideService(ToolManagementTag, toolManagement)));
+      const fiber = yield* Effect.fork(upgradeEssentialTools().pipe(Effect.provideService(ToolManagement, toolManagement)));
 
       yield* Deferred.await(firstStarted);
       expect(yield* Ref.get(calls)).toEqual(["git"]);

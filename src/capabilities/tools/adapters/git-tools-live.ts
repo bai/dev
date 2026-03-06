@@ -1,7 +1,7 @@
 import { Effect } from "effect";
 
 import { ShellLiveLayer } from "~/capabilities/system/shell-live";
-import { ShellTag } from "~/capabilities/system/shell-port";
+import { Shell } from "~/capabilities/system/shell-port";
 import {
   buildMinimumVersionHealthCheck,
   checkVersionAgainstMinimum,
@@ -12,7 +12,7 @@ import { type ExternalToolError, type HealthCheckError, type ShellExecutionError
 
 export const GIT_MIN_VERSION = "2.52.0";
 
-export interface GitTools {
+export interface GitToolsService {
   getCurrentVersion(): Effect.Effect<string | null, ShellExecutionError>;
   checkVersion(): Effect.Effect<{ isValid: boolean; currentVersion: string | null }, ShellExecutionError>;
   performUpgrade(): Effect.Effect<boolean, ShellExecutionError>;
@@ -20,10 +20,10 @@ export interface GitTools {
   performHealthCheck(): Effect.Effect<HealthCheckResult, HealthCheckError>;
 }
 
-export class GitToolsTag extends Effect.Service<GitTools>()("GitTools", {
+export class GitTools extends Effect.Service<GitToolsService>()("GitTools", {
   dependencies: [ShellLiveLayer],
   effect: Effect.gen(function* () {
-    const shell = yield* ShellTag;
+    const shell = yield* Shell;
     const getBinaryPath = (): Effect.Effect<string | undefined, never> =>
       shell.exec("which", ["git"]).pipe(
         Effect.map((result) => (result.exitCode === 0 && result.stdout ? result.stdout.trim() : undefined)),
@@ -79,8 +79,8 @@ export class GitToolsTag extends Effect.Service<GitTools>()("GitTools", {
           getCurrentVersion,
           getBinaryPath,
         }),
-    } satisfies GitTools;
+    } satisfies GitToolsService;
   }),
 }) {}
 
-export const GitToolsLiveLayer = GitToolsTag.Default;
+export const GitToolsLiveLayer = GitTools.Default;

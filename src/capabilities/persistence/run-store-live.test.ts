@@ -3,10 +3,10 @@ import { Effect, Layer } from "effect";
 import { afterEach, describe, expect, vi } from "vitest";
 
 import { DatabaseMock } from "~/capabilities/persistence/database-mock";
-import { DatabaseTag } from "~/capabilities/persistence/database-port";
+import { Database } from "~/capabilities/persistence/database-port";
 import type { DrizzleDatabase } from "~/capabilities/persistence/drizzle-types";
 import { RunStoreLiveLayer } from "~/capabilities/persistence/run-store-live";
-import { RunStoreTag, type RunStore } from "~/capabilities/persistence/run-store-port";
+import { RunStore, type RunStoreService } from "~/capabilities/persistence/run-store-port";
 
 interface MockRunRow {
   readonly id: string;
@@ -44,10 +44,10 @@ const makeMockDatabase = (rows: readonly MockRunRow[]) => {
 };
 
 describe("run-store-live", () => {
-  const makeRunStore = (database: DatabaseMock): Effect.Effect<RunStore> =>
+  const makeRunStore = (database: DatabaseMock): Effect.Effect<RunStoreService> =>
     Effect.gen(function* () {
-      return yield* RunStoreTag;
-    }).pipe(Effect.provide(Layer.provide(RunStoreLiveLayer, Layer.succeed(DatabaseTag, database))));
+      return yield* RunStore;
+    }).pipe(Effect.provide(Layer.provide(RunStoreLiveLayer, Layer.succeed(Database, database))));
 
   afterEach(() => {
     vi.restoreAllMocks();

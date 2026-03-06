@@ -2,7 +2,7 @@ import { Command, HelpDoc, ValidationError } from "@effect/cli";
 import { Effect } from "effect";
 import * as Arr from "effect/Array";
 
-import { type CommandRegistry, type CommandRegistryTag, type RegisteredCommand } from "~/bootstrap/command-registry-port";
+import { type CommandRegistryService, type CommandRegistry, type RegisteredCommand } from "~/bootstrap/command-registry-port";
 import { cliUsageError, type DevError } from "~/core/errors";
 import { registerCdCommand } from "~/features/cd/cd-command";
 import { registerCloneCommand } from "~/features/clone/clone-command";
@@ -41,7 +41,7 @@ export const displayMainHelp = (): Effect.Effect<void, never, never> =>
     yield* Effect.logInfo("Use 'dev <command> --help' for command-specific help.\n");
   });
 
-export const registerAllCommands: Effect.Effect<void, never, CommandRegistryTag> = Effect.gen(function* () {
+export const registerAllCommands: Effect.Effect<void, never, CommandRegistry> = Effect.gen(function* () {
   yield* registerCdCommand;
   yield* registerCloneCommand;
   yield* registerUpCommand;
@@ -52,7 +52,7 @@ export const registerAllCommands: Effect.Effect<void, never, CommandRegistryTag>
   yield* registerUpgradeCommand;
 });
 
-export const checkAndDisplayHelp = (args: readonly string[], registry: CommandRegistry): Effect.Effect<boolean, never, never> =>
+export const checkAndDisplayHelp = (args: readonly string[], registry: CommandRegistryService): Effect.Effect<boolean, never, never> =>
   Effect.gen(function* () {
     const hasHelp = args.includes("--help") || args.includes("-h");
 
@@ -77,7 +77,7 @@ export const checkAndDisplayHelp = (args: readonly string[], registry: CommandRe
     return true;
   });
 
-export const createMainCommand = (registry: CommandRegistry): Effect.Effect<RegisteredCommand, never, never> =>
+export const createMainCommand = (registry: CommandRegistryService): Effect.Effect<RegisteredCommand, never, never> =>
   Effect.gen(function* () {
     const commands = yield* registry.getCommands();
     const baseCommand = Command.make("dev", {}, () => Effect.logInfo("Use --help to see available commands"));
@@ -91,7 +91,7 @@ export const createMainCommand = (registry: CommandRegistry): Effect.Effect<Regi
   });
 
 export const runCli = (
-  registry: CommandRegistry,
+  registry: CommandRegistryService,
   metadata: {
     name: string;
     version: string;

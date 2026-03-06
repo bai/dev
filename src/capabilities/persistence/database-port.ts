@@ -9,8 +9,8 @@ import type { ConfigError, UnknownError } from "~/core/errors";
  * Database port for managing SQLite connections and operations
  * Provides a consistent interface for database operations across the application
  */
-export class DatabaseTag extends Effect.Tag("Database")<
-  DatabaseTag,
+export class Database extends Effect.Tag("Database")<
+  Database,
   {
     /**
      * Execute a database operation with the Drizzle instance
@@ -34,4 +34,4 @@ export class DatabaseTag extends Effect.Tag("Database")<
   }
 >() {}
 
-export type Database = (typeof DatabaseTag)["Service"];
+export type DatabaseService = (typeof Database)["Service"];

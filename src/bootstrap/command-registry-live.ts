@@ -1,11 +1,11 @@
 import { Effect, Layer, Ref } from "effect";
 
-import { CommandRegistryTag, type CommandInfo, type CommandRegistry } from "~/bootstrap/command-registry-port";
+import { CommandRegistry, type CommandInfo, type CommandRegistryService } from "~/bootstrap/command-registry-port";
 
 /**
  * Create an in-memory command registry
  */
-const makeCommandRegistry = (commandsRef: Ref.Ref<ReadonlyArray<CommandInfo>>): CommandRegistry => ({
+const makeCommandRegistry = (commandsRef: Ref.Ref<ReadonlyArray<CommandInfo>>): CommandRegistryService => ({
   register: (info) => Ref.update(commandsRef, (commands) => [...commands, info]),
 
   getByName: (name) =>
@@ -22,7 +22,7 @@ const makeCommandRegistry = (commandsRef: Ref.Ref<ReadonlyArray<CommandInfo>>): 
 });
 
 export const CommandRegistryLiveLayer = Layer.effect(
-  CommandRegistryTag,
+  CommandRegistry,
   Effect.gen(function* () {
     const commandsRef = yield* Ref.make<ReadonlyArray<CommandInfo>>([]);
     return makeCommandRegistry(commandsRef);

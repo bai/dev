@@ -1,14 +1,14 @@
 import { Effect, Layer } from "effect";
 
-import { FileSystemTag, type FileSystem } from "~/capabilities/system/file-system-port";
-import { DirectoryTag, type Directory } from "~/capabilities/workspace/directory-port";
+import { FileSystem, type FileSystemService } from "~/capabilities/system/file-system-port";
+import { Directory, type DirectoryService } from "~/capabilities/workspace/directory-port";
 import { type FileSystemError, type UnknownError } from "~/core/errors";
-import { WorkspacePathsTag, type WorkspacePaths } from "~/core/runtime/path-service";
+import { WorkspacePaths, type WorkspacePathsService } from "~/core/runtime/path-service";
 
 // Individual effect functions (dependencies captured at layer construction)
 const ensureBaseDirectoryExists = (
-  workspacePaths: WorkspacePaths,
-  fileSystem: FileSystem,
+  workspacePaths: WorkspacePathsService,
+  fileSystem: FileSystemService,
 ): Effect.Effect<void, FileSystemError | UnknownError, never> =>
   Effect.gen(function* () {
     const baseDir = workspacePaths.baseSearchPath;
@@ -19,7 +19,10 @@ const ensureBaseDirectoryExists = (
     }
   });
 
-const findDirs = (workspacePaths: WorkspacePaths, fileSystem: FileSystem): Effect.Effect<string[], FileSystemError | UnknownError, never> =>
+const findDirs = (
+  workspacePaths: WorkspacePathsService,
+  fileSystem: FileSystemService,
+): Effect.Effect<string[], FileSystemError | UnknownError, never> =>
   Effect.gen(function* () {
     const baseDir = workspacePaths.baseSearchPath;
 
@@ -37,13 +40,13 @@ const findDirs = (workspacePaths: WorkspacePaths, fileSystem: FileSystem): Effec
 
 // Layer that provides DirectoryService with proper dependency injection
 export const DirectoryLiveLayer = Layer.effect(
-  DirectoryTag,
+  Directory,
   Effect.gen(function* () {
-    const workspacePaths = yield* WorkspacePathsTag;
-    const fileSystem = yield* FileSystemTag;
+    const workspacePaths = yield* WorkspacePaths;
+    const fileSystem = yield* FileSystem;
     return {
       ensureBaseDirectoryExists: () => ensureBaseDirectoryExists(workspacePaths, fileSystem),
       findDirs: () => findDirs(workspacePaths, fileSystem),
-    } satisfies Directory;
+    } satisfies DirectoryService;
   }),
 );

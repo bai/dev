@@ -3,14 +3,14 @@ import { Effect, Layer } from "effect";
 import { describe, expect } from "vitest";
 
 import { ShellMock } from "~/capabilities/system/shell-mock";
-import { ShellTag } from "~/capabilities/system/shell-port";
-import { DOCKER_MIN_VERSION, DockerToolsTag } from "~/capabilities/tools/adapters/docker-tools-live";
+import { Shell } from "~/capabilities/system/shell-port";
+import { DOCKER_MIN_VERSION, DockerTools } from "~/capabilities/tools/adapters/docker-tools-live";
 
 describe("docker-tools-live", () => {
   const makeDockerTools = (shell: ShellMock) =>
     Effect.gen(function* () {
-      return yield* DockerToolsTag;
-    }).pipe(Effect.provide(Layer.provide(DockerToolsTag.DefaultWithoutDependencies, Layer.succeed(ShellTag, shell))));
+      return yield* DockerTools;
+    }).pipe(Effect.provide(Layer.provide(DockerTools.DefaultWithoutDependencies, Layer.succeed(Shell, shell))));
 
   it.effect("parses docker and compose versions", () =>
     Effect.gen(function* () {

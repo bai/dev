@@ -3,7 +3,7 @@ import { Effect } from "effect";
 import { describe, expect } from "vitest";
 
 import { makeMultiRepoProvider, MultiRepoProviderLiveLayer } from "~/capabilities/repositories/adapters/multi-repo-provider-live";
-import { RepoProviderTag } from "~/capabilities/repositories/repo-provider-port";
+import { RepoProvider } from "~/capabilities/repositories/repo-provider-port";
 import type { GitProviderType } from "~/core/models";
 
 describe("multi-repo-provider-live", () => {
@@ -136,7 +136,7 @@ describe("multi-repo-provider-live", () => {
       const providerLayer = MultiRepoProviderLiveLayer("acmesoftware", "github", { acmesoftware: "gitlab" });
 
       return Effect.gen(function* () {
-        const provider = yield* RepoProviderTag;
+        const provider = yield* RepoProvider;
 
         expect(provider.getDefaultOrg()).toBe("acmesoftware");
 
@@ -149,7 +149,7 @@ describe("multi-repo-provider-live", () => {
       const providerLayer = MultiRepoProviderLiveLayer("acmesoftware", "github", { acmesoftware: "gitlab" });
 
       return Effect.gen(function* () {
-        const provider = yield* RepoProviderTag;
+        const provider = yield* RepoProvider;
         const repository = yield* provider.resolveRepository("test-repo");
 
         expect(repository.name).toBe("test-repo");

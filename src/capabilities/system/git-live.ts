@@ -1,15 +1,15 @@
 import { Effect, Layer } from "effect";
 
-import { GitTag, type Git } from "~/capabilities/system/git-port";
-import { ShellTag, type Shell } from "~/capabilities/system/shell-port";
+import { Git, type GitService } from "~/capabilities/system/git-port";
+import { Shell, type ShellService } from "~/capabilities/system/shell-port";
 import { gitError, type GitError, type ShellExecutionError } from "~/core/errors";
 import type { Repository } from "~/core/models";
 
 // Effect Layer for dependency injection
 export const GitLiveLayer = Layer.effect(
-  GitTag,
+  Git,
   Effect.gen(function* () {
-    const shell = yield* ShellTag;
+    const shell = yield* Shell;
     return {
       cloneRepositoryToPath: (repository: Repository, destinationPath: string): Effect.Effect<void, GitError | ShellExecutionError> =>
         Effect.scoped(
@@ -64,6 +64,6 @@ export const GitLiveLayer = Layer.effect(
             return Effect.succeed(result.stdout.trim());
           }),
         ),
-    } satisfies Git;
+    } satisfies GitService;
   }),
 );

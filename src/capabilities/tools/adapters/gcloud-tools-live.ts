@@ -3,9 +3,9 @@ import path from "path";
 import { Effect } from "effect";
 
 import { FileSystemLiveLayer } from "~/capabilities/system/file-system-live";
-import { FileSystemTag } from "~/capabilities/system/file-system-port";
+import { FileSystem } from "~/capabilities/system/file-system-port";
 import { ShellLiveLayer } from "~/capabilities/system/shell-live";
-import { ShellTag } from "~/capabilities/system/shell-port";
+import { Shell } from "~/capabilities/system/shell-port";
 import {
   buildMinimumVersionHealthCheck,
   checkVersionAgainstMinimum,
@@ -13,11 +13,11 @@ import {
 } from "~/capabilities/tools/adapters/versioned-tools-live";
 import { type HealthCheckResult } from "~/capabilities/tools/health-check-port";
 import { unknownError, type ExternalToolError, type HealthCheckError, type ShellExecutionError, type UnknownError } from "~/core/errors";
-import { EnvironmentPathsTag } from "~/core/runtime/path-service";
+import { EnvironmentPaths } from "~/core/runtime/path-service";
 
 export const GCLOUD_MIN_VERSION = "552.0.0";
 
-export interface GcloudTools {
+export interface GcloudToolsService {
   getCurrentVersion(): Effect.Effect<string | null, ShellExecutionError>;
   checkVersion(): Effect.Effect<{ isValid: boolean; currentVersion: string | null }, ShellExecutionError>;
   performUpgrade(): Effect.Effect<boolean, ShellExecutionError>;
@@ -26,12 +26,12 @@ export interface GcloudTools {
   setupConfig(): Effect.Effect<void, UnknownError>;
 }
 
-export class GcloudToolsTag extends Effect.Service<GcloudTools>()("GcloudTools", {
+export class GcloudTools extends Effect.Service<GcloudToolsService>()("GcloudTools", {
   dependencies: [ShellLiveLayer, FileSystemLiveLayer],
   effect: Effect.gen(function* () {
-    const shell = yield* ShellTag;
-    const filesystem = yield* FileSystemTag;
-    const environmentPaths = yield* EnvironmentPathsTag;
+    const shell = yield* Shell;
+    const filesystem = yield* FileSystem;
+    const environmentPaths = yield* EnvironmentPaths;
     const getBinaryPath = (): Effect.Effect<string | undefined, never> =>
       shell.exec("which", ["gcloud"]).pipe(
         Effect.map((result) => (result.exitCode === 0 && result.stdout ? result.stdout.trim() : undefined)),
@@ -125,8 +125,8 @@ export class GcloudToolsTag extends Effect.Service<GcloudTools>()("GcloudTools",
           getCurrentVersion,
           getBinaryPath,
         }),
-    } satisfies GcloudTools;
+    } satisfies GcloudToolsService;
   }),
 }) {}
 
-export const GcloudToolsLiveLayer = GcloudToolsTag.Default;
+export const GcloudToolsLiveLayer = GcloudTools.Default;

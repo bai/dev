@@ -3,10 +3,10 @@ import path from "path";
 import { Command } from "@effect/cli";
 import { Effect } from "effect";
 
-import { CommandRegistryTag } from "~/bootstrap/command-registry-port";
-import { GitTag } from "~/capabilities/system/git-port";
-import { DirectoryTag } from "~/capabilities/workspace/directory-port";
-import { WorkspacePathsTag } from "~/core/runtime/path-service";
+import { CommandRegistry } from "~/bootstrap/command-registry-port";
+import { Git } from "~/capabilities/system/git-port";
+import { Directory } from "~/capabilities/workspace/directory-port";
+import { WorkspacePaths } from "~/core/runtime/path-service";
 
 /**
  * Display help for the sync command
@@ -27,9 +27,9 @@ export const displayHelp = (): Effect.Effect<void, never, never> =>
  */
 export const syncCommand = Command.make("sync", {}, () =>
   Effect.gen(function* () {
-    const directoryService = yield* DirectoryTag;
-    const git = yield* GitTag;
-    const workspacePaths = yield* WorkspacePathsTag;
+    const directoryService = yield* Directory;
+    const git = yield* Git;
+    const workspacePaths = yield* WorkspacePaths;
 
     yield* Effect.logInfo("Scanning for repositories...");
 
@@ -88,8 +88,8 @@ export const syncCommand = Command.make("sync", {}, () =>
 /**
  * Register the sync command with the command registry
  */
-export const registerSyncCommand: Effect.Effect<void, never, CommandRegistryTag> = Effect.gen(function* () {
-  const registry = yield* CommandRegistryTag;
+export const registerSyncCommand: Effect.Effect<void, never, CommandRegistry> = Effect.gen(function* () {
+  const registry = yield* CommandRegistry;
   yield* registry.register({
     name: "sync",
     command: syncCommand,

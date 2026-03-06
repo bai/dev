@@ -4,7 +4,7 @@ import path from "path";
 import { ATTR_FILE_PATH } from "@opentelemetry/semantic-conventions/incubating";
 import { Effect, Layer } from "effect";
 
-import { FileSystemTag, type FileSystem } from "~/capabilities/system/file-system-port";
+import { FileSystem, type FileSystemService } from "~/capabilities/system/file-system-port";
 import { fileSystemError, type FileSystemError, type UnknownError } from "~/core/errors";
 import { annotateErrorTypeOnFailure } from "~/core/observability/error-type";
 
@@ -55,7 +55,7 @@ const findDirectoriesGlob = (basePath: string, pattern: string): Effect.Effect<s
 
 const getCwd = (): Effect.Effect<string> => Effect.sync(() => process.cwd());
 
-export const FileSystemLive: FileSystem = {
+export const FileSystemLive: FileSystemService = {
   readFile,
   writeFile,
   exists,
@@ -65,4 +65,4 @@ export const FileSystemLive: FileSystem = {
 };
 
 // Effect Layer for dependency injection with proper resource management
-export const FileSystemLiveLayer = Layer.succeed(FileSystemTag, FileSystemLive);
+export const FileSystemLiveLayer = Layer.succeed(FileSystem, FileSystemLive);

@@ -16,8 +16,8 @@ export interface CommandInfo {
   readonly displayHelp: () => Effect.Effect<void, never, never>;
 }
 
-export class CommandRegistryTag extends Effect.Tag("CommandRegistry")<
-  CommandRegistryTag,
+export class CommandRegistry extends Effect.Tag("CommandRegistry")<
+  CommandRegistry,
   {
     register(info: CommandInfo): Effect.Effect<void, never, never>;
     getByName(name: string): Effect.Effect<CommandInfo | undefined, never, never>;
@@ -25,4 +25,4 @@ export class CommandRegistryTag extends Effect.Tag("CommandRegistry")<
   }
 >() {}
 
-export type CommandRegistry = (typeof CommandRegistryTag)["Service"];
+export type CommandRegistryService = (typeof CommandRegistry)["Service"];

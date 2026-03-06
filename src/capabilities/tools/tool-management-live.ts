@@ -1,15 +1,15 @@
 import { Effect, Layer } from "effect";
 
-import { ToolManagementTag, type ToolManagement, type ToolManager } from "~/capabilities/tools/tool-management-port";
-import { BuiltToolRegistryTag, type BuiltToolRegistry } from "~/capabilities/tools/tool-registry-live";
+import { ToolManagement, type ToolManagementService, type ToolManager } from "~/capabilities/tools/tool-management-port";
+import { BuiltToolRegistry, type BuiltToolRegistryService } from "~/capabilities/tools/tool-registry-live";
 
 /**
  * Effect Layer that provides the ToolManagementService implementation
  */
 export const ToolManagementLiveLayer = Layer.effect(
-  ToolManagementTag,
+  ToolManagement,
   Effect.gen(function* () {
-    const toolRegistry = yield* BuiltToolRegistryTag;
+    const toolRegistry = yield* BuiltToolRegistry;
     const tools = toolRegistry.managedTools.reduce<Record<string, ToolManager>>(
       (allTools, tool) => ({
         ...allTools,
@@ -22,6 +22,6 @@ export const ToolManagementLiveLayer = Layer.effect(
       tools,
       listTools: () => toolRegistry.managedTools,
       listEssentialTools: () => toolRegistry.essentialManagedTools,
-    } satisfies ToolManagement;
+    } satisfies ToolManagementService;
   }),
 );

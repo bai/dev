@@ -2,16 +2,16 @@ import { it } from "@effect/vitest";
 import { Effect, Exit, Layer } from "effect";
 import { describe, expect } from "vitest";
 
-import { RepoProviderTag, type RepoProvider } from "~/capabilities/repositories/repo-provider-port";
-import { makeRepositoryService, RepositoryServiceTag } from "~/capabilities/repositories/repository-service";
+import { RepoProvider, type RepoProviderService } from "~/capabilities/repositories/repo-provider-port";
+import { makeRepositoryService, RepositoryService } from "~/capabilities/repositories/repository-service";
 import { FileSystemMock } from "~/capabilities/system/file-system-mock";
-import { FileSystemTag } from "~/capabilities/system/file-system-port";
+import { FileSystem } from "~/capabilities/system/file-system-port";
 import { GitMock } from "~/capabilities/system/git-mock";
-import { GitTag } from "~/capabilities/system/git-port";
-import { ShellIntegrationTag, type ShellIntegration } from "~/capabilities/workspace/shell-integration-service";
+import { Git } from "~/capabilities/system/git-port";
+import { ShellIntegration, type ShellIntegrationService } from "~/capabilities/workspace/shell-integration-service";
 import { unknownError } from "~/core/errors";
 import type { GitProvider, Repository } from "~/core/models";
-import { WorkspacePathsTag, type WorkspacePaths } from "~/core/runtime/path-service";
+import { WorkspacePaths, type WorkspacePathsService } from "~/core/runtime/path-service";
 import { makeWorkspacePathsMock } from "~/core/runtime/path-service-mock";
 import { cloneCommand } from "~/features/clone/clone-command";
 
@@ -32,7 +32,7 @@ describe("clone-command", () => {
     }
   }
 
-  class MockRepoProvider implements RepoProvider {
+  class MockRepoProvider implements RepoProviderService {
     constructor(
       private readonly defaultOrg = "default-org",
       private readonly provider: GitProvider = { name: "github", baseUrl: "https://github.com" },
@@ -57,9 +57,9 @@ describe("clone-command", () => {
     }
   }
 
-  const makeWorkspacePaths = (baseSearchPath = "/home/user/dev"): WorkspacePaths => makeWorkspacePathsMock(baseSearchPath);
+  const makeWorkspacePaths = (baseSearchPath = "/home/user/dev"): WorkspacePathsService => makeWorkspacePathsMock(baseSearchPath);
 
-  class MockShellIntegration implements ShellIntegration {
+  class MockShellIntegration implements ShellIntegrationService {
     public changedDirectories: string[] = [];
 
     changeDirectory(path: string): Effect.Effect<void, never, never> {
@@ -68,8 +68,8 @@ describe("clone-command", () => {
     }
   }
 
-  const repositoryServiceLayer = (workspacePaths: WorkspacePaths = makeWorkspacePaths()) =>
-    Layer.succeed(RepositoryServiceTag, makeRepositoryService(workspacePaths));
+  const repositoryServiceLayer = (workspacePaths: WorkspacePathsService = makeWorkspacePaths()) =>
+    Layer.succeed(RepositoryService, makeRepositoryService(workspacePaths));
 
   describe("repository cloning", () => {
     it.effect("clones repository with org/repo format", () =>
@@ -79,12 +79,12 @@ describe("clone-command", () => {
         const shellIntegration = new MockShellIntegration();
 
         const testLayer = Layer.mergeAll(
-          Layer.succeed(FileSystemTag, fileSystem),
-          Layer.succeed(GitTag, git),
-          Layer.succeed(RepoProviderTag, new MockRepoProvider()),
-          Layer.succeed(WorkspacePathsTag, makeWorkspacePaths()),
+          Layer.succeed(FileSystem, fileSystem),
+          Layer.succeed(Git, git),
+          Layer.succeed(RepoProvider, new MockRepoProvider()),
+          Layer.succeed(WorkspacePaths, makeWorkspacePaths()),
           repositoryServiceLayer(),
-          Layer.succeed(ShellIntegrationTag, shellIntegration),
+          Layer.succeed(ShellIntegration, shellIntegration),
         );
 
         // Parse args and run command
@@ -108,12 +108,12 @@ describe("clone-command", () => {
         const shellIntegration = new MockShellIntegration();
 
         const testLayer = Layer.mergeAll(
-          Layer.succeed(FileSystemTag, fileSystem),
-          Layer.succeed(GitTag, git),
-          Layer.succeed(RepoProviderTag, new MockRepoProvider("default-org")),
-          Layer.succeed(WorkspacePathsTag, makeWorkspacePaths()),
+          Layer.succeed(FileSystem, fileSystem),
+          Layer.succeed(Git, git),
+          Layer.succeed(RepoProvider, new MockRepoProvider("default-org")),
+          Layer.succeed(WorkspacePaths, makeWorkspacePaths()),
           repositoryServiceLayer(),
-          Layer.succeed(ShellIntegrationTag, shellIntegration),
+          Layer.succeed(ShellIntegration, shellIntegration),
         );
 
         const args = { repo: "myrepo" };
@@ -137,12 +137,12 @@ describe("clone-command", () => {
         const shellIntegration = new MockShellIntegration();
 
         const testLayer = Layer.mergeAll(
-          Layer.succeed(FileSystemTag, fileSystem),
-          Layer.succeed(GitTag, git),
-          Layer.succeed(RepoProviderTag, new MockRepoProvider()),
-          Layer.succeed(WorkspacePathsTag, makeWorkspacePaths()),
+          Layer.succeed(FileSystem, fileSystem),
+          Layer.succeed(Git, git),
+          Layer.succeed(RepoProvider, new MockRepoProvider()),
+          Layer.succeed(WorkspacePaths, makeWorkspacePaths()),
           repositoryServiceLayer(),
-          Layer.succeed(ShellIntegrationTag, shellIntegration),
+          Layer.succeed(ShellIntegration, shellIntegration),
         );
 
         const args = { repo: "myorg/myrepo" };
@@ -164,12 +164,12 @@ describe("clone-command", () => {
         const shellIntegration = new MockShellIntegration();
 
         const testLayer = Layer.mergeAll(
-          Layer.succeed(FileSystemTag, fileSystem),
-          Layer.succeed(GitTag, git),
-          Layer.succeed(RepoProviderTag, new MockRepoProvider()),
-          Layer.succeed(WorkspacePathsTag, makeWorkspacePaths()),
+          Layer.succeed(FileSystem, fileSystem),
+          Layer.succeed(Git, git),
+          Layer.succeed(RepoProvider, new MockRepoProvider()),
+          Layer.succeed(WorkspacePaths, makeWorkspacePaths()),
           repositoryServiceLayer(),
-          Layer.succeed(ShellIntegrationTag, shellIntegration),
+          Layer.succeed(ShellIntegration, shellIntegration),
         );
 
         const args = { repo: "" };
@@ -196,12 +196,12 @@ describe("clone-command", () => {
         const shellIntegration = new MockShellIntegration();
 
         const testLayer = Layer.mergeAll(
-          Layer.succeed(FileSystemTag, fileSystem),
-          Layer.succeed(GitTag, git),
-          Layer.succeed(RepoProviderTag, new FailingRepoProvider()),
-          Layer.succeed(WorkspacePathsTag, makeWorkspacePaths()),
+          Layer.succeed(FileSystem, fileSystem),
+          Layer.succeed(Git, git),
+          Layer.succeed(RepoProvider, new FailingRepoProvider()),
+          Layer.succeed(WorkspacePaths, makeWorkspacePaths()),
           repositoryServiceLayer(),
-          Layer.succeed(ShellIntegrationTag, shellIntegration),
+          Layer.succeed(ShellIntegration, shellIntegration),
         );
 
         const args = { repo: "myorg/myrepo" };
@@ -224,12 +224,12 @@ describe("clone-command", () => {
         const githubProvider: GitProvider = { name: "github", baseUrl: "https://github.com" };
 
         const testLayer = Layer.mergeAll(
-          Layer.succeed(FileSystemTag, fileSystem),
-          Layer.succeed(GitTag, git),
-          Layer.succeed(RepoProviderTag, new MockRepoProvider("github-org", githubProvider)),
-          Layer.succeed(WorkspacePathsTag, makeWorkspacePaths()),
+          Layer.succeed(FileSystem, fileSystem),
+          Layer.succeed(Git, git),
+          Layer.succeed(RepoProvider, new MockRepoProvider("github-org", githubProvider)),
+          Layer.succeed(WorkspacePaths, makeWorkspacePaths()),
           repositoryServiceLayer(),
-          Layer.succeed(ShellIntegrationTag, shellIntegration),
+          Layer.succeed(ShellIntegration, shellIntegration),
         );
 
         const args = { repo: "github-org/github-repo" };
@@ -250,12 +250,12 @@ describe("clone-command", () => {
         const gitlabProvider: GitProvider = { name: "gitlab", baseUrl: "https://gitlab.com" };
 
         const testLayer = Layer.mergeAll(
-          Layer.succeed(FileSystemTag, fileSystem),
-          Layer.succeed(GitTag, git),
-          Layer.succeed(RepoProviderTag, new MockRepoProvider("gitlab-org", gitlabProvider)),
-          Layer.succeed(WorkspacePathsTag, makeWorkspacePaths()),
+          Layer.succeed(FileSystem, fileSystem),
+          Layer.succeed(Git, git),
+          Layer.succeed(RepoProvider, new MockRepoProvider("gitlab-org", gitlabProvider)),
+          Layer.succeed(WorkspacePaths, makeWorkspacePaths()),
           repositoryServiceLayer(),
-          Layer.succeed(ShellIntegrationTag, shellIntegration),
+          Layer.succeed(ShellIntegration, shellIntegration),
         );
 
         const args = { repo: "gitlab-org/gitlab-repo" };
@@ -277,12 +277,12 @@ describe("clone-command", () => {
         const shellIntegration = new MockShellIntegration();
 
         const testLayer = Layer.mergeAll(
-          Layer.succeed(FileSystemTag, fileSystem),
-          Layer.succeed(GitTag, git),
-          Layer.succeed(RepoProviderTag, new MockRepoProvider()),
-          Layer.succeed(WorkspacePathsTag, makeWorkspacePaths()),
+          Layer.succeed(FileSystem, fileSystem),
+          Layer.succeed(Git, git),
+          Layer.succeed(RepoProvider, new MockRepoProvider()),
+          Layer.succeed(WorkspacePaths, makeWorkspacePaths()),
           repositoryServiceLayer(),
-          Layer.succeed(ShellIntegrationTag, shellIntegration),
+          Layer.succeed(ShellIntegration, shellIntegration),
         );
 
         const args = { repo: "http://github.com/bai/dev.git" };
@@ -305,12 +305,12 @@ describe("clone-command", () => {
         const shellIntegration = new MockShellIntegration();
 
         const testLayer = Layer.mergeAll(
-          Layer.succeed(FileSystemTag, fileSystem),
-          Layer.succeed(GitTag, git),
-          Layer.succeed(RepoProviderTag, new MockRepoProvider()),
-          Layer.succeed(WorkspacePathsTag, makeWorkspacePaths()),
+          Layer.succeed(FileSystem, fileSystem),
+          Layer.succeed(Git, git),
+          Layer.succeed(RepoProvider, new MockRepoProvider()),
+          Layer.succeed(WorkspacePaths, makeWorkspacePaths()),
           repositoryServiceLayer(),
-          Layer.succeed(ShellIntegrationTag, shellIntegration),
+          Layer.succeed(ShellIntegration, shellIntegration),
         );
 
         const args = { repo: "https://github.com/bai/dev.git" };
@@ -333,12 +333,12 @@ describe("clone-command", () => {
         const shellIntegration = new MockShellIntegration();
 
         const testLayer = Layer.mergeAll(
-          Layer.succeed(FileSystemTag, fileSystem),
-          Layer.succeed(GitTag, git),
-          Layer.succeed(RepoProviderTag, new MockRepoProvider()),
-          Layer.succeed(WorkspacePathsTag, makeWorkspacePaths()),
+          Layer.succeed(FileSystem, fileSystem),
+          Layer.succeed(Git, git),
+          Layer.succeed(RepoProvider, new MockRepoProvider()),
+          Layer.succeed(WorkspacePaths, makeWorkspacePaths()),
           repositoryServiceLayer(),
-          Layer.succeed(ShellIntegrationTag, shellIntegration),
+          Layer.succeed(ShellIntegration, shellIntegration),
         );
 
         const args = { repo: "git://github.com/bai/dev.git" };
@@ -361,12 +361,12 @@ describe("clone-command", () => {
         const shellIntegration = new MockShellIntegration();
 
         const testLayer = Layer.mergeAll(
-          Layer.succeed(FileSystemTag, fileSystem),
-          Layer.succeed(GitTag, git),
-          Layer.succeed(RepoProviderTag, new MockRepoProvider()),
-          Layer.succeed(WorkspacePathsTag, makeWorkspacePaths()),
+          Layer.succeed(FileSystem, fileSystem),
+          Layer.succeed(Git, git),
+          Layer.succeed(RepoProvider, new MockRepoProvider()),
+          Layer.succeed(WorkspacePaths, makeWorkspacePaths()),
           repositoryServiceLayer(),
-          Layer.succeed(ShellIntegrationTag, shellIntegration),
+          Layer.succeed(ShellIntegration, shellIntegration),
         );
 
         const args = { repo: "git+ssh://git@github.com/bai/dev.git" };
@@ -389,12 +389,12 @@ describe("clone-command", () => {
         const shellIntegration = new MockShellIntegration();
 
         const testLayer = Layer.mergeAll(
-          Layer.succeed(FileSystemTag, fileSystem),
-          Layer.succeed(GitTag, git),
-          Layer.succeed(RepoProviderTag, new MockRepoProvider()),
-          Layer.succeed(WorkspacePathsTag, makeWorkspacePaths()),
+          Layer.succeed(FileSystem, fileSystem),
+          Layer.succeed(Git, git),
+          Layer.succeed(RepoProvider, new MockRepoProvider()),
+          Layer.succeed(WorkspacePaths, makeWorkspacePaths()),
           repositoryServiceLayer(),
-          Layer.succeed(ShellIntegrationTag, shellIntegration),
+          Layer.succeed(ShellIntegration, shellIntegration),
         );
 
         const args = { repo: "ssh://git@github.com/bai/dev.git" };
@@ -417,12 +417,12 @@ describe("clone-command", () => {
         const shellIntegration = new MockShellIntegration();
 
         const testLayer = Layer.mergeAll(
-          Layer.succeed(FileSystemTag, fileSystem),
-          Layer.succeed(GitTag, git),
-          Layer.succeed(RepoProviderTag, new MockRepoProvider()),
-          Layer.succeed(WorkspacePathsTag, makeWorkspacePaths()),
+          Layer.succeed(FileSystem, fileSystem),
+          Layer.succeed(Git, git),
+          Layer.succeed(RepoProvider, new MockRepoProvider()),
+          Layer.succeed(WorkspacePaths, makeWorkspacePaths()),
           repositoryServiceLayer(),
-          Layer.succeed(ShellIntegrationTag, shellIntegration),
+          Layer.succeed(ShellIntegration, shellIntegration),
         );
 
         const args = { repo: "https://gitlab.com/myorg/myrepo.git" };
@@ -444,12 +444,12 @@ describe("clone-command", () => {
         const shellIntegration = new MockShellIntegration();
 
         const testLayer = Layer.mergeAll(
-          Layer.succeed(FileSystemTag, fileSystem),
-          Layer.succeed(GitTag, git),
-          Layer.succeed(RepoProviderTag, new MockRepoProvider()),
-          Layer.succeed(WorkspacePathsTag, makeWorkspacePaths()),
+          Layer.succeed(FileSystem, fileSystem),
+          Layer.succeed(Git, git),
+          Layer.succeed(RepoProvider, new MockRepoProvider()),
+          Layer.succeed(WorkspacePaths, makeWorkspacePaths()),
           repositoryServiceLayer(),
-          Layer.succeed(ShellIntegrationTag, shellIntegration),
+          Layer.succeed(ShellIntegration, shellIntegration),
         );
 
         const args = { repo: "git@github.com:myorg/myrepo.git" };
@@ -474,12 +474,12 @@ describe("clone-command", () => {
         const workspacePaths = makeWorkspacePaths("/Users/developer/projects");
 
         const testLayer = Layer.mergeAll(
-          Layer.succeed(FileSystemTag, fileSystem),
-          Layer.succeed(GitTag, git),
-          Layer.succeed(RepoProviderTag, new MockRepoProvider()),
-          Layer.succeed(WorkspacePathsTag, workspacePaths),
+          Layer.succeed(FileSystem, fileSystem),
+          Layer.succeed(Git, git),
+          Layer.succeed(RepoProvider, new MockRepoProvider()),
+          Layer.succeed(WorkspacePaths, workspacePaths),
           repositoryServiceLayer(workspacePaths),
-          Layer.succeed(ShellIntegrationTag, shellIntegration),
+          Layer.succeed(ShellIntegration, shellIntegration),
         );
 
         const args = { repo: "test-org/test-repo" };
@@ -499,12 +499,12 @@ describe("clone-command", () => {
         const shellIntegration = new MockShellIntegration();
 
         const testLayer = Layer.mergeAll(
-          Layer.succeed(FileSystemTag, fileSystem),
-          Layer.succeed(GitTag, git),
-          Layer.succeed(RepoProviderTag, new MockRepoProvider()),
-          Layer.succeed(WorkspacePathsTag, makeWorkspacePaths()),
+          Layer.succeed(FileSystem, fileSystem),
+          Layer.succeed(Git, git),
+          Layer.succeed(RepoProvider, new MockRepoProvider()),
+          Layer.succeed(WorkspacePaths, makeWorkspacePaths()),
           repositoryServiceLayer(),
-          Layer.succeed(ShellIntegrationTag, shellIntegration),
+          Layer.succeed(ShellIntegration, shellIntegration),
         );
 
         const args = { repo: "my-org/my-repo-2.0" };

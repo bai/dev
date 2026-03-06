@@ -1,10 +1,10 @@
 import { Layer } from "effect";
 
-import { RuntimeContextTag, type RuntimeContext } from "~/core/runtime/runtime-context-port";
+import { RuntimeContext, type RuntimeContextService } from "~/core/runtime/runtime-context-port";
 
-export const RuntimeContextLive: RuntimeContext = {
+export const RuntimeContextLive: RuntimeContextService = {
   getArgv: () => [...process.argv],
   getCwd: () => process.cwd(),
 };
 
-export const RuntimeContextLiveLayer = Layer.succeed(RuntimeContextTag, RuntimeContextLive);
+export const RuntimeContextLiveLayer = Layer.succeed(RuntimeContext, RuntimeContextLive);

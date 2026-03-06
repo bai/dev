@@ -5,7 +5,7 @@ import { describe, expect } from "vitest";
 
 import { CommandRegistryLiveLayer } from "~/bootstrap/command-registry-live";
 import type { CommandInfo } from "~/bootstrap/command-registry-port";
-import { CommandRegistryTag } from "~/bootstrap/command-registry-port";
+import { CommandRegistry } from "~/bootstrap/command-registry-port";
 
 const makeCommandInfo = (name: string): CommandInfo => ({
   name,
@@ -18,7 +18,7 @@ describe("command-registry-live", () => {
     Effect.gen(function* () {
       const alpha = makeCommandInfo("alpha");
       const beta = makeCommandInfo("beta");
-      const registry = yield* CommandRegistryTag;
+      const registry = yield* CommandRegistry;
       yield* registry.register(alpha);
       yield* registry.register(beta);
       const commands = yield* registry.getCommands();
@@ -30,7 +30,7 @@ describe("command-registry-live", () => {
   it.effect("returns command by name and undefined for missing command", () =>
     Effect.gen(function* () {
       const alpha = makeCommandInfo("alpha");
-      const registry = yield* CommandRegistryTag;
+      const registry = yield* CommandRegistry;
       yield* registry.register(alpha);
       const found = yield* registry.getByName("alpha");
       const missing = yield* registry.getByName("missing");
@@ -43,7 +43,7 @@ describe("command-registry-live", () => {
     Effect.gen(function* () {
       const alpha = makeCommandInfo("alpha");
       const beta = makeCommandInfo("beta");
-      const registry = yield* CommandRegistryTag;
+      const registry = yield* CommandRegistry;
       yield* registry.register(alpha);
       yield* registry.register(beta);
       const commands = yield* registry.getCommands();

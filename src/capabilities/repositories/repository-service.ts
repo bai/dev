@@ -5,13 +5,13 @@ import { Effect, Layer } from "effect";
 import { resolveRepositoryInput } from "~/capabilities/repositories/org-provider-utils";
 import { configError, type ConfigError } from "~/core/errors";
 import type { GitProviderType, Repository } from "~/core/models";
-import { WorkspacePathsTag, type WorkspacePaths } from "~/core/runtime/path-service";
+import { WorkspacePaths, type WorkspacePathsService } from "~/core/runtime/path-service";
 
 /**
  * Repository service for handling repository URL parsing and expansion
  * This is domain logic for repository URL handling
  */
-export interface RepositoryService {
+export interface RepositoryServiceApi {
   parseRepoUrlToPath(repoUrl: string): Effect.Effect<string, ConfigError>;
   parseFullUrlToRepository(repoUrl: string): Effect.Effect<Repository, ConfigError, never>;
   expandToFullGitUrl(
@@ -75,7 +75,7 @@ export const isFullUrl = (str: string): boolean =>
   str.startsWith("git+ssh://") ||
   str.match(/^[^@:/]+@[^:]+:/) !== null; // scp-style git@host:path
 
-export const makeRepositoryService = (workspacePaths: WorkspacePaths): RepositoryService => {
+export const makeRepositoryService = (workspacePaths: WorkspacePathsService): RepositoryServiceApi => {
   const parseRepoUrlToPath = (repoUrl: string): Effect.Effect<string, ConfigError> =>
     Effect.gen(function* () {
       const parsedRepository = yield* parseRepositoryCoordinatesFromUrl(repoUrl);
@@ -123,12 +123,12 @@ export const makeRepositoryService = (workspacePaths: WorkspacePaths): Repositor
   };
 };
 
-export class RepositoryServiceTag extends Effect.Service<RepositoryService>()("RepositoryService", {
-  dependencies: [Layer.service(WorkspacePathsTag)],
+export class RepositoryService extends Effect.Service<RepositoryServiceApi>()("RepositoryService", {
+  dependencies: [Layer.service(WorkspacePaths)],
   effect: Effect.gen(function* () {
-    const workspacePaths = yield* WorkspacePathsTag;
+    const workspacePaths = yield* WorkspacePaths;
     return makeRepositoryService(workspacePaths);
   }),
 }) {}
 
-export const RepositoryServiceLiveLayer = RepositoryServiceTag.Default;
+export const RepositoryServiceLiveLayer = RepositoryService.Default;

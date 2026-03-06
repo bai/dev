@@ -2,24 +2,28 @@ import path from "path";
 
 import { Effect, Layer } from "effect";
 
-import { FileSystemTag, type FileSystem } from "~/capabilities/system/file-system-port";
+import { FileSystem, type FileSystemService } from "~/capabilities/system/file-system-port";
 import { configError, type ConfigError, type FileSystemError, type UnknownError } from "~/core/errors";
-import { StatePathsTag, type StatePaths, WorkspacePathsTag, type WorkspacePaths } from "~/core/runtime/path-service";
+import { StatePaths, type StatePathsService, WorkspacePaths, type WorkspacePathsService } from "~/core/runtime/path-service";
 
 /**
  * Shell integration service for handling directory changes
  * This is app-level logic for shell integration using file-based approach
  */
-export interface ShellIntegration {
+export interface ShellIntegrationService {
   changeDirectory(targetPath: string): Effect.Effect<void, ConfigError | UnknownError | FileSystemError>;
 }
 
 // Helper function to get the cd target file path
 // Use parent process ID to make file unique per shell, avoiding race conditions when multiple processes start concurrently
-const getCdFilePath = (statePaths: StatePaths): string => path.join(statePaths.runDir, `cd_target.${process.ppid}`);
+const getCdFilePath = (statePaths: StatePathsService): string => path.join(statePaths.runDir, `cd_target.${process.ppid}`);
 
 // Factory for a self-contained implementation (captures dependencies at layer construction)
-const makeShellIntegration = (statePaths: StatePaths, workspacePaths: WorkspacePaths, fileSystem: FileSystem): ShellIntegration => ({
+const makeShellIntegration = (
+  statePaths: StatePathsService,
+  workspacePaths: WorkspacePathsService,
+  fileSystem: FileSystemService,
+): ShellIntegrationService => ({
   changeDirectory: (targetPath: string) =>
     Effect.gen(function* () {
       const cleanedTargetPath = targetPath.replace(/\/$/, ""); // Remove trailing slash
@@ -45,14 +49,14 @@ const makeShellIntegration = (statePaths: StatePaths, workspacePaths: WorkspaceP
     }),
 });
 
-export class ShellIntegrationTag extends Effect.Service<ShellIntegration>()("ShellIntegration", {
-  dependencies: [Layer.service(StatePathsTag), Layer.service(WorkspacePathsTag), Layer.service(FileSystemTag)],
+export class ShellIntegration extends Effect.Service<ShellIntegrationService>()("ShellIntegration", {
+  dependencies: [Layer.service(StatePaths), Layer.service(WorkspacePaths), Layer.service(FileSystem)],
   effect: Effect.gen(function* () {
-    const statePaths = yield* StatePathsTag;
-    const workspacePaths = yield* WorkspacePathsTag;
-    const fileSystem = yield* FileSystemTag;
+    const statePaths = yield* StatePaths;
+    const workspacePaths = yield* WorkspacePaths;
+    const fileSystem = yield* FileSystem;
     return makeShellIntegration(statePaths, workspacePaths, fileSystem);
   }),
 }) {}
 
-export const ShellIntegrationLiveLayer = ShellIntegrationTag.Default;
+export const ShellIntegrationLiveLayer = ShellIntegration.Default;

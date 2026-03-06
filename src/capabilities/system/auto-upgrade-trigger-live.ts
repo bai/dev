@@ -1,6 +1,6 @@
 import { Effect, Layer } from "effect";
 
-import { AutoUpgradeTriggerTag, type AutoUpgradeTrigger } from "~/capabilities/system/auto-upgrade-trigger-port";
+import { AutoUpgradeTrigger, type AutoUpgradeTriggerService } from "~/capabilities/system/auto-upgrade-trigger-port";
 import { unknownError, type UnknownError } from "~/core/errors";
 
 export const resolveAutoUpgradeInvocation = (argv: readonly string[], execPath: string): readonly [string, ...string[]] | null => {
@@ -49,8 +49,8 @@ const trigger = (): Effect.Effect<void, UnknownError> =>
     });
   });
 
-export const AutoUpgradeTriggerLive: AutoUpgradeTrigger = {
+export const AutoUpgradeTriggerLive: AutoUpgradeTriggerService = {
   trigger,
 };
 
-export const AutoUpgradeTriggerLiveLayer = Layer.succeed(AutoUpgradeTriggerTag, AutoUpgradeTriggerLive);
+export const AutoUpgradeTriggerLiveLayer = Layer.succeed(AutoUpgradeTrigger, AutoUpgradeTriggerLive);

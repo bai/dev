@@ -3,14 +3,14 @@ import { Effect, Layer } from "effect";
 import { describe, expect } from "vitest";
 
 import { ShellMock } from "~/capabilities/system/shell-mock";
-import { ShellTag } from "~/capabilities/system/shell-port";
-import { BUN_MIN_VERSION, BunToolsTag } from "~/capabilities/tools/adapters/bun-tools-live";
+import { Shell } from "~/capabilities/system/shell-port";
+import { BUN_MIN_VERSION, BunTools } from "~/capabilities/tools/adapters/bun-tools-live";
 
 describe("bun-tools-live", () => {
   const makeBunTools = (shell: ShellMock) =>
     Effect.gen(function* () {
-      return yield* BunToolsTag;
-    }).pipe(Effect.provide(Layer.provide(BunToolsTag.DefaultWithoutDependencies, Layer.succeed(ShellTag, shell))));
+      return yield* BunTools;
+    }).pipe(Effect.provide(Layer.provide(BunTools.DefaultWithoutDependencies, Layer.succeed(Shell, shell))));
 
   it.effect("parses bun version from shell output", () =>
     Effect.gen(function* () {

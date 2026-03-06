@@ -18,8 +18,8 @@ export interface PathRuntime {
 
 export type InstallMode = "repo" | "binary";
 
-export class EnvironmentPathsTag extends Effect.Tag("EnvironmentPaths")<
-  EnvironmentPathsTag,
+export class EnvironmentPaths extends Effect.Tag("EnvironmentPaths")<
+  EnvironmentPaths,
   {
     readonly homeDir: string;
     readonly cwd: string;
@@ -28,10 +28,10 @@ export class EnvironmentPathsTag extends Effect.Tag("EnvironmentPaths")<
   }
 >() {}
 
-export type EnvironmentPaths = (typeof EnvironmentPathsTag)["Service"];
+export type EnvironmentPathsService = (typeof EnvironmentPaths)["Service"];
 
-export class InstallPathsTag extends Effect.Tag("InstallPaths")<
-  InstallPathsTag,
+export class InstallPaths extends Effect.Tag("InstallPaths")<
+  InstallPaths,
   {
     readonly installMode: InstallMode;
     readonly installDir: string;
@@ -39,10 +39,10 @@ export class InstallPathsTag extends Effect.Tag("InstallPaths")<
   }
 >() {}
 
-export type InstallPaths = (typeof InstallPathsTag)["Service"];
+export type InstallPathsService = (typeof InstallPaths)["Service"];
 
-export class StatePathsTag extends Effect.Tag("StatePaths")<
-  StatePathsTag,
+export class StatePaths extends Effect.Tag("StatePaths")<
+  StatePaths,
   {
     readonly stateDir: string;
     readonly configPath: string;
@@ -53,16 +53,16 @@ export class StatePathsTag extends Effect.Tag("StatePaths")<
   }
 >() {}
 
-export type StatePaths = (typeof StatePathsTag)["Service"];
+export type StatePathsService = (typeof StatePaths)["Service"];
 
-export class WorkspacePathsTag extends Effect.Tag("WorkspacePaths")<
-  WorkspacePathsTag,
+export class WorkspacePaths extends Effect.Tag("WorkspacePaths")<
+  WorkspacePaths,
   {
     readonly baseSearchPath: string;
   }
 >() {}
 
-export type WorkspacePaths = (typeof WorkspacePathsTag)["Service"];
+export type WorkspacePathsService = (typeof WorkspacePaths)["Service"];
 
 export const resolveUserPath = (filePath: string, runtime: Pick<PathRuntime, "homeDir" | "cwd">): string => {
   if (filePath.startsWith("~/")) {
@@ -89,7 +89,7 @@ export const resolveRepoInstallDirFromArgv = (argv: readonly string[]): string |
   return path.resolve(scriptPath, "..", "..");
 };
 
-export const createEnvironmentPaths = (runtime: Pick<PathRuntime, "homeDir" | "cwd" | "xdgConfigHome">): EnvironmentPaths => ({
+export const createEnvironmentPaths = (runtime: Pick<PathRuntime, "homeDir" | "cwd" | "xdgConfigHome">): EnvironmentPathsService => ({
   homeDir: runtime.homeDir,
   cwd: runtime.cwd,
   xdgConfigHome: runtime.xdgConfigHome,
@@ -103,7 +103,7 @@ export const createInstallPaths = (
     readonly installMode?: InstallMode;
     readonly upgradeCapable?: boolean;
   } = {},
-): InstallPaths => {
+): InstallPathsService => {
   const inferredInstallMode = isBundledBinaryInvocation(runtime.argv, runtime.execPath) ? "binary" : "repo";
   const installMode = overrides.installMode ?? inferredInstallMode;
   const inferredInstallDir =
@@ -124,7 +124,7 @@ export const createStatePaths = (
     readonly stateDir?: string;
     readonly configPath?: string;
   } = {},
-): StatePaths => {
+): StatePathsService => {
   const stateDir = resolveUserPath(overrides.stateDir ?? runtime.devStateDir ?? DEFAULT_STATE_DIR, runtime);
   return {
     stateDir,
@@ -137,8 +137,8 @@ export const createStatePaths = (
 };
 
 export const createWorkspacePaths = (
-  environmentPaths: Pick<EnvironmentPaths, "homeDir" | "resolveUserPath">,
+  environmentPaths: Pick<EnvironmentPathsService, "homeDir" | "resolveUserPath">,
   baseSearchPath?: string,
-): WorkspacePaths => ({
+): WorkspacePathsService => ({
   baseSearchPath: environmentPaths.resolveUserPath(baseSearchPath ?? path.join(environmentPaths.homeDir, DEFAULT_BASE_SEARCH_DIR)),
 });

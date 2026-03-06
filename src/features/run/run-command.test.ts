@@ -3,10 +3,10 @@ import { it } from "@effect/vitest";
 import { Cause, Effect, Exit, Layer, Option } from "effect";
 import { describe, expect } from "vitest";
 
-import type { FileSystem } from "~/capabilities/system/file-system-port";
-import { FileSystemTag } from "~/capabilities/system/file-system-port";
+import type { FileSystemService } from "~/capabilities/system/file-system-port";
+import { FileSystem } from "~/capabilities/system/file-system-port";
 import { MiseMock } from "~/capabilities/tools/mise-mock";
-import { MiseTag } from "~/capabilities/tools/mise-port";
+import { Mise } from "~/capabilities/tools/mise-port";
 import { ShellExecutionError } from "~/core/errors";
 import { runCommand } from "~/features/run/run-command";
 
@@ -19,7 +19,7 @@ interface MiseCallState {
   }>;
 }
 
-const makeFileSystem = (cwd = "/test/directory"): FileSystem => ({
+const makeFileSystem = (cwd = "/test/directory"): FileSystemService => ({
   getCwd: () => Effect.succeed(cwd),
   exists: () => Effect.succeed(true),
   readFile: () => Effect.succeed("test content"),
@@ -48,8 +48,8 @@ const makeMise = (
   };
 };
 
-const runRunCommand = (args: readonly string[], fileSystem: FileSystem, mise: MiseMock) => {
-  const dependencies = Layer.mergeAll(Layer.succeed(FileSystemTag, fileSystem), Layer.succeed(MiseTag, mise));
+const runRunCommand = (args: readonly string[], fileSystem: FileSystemService, mise: MiseMock) => {
+  const dependencies = Layer.mergeAll(Layer.succeed(FileSystem, fileSystem), Layer.succeed(Mise, mise));
 
   return Command.run(runCommand, { name: "dev", version: "0.0.0" })(["node", "dev", ...args]).pipe(
     Effect.provide(dependencies),

@@ -1,11 +1,11 @@
 import { Effect } from "effect";
 
-import type { RepoProvider } from "~/capabilities/repositories/repo-provider-port";
+import type { RepoProviderService } from "~/capabilities/repositories/repo-provider-port";
 import type { NetworkError, UnknownError } from "~/core/errors";
 import type { GitProvider, Repository } from "~/core/models";
 
 // Factory function that creates GitLabProvider with dependencies
-export const makeGitLabProvider = (defaultOrg = "gitlab-org"): RepoProvider => {
+export const makeGitLabProvider = (defaultOrg = "gitlab-org"): RepoProviderService => {
   const provider: GitProvider = {
     name: "gitlab",
     baseUrl: "https://gitlab.com",

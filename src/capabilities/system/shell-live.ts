@@ -1,7 +1,7 @@
 import { spawn } from "bun";
 import { Effect, Layer } from "effect";
 
-import { ShellTag, type Shell, type SpawnResult } from "~/capabilities/system/shell-port";
+import { Shell, type ShellService, type SpawnResult } from "~/capabilities/system/shell-port";
 import { shellExecutionError, type ShellExecutionError } from "~/core/errors";
 import { annotateErrorTypeOnFailure } from "~/core/observability/error-type";
 
@@ -71,11 +71,11 @@ const setProcessCwd = (path: string): Effect.Effect<void> =>
     process.chdir(path);
   });
 
-export const ShellLive: Shell = {
+export const ShellLive: ShellService = {
   exec,
   execInteractive,
   setProcessCwd,
 };
 
 // Effect Layer for dependency injection with proper resource management
-export const ShellLiveLayer = Layer.succeed(ShellTag, ShellLive);
+export const ShellLiveLayer = Layer.succeed(Shell, ShellLive);

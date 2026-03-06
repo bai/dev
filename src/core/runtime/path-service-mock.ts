@@ -1,6 +1,11 @@
 import path from "path";
 
-import { type EnvironmentPaths, type InstallPaths, type StatePaths, type WorkspacePaths } from "~/core/runtime/path-service";
+import {
+  type EnvironmentPathsService,
+  type InstallPathsService,
+  type StatePathsService,
+  type WorkspacePathsService,
+} from "~/core/runtime/path-service";
 
 const resolveMockUserPath = (filePath: string, runtime: { readonly homeDir: string; readonly cwd: string }): string => {
   if (filePath.startsWith("~/")) {
@@ -18,7 +23,7 @@ export const makeEnvironmentPathsMock = (
     readonly cwd?: string;
     readonly xdgConfigHome?: string;
   } = {},
-): EnvironmentPaths => {
+): EnvironmentPathsService => {
   const homeDir = overrides.homeDir ?? "/home/user";
   const cwd = overrides.cwd ?? homeDir;
   return {
@@ -31,11 +36,11 @@ export const makeEnvironmentPathsMock = (
 
 export const makeInstallPathsMock = (
   overrides: {
-    readonly installMode?: InstallPaths["installMode"];
+    readonly installMode?: InstallPathsService["installMode"];
     readonly installDir?: string;
     readonly upgradeCapable?: boolean;
   } = {},
-): InstallPaths => {
+): InstallPathsService => {
   const installMode = overrides.installMode ?? "repo";
   return {
     installMode,
@@ -53,7 +58,7 @@ export const makeStatePathsMock = (
     readonly dockerDir?: string;
     readonly runDir?: string;
   } = {},
-): StatePaths => {
+): StatePathsService => {
   const stateDir = overrides.stateDir ?? "/home/user/.dev/state";
   return {
     stateDir,
@@ -65,6 +70,6 @@ export const makeStatePathsMock = (
   };
 };
 
-export const makeWorkspacePathsMock = (baseSearchPath = "/home/user/src"): WorkspacePaths => ({
+export const makeWorkspacePathsMock = (baseSearchPath = "/home/user/src"): WorkspacePathsService => ({
   baseSearchPath,
 });

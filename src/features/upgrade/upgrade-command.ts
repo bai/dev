@@ -4,13 +4,13 @@ import path from "path";
 import { Command } from "@effect/cli";
 import { Effect } from "effect";
 
-import { CommandRegistryTag } from "~/bootstrap/command-registry-port";
-import { FileSystemTag } from "~/capabilities/system/file-system-port";
-import { GitTag } from "~/capabilities/system/git-port";
-import { ShellTag } from "~/capabilities/system/shell-port";
-import { MiseTag } from "~/capabilities/tools/mise-port";
-import { ToolManagementTag, type ToolManager } from "~/capabilities/tools/tool-management-port";
-import { type ConfigLoader, ConfigLoaderTag } from "~/core/config/config-loader-port";
+import { CommandRegistry } from "~/bootstrap/command-registry-port";
+import { FileSystem } from "~/capabilities/system/file-system-port";
+import { Git } from "~/capabilities/system/git-port";
+import { Shell } from "~/capabilities/system/shell-port";
+import { Mise } from "~/capabilities/tools/mise-port";
+import { ToolManagement, type ToolManager } from "~/capabilities/tools/tool-management-port";
+import { type ConfigLoaderService, ConfigLoader } from "~/core/config/config-loader-port";
 import { configSchema, type Config } from "~/core/config/config-schema";
 import {
   configError,
@@ -23,12 +23,12 @@ import {
   type UnknownError,
   type DevError,
 } from "~/core/errors";
-import { InstallPathsTag, StatePathsTag, type InstallPaths, type StatePaths } from "~/core/runtime/path-service";
+import { InstallPaths, StatePaths, type InstallPathsService, type StatePathsService } from "~/core/runtime/path-service";
 
 // No options needed for upgrade command
 const INSTALL_LOCK_DIR_NAME = ".dev-upgrade.lock";
 
-const getInstallLockPath = (installPaths: InstallPaths) => path.join(installPaths.installDir, INSTALL_LOCK_DIR_NAME);
+const getInstallLockPath = (installPaths: InstallPathsService) => path.join(installPaths.installDir, INSTALL_LOCK_DIR_NAME);
 
 const tryAcquireInstallLock = (lockPath: string): Effect.Effect<boolean, UnknownError> =>
   Effect.tryPromise({
@@ -68,7 +68,10 @@ const releaseInstallLock = (lockPath: string): Effect.Effect<void, UnknownError>
     catch: (error) => unknownError(`Failed to release install lock at ${lockPath}: ${error}`),
   });
 
-const withInstallLock = <A, E, R>(installPaths: InstallPaths, effect: Effect.Effect<A, E, R>): Effect.Effect<A, E | UnknownError, R> =>
+const withInstallLock = <A, E, R>(
+  installPaths: InstallPathsService,
+  effect: Effect.Effect<A, E, R>,
+): Effect.Effect<A, E | UnknownError, R> =>
   Effect.acquireUseRelease(
     waitForInstallLock(getInstallLockPath(installPaths)),
     () => effect,
@@ -95,9 +98,9 @@ export const displayHelp = (): Effect.Effect<void, never, never> =>
 // Create the upgrade command using @effect/cli
 export const upgradeCommand = Command.make("upgrade", {}, () =>
   Effect.gen(function* () {
-    const configLoader = yield* ConfigLoaderTag;
-    const installPaths = yield* InstallPathsTag;
-    const statePaths = yield* StatePathsTag;
+    const configLoader = yield* ConfigLoader;
+    const installPaths = yield* InstallPaths;
+    const statePaths = yield* StatePaths;
 
     yield* Effect.logInfo("🔄 Upgrading dev CLI tool...");
 
@@ -131,7 +134,7 @@ export const upgradeCommand = Command.make("upgrade", {}, () =>
 /**
  * Self-update the CLI repository
  */
-export function selfUpdateCli(installPaths: InstallPaths): Effect.Effect<void, DevError, GitTag | ShellTag> {
+export function selfUpdateCli(installPaths: InstallPathsService): Effect.Effect<void, DevError, Git | Shell> {
   return Effect.gen(function* () {
     if (!installPaths.upgradeCapable) {
       yield* Effect.logInfo("📝 This dev installation is managed externally; skipping CLI self-update");
@@ -140,8 +143,8 @@ export function selfUpdateCli(installPaths: InstallPaths): Effect.Effect<void, D
 
     yield* Effect.logInfo("🔄 Self-updating CLI repository...");
 
-    const git = yield* GitTag;
-    const shell = yield* ShellTag;
+    const git = yield* Git;
+    const shell = yield* Shell;
 
     yield* withInstallLock(
       installPaths,
@@ -185,11 +188,11 @@ export function selfUpdateCli(installPaths: InstallPaths): Effect.Effect<void, D
 /**
  * Ensure necessary directories exist
  */
-function ensureDirectoriesExist(statePaths: StatePaths): Effect.Effect<void, DevError, FileSystemTag> {
+function ensureDirectoriesExist(statePaths: StatePathsService): Effect.Effect<void, DevError, FileSystem> {
   return Effect.gen(function* () {
     yield* Effect.logInfo("📁 Ensuring necessary directories exist...");
 
-    const fileSystem = yield* FileSystemTag;
+    const fileSystem = yield* FileSystem;
     const directories = Array.from(
       new Set([
         statePaths.stateDir,
@@ -210,11 +213,11 @@ function ensureDirectoriesExist(statePaths: StatePaths): Effect.Effect<void, Dev
 /**
  * Update shell integration
  */
-function ensureShellIntegration(statePaths: StatePaths): Effect.Effect<void, DevError, FileSystemTag> {
+function ensureShellIntegration(statePaths: StatePathsService): Effect.Effect<void, DevError, FileSystem> {
   return Effect.gen(function* () {
     yield* Effect.logInfo("🐚 Ensuring shell integration...");
 
-    const fileSystem = yield* FileSystemTag;
+    const fileSystem = yield* FileSystem;
 
     yield* fileSystem.mkdir(path.join(statePaths.stateDir, "shell"), true);
 
@@ -227,12 +230,12 @@ function ensureShellIntegration(statePaths: StatePaths): Effect.Effect<void, Dev
  * This updates only the configUrl field so that configLoader.refresh() works correctly
  */
 export function ensureCorrectConfigUrl(
-  statePaths: StatePaths,
-  installPaths: InstallPaths,
-  configLoader: ConfigLoader,
-): Effect.Effect<void, DevError, FileSystemTag> {
+  statePaths: StatePathsService,
+  installPaths: InstallPathsService,
+  configLoader: ConfigLoaderService,
+): Effect.Effect<void, DevError, FileSystem> {
   return Effect.gen(function* () {
-    const fileSystem = yield* FileSystemTag;
+    const fileSystem = yield* FileSystem;
 
     if (installPaths.installMode !== "repo") {
       return yield* configError("Standalone binary distribution is not supported yet");
@@ -276,11 +279,11 @@ export function ensureCorrectConfigUrl(
 /**
  * Setup mise global configuration from refreshed config
  */
-function setupMiseGlobalConfiguration(config: Config): Effect.Effect<void, DevError, MiseTag> {
+function setupMiseGlobalConfiguration(config: Config): Effect.Effect<void, DevError, Mise> {
   return Effect.gen(function* () {
     yield* Effect.logInfo("🔧 Setting up mise global configuration...");
 
-    const misePort = yield* MiseTag;
+    const misePort = yield* Mise;
 
     if (config.miseGlobalConfig) {
       yield* Effect.logDebug(`📝 Found mise global config with ${Object.keys(config.miseGlobalConfig.tools || {}).length} tools`);
@@ -298,11 +301,11 @@ function setupMiseGlobalConfiguration(config: Config): Effect.Effect<void, DevEr
 /**
  * Upgrade essential tools
  */
-export function upgradeEssentialTools(): Effect.Effect<void, DevError, ToolManagementTag> {
+export function upgradeEssentialTools(): Effect.Effect<void, DevError, ToolManagement> {
   return Effect.gen(function* () {
     yield* Effect.logInfo("🛠️ Checking essential tools...");
 
-    const toolManagement = yield* ToolManagementTag;
+    const toolManagement = yield* ToolManagement;
     const essentialTools = toolManagement.listEssentialTools();
 
     yield* Effect.forEach(essentialTools, (tool) => checkTool(tool.displayName, tool.manager).pipe(Effect.withSpan("tools.upgrade_one")), {
@@ -380,8 +383,8 @@ function showSuccessMessage(): Effect.Effect<void, DevError, never> {
 /**
  * Register the upgrade command with the command registry
  */
-export const registerUpgradeCommand: Effect.Effect<void, never, CommandRegistryTag> = Effect.gen(function* () {
-  const registry = yield* CommandRegistryTag;
+export const registerUpgradeCommand: Effect.Effect<void, never, CommandRegistry> = Effect.gen(function* () {
+  const registry = yield* CommandRegistry;
   yield* registry.register({
     name: "upgrade",
     command: upgradeCommand,

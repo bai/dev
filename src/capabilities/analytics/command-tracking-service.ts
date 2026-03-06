@@ -1,15 +1,15 @@
 import { Clock, Effect, Layer } from "effect";
 
-import { RunStoreTag, type RunStore } from "~/capabilities/persistence/run-store-port";
+import { RunStore, type RunStoreService } from "~/capabilities/persistence/run-store-port";
 import { type ConfigError, type UnknownError } from "~/core/errors";
-import { RuntimeContextTag, type RuntimeContext } from "~/core/runtime/runtime-context-port";
-import { VersionTag, type Version } from "~/core/runtime/version-port";
+import { RuntimeContext, type RuntimeContextService } from "~/core/runtime/runtime-context-port";
+import { Version, type VersionService } from "~/core/runtime/version-port";
 
 /**
  * Command tracker for recording CLI runs
  * This is app-level logic for command execution tracking
  */
-export interface CommandTracker {
+export interface CommandTrackerService {
   recordCommandRun(): Effect.Effect<string, ConfigError | UnknownError>;
   completeCommandRun(id: string, exitCode: number): Effect.Effect<void, ConfigError | UnknownError>;
 
@@ -19,7 +19,11 @@ export interface CommandTracker {
   gracefulShutdown(): Effect.Effect<void, ConfigError | UnknownError>;
 }
 
-export const makeCommandTracker = (runStore: RunStore, version: Version, runtimeContext: RuntimeContext): CommandTracker => {
+export const makeCommandTracker = (
+  runStore: RunStoreService,
+  version: VersionService,
+  runtimeContext: RuntimeContextService,
+): CommandTrackerService => {
   const recordCommandRun = (): Effect.Effect<string, ConfigError | UnknownError> =>
     Effect.gen(function* () {
       // Gather run information
@@ -71,14 +75,14 @@ export const makeCommandTracker = (runStore: RunStore, version: Version, runtime
   };
 };
 
-export class CommandTrackerTag extends Effect.Service<CommandTracker>()("CommandTracker", {
-  dependencies: [Layer.service(RunStoreTag), Layer.service(VersionTag), Layer.service(RuntimeContextTag)],
+export class CommandTracker extends Effect.Service<CommandTrackerService>()("CommandTracker", {
+  dependencies: [Layer.service(RunStore), Layer.service(Version), Layer.service(RuntimeContext)],
   effect: Effect.gen(function* () {
-    const runStore = yield* RunStoreTag;
-    const version = yield* VersionTag;
-    const runtimeContext = yield* RuntimeContextTag;
+    const runStore = yield* RunStore;
+    const version = yield* Version;
+    const runtimeContext = yield* RuntimeContext;
     return makeCommandTracker(runStore, version, runtimeContext);
   }),
 }) {}
 
-export const CommandTrackerLiveLayer = CommandTrackerTag.Default;
+export const CommandTrackerLiveLayer = CommandTracker.Default;

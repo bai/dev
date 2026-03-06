@@ -3,21 +3,21 @@ import path from "path";
 
 import { Effect, Layer } from "effect";
 
-import { AppConfigTag } from "~/core/config/app-config-port";
+import { AppConfig } from "~/core/config/app-config-port";
 import {
   createEnvironmentPaths,
   createInstallPaths,
   createStatePaths,
   createWorkspacePaths,
-  EnvironmentPathsTag,
-  type EnvironmentPaths,
-  InstallPathsTag,
-  type InstallPaths,
+  EnvironmentPaths,
+  type EnvironmentPathsService,
+  InstallPaths,
+  type InstallPathsService,
   type PathRuntime,
-  StatePathsTag,
-  type StatePaths,
-  WorkspacePathsTag,
-  type WorkspacePaths,
+  StatePaths,
+  type StatePathsService,
+  WorkspacePaths,
+  type WorkspacePathsService,
 } from "~/core/runtime/path-service";
 
 export const resolvePathRuntime = (overrides: Partial<PathRuntime> = {}): PathRuntime => {
@@ -34,13 +34,13 @@ export const resolvePathRuntime = (overrides: Partial<PathRuntime> = {}): PathRu
   };
 };
 
-export const createEnvironmentPathsLive = (runtime = resolvePathRuntime()): EnvironmentPaths => createEnvironmentPaths(runtime);
+export const createEnvironmentPathsLive = (runtime = resolvePathRuntime()): EnvironmentPathsService => createEnvironmentPaths(runtime);
 
-export const createEnvironmentPathsLiveLayer = () => Layer.succeed(EnvironmentPathsTag, createEnvironmentPathsLive());
+export const createEnvironmentPathsLiveLayer = () => Layer.succeed(EnvironmentPaths, createEnvironmentPathsLive());
 
-export const createInstallPathsLive = (runtime = resolvePathRuntime()): InstallPaths => createInstallPaths(runtime);
+export const createInstallPathsLive = (runtime = resolvePathRuntime()): InstallPathsService => createInstallPaths(runtime);
 
-export const createInstallPathsLiveLayer = () => Layer.succeed(InstallPathsTag, createInstallPathsLive());
+export const createInstallPathsLiveLayer = () => Layer.succeed(InstallPaths, createInstallPathsLive());
 
 export const createStatePathsLive = (
   options: {
@@ -48,24 +48,24 @@ export const createStatePathsLive = (
     readonly configPath?: string;
   } = {},
   runtime = resolvePathRuntime(),
-): StatePaths => createStatePaths(runtime, options);
+): StatePathsService => createStatePaths(runtime, options);
 
 export const createStatePathsLiveLayer = (configPath?: string) =>
   Layer.succeed(
-    StatePathsTag,
+    StatePaths,
     createStatePathsLive({
       configPath,
     }),
   );
 
-export const createWorkspacePathsLive = (environmentPaths: EnvironmentPaths, baseSearchPath?: string): WorkspacePaths =>
+export const createWorkspacePathsLive = (environmentPaths: EnvironmentPathsService, baseSearchPath?: string): WorkspacePathsService =>
   createWorkspacePaths(environmentPaths, baseSearchPath);
 
 export const WorkspacePathsLiveLayer = Layer.effect(
-  WorkspacePathsTag,
+  WorkspacePaths,
   Effect.gen(function* () {
-    const config = yield* AppConfigTag;
-    const environmentPaths = yield* EnvironmentPathsTag;
+    const config = yield* AppConfig;
+    const environmentPaths = yield* EnvironmentPaths;
     return createWorkspacePathsLive(environmentPaths, config.baseSearchPath);
   }),
 );

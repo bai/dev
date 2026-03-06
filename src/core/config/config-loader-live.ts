@@ -1,19 +1,19 @@
 import { Effect, Layer } from "effect";
 
-import { FileSystemTag, type FileSystem } from "~/capabilities/system/file-system-port";
-import { NetworkTag, type Network } from "~/capabilities/system/network-port";
-import { ConfigLoaderTag, type ConfigLoader } from "~/core/config/config-loader-port";
+import { FileSystem, type FileSystemService } from "~/capabilities/system/file-system-port";
+import { Network, type NetworkService } from "~/capabilities/system/network-port";
+import { ConfigLoader, type ConfigLoaderService } from "~/core/config/config-loader-port";
 import { configSchema, type Config } from "~/core/config/config-schema";
 import { configError, type ConfigError, type FileSystemError, type NetworkError, type UnknownError } from "~/core/errors";
 import { annotateErrorTypeOnFailure } from "~/core/observability/error-type";
-import { StatePathsTag } from "~/core/runtime/path-service";
+import { StatePaths } from "~/core/runtime/path-service";
 
 export const ConfigLoaderLiveLayer = Layer.effect(
-  ConfigLoaderTag,
+  ConfigLoader,
   Effect.gen(function* () {
-    const fileSystem = yield* FileSystemTag;
-    const network = yield* NetworkTag;
-    const statePaths = yield* StatePathsTag;
+    const fileSystem = yield* FileSystem;
+    const network = yield* Network;
+    const statePaths = yield* StatePaths;
     const configPath = statePaths.configPath;
     const parse = (content: string, source = "config"): Effect.Effect<Config, ConfigError> =>
       Effect.try({
@@ -68,6 +68,6 @@ export const ConfigLoaderLiveLayer = Layer.effect(
       load,
       save,
       refresh,
-    } satisfies ConfigLoader;
+    } satisfies ConfigLoaderService;
   }),
 );

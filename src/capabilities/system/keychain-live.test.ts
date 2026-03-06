@@ -3,9 +3,9 @@ import { Cause, Effect, Exit, Layer, Option } from "effect";
 import { describe, expect } from "vitest";
 
 import { KeychainLiveLayer } from "~/capabilities/system/keychain-live";
-import { KeychainTag } from "~/capabilities/system/keychain-port";
+import { Keychain } from "~/capabilities/system/keychain-port";
 import { ShellMock } from "~/capabilities/system/shell-mock";
-import { ShellTag, type SpawnResult } from "~/capabilities/system/shell-port";
+import { Shell, type SpawnResult } from "~/capabilities/system/shell-port";
 
 const createShell = (responses: Record<string, SpawnResult>) => {
   const shell = new ShellMock();
@@ -21,8 +21,8 @@ const createShell = (responses: Record<string, SpawnResult>) => {
 describe("keychain-live", () => {
   const makeKeychain = (shell: ShellMock) =>
     Effect.gen(function* () {
-      return yield* KeychainTag;
-    }).pipe(Effect.provide(Layer.provide(KeychainLiveLayer, Layer.succeed(ShellTag, shell))));
+      return yield* Keychain;
+    }).pipe(Effect.provide(Layer.provide(KeychainLiveLayer, Layer.succeed(Shell, shell))));
 
   it.effect("stores credentials when security command succeeds", () =>
     Effect.gen(function* () {

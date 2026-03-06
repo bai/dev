@@ -1,11 +1,11 @@
 import { Effect } from "effect";
 
-export class RuntimeContextTag extends Effect.Tag("RuntimeContext")<
-  RuntimeContextTag,
+export class RuntimeContext extends Effect.Tag("RuntimeContext")<
+  RuntimeContext,
   {
     readonly getArgv: () => readonly string[];
     readonly getCwd: () => string;
   }
 >() {}
 
-export type RuntimeContext = (typeof RuntimeContextTag)["Service"];
+export type RuntimeContextService = (typeof RuntimeContext)["Service"];

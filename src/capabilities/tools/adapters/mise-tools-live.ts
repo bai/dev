@@ -1,20 +1,20 @@
 import { Effect } from "effect";
 
 import { ShellLiveLayer } from "~/capabilities/system/shell-live";
-import { ShellTag } from "~/capabilities/system/shell-port";
+import { Shell } from "~/capabilities/system/shell-port";
 import {
   buildMinimumVersionHealthCheck,
   checkVersionAgainstMinimum,
   ensureMinimumVersionOrUpgrade,
 } from "~/capabilities/tools/adapters/versioned-tools-live";
 import { type HealthCheckResult } from "~/capabilities/tools/health-check-port";
-import { MiseTag } from "~/capabilities/tools/mise-port";
+import { Mise } from "~/capabilities/tools/mise-port";
 import { type ExternalToolError, type HealthCheckError, type ShellExecutionError, type UnknownError } from "~/core/errors";
 import { compareVersions } from "~/core/runtime/version-utils";
 
 export const MISE_MIN_VERSION = "2026.1.5";
 
-export interface MiseTools {
+export interface MiseToolsService {
   getCurrentVersion(): Effect.Effect<string | null, ShellExecutionError>;
   checkVersion(): Effect.Effect<{ isValid: boolean; currentVersion: string | null }, ShellExecutionError>;
   performUpgrade(): Effect.Effect<boolean, ShellExecutionError>;
@@ -22,11 +22,11 @@ export interface MiseTools {
   performHealthCheck(): Effect.Effect<HealthCheckResult, HealthCheckError>;
 }
 
-export class MiseToolsTag extends Effect.Service<MiseTools>()("MiseTools", {
+export class MiseTools extends Effect.Service<MiseToolsService>()("MiseTools", {
   dependencies: [ShellLiveLayer],
   effect: Effect.gen(function* () {
-    const shell = yield* ShellTag;
-    const mise = yield* MiseTag;
+    const shell = yield* Shell;
+    const mise = yield* Mise;
     const resolveRequiredVersion = (latestVersion: string | null): string =>
       latestVersion && compareVersions(latestVersion, MISE_MIN_VERSION) >= 0 ? latestVersion : MISE_MIN_VERSION;
 
@@ -134,8 +134,8 @@ export class MiseToolsTag extends Effect.Service<MiseTools>()("MiseTools", {
           getCurrentVersion,
           getBinaryPath,
         }),
-    } satisfies MiseTools;
+    } satisfies MiseToolsService;
   }),
 }) {}
 
-export const MiseToolsLiveLayer = MiseToolsTag.Default;
+export const MiseToolsLiveLayer = MiseTools.Default;

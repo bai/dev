@@ -7,14 +7,14 @@ import {
 } from "@opentelemetry/semantic-conventions/incubating";
 import { Effect } from "effect";
 
-import { CommandRegistryTag } from "~/bootstrap/command-registry-port";
-import { RepoProviderTag } from "~/capabilities/repositories/repo-provider-port";
-import { isFullUrl, RepositoryServiceTag } from "~/capabilities/repositories/repository-service";
-import { FileSystemTag } from "~/capabilities/system/file-system-port";
-import { GitTag } from "~/capabilities/system/git-port";
-import { ShellIntegrationTag } from "~/capabilities/workspace/shell-integration-service";
+import { CommandRegistry } from "~/bootstrap/command-registry-port";
+import { RepoProvider } from "~/capabilities/repositories/repo-provider-port";
+import { isFullUrl, RepositoryService } from "~/capabilities/repositories/repository-service";
+import { FileSystem } from "~/capabilities/system/file-system-port";
+import { Git } from "~/capabilities/system/git-port";
+import { ShellIntegration } from "~/capabilities/workspace/shell-integration-service";
 import { unknownError } from "~/core/errors";
-import { WorkspacePathsTag } from "~/core/runtime/path-service";
+import { WorkspacePaths } from "~/core/runtime/path-service";
 
 // Define the repository argument as required
 const repo = Args.text({ name: "repo" });
@@ -47,12 +47,12 @@ export const cloneCommand = Command.make("clone", { repo }, ({ repo }) =>
       yield* Effect.addFinalizer(() => Effect.logDebug("Clone command finalizer called - cleanup complete"));
 
       // Get services from Effect Context
-      const git = yield* GitTag;
-      const repoProvider = yield* RepoProviderTag;
-      const fileSystem = yield* FileSystemTag;
-      const workspacePaths = yield* WorkspacePathsTag;
-      const repositoryService = yield* RepositoryServiceTag;
-      const shellIntegration = yield* ShellIntegrationTag;
+      const git = yield* Git;
+      const repoProvider = yield* RepoProvider;
+      const fileSystem = yield* FileSystem;
+      const workspacePaths = yield* WorkspacePaths;
+      const repositoryService = yield* RepositoryService;
+      const shellIntegration = yield* ShellIntegration;
 
       if (!repo) {
         return yield* unknownError("Repository name is required");
@@ -120,8 +120,8 @@ export const cloneCommand = Command.make("clone", { repo }, ({ repo }) =>
 /**
  * Register the clone command with the command registry
  */
-export const registerCloneCommand: Effect.Effect<void, never, CommandRegistryTag> = Effect.gen(function* () {
-  const registry = yield* CommandRegistryTag;
+export const registerCloneCommand: Effect.Effect<void, never, CommandRegistry> = Effect.gen(function* () {
+  const registry = yield* CommandRegistry;
   yield* registry.register({
     name: "clone",
     command: cloneCommand,

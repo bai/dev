@@ -2,8 +2,8 @@ import { Effect } from "effect";
 
 import type { FileSystemError, UnknownError } from "~/core/errors";
 
-export class FileSystemTag extends Effect.Tag("FileSystem")<
-  FileSystemTag,
+export class FileSystem extends Effect.Tag("FileSystem")<
+  FileSystem,
   {
     /**
      * Read a file as text
@@ -37,4 +37,4 @@ export class FileSystemTag extends Effect.Tag("FileSystem")<
   }
 >() {}
 
-export type FileSystem = (typeof FileSystemTag)["Service"];
+export type FileSystemService = (typeof FileSystem)["Service"];

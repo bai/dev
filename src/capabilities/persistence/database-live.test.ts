@@ -7,12 +7,12 @@ import { Deferred, Effect, Fiber, Layer } from "effect";
 import { describe, expect, vi } from "vitest";
 
 import { createDatabaseService, DatabaseLiveLayer } from "~/capabilities/persistence/database-live";
-import { DatabaseTag } from "~/capabilities/persistence/database-port";
+import { Database } from "~/capabilities/persistence/database-port";
 import type { DrizzleDatabase } from "~/capabilities/persistence/drizzle-types";
 import { FileSystemMock } from "~/capabilities/system/file-system-mock";
-import { FileSystemTag } from "~/capabilities/system/file-system-port";
+import { FileSystem } from "~/capabilities/system/file-system-port";
 import { configError } from "~/core/errors";
-import { InstallPathsTag, StatePathsTag } from "~/core/runtime/path-service";
+import { InstallPaths, StatePaths } from "~/core/runtime/path-service";
 import { makeInstallPathsMock, makeStatePathsMock } from "~/core/runtime/path-service-mock";
 
 const isTaggedError = (error: unknown): error is { readonly _tag: string; readonly message: string } =>
@@ -281,15 +281,15 @@ describe("database-live", () => {
       });
 
       const dependencies = Layer.mergeAll(
-        Layer.succeed(FileSystemTag, fileSystem),
-        Layer.succeed(InstallPathsTag, makeInstallPathsMock({ installDir: process.cwd() })),
-        Layer.succeed(StatePathsTag, statePaths),
+        Layer.succeed(FileSystem, fileSystem),
+        Layer.succeed(InstallPaths, makeInstallPathsMock({ installDir: process.cwd() })),
+        Layer.succeed(StatePaths, statePaths),
       );
       const databaseLayer = Layer.provide(DatabaseLiveLayer, dependencies);
 
       const tableNames = yield* Effect.scoped(
         Effect.gen(function* () {
-          const database = yield* DatabaseTag;
+          const database = yield* Database;
           const raw = yield* database.raw();
           return yield* Effect.sync(
             () =>
@@ -312,16 +312,16 @@ describe("database-live", () => {
       const databaseLayer = Layer.provide(
         DatabaseLiveLayer,
         Layer.mergeAll(
-          Layer.succeed(FileSystemTag, fileSystem),
-          Layer.succeed(InstallPathsTag, makeInstallPathsMock({ installMode: "binary", installDir: "/tmp/dist", upgradeCapable: false })),
-          Layer.succeed(StatePathsTag, makeStatePathsMock({ dbPath: "/tmp/dev-live-layer-binary.db" })),
+          Layer.succeed(FileSystem, fileSystem),
+          Layer.succeed(InstallPaths, makeInstallPathsMock({ installMode: "binary", installDir: "/tmp/dist", upgradeCapable: false })),
+          Layer.succeed(StatePaths, makeStatePathsMock({ dbPath: "/tmp/dev-live-layer-binary.db" })),
         ),
       );
 
       const error = yield* Effect.flip(
         Effect.scoped(
           Effect.gen(function* () {
-            return yield* DatabaseTag;
+            return yield* Database;
           }).pipe(Effect.provide(databaseLayer)),
         ),
       );

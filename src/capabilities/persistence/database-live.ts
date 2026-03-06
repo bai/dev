@@ -5,14 +5,14 @@ import { drizzle } from "drizzle-orm/bun-sqlite";
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
 import { Effect, Exit, Layer } from "effect";
 
-import { DatabaseTag, type Database } from "~/capabilities/persistence/database-port";
+import { Database, type DatabaseService } from "~/capabilities/persistence/database-port";
 import type { DrizzleDatabase } from "~/capabilities/persistence/drizzle-types";
-import { FileSystemTag } from "~/capabilities/system/file-system-port";
+import { FileSystem } from "~/capabilities/system/file-system-port";
 import { configError, unknownError, type ConfigError, type UnknownError } from "~/core/errors";
-import { InstallPathsTag, StatePathsTag } from "~/core/runtime/path-service";
+import { InstallPaths, StatePaths } from "~/core/runtime/path-service";
 
 // Extended interface for internal use with close method
-export interface DatabaseWithClose extends Database {
+export interface DatabaseWithClose extends DatabaseService {
   readonly close: () => Effect.Effect<void>;
 }
 
@@ -121,9 +121,9 @@ export const createDatabaseService = (
 
 // Create and initialize database with migrations
 const createDatabase = Effect.gen(function* () {
-  const fileSystem = yield* FileSystemTag;
-  const installPaths = yield* InstallPathsTag;
-  const statePaths = yield* StatePathsTag;
+  const fileSystem = yield* FileSystem;
+  const installPaths = yield* InstallPaths;
+  const statePaths = yield* StatePaths;
   const dbPath = statePaths.dbPath;
 
   if (installPaths.installMode !== "repo") {
@@ -165,7 +165,7 @@ const createDatabase = Effect.gen(function* () {
 
 // Effect Layer for dependency injection with proper resource management
 export const DatabaseLiveLayer = Layer.scoped(
-  DatabaseTag,
+  Database,
   Effect.gen(function* () {
     // Create the Database with proper resource management
     const database = yield* Effect.acquireRelease(createDatabase, (database) =>
@@ -173,7 +173,7 @@ export const DatabaseLiveLayer = Layer.scoped(
     );
 
     // Return only the public Database interface, not the extended one with close
-    const publicDatabase: Database = {
+    const publicDatabase: DatabaseService = {
       query: database.query,
       transaction: database.transaction,
       raw: database.raw,

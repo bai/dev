@@ -3,14 +3,14 @@ import { Effect, Layer } from "effect";
 import { describe, expect } from "vitest";
 
 import { ShellMock } from "~/capabilities/system/shell-mock";
-import { ShellTag } from "~/capabilities/system/shell-port";
-import { FZF_MIN_VERSION, FzfToolsTag } from "~/capabilities/tools/adapters/fzf-tools-live";
+import { Shell } from "~/capabilities/system/shell-port";
+import { FZF_MIN_VERSION, FzfTools } from "~/capabilities/tools/adapters/fzf-tools-live";
 
 describe("fzf-tools-live", () => {
   const makeFzfTools = (shell: ShellMock) =>
     Effect.gen(function* () {
-      return yield* FzfToolsTag;
-    }).pipe(Effect.provide(Layer.provide(FzfToolsTag.DefaultWithoutDependencies, Layer.succeed(ShellTag, shell))));
+      return yield* FzfTools;
+    }).pipe(Effect.provide(Layer.provide(FzfTools.DefaultWithoutDependencies, Layer.succeed(Shell, shell))));
 
   it.effect("parses fzf version from shell output", () =>
     Effect.gen(function* () {

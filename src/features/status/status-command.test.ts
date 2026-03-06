@@ -3,17 +3,17 @@ import { Cause, Effect, Exit, Layer, Logger, Option } from "effect";
 import { describe, expect } from "vitest";
 
 import { RunStoreMock } from "~/capabilities/persistence/run-store-mock";
-import { RunStoreTag } from "~/capabilities/persistence/run-store-port";
-import type { DockerServices, ServiceName, ServiceStatus } from "~/capabilities/services/docker-services-port";
-import { DockerServicesTag } from "~/capabilities/services/docker-services-port";
+import { RunStore } from "~/capabilities/persistence/run-store-port";
+import type { DockerServicesService, ServiceName, ServiceStatus } from "~/capabilities/services/docker-services-port";
+import { DockerServices } from "~/capabilities/services/docker-services-port";
 import { GitMock } from "~/capabilities/system/git-mock";
-import { GitTag } from "~/capabilities/system/git-port";
-import type { HealthCheck } from "~/capabilities/tools/health-check-port";
-import { HealthCheckTag } from "~/capabilities/tools/health-check-port";
+import { Git } from "~/capabilities/system/git-port";
+import type { HealthCheckService } from "~/capabilities/tools/health-check-port";
+import { HealthCheck } from "~/capabilities/tools/health-check-port";
 import type { HealthCheckResult } from "~/capabilities/tools/health-check-port";
 import { HealthCheckError, dockerServiceError, gitError, healthCheckError } from "~/core/errors";
 import type { CommandRun } from "~/core/models";
-import { RuntimeContextTag } from "~/core/runtime/runtime-context-port";
+import { RuntimeContext } from "~/core/runtime/runtime-context-port";
 import { statusCommand } from "~/features/status/status-command";
 
 const createGit = (branch: string | null, remote: string | null) => {
@@ -29,7 +29,7 @@ const createGit = (branch: string | null, remote: string | null) => {
   };
 };
 
-const createDockerServices = (isAvailable: boolean, statuses: readonly ServiceStatus[] = []): DockerServices => ({
+const createDockerServices = (isAvailable: boolean, statuses: readonly ServiceStatus[] = []): DockerServicesService => ({
   up: (_services?: readonly ServiceName[]) => Effect.void,
   down: (_services?: readonly ServiceName[]) => Effect.void,
   restart: (_services?: readonly ServiceName[]) => Effect.void,
@@ -45,13 +45,13 @@ const createDockerServices = (isAvailable: boolean, statuses: readonly ServiceSt
     }),
 });
 
-const createHealthCheck = (results: readonly HealthCheckResult[]): HealthCheck => ({
+const createHealthCheck = (results: readonly HealthCheckResult[]): HealthCheckService => ({
   runHealthChecks: () => Effect.succeed(results),
 });
 
 const createRunStore = (runs: readonly CommandRun[] = []) => new RunStoreMock({ runs });
 
-const runtimeContextLayer = Layer.succeed(RuntimeContextTag, {
+const runtimeContextLayer = Layer.succeed(RuntimeContext, {
   getArgv: () => ["bun", "src/index.ts", "status"] as const,
   getCwd: () => "/workspace/repo",
 });
@@ -62,12 +62,12 @@ describe("status-command", () => {
       const gitContext = createGit("main", "https://github.com/acme/repo.git");
 
       const layer = Layer.mergeAll(
-        Layer.succeed(GitTag, gitContext.git),
-        Layer.succeed(DockerServicesTag, createDockerServices(false)),
-        Layer.succeed(RunStoreTag, createRunStore()),
+        Layer.succeed(Git, gitContext.git),
+        Layer.succeed(DockerServices, createDockerServices(false)),
+        Layer.succeed(RunStore, createRunStore()),
         runtimeContextLayer,
         Layer.succeed(
-          HealthCheckTag,
+          HealthCheck,
           createHealthCheck([
             {
               toolName: "git",
@@ -92,12 +92,12 @@ describe("status-command", () => {
       const gitContext = createGit("main", "https://github.com/acme/repo.git");
 
       const layer = Layer.mergeAll(
-        Layer.succeed(GitTag, gitContext.git),
-        Layer.succeed(DockerServicesTag, createDockerServices(false)),
-        Layer.succeed(RunStoreTag, createRunStore()),
+        Layer.succeed(Git, gitContext.git),
+        Layer.succeed(DockerServices, createDockerServices(false)),
+        Layer.succeed(RunStore, createRunStore()),
         runtimeContextLayer,
         Layer.succeed(
-          HealthCheckTag,
+          HealthCheck,
           createHealthCheck([
             {
               toolName: "git",
@@ -120,12 +120,12 @@ describe("status-command", () => {
       const gitContext = createGit("main", "https://github.com/acme/repo.git");
 
       const layer = Layer.mergeAll(
-        Layer.succeed(GitTag, gitContext.git),
-        Layer.succeed(DockerServicesTag, createDockerServices(false)),
-        Layer.succeed(RunStoreTag, createRunStore()),
+        Layer.succeed(Git, gitContext.git),
+        Layer.succeed(DockerServices, createDockerServices(false)),
+        Layer.succeed(RunStore, createRunStore()),
         runtimeContextLayer,
         Layer.succeed(
-          HealthCheckTag,
+          HealthCheck,
           createHealthCheck([
             {
               toolName: "bun",
@@ -149,12 +149,12 @@ describe("status-command", () => {
       const gitContext = createGit("main", "https://github.com/acme/repo.git");
 
       const layer = Layer.mergeAll(
-        Layer.succeed(GitTag, gitContext.git),
-        Layer.succeed(DockerServicesTag, createDockerServices(false)),
-        Layer.succeed(RunStoreTag, createRunStore()),
+        Layer.succeed(Git, gitContext.git),
+        Layer.succeed(DockerServices, createDockerServices(false)),
+        Layer.succeed(RunStore, createRunStore()),
         runtimeContextLayer,
         Layer.succeed(
-          HealthCheckTag,
+          HealthCheck,
           createHealthCheck([
             {
               toolName: "bun",
@@ -188,16 +188,16 @@ describe("status-command", () => {
     Effect.gen(function* () {
       const gitContext = createGit(null, null);
 
-      const failingHealthCheck: HealthCheck = {
+      const failingHealthCheck: HealthCheckService = {
         runHealthChecks: () => healthCheckError("registry unavailable"),
       };
 
       const layer = Layer.mergeAll(
-        Layer.succeed(GitTag, gitContext.git),
-        Layer.succeed(DockerServicesTag, createDockerServices(false)),
-        Layer.succeed(RunStoreTag, createRunStore()),
+        Layer.succeed(Git, gitContext.git),
+        Layer.succeed(DockerServices, createDockerServices(false)),
+        Layer.succeed(RunStore, createRunStore()),
         runtimeContextLayer,
-        Layer.succeed(HealthCheckTag, failingHealthCheck),
+        Layer.succeed(HealthCheck, failingHealthCheck),
       );
 
       const result = yield* Effect.exit(statusCommand.handler({}).pipe(Effect.provide(layer)));
@@ -221,16 +221,16 @@ describe("status-command", () => {
   it.effect("keeps HealthCheckError tagged type when raised directly by service", () =>
     Effect.gen(function* () {
       const failure = new HealthCheckError({ message: "boom" });
-      const failingHealthCheck: HealthCheck = {
+      const failingHealthCheck: HealthCheckService = {
         runHealthChecks: () => Effect.fail(failure),
       };
 
       const layer = Layer.mergeAll(
-        Layer.succeed(GitTag, createGit("main", "https://github.com/acme/repo.git").git),
-        Layer.succeed(DockerServicesTag, createDockerServices(false)),
-        Layer.succeed(RunStoreTag, createRunStore()),
+        Layer.succeed(Git, createGit("main", "https://github.com/acme/repo.git").git),
+        Layer.succeed(DockerServices, createDockerServices(false)),
+        Layer.succeed(RunStore, createRunStore()),
         runtimeContextLayer,
-        Layer.succeed(HealthCheckTag, failingHealthCheck),
+        Layer.succeed(HealthCheck, failingHealthCheck),
       );
 
       const result = yield* Effect.exit(statusCommand.handler({}).pipe(Effect.provide(layer)));
@@ -245,18 +245,18 @@ describe("status-command", () => {
       const logger = Logger.make(({ message }) => {
         loggedMessages.push(String(message));
       });
-      const dockerServices: DockerServices = {
+      const dockerServices: DockerServicesService = {
         ...createDockerServices(true),
         status: () => dockerServiceError("compose status failed"),
       };
 
       const layer = Layer.mergeAll(
-        Layer.succeed(GitTag, gitContext.git),
-        Layer.succeed(DockerServicesTag, dockerServices),
-        Layer.succeed(RunStoreTag, createRunStore()),
+        Layer.succeed(Git, gitContext.git),
+        Layer.succeed(DockerServices, dockerServices),
+        Layer.succeed(RunStore, createRunStore()),
         runtimeContextLayer,
         Layer.succeed(
-          HealthCheckTag,
+          HealthCheck,
           createHealthCheck([
             {
               toolName: "git",

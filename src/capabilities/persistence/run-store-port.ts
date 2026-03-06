@@ -3,8 +3,8 @@ import { Effect } from "effect";
 import type { ConfigError, UnknownError } from "~/core/errors";
 import type { CommandRun } from "~/core/models";
 
-export class RunStoreTag extends Effect.Tag("RunStore")<
-  RunStoreTag,
+export class RunStore extends Effect.Tag("RunStore")<
+  RunStore,
   {
     /**
      * Record a new command run
@@ -33,4 +33,4 @@ export class RunStoreTag extends Effect.Tag("RunStore")<
   }
 >() {}
 
-export type RunStore = (typeof RunStoreTag)["Service"];
+export type RunStoreService = (typeof RunStore)["Service"];

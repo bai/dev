@@ -3,11 +3,11 @@ import { Effect, Layer } from "effect";
 import { describe, expect, vi } from "vitest";
 
 import { GitMock } from "~/capabilities/system/git-mock";
-import { GitTag } from "~/capabilities/system/git-port";
+import { Git } from "~/capabilities/system/git-port";
 import { gitError } from "~/core/errors";
-import { InstallPathsTag } from "~/core/runtime/path-service";
+import { InstallPaths } from "~/core/runtime/path-service";
 import { makeInstallPathsMock } from "~/core/runtime/path-service-mock";
-import { VersionTag } from "~/core/runtime/version-port";
+import { Version } from "~/core/runtime/version-port";
 import { VersionLiveLayer } from "~/core/runtime/version-service";
 
 const createGitMock = (getCurrentCommitShaImpl: GitMock["getCurrentCommitSha"]) =>
@@ -19,7 +19,7 @@ const createGitMock = (getCurrentCommitShaImpl: GitMock["getCurrentCommitSha"]) 
   });
 
 const makeVersionLayer = (git: GitMock, installPaths = makeInstallPathsMock({ installDir: "/tmp/home/.dev" })) =>
-  Layer.provide(VersionLiveLayer, Layer.mergeAll(Layer.succeed(GitTag, git), Layer.succeed(InstallPathsTag, installPaths)));
+  Layer.provide(VersionLiveLayer, Layer.mergeAll(Layer.succeed(Git, git), Layer.succeed(InstallPaths, installPaths)));
 
 describe("version-service", () => {
   it.effect("returns current commit sha from Git in repo mode", () => {
@@ -28,7 +28,7 @@ describe("version-service", () => {
     const installPaths = makeInstallPathsMock({ installDir: "/tmp/home/.dev" });
 
     return Effect.gen(function* () {
-      const version = yield* VersionTag;
+      const version = yield* Version;
       const sha = yield* version.getCurrentGitCommitSha();
 
       expect(sha).toBe("abc123");
@@ -42,7 +42,7 @@ describe("version-service", () => {
     const installPaths = makeInstallPathsMock({ installDir: "/tmp/home/.dev" });
 
     return Effect.gen(function* () {
-      const version = yield* VersionTag;
+      const version = yield* Version;
       const sha = yield* version.getCurrentGitCommitSha();
 
       expect(sha).toBe("unknown");
@@ -60,7 +60,7 @@ describe("version-service", () => {
     });
 
     return Effect.gen(function* () {
-      const version = yield* VersionTag;
+      const version = yield* Version;
 
       expect(yield* version.getCurrentGitCommitSha()).toBe("unknown");
       expect(yield* version.getVersion()).toBe("unknown");

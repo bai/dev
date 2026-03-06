@@ -1,14 +1,14 @@
 import { Command } from "@effect/cli";
 import { Effect } from "effect";
 
-import { CommandRegistryTag } from "~/bootstrap/command-registry-port";
-import { RunStoreTag } from "~/capabilities/persistence/run-store-port";
-import { DockerServicesTag, type ServiceStatus } from "~/capabilities/services/docker-services-port";
-import { GitTag } from "~/capabilities/system/git-port";
-import { HealthCheckTag } from "~/capabilities/tools/health-check-port";
+import { CommandRegistry } from "~/bootstrap/command-registry-port";
+import { RunStore } from "~/capabilities/persistence/run-store-port";
+import { DockerServices, type ServiceStatus } from "~/capabilities/services/docker-services-port";
+import { Git } from "~/capabilities/system/git-port";
+import { HealthCheck } from "~/capabilities/tools/health-check-port";
 import { statusCheckError } from "~/core/errors";
 import type { EnvironmentInfo, GitInfo } from "~/core/models";
-import { RuntimeContextTag } from "~/core/runtime/runtime-context-port";
+import { RuntimeContext } from "~/core/runtime/runtime-context-port";
 
 interface StatusItem {
   readonly tool: string;
@@ -58,7 +58,7 @@ export const statusCommand = Command.make("status", {}, () =>
 /**
  * Show environment information
  */
-const showEnvironmentInfo: Effect.Effect<void, never, GitTag | RuntimeContextTag> = Effect.gen(function* () {
+const showEnvironmentInfo: Effect.Effect<void, never, Git | RuntimeContext> = Effect.gen(function* () {
   yield* Effect.logInfo("🌍 Environment Information:");
   yield* Effect.logInfo("");
 
@@ -81,9 +81,9 @@ const showEnvironmentInfo: Effect.Effect<void, never, GitTag | RuntimeContextTag
 /**
  * Get comprehensive environment information
  */
-const getEnvironmentInfo = (): Effect.Effect<EnvironmentInfo, never, GitTag | RuntimeContextTag> =>
+const getEnvironmentInfo = (): Effect.Effect<EnvironmentInfo, never, Git | RuntimeContext> =>
   Effect.gen(function* () {
-    const runtimeContext = yield* RuntimeContextTag;
+    const runtimeContext = yield* RuntimeContext;
     const currentDir = runtimeContext.getCwd();
 
     const gitInfo = yield* getGitInfo(currentDir);
@@ -97,9 +97,9 @@ const getEnvironmentInfo = (): Effect.Effect<EnvironmentInfo, never, GitTag | Ru
 /**
  * Get git information
  */
-const getGitInfo = (cwd: string): Effect.Effect<GitInfo, never, GitTag> =>
+const getGitInfo = (cwd: string): Effect.Effect<GitInfo, never, Git> =>
   Effect.gen(function* () {
-    const git = yield* GitTag;
+    const git = yield* Git;
     const branch = yield* git.getCurrentBranch(cwd).pipe(Effect.orElseSucceed(() => null));
     const remote = yield* git.getRemoteUrl(cwd, "origin").pipe(Effect.orElseSucceed(() => null));
 
@@ -112,10 +112,10 @@ const getGitInfo = (cwd: string): Effect.Effect<GitInfo, never, GitTag> =>
 /**
  * Get health check results and transform them
  */
-const getHealthCheckResults: Effect.Effect<readonly StatusItem[], never, HealthCheckTag> = Effect.gen(function* () {
+const getHealthCheckResults: Effect.Effect<readonly StatusItem[], never, HealthCheck> = Effect.gen(function* () {
   yield* Effect.logDebug("Running fresh health checks...");
 
-  const healthCheckService = yield* HealthCheckTag;
+  const healthCheckService = yield* HealthCheck;
 
   // Run health checks directly and bypass cached results.
   // If execution itself fails, emit a synthetic failing item so summary/exit logic remains accurate.
@@ -182,8 +182,8 @@ const getServiceConnectionString = (status: ServiceStatus): string | undefined =
 /**
  * Show Docker services status
  */
-const showDockerServicesStatus: Effect.Effect<void, never, DockerServicesTag> = Effect.gen(function* () {
-  const dockerServices = yield* DockerServicesTag;
+const showDockerServicesStatus: Effect.Effect<void, never, DockerServices> = Effect.gen(function* () {
+  const dockerServices = yield* DockerServices;
 
   const isAvailable = yield* dockerServices.isDockerAvailable();
   if (!isAvailable) {
@@ -254,15 +254,15 @@ const formatUpgradeTimestamp = (date: Date): string =>
     timeZoneName: "short",
   }).format(date);
 
-const getLastUpgradeTimestamp = (): Effect.Effect<Date | null, never, RunStoreTag> =>
+const getLastUpgradeTimestamp = (): Effect.Effect<Date | null, never, RunStore> =>
   Effect.gen(function* () {
-    const runStore = yield* RunStoreTag;
+    const runStore = yield* RunStore;
     const recentRuns = yield* runStore.getRecentRuns(100).pipe(Effect.orElseSucceed(() => []));
     const lastUpgradeRun = recentRuns.find((run) => run.commandName === "upgrade");
     return lastUpgradeRun ? lastUpgradeRun.startedAt : null;
   });
 
-const showLastUpgradedStatus: Effect.Effect<void, never, RunStoreTag> = Effect.gen(function* () {
+const showLastUpgradedStatus: Effect.Effect<void, never, RunStore> = Effect.gen(function* () {
   const lastUpgradeTimestamp = yield* getLastUpgradeTimestamp();
 
   if (lastUpgradeTimestamp === null) {
@@ -340,8 +340,8 @@ const checkForFailures = (statusItems: readonly StatusItem[]): Effect.Effect<voi
 /**
  * Register the status command with the command registry
  */
-export const registerStatusCommand: Effect.Effect<void, never, CommandRegistryTag> = Effect.gen(function* () {
-  const registry = yield* CommandRegistryTag;
+export const registerStatusCommand: Effect.Effect<void, never, CommandRegistry> = Effect.gen(function* () {
+  const registry = yield* CommandRegistry;
   yield* registry.register({
     name: "status",
     command: statusCommand,

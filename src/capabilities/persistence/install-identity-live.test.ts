@@ -7,11 +7,11 @@ import { Effect, Layer } from "effect";
 import { afterEach, describe, expect, vi } from "vitest";
 
 import { DatabaseMock } from "~/capabilities/persistence/database-mock";
-import { DatabaseTag } from "~/capabilities/persistence/database-port";
-import type { Database } from "~/capabilities/persistence/database-port";
+import { Database } from "~/capabilities/persistence/database-port";
+import type { DatabaseService } from "~/capabilities/persistence/database-port";
 import type { DrizzleDatabase } from "~/capabilities/persistence/drizzle-types";
 import { InstallIdentityLiveLayer } from "~/capabilities/persistence/install-identity-live";
-import { InstallIdentityTag, type InstallIdentity } from "~/capabilities/persistence/install-identity-port";
+import { InstallIdentity, type InstallIdentityService } from "~/capabilities/persistence/install-identity-port";
 
 import { installMetadata } from "../../../drizzle/schema";
 
@@ -48,7 +48,7 @@ const withTestDatabase = <A>(run: (database: DatabaseMock) => Effect.Effect<A>) 
     return yield* run(database).pipe(Effect.orDie, Effect.ensuring(Effect.sync(() => sqlite.close()).pipe(Effect.orDie)));
   });
 
-const selectSingletonRows = (database: Database) =>
+const selectSingletonRows = (database: DatabaseService) =>
   database
     .query((db) =>
       Effect.tryPromise({
@@ -59,10 +59,10 @@ const selectSingletonRows = (database: Database) =>
     .pipe(Effect.orDie);
 
 describe("install-identity-live", () => {
-  const makeInstallIdentity = (database: DatabaseMock): Effect.Effect<InstallIdentity> =>
+  const makeInstallIdentity = (database: DatabaseMock): Effect.Effect<InstallIdentityService> =>
     Effect.gen(function* () {
-      return yield* InstallIdentityTag;
-    }).pipe(Effect.provide(Layer.provide(InstallIdentityLiveLayer, Layer.succeed(DatabaseTag, database))));
+      return yield* InstallIdentity;
+    }).pipe(Effect.provide(Layer.provide(InstallIdentityLiveLayer, Layer.succeed(Database, database))));
 
   afterEach(() => {
     vi.restoreAllMocks();

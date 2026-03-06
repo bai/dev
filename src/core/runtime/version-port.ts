@@ -3,12 +3,12 @@ import { Effect } from "effect";
 /**
  * Version service port for getting CLI version information
  */
-export class VersionTag extends Effect.Tag("Version")<
-  VersionTag,
+export class Version extends Effect.Tag("Version")<
+  Version,
   {
     readonly getCurrentGitCommitSha: () => Effect.Effect<string, never, never>;
     readonly getVersion: () => Effect.Effect<string, never, never>;
   }
 >() {}
 
-export type Version = (typeof VersionTag)["Service"];
+export type VersionService = (typeof Version)["Service"];

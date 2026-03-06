@@ -1,7 +1,7 @@
 import { Clock, Effect } from "effect";
 
 import { ShellLiveLayer } from "~/capabilities/system/shell-live";
-import { ShellTag } from "~/capabilities/system/shell-port";
+import { Shell } from "~/capabilities/system/shell-port";
 import type { HealthCheckResult } from "~/capabilities/tools/health-check-port";
 import { healthCheckError, type HealthCheckError } from "~/core/errors";
 import { compareVersions } from "~/core/runtime/version-utils";
@@ -11,16 +11,16 @@ export const DOCKER_MIN_VERSION = "29.1.3";
 /**
  * Docker tools for version checking (includes Docker Compose)
  */
-export interface DockerTools {
+export interface DockerToolsService {
   readonly getDockerVersion: () => Effect.Effect<string | null, never>;
   readonly getComposeVersion: () => Effect.Effect<string | null, never>;
   readonly performHealthCheck: () => Effect.Effect<HealthCheckResult, HealthCheckError>;
 }
 
-export class DockerToolsTag extends Effect.Service<DockerTools>()("DockerTools", {
+export class DockerTools extends Effect.Service<DockerToolsService>()("DockerTools", {
   dependencies: [ShellLiveLayer],
   effect: Effect.gen(function* () {
-    const shell = yield* ShellTag;
+    const shell = yield* Shell;
     const getBinaryPath = (): Effect.Effect<string | undefined, never> =>
       shell.exec("which", ["docker"]).pipe(
         Effect.map((result) => (result.exitCode === 0 && result.stdout ? result.stdout.trim() : undefined)),
@@ -98,8 +98,8 @@ export class DockerToolsTag extends Effect.Service<DockerTools>()("DockerTools",
             checkedAt,
           };
         }),
-    } satisfies DockerTools;
+    } satisfies DockerToolsService;
   }),
 }) {}
 
-export const DockerToolsLiveLayer = DockerToolsTag.Default;
+export const DockerToolsLiveLayer = DockerTools.Default;

@@ -6,12 +6,12 @@ import { it } from "@effect/vitest";
 import { Effect } from "effect";
 import { afterEach, beforeEach, describe, expect } from "vitest";
 
-import { CommandRegistryTag } from "~/bootstrap/command-registry-port";
+import { CommandRegistry } from "~/bootstrap/command-registry-port";
 import { loadConfiguration, setupApplication } from "~/bootstrap/wiring";
-import { TracingTag } from "~/core/observability/tracing-port";
+import { Tracing } from "~/core/observability/tracing-port";
 import { makeEnvironmentPathsMock, makeInstallPathsMock, makeStatePathsMock } from "~/core/runtime/path-service-mock";
-import { VersionTag } from "~/core/runtime/version-port";
-import { UpdateCheckerTag } from "~/features/upgrade/update-check-service";
+import { Version } from "~/core/runtime/version-port";
+import { UpdateChecker } from "~/features/upgrade/update-check-service";
 
 describe("wiring", () => {
   let tempDir: string;
@@ -166,10 +166,10 @@ describe("wiring", () => {
       const result = yield* setupApplication(makeSetupOptions());
 
       const services = yield* Effect.gen(function* () {
-        const tracing = yield* TracingTag;
-        const version = yield* VersionTag;
-        const updateChecker = yield* UpdateCheckerTag;
-        const registry = yield* CommandRegistryTag;
+        const tracing = yield* Tracing;
+        const version = yield* Version;
+        const updateChecker = yield* UpdateChecker;
+        const registry = yield* CommandRegistry;
         return { tracing, version, updateChecker, registry };
       }).pipe(Effect.provide(result.appLayer));
 

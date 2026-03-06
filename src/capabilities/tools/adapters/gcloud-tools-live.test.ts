@@ -5,11 +5,11 @@ import { Effect, Layer } from "effect";
 import { describe, expect } from "vitest";
 
 import { FileSystemMock } from "~/capabilities/system/file-system-mock";
-import { FileSystemTag } from "~/capabilities/system/file-system-port";
+import { FileSystem } from "~/capabilities/system/file-system-port";
 import { ShellMock } from "~/capabilities/system/shell-mock";
-import { ShellTag } from "~/capabilities/system/shell-port";
-import { GcloudToolsTag } from "~/capabilities/tools/adapters/gcloud-tools-live";
-import { EnvironmentPathsTag } from "~/core/runtime/path-service";
+import { Shell } from "~/capabilities/system/shell-port";
+import { GcloudTools } from "~/capabilities/tools/adapters/gcloud-tools-live";
+import { EnvironmentPaths } from "~/core/runtime/path-service";
 import { makeEnvironmentPathsMock } from "~/core/runtime/path-service-mock";
 
 const makeSubject = () => {
@@ -21,15 +21,15 @@ const makeSubject = () => {
   });
   const configDir = path.join(environmentPaths.xdgConfigHome, "gcloud");
   const gcloudTools = Effect.gen(function* () {
-    return yield* GcloudToolsTag;
+    return yield* GcloudTools;
   }).pipe(
     Effect.provide(
       Layer.provide(
-        GcloudToolsTag.DefaultWithoutDependencies,
+        GcloudTools.DefaultWithoutDependencies,
         Layer.mergeAll(
-          Layer.succeed(ShellTag, shell),
-          Layer.succeed(FileSystemTag, fileSystem),
-          Layer.succeed(EnvironmentPathsTag, environmentPaths),
+          Layer.succeed(Shell, shell),
+          Layer.succeed(FileSystem, fileSystem),
+          Layer.succeed(EnvironmentPaths, environmentPaths),
         ),
       ),
     ),

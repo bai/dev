@@ -5,10 +5,10 @@ import { Effect, Exit, Layer, Logger } from "effect";
 import { describe, expect } from "vitest";
 
 import { GitMock } from "~/capabilities/system/git-mock";
-import { GitTag } from "~/capabilities/system/git-port";
+import { Git } from "~/capabilities/system/git-port";
 import { DirectoryMock } from "~/capabilities/workspace/directory-mock";
-import { DirectoryTag } from "~/capabilities/workspace/directory-port";
-import { WorkspacePathsTag } from "~/core/runtime/path-service";
+import { Directory } from "~/capabilities/workspace/directory-port";
+import { WorkspacePaths } from "~/core/runtime/path-service";
 import { makeWorkspacePathsMock } from "~/core/runtime/path-service-mock";
 import { syncCommand } from "~/features/sync/sync-command";
 
@@ -25,9 +25,9 @@ describe("sync-command", () => {
       });
 
       const testLayer = Layer.mergeAll(
-        Layer.succeed(DirectoryTag, new DirectoryMock(["github.com/acme/first", "github.com/acme/second"])),
-        Layer.succeed(GitTag, git),
-        Layer.succeed(WorkspacePathsTag, makeWorkspacePaths(baseSearchPath)),
+        Layer.succeed(Directory, new DirectoryMock(["github.com/acme/first", "github.com/acme/second"])),
+        Layer.succeed(Git, git),
+        Layer.succeed(WorkspacePaths, makeWorkspacePaths(baseSearchPath)),
       );
 
       yield* syncCommand.handler({}).pipe(Effect.provide(testLayer));
@@ -47,9 +47,9 @@ describe("sync-command", () => {
       });
 
       const testLayer = Layer.mergeAll(
-        Layer.succeed(DirectoryTag, new DirectoryMock(["github.com/acme/failing"])),
-        Layer.succeed(GitTag, git),
-        Layer.succeed(WorkspacePathsTag, makeWorkspacePaths(baseSearchPath)),
+        Layer.succeed(Directory, new DirectoryMock(["github.com/acme/failing"])),
+        Layer.succeed(Git, git),
+        Layer.succeed(WorkspacePaths, makeWorkspacePaths(baseSearchPath)),
       );
 
       const result = yield* Effect.exit(syncCommand.handler({}).pipe(Effect.provide(testLayer)));
@@ -75,9 +75,9 @@ describe("sync-command", () => {
       });
 
       const testLayer = Layer.mergeAll(
-        Layer.succeed(DirectoryTag, new DirectoryMock(["github.com/acme/success", "github.com/acme/failing", "github.com/acme/not-git"])),
-        Layer.succeed(GitTag, git),
-        Layer.succeed(WorkspacePathsTag, makeWorkspacePaths(baseSearchPath)),
+        Layer.succeed(Directory, new DirectoryMock(["github.com/acme/success", "github.com/acme/failing", "github.com/acme/not-git"])),
+        Layer.succeed(Git, git),
+        Layer.succeed(WorkspacePaths, makeWorkspacePaths(baseSearchPath)),
         Logger.replace(Logger.defaultLogger, logger),
       );
 

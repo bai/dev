@@ -7,12 +7,12 @@ import { Cause, Effect, Exit, Layer, Option } from "effect";
 import { afterEach, beforeEach, describe, expect } from "vitest";
 
 import { FileSystemLive } from "~/capabilities/system/file-system-live";
-import { FileSystemTag } from "~/capabilities/system/file-system-port";
-import { NetworkTag, type Network } from "~/capabilities/system/network-port";
+import { FileSystem } from "~/capabilities/system/file-system-port";
+import { Network, type NetworkService } from "~/capabilities/system/network-port";
 import { ConfigLoaderLiveLayer } from "~/core/config/config-loader-live";
-import { ConfigLoaderTag } from "~/core/config/config-loader-port";
+import { ConfigLoader } from "~/core/config/config-loader-port";
 import { configSchema } from "~/core/config/config-schema";
-import { StatePathsTag } from "~/core/runtime/path-service";
+import { StatePaths } from "~/core/runtime/path-service";
 import { makeStatePathsMock } from "~/core/runtime/path-service-mock";
 
 describe("config-loader-live", () => {
@@ -20,23 +20,23 @@ describe("config-loader-live", () => {
   let configPath: string;
 
   // Mock network that's not used in these tests
-  const mockNetwork: Network = {
+  const mockNetwork: NetworkService = {
     get: () => Effect.succeed({ status: 200, statusText: "OK", body: "{}", headers: {} }),
     downloadFile: () => Effect.void,
     checkConnectivity: () => Effect.succeed(true),
   };
 
-  const makeConfigLoader = (network: Network) =>
+  const makeConfigLoader = (network: NetworkService) =>
     Effect.gen(function* () {
-      return yield* ConfigLoaderTag;
+      return yield* ConfigLoader;
     }).pipe(
       Effect.provide(
         Layer.provide(
           ConfigLoaderLiveLayer,
           Layer.mergeAll(
-            Layer.succeed(FileSystemTag, FileSystemLive),
-            Layer.succeed(NetworkTag, network),
-            Layer.succeed(StatePathsTag, makeStatePathsMock({ configPath })),
+            Layer.succeed(FileSystem, FileSystemLive),
+            Layer.succeed(Network, network),
+            Layer.succeed(StatePaths, makeStatePathsMock({ configPath })),
           ),
         ),
       ),
@@ -142,7 +142,7 @@ describe("config-loader-live", () => {
         };
         yield* Effect.promise(() => fs.writeFile(configPath, JSON.stringify(localConfig, null, 2)));
 
-        const remoteNetwork: Network = {
+        const remoteNetwork: NetworkService = {
           get: () =>
             Effect.succeed({
               status: 200,
@@ -180,7 +180,7 @@ describe("config-loader-live", () => {
         };
         yield* Effect.promise(() => fs.writeFile(configPath, JSON.stringify(localConfig, null, 2)));
 
-        const invalidRemoteNetwork: Network = {
+        const invalidRemoteNetwork: NetworkService = {
           get: () =>
             Effect.succeed({
               status: 200,
@@ -219,7 +219,7 @@ describe("config-loader-live", () => {
         };
         yield* Effect.promise(() => fs.writeFile(configPath, JSON.stringify(localConfig, null, 2)));
 
-        const failingRemoteNetwork: Network = {
+        const failingRemoteNetwork: NetworkService = {
           get: () =>
             Effect.succeed({
               status: 503,

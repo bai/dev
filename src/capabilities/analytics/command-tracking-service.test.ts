@@ -6,15 +6,15 @@ import { makeCommandTracker } from "~/capabilities/analytics/command-tracking-se
 import { RunStoreMock } from "~/capabilities/persistence/run-store-mock";
 import { ConfigError, UnknownError, configError, unknownError } from "~/core/errors";
 import type { CommandRun } from "~/core/models";
-import type { RuntimeContext } from "~/core/runtime/runtime-context-port";
-import type { Version } from "~/core/runtime/version-port";
+import type { RuntimeContextService } from "~/core/runtime/runtime-context-port";
+import type { VersionService } from "~/core/runtime/version-port";
 
-const baseVersionService: Version = {
+const baseVersionService: VersionService = {
   getCurrentGitCommitSha: () => Effect.succeed("deadbeef"),
   getVersion: () => Effect.succeed("deadbeef"),
 };
 
-const makeRuntimeContext = (argv: readonly string[], cwd: string): RuntimeContext => ({
+const makeRuntimeContext = (argv: readonly string[], cwd: string): RuntimeContextService => ({
   getArgv: () => argv,
   getCwd: () => cwd,
 });
@@ -34,7 +34,7 @@ describe("command-tracking-service", () => {
         },
       });
 
-      const versionService: Version = {
+      const versionService: VersionService = {
         getCurrentGitCommitSha: () => Effect.succeed("deadbeef"),
         getVersion: () => Effect.succeed("deadbeef"),
       };
@@ -117,7 +117,7 @@ describe("command-tracking-service", () => {
         },
       });
 
-      const versionService: Version = {
+      const versionService: VersionService = {
         getCurrentGitCommitSha: () => Effect.succeed("deadbeef"),
         getVersion: () => Effect.succeed("deadbeef"),
       };

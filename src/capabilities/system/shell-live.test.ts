@@ -5,7 +5,7 @@ import { Effect } from "effect";
 import { describe, expect } from "vitest";
 
 import { ShellLiveLayer } from "~/capabilities/system/shell-live";
-import { ShellTag } from "~/capabilities/system/shell-port";
+import { Shell } from "~/capabilities/system/shell-port";
 
 describe("shell-live", () => {
   it.effect("exec emits shell.exec span with stable attributes", () => {
@@ -18,7 +18,7 @@ describe("shell-live", () => {
     }));
 
     return Effect.gen(function* () {
-      const shell = yield* ShellTag;
+      const shell = yield* Shell;
       const cwd = process.cwd();
       const result = yield* shell.exec("bun", ["--version"], { cwd });
 
@@ -43,7 +43,7 @@ describe("shell-live", () => {
     }));
 
     return Effect.gen(function* () {
-      const shell = yield* ShellTag;
+      const shell = yield* Shell;
       const exitCode = yield* shell.execInteractive("bun", ["-e", "process.exit(0)"]);
 
       expect(exitCode).toBe(0);

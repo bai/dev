@@ -4,13 +4,13 @@ import { ATTR_SERVICE_NAMESPACE } from "@opentelemetry/semantic-conventions";
 import { Cause, Effect, Layer } from "effect";
 
 import { registerAllCommands, runCli } from "~/bootstrap/cli-router";
-import { CommandRegistryTag } from "~/bootstrap/command-registry-port";
+import { CommandRegistry } from "~/bootstrap/command-registry-port";
 import { setupApplication } from "~/bootstrap/wiring";
-import { CommandTrackerTag } from "~/capabilities/analytics/command-tracking-service";
+import { CommandTracker } from "~/capabilities/analytics/command-tracking-service";
 import type { DevError } from "~/core/errors";
-import { TracingTag } from "~/core/observability/tracing-port";
-import { VersionTag } from "~/core/runtime/version-port";
-import { UpdateCheckerTag } from "~/features/upgrade/update-check-service";
+import { Tracing } from "~/core/observability/tracing-port";
+import { Version } from "~/core/runtime/version-port";
+import { UpdateChecker } from "~/features/upgrade/update-check-service";
 
 export type ProgramError = DevError;
 
@@ -44,10 +44,10 @@ export const program = Effect.scoped(
     // Run CLI with services provided from the outside
     const commandExitCode = yield* Effect.gen(function* () {
       // Get services
-      const commandTracker = yield* CommandTrackerTag;
-      const updateChecker = yield* UpdateCheckerTag;
-      const versionService = yield* VersionTag;
-      const registry = yield* CommandRegistryTag;
+      const commandTracker = yield* CommandTracker;
+      const updateChecker = yield* UpdateChecker;
+      const versionService = yield* Version;
+      const registry = yield* CommandRegistry;
       const version = yield* versionService.getVersion();
 
       // Register all commands
@@ -106,7 +106,7 @@ export const mainProgram = Effect.gen(function* () {
 
   // Get tracing configuration from the tracing service
   const sdkConfig = yield* Effect.gen(function* () {
-    const tracing = yield* TracingTag;
+    const tracing = yield* Tracing;
     return yield* tracing.createSdkConfig();
   }).pipe(
     Effect.provide(appLayer),

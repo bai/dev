@@ -1,14 +1,14 @@
 import { Effect, Layer } from "effect";
 
-import { KeychainTag, type Keychain } from "~/capabilities/system/keychain-port";
-import { ShellTag, type Shell } from "~/capabilities/system/shell-port";
+import { Keychain, type KeychainService } from "~/capabilities/system/keychain-port";
+import { Shell, type ShellService } from "~/capabilities/system/shell-port";
 import { authError, type AuthError, type ShellExecutionError } from "~/core/errors";
 
 // Effect Layer for dependency injection
 export const KeychainLiveLayer = Layer.effect(
-  KeychainTag,
+  Keychain,
   Effect.gen(function* () {
-    const shell = yield* ShellTag;
+    const shell = yield* Shell;
     return {
       setCredential: (service: string, account: string, password: string): Effect.Effect<void, AuthError | ShellExecutionError> =>
         shell.exec("security", ["add-generic-password", "-s", service, "-a", account, "-w", password, "-U"]).pipe(
@@ -42,6 +42,6 @@ export const KeychainLiveLayer = Layer.effect(
           Effect.map((result) => result.exitCode === 0),
           Effect.orElseSucceed(() => false),
         ),
-    } satisfies Keychain;
+    } satisfies KeychainService;
   }),
 );

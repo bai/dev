@@ -3,10 +3,10 @@ import { Cause, Effect, Exit, Layer, Option } from "effect";
 import { describe, expect } from "vitest";
 
 import { FileSystemMock } from "~/capabilities/system/file-system-mock";
-import { FileSystemTag } from "~/capabilities/system/file-system-port";
-import { ShellIntegrationLiveLayer, ShellIntegrationTag } from "~/capabilities/workspace/shell-integration-service";
+import { FileSystem } from "~/capabilities/system/file-system-port";
+import { ShellIntegrationLiveLayer, ShellIntegration } from "~/capabilities/workspace/shell-integration-service";
 import { ConfigError } from "~/core/errors";
-import { StatePathsTag, WorkspacePathsTag } from "~/core/runtime/path-service";
+import { StatePaths, WorkspacePaths } from "~/core/runtime/path-service";
 import { makeStatePathsMock, makeWorkspacePathsMock } from "~/core/runtime/path-service-mock";
 
 const statePaths = makeStatePathsMock({
@@ -22,14 +22,14 @@ describe("shell-integration-service", () => {
       fileSystem.existingPaths.add("/tmp/workspace/github.com/acme/repo");
 
       const dependencies = Layer.mergeAll(
-        Layer.succeed(StatePathsTag, statePaths),
-        Layer.succeed(WorkspacePathsTag, workspacePaths),
-        Layer.succeed(FileSystemTag, fileSystem),
+        Layer.succeed(StatePaths, statePaths),
+        Layer.succeed(WorkspacePaths, workspacePaths),
+        Layer.succeed(FileSystem, fileSystem),
       );
       const shellIntegrationLayer = Layer.provide(ShellIntegrationLiveLayer, dependencies);
 
       yield* Effect.gen(function* () {
-        const shellIntegration = yield* ShellIntegrationTag;
+        const shellIntegration = yield* ShellIntegration;
         yield* shellIntegration.changeDirectory("github.com/acme/repo/");
       }).pipe(Effect.provide(shellIntegrationLayer));
 
@@ -46,14 +46,14 @@ describe("shell-integration-service", () => {
       fileSystem.existingPaths.add("/absolute/repo");
 
       const dependencies = Layer.mergeAll(
-        Layer.succeed(StatePathsTag, statePaths),
-        Layer.succeed(WorkspacePathsTag, workspacePaths),
-        Layer.succeed(FileSystemTag, fileSystem),
+        Layer.succeed(StatePaths, statePaths),
+        Layer.succeed(WorkspacePaths, workspacePaths),
+        Layer.succeed(FileSystem, fileSystem),
       );
       const shellIntegrationLayer = Layer.provide(ShellIntegrationLiveLayer, dependencies);
 
       yield* Effect.gen(function* () {
-        const shellIntegration = yield* ShellIntegrationTag;
+        const shellIntegration = yield* ShellIntegration;
         yield* shellIntegration.changeDirectory("/absolute/repo");
       }).pipe(Effect.provide(shellIntegrationLayer));
 
@@ -66,15 +66,15 @@ describe("shell-integration-service", () => {
       const fileSystem = new FileSystemMock();
 
       const dependencies = Layer.mergeAll(
-        Layer.succeed(StatePathsTag, statePaths),
-        Layer.succeed(WorkspacePathsTag, workspacePaths),
-        Layer.succeed(FileSystemTag, fileSystem),
+        Layer.succeed(StatePaths, statePaths),
+        Layer.succeed(WorkspacePaths, workspacePaths),
+        Layer.succeed(FileSystem, fileSystem),
       );
       const shellIntegrationLayer = Layer.provide(ShellIntegrationLiveLayer, dependencies);
 
       const result = yield* Effect.exit(
         Effect.gen(function* () {
-          const shellIntegration = yield* ShellIntegrationTag;
+          const shellIntegration = yield* ShellIntegration;
           yield* shellIntegration.changeDirectory("missing/repo");
         }).pipe(Effect.provide(shellIntegrationLayer)),
       );

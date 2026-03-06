@@ -3,8 +3,8 @@ import { Effect } from "effect";
 import type { NetworkError, UnknownError } from "~/core/errors";
 import type { GitProvider, Repository } from "~/core/models";
 
-export class RepoProviderTag extends Effect.Tag("RepoProvider")<
-  RepoProviderTag,
+export class RepoProvider extends Effect.Tag("RepoProvider")<
+  RepoProvider,
   {
     /**
      * Resolve a repository name to full repository details
@@ -23,4 +23,4 @@ export class RepoProviderTag extends Effect.Tag("RepoProvider")<
   }
 >() {}
 
-export type RepoProvider = (typeof RepoProviderTag)["Service"];
+export type RepoProviderService = (typeof RepoProvider)["Service"];

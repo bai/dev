@@ -5,20 +5,20 @@ import { ATTR_APP_INSTALLATION_ID } from "@opentelemetry/semantic-conventions/in
 import { Effect } from "effect";
 import { afterEach, describe, expect, vi } from "vitest";
 
-import type { InstallIdentity } from "~/capabilities/persistence/install-identity-port";
-import { InstallIdentityTag } from "~/capabilities/persistence/install-identity-port";
+import type { InstallIdentityService } from "~/capabilities/persistence/install-identity-port";
+import { InstallIdentity } from "~/capabilities/persistence/install-identity-port";
 import { GitMock } from "~/capabilities/system/git-mock";
-import { GitTag } from "~/capabilities/system/git-port";
-import type { ConfigLoader } from "~/core/config/config-loader-port";
-import { ConfigLoaderTag } from "~/core/config/config-loader-port";
+import { Git } from "~/capabilities/system/git-port";
+import type { ConfigLoaderService } from "~/core/config/config-loader-port";
+import { ConfigLoader } from "~/core/config/config-loader-port";
 import { configSchema } from "~/core/config/config-schema";
 import { configError } from "~/core/errors";
 import { TracingLiveLayer } from "~/core/observability/tracing-live";
-import { TracingTag } from "~/core/observability/tracing-port";
-import type { Version } from "~/core/runtime/version-port";
-import { VersionTag } from "~/core/runtime/version-port";
+import { Tracing } from "~/core/observability/tracing-port";
+import type { VersionService } from "~/core/runtime/version-port";
+import { Version } from "~/core/runtime/version-port";
 
-const mockVersion: Version = {
+const mockVersion: VersionService = {
   getCurrentGitCommitSha: () => Effect.succeed("deadbeef"),
   getVersion: () => Effect.succeed("1.2.3"),
 };
@@ -29,11 +29,11 @@ const mockGit = new GitMock({
   remoteUrl: "https://github.com/acme/repo",
 });
 
-const mockInstallIdentity: InstallIdentity = {
+const mockInstallIdentity: InstallIdentityService = {
   getOrCreateInstallId: () => Effect.succeed("0196ed78-467a-7f2f-bf6b-95e73fd43b8d"),
 };
 
-const makeConfigLoader = (config: ReturnType<typeof configSchema.parse>): ConfigLoader => ({
+const makeConfigLoader = (config: ReturnType<typeof configSchema.parse>): ConfigLoaderService => ({
   parse: (content, source = "config") =>
     Effect.try({
       try: () => configSchema.parse(Bun.JSONC.parse(content)),
@@ -46,14 +46,14 @@ const makeConfigLoader = (config: ReturnType<typeof configSchema.parse>): Config
 
 const loadSdkConfig = (config: ReturnType<typeof configSchema.parse>) =>
   Effect.gen(function* () {
-    const tracing = yield* TracingTag;
+    const tracing = yield* Tracing;
     return yield* tracing.createSdkConfig();
   }).pipe(
     Effect.provide(TracingLiveLayer),
-    Effect.provideService(ConfigLoaderTag, makeConfigLoader(config)),
-    Effect.provideService(VersionTag, mockVersion),
-    Effect.provideService(InstallIdentityTag, mockInstallIdentity),
-    Effect.provideService(GitTag, mockGit),
+    Effect.provideService(ConfigLoader, makeConfigLoader(config)),
+    Effect.provideService(Version, mockVersion),
+    Effect.provideService(InstallIdentity, mockInstallIdentity),
+    Effect.provideService(Git, mockGit),
   );
 
 describe("tracing-live", () => {

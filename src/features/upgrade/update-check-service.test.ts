@@ -6,10 +6,10 @@ import { RunStoreMock } from "~/capabilities/persistence/run-store-mock";
 import { configError, unknownError } from "~/core/errors";
 import type { CommandRun } from "~/core/models";
 import { makeInstallPathsMock } from "~/core/runtime/path-service-mock";
-import type { RuntimeContext } from "~/core/runtime/runtime-context-port";
+import type { RuntimeContextService } from "~/core/runtime/runtime-context-port";
 import { makeUpdateChecker } from "~/features/upgrade/update-check-service";
 
-const makeRuntimeContext = (argv: readonly string[]): RuntimeContext => ({
+const makeRuntimeContext = (argv: readonly string[]): RuntimeContextService => ({
   getArgv: () => argv,
   getCwd: () => "/workspace/repo",
 });

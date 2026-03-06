@@ -10,12 +10,12 @@ import {
 import { ATTR_APP_INSTALLATION_ID } from "@opentelemetry/semantic-conventions/incubating";
 import { Effect, Layer } from "effect";
 
-import { InstallIdentityTag } from "~/capabilities/persistence/install-identity-port";
-import { ConfigLoaderTag } from "~/core/config/config-loader-port";
+import { InstallIdentity } from "~/capabilities/persistence/install-identity-port";
+import { ConfigLoader } from "~/core/config/config-loader-port";
 import { tracingExporterFactories } from "~/core/observability/tracing-exporter-registry-live";
 import type { RemoteTelemetryConfig, RemoteTelemetryMode } from "~/core/observability/tracing-exporter-types";
-import { TracingError, TracingTag, type Tracing } from "~/core/observability/tracing-port";
-import { VersionTag } from "~/core/runtime/version-port";
+import { TracingError, Tracing, type TracingService } from "~/core/observability/tracing-port";
+import { Version } from "~/core/runtime/version-port";
 
 const OTLP_SERVICE_NAMESPACE = "dev";
 const OTLP_SERVICE_NAME = "cli";
@@ -26,11 +26,11 @@ const createRemoteSpanProcessor = <Mode extends RemoteTelemetryMode>(
   tracingExporterFactories[telemetryConfig.mode].createSpanProcessor(telemetryConfig);
 
 export const TracingLiveLayer = Layer.effect(
-  TracingTag,
+  Tracing,
   Effect.gen(function* () {
-    const configLoader = yield* ConfigLoaderTag;
-    const versionService = yield* VersionTag;
-    const installIdentityService = yield* InstallIdentityTag;
+    const configLoader = yield* ConfigLoader;
+    const versionService = yield* Version;
+    const installIdentityService = yield* InstallIdentity;
     return {
       createSdkConfig: () =>
         Effect.gen(function* () {
@@ -81,6 +81,6 @@ export const TracingLiveLayer = Layer.effect(
             spanProcessor,
           } satisfies NodeSdk.Configuration;
         }),
-    } satisfies Tracing;
+    } satisfies TracingService;
   }),
 );

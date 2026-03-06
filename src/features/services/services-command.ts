@@ -1,7 +1,7 @@
 import { Args, Command, Options } from "@effect/cli";
 import { Effect } from "effect";
 
-import { CommandRegistryTag } from "~/bootstrap/command-registry-port";
+import { CommandRegistry } from "~/bootstrap/command-registry-port";
 import {
   handleDown,
   handleLogs,
@@ -72,8 +72,8 @@ export const servicesCommand = Command.make("services", {}, () =>
   }),
 ).pipe(Command.withSubcommands([upCommand, startCommand, downCommand, stopCommand, restartCommand, logsCommand, resetCommand]));
 
-export const registerServicesCommand: Effect.Effect<void, never, CommandRegistryTag> = Effect.gen(function* () {
-  const registry = yield* CommandRegistryTag;
+export const registerServicesCommand: Effect.Effect<void, never, CommandRegistry> = Effect.gen(function* () {
+  const registry = yield* CommandRegistry;
   yield* registry.register({
     name: "services",
     command: servicesCommand,

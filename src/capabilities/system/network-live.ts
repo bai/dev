@@ -10,8 +10,8 @@ import {
 import { ATTR_FILE_PATH } from "@opentelemetry/semantic-conventions/incubating";
 import { Effect, Layer } from "effect";
 
-import { FileSystemTag, type FileSystem } from "~/capabilities/system/file-system-port";
-import { NetworkTag, type HttpResponse, type Network } from "~/capabilities/system/network-port";
+import { FileSystem, type FileSystemService } from "~/capabilities/system/file-system-port";
+import { Network, type HttpResponse, type NetworkService } from "~/capabilities/system/network-port";
 import { networkError, type NetworkError, type UnknownError } from "~/core/errors";
 import { annotateErrorTypeOnFailure } from "~/core/observability/error-type";
 
@@ -33,9 +33,9 @@ const createHttpClientSpanAttributes = (url: string, method: string): Record<str
 };
 
 export const NetworkLiveLayer = Layer.effect(
-  NetworkTag,
+  Network,
   Effect.gen(function* () {
-    const fileSystem = yield* FileSystemTag;
+    const fileSystem = yield* FileSystem;
     return {
       get: (url: string, options: { headers?: Record<string, string> } = {}): Effect.Effect<HttpResponse, NetworkError | UnknownError> =>
         Effect.gen(function* () {
@@ -129,6 +129,6 @@ export const NetworkLiveLayer = Layer.effect(
             attributes: createHttpClientSpanAttributes(url, HTTP_REQUEST_METHOD_VALUE_HEAD),
           }),
         ),
-    } satisfies Network;
+    } satisfies NetworkService;
   }),
 );

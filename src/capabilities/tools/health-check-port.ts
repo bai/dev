@@ -11,8 +11,8 @@ export interface HealthCheckResult {
   readonly checkedAt: Date;
 }
 
-export class HealthCheckTag extends Effect.Tag("HealthCheck")<
-  HealthCheckTag,
+export class HealthCheck extends Effect.Tag("HealthCheck")<
+  HealthCheck,
   {
     /**
      * Run health checks immediately and return results
@@ -22,4 +22,4 @@ export class HealthCheckTag extends Effect.Tag("HealthCheck")<
   }
 >() {}
 
-export type HealthCheck = (typeof HealthCheckTag)["Service"];
+export type HealthCheckService = (typeof HealthCheck)["Service"];

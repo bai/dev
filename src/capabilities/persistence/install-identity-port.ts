@@ -2,11 +2,11 @@ import { Effect } from "effect";
 
 import type { ConfigError, UnknownError } from "~/core/errors";
 
-export class InstallIdentityTag extends Effect.Tag("InstallIdentity")<
-  InstallIdentityTag,
+export class InstallIdentity extends Effect.Tag("InstallIdentity")<
+  InstallIdentity,
   {
     readonly getOrCreateInstallId: () => Effect.Effect<string, ConfigError | UnknownError>;
   }
 >() {}
 
-export type InstallIdentity = (typeof InstallIdentityTag)["Service"];
+export type InstallIdentityService = (typeof InstallIdentity)["Service"];

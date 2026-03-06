@@ -2,9 +2,9 @@ import { Effect, Option } from "effect";
 
 import {
   DOCKER_SERVICE_NAMES,
-  DockerServicesTag,
+  DockerServices,
   isServiceName,
-  type DockerServices,
+  type DockerServicesService,
   type ServiceName,
 } from "~/capabilities/services/docker-services-port";
 import { dockerServiceError, type DockerServiceError, type ShellExecutionError } from "~/core/errors";
@@ -29,10 +29,10 @@ export const validateServiceNames = (services: readonly string[]): Effect.Effect
   });
 
 export const withDocker = <A, E, R>(
-  handler: (dockerServices: DockerServices) => Effect.Effect<A, E, R>,
-): Effect.Effect<A, E | DockerServiceError, R | DockerServicesTag> =>
+  handler: (dockerServices: DockerServicesService) => Effect.Effect<A, E, R>,
+): Effect.Effect<A, E | DockerServiceError, R | DockerServices> =>
   Effect.gen(function* () {
-    const dockerServices = yield* DockerServicesTag;
+    const dockerServices = yield* DockerServices;
     const isAvailable = yield* dockerServices.isDockerAvailable();
 
     if (!isAvailable) {
@@ -44,7 +44,7 @@ export const withDocker = <A, E, R>(
 
 export const handleUp = ({
   services,
-}: ServicesHandlerConfig): Effect.Effect<void, DockerServiceError | ShellExecutionError, DockerServicesTag> =>
+}: ServicesHandlerConfig): Effect.Effect<void, DockerServiceError | ShellExecutionError, DockerServices> =>
   withDocker((dockerServices) =>
     Effect.gen(function* () {
       const validServices = yield* validateServiceNames(services);
@@ -56,7 +56,7 @@ export const handleUp = ({
 
 export const handleDown = ({
   services,
-}: ServicesHandlerConfig): Effect.Effect<void, DockerServiceError | ShellExecutionError, DockerServicesTag> =>
+}: ServicesHandlerConfig): Effect.Effect<void, DockerServiceError | ShellExecutionError, DockerServices> =>
   withDocker((dockerServices) =>
     Effect.gen(function* () {
       const validServices = yield* validateServiceNames(services);
@@ -68,7 +68,7 @@ export const handleDown = ({
 
 export const handleRestart = ({
   services,
-}: ServicesHandlerConfig): Effect.Effect<void, DockerServiceError | ShellExecutionError, DockerServicesTag> =>
+}: ServicesHandlerConfig): Effect.Effect<void, DockerServiceError | ShellExecutionError, DockerServices> =>
   withDocker((dockerServices) =>
     Effect.gen(function* () {
       const validServices = yield* validateServiceNames(services);
@@ -78,7 +78,7 @@ export const handleRestart = ({
     }),
   );
 
-export const handleLogs = (config: LogsHandlerConfig): Effect.Effect<void, DockerServiceError | ShellExecutionError, DockerServicesTag> =>
+export const handleLogs = (config: LogsHandlerConfig): Effect.Effect<void, DockerServiceError | ShellExecutionError, DockerServices> =>
   withDocker((dockerServices) =>
     Effect.gen(function* () {
       const validServices = yield* validateServiceNames(config.service);
@@ -93,7 +93,7 @@ export const handleLogs = (config: LogsHandlerConfig): Effect.Effect<void, Docke
     }),
   );
 
-export const handleReset = (): Effect.Effect<void, DockerServiceError | ShellExecutionError, DockerServicesTag> =>
+export const handleReset = (): Effect.Effect<void, DockerServiceError | ShellExecutionError, DockerServices> =>
   withDocker((dockerServices) =>
     Effect.gen(function* () {
       yield* dockerServices.reset();

@@ -2,22 +2,22 @@ import { it } from "@effect/vitest";
 import { Effect, Layer } from "effect";
 import { describe, expect, vi } from "vitest";
 
-import type { BunTools } from "~/capabilities/tools/adapters/bun-tools-live";
-import { BunToolsTag } from "~/capabilities/tools/adapters/bun-tools-live";
-import type { DockerTools } from "~/capabilities/tools/adapters/docker-tools-live";
-import { DockerToolsTag } from "~/capabilities/tools/adapters/docker-tools-live";
-import type { FzfTools } from "~/capabilities/tools/adapters/fzf-tools-live";
-import { FzfToolsTag } from "~/capabilities/tools/adapters/fzf-tools-live";
-import type { GcloudTools } from "~/capabilities/tools/adapters/gcloud-tools-live";
-import { GcloudToolsTag } from "~/capabilities/tools/adapters/gcloud-tools-live";
-import type { GitTools } from "~/capabilities/tools/adapters/git-tools-live";
-import { GitToolsTag } from "~/capabilities/tools/adapters/git-tools-live";
-import type { MiseTools } from "~/capabilities/tools/adapters/mise-tools-live";
-import { MiseToolsTag } from "~/capabilities/tools/adapters/mise-tools-live";
+import type { BunToolsService } from "~/capabilities/tools/adapters/bun-tools-live";
+import { BunTools } from "~/capabilities/tools/adapters/bun-tools-live";
+import type { DockerToolsService } from "~/capabilities/tools/adapters/docker-tools-live";
+import { DockerTools } from "~/capabilities/tools/adapters/docker-tools-live";
+import type { FzfToolsService } from "~/capabilities/tools/adapters/fzf-tools-live";
+import { FzfTools } from "~/capabilities/tools/adapters/fzf-tools-live";
+import type { GcloudToolsService } from "~/capabilities/tools/adapters/gcloud-tools-live";
+import { GcloudTools } from "~/capabilities/tools/adapters/gcloud-tools-live";
+import type { GitToolsService } from "~/capabilities/tools/adapters/git-tools-live";
+import { GitTools } from "~/capabilities/tools/adapters/git-tools-live";
+import type { MiseToolsService } from "~/capabilities/tools/adapters/mise-tools-live";
+import { MiseTools } from "~/capabilities/tools/adapters/mise-tools-live";
 import type { HealthCheckResult } from "~/capabilities/tools/health-check-port";
 import { ToolHealthRegistryLiveLayer } from "~/capabilities/tools/tool-health-registry-live";
-import { ToolHealthRegistryTag } from "~/capabilities/tools/tool-health-registry-port";
-import { BuiltToolRegistryTag, createToolRegistry } from "~/capabilities/tools/tool-registry-live";
+import { ToolHealthRegistry } from "~/capabilities/tools/tool-health-registry-port";
+import { BuiltToolRegistry, createToolRegistry } from "~/capabilities/tools/tool-registry-live";
 import { healthCheckError } from "~/core/errors";
 
 const createResult = (toolName: string, status: "ok" | "warning" | "fail"): HealthCheckResult => ({
@@ -42,15 +42,15 @@ const createDockerToolStub = (result: HealthCheckResult) => ({
 });
 
 const createFixtures = () => {
-  const bunTools: BunTools = createVersionedToolStub(createResult("bun", "ok"));
-  const gitTools: GitTools = createVersionedToolStub(createResult("git", "ok"));
-  const miseTools: MiseTools = createVersionedToolStub(createResult("mise", "warning"));
-  const fzfTools: FzfTools = createVersionedToolStub(createResult("fzf", "ok"));
-  const gcloudTools: GcloudTools = {
+  const bunTools: BunToolsService = createVersionedToolStub(createResult("bun", "ok"));
+  const gitTools: GitToolsService = createVersionedToolStub(createResult("git", "ok"));
+  const miseTools: MiseToolsService = createVersionedToolStub(createResult("mise", "warning"));
+  const fzfTools: FzfToolsService = createVersionedToolStub(createResult("fzf", "ok"));
+  const gcloudTools: GcloudToolsService = {
     ...createVersionedToolStub(createResult("gcloud", "ok")),
     setupConfig: () => Effect.void,
   };
-  const dockerTools: DockerTools = createDockerToolStub(createResult("docker", "ok"));
+  const dockerTools: DockerToolsService = createDockerToolStub(createResult("docker", "ok"));
   const toolDependencies = {
     bunTools,
     dockerTools,
@@ -61,14 +61,14 @@ const createFixtures = () => {
   };
 
   const toolLayer = Layer.mergeAll(
-    Layer.succeed(BunToolsTag, bunTools),
-    Layer.succeed(GitToolsTag, gitTools),
-    Layer.succeed(MiseToolsTag, miseTools),
-    Layer.succeed(FzfToolsTag, fzfTools),
-    Layer.succeed(GcloudToolsTag, gcloudTools),
-    Layer.succeed(DockerToolsTag, dockerTools),
+    Layer.succeed(BunTools, bunTools),
+    Layer.succeed(GitTools, gitTools),
+    Layer.succeed(MiseTools, miseTools),
+    Layer.succeed(FzfTools, fzfTools),
+    Layer.succeed(GcloudTools, gcloudTools),
+    Layer.succeed(DockerTools, dockerTools),
   );
-  const builtToolRegistryLayer = Layer.provide(BuiltToolRegistryTag.DefaultWithoutDependencies, toolLayer);
+  const builtToolRegistryLayer = Layer.provide(BuiltToolRegistry.DefaultWithoutDependencies, toolLayer);
   const layer = Layer.provide(ToolHealthRegistryLiveLayer, builtToolRegistryLayer);
 
   return {
@@ -84,9 +84,9 @@ const createFixtures = () => {
 };
 
 describe("tool-health-registry-live", () => {
-  const loadRegistry = (layer: Layer.Layer<ToolHealthRegistryTag>) =>
+  const loadRegistry = (layer: Layer.Layer<ToolHealthRegistry>) =>
     Effect.gen(function* () {
-      return yield* ToolHealthRegistryTag;
+      return yield* ToolHealthRegistry;
     }).pipe(Effect.provide(layer));
 
   it.effect("returns all registered tools in stable order", () =>
@@ -147,20 +147,20 @@ describe("tool-health-registry-live", () => {
   it.effect("propagates checker failures from checkAllTools", () =>
     Effect.gen(function* () {
       const fixtures = createFixtures();
-      const failingGitTools: GitTools = {
+      const failingGitTools: GitToolsService = {
         ...fixtures.gitTools,
         performHealthCheck: () => Effect.fail(healthCheckError("git health check failed", "git")),
       };
       const toolLayer = Layer.mergeAll(
-        Layer.succeed(BunToolsTag, fixtures.bunTools),
-        Layer.succeed(DockerToolsTag, fixtures.dockerTools),
-        Layer.succeed(FzfToolsTag, fixtures.fzfTools),
-        Layer.succeed(GcloudToolsTag, fixtures.gcloudTools),
-        Layer.succeed(GitToolsTag, failingGitTools),
-        Layer.succeed(MiseToolsTag, fixtures.miseTools),
+        Layer.succeed(BunTools, fixtures.bunTools),
+        Layer.succeed(DockerTools, fixtures.dockerTools),
+        Layer.succeed(FzfTools, fixtures.fzfTools),
+        Layer.succeed(GcloudTools, fixtures.gcloudTools),
+        Layer.succeed(GitTools, failingGitTools),
+        Layer.succeed(MiseTools, fixtures.miseTools),
       );
       const registry = yield* loadRegistry(
-        Layer.provide(ToolHealthRegistryLiveLayer, Layer.provide(BuiltToolRegistryTag.DefaultWithoutDependencies, toolLayer)),
+        Layer.provide(ToolHealthRegistryLiveLayer, Layer.provide(BuiltToolRegistry.DefaultWithoutDependencies, toolLayer)),
       );
 
       const error = yield* Effect.flip(registry.checkAllTools());
@@ -174,7 +174,7 @@ describe("tool-health-registry-live", () => {
   it.effect("wires ToolHealthRegistry through the Effect layer", () =>
     Effect.gen(function* () {
       const fixtures = createFixtures();
-      const registry = yield* ToolHealthRegistryTag.pipe(Effect.provide(fixtures.layer));
+      const registry = yield* ToolHealthRegistry.pipe(Effect.provide(fixtures.layer));
 
       const result = yield* registry.checkTool("docker");
 

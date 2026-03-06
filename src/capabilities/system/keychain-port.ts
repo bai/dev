@@ -2,7 +2,7 @@ import { Effect } from "effect";
 
 import type { AuthError, ShellExecutionError } from "~/core/errors";
 
-export interface Keychain {
+export interface KeychainService {
   /**
    * Store a credential in the keychain
    */
@@ -24,4 +24,4 @@ export interface Keychain {
   hasCredential(service: string, account: string): Effect.Effect<boolean>;
 }
 
-export class KeychainTag extends Effect.Tag("Keychain")<KeychainTag, Keychain>() {}
+export class Keychain extends Effect.Tag("Keychain")<Keychain, KeychainService>() {}

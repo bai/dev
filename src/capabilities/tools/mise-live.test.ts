@@ -2,17 +2,17 @@ import { it } from "@effect/vitest";
 import { Effect, Exit, Layer } from "effect";
 import { beforeEach, describe, expect } from "vitest";
 
-import { FileSystemTag } from "~/capabilities/system/file-system-port";
-import type { FileSystem } from "~/capabilities/system/file-system-port";
+import { FileSystem } from "~/capabilities/system/file-system-port";
+import type { FileSystemService } from "~/capabilities/system/file-system-port";
 import { ShellMock } from "~/capabilities/system/shell-mock";
-import { ShellTag } from "~/capabilities/system/shell-port";
+import { Shell } from "~/capabilities/system/shell-port";
 import { MiseLiveLayer } from "~/capabilities/tools/mise-live";
-import { MiseTag, type Mise } from "~/capabilities/tools/mise-port";
-import { ConfigLoaderTag } from "~/core/config/config-loader-port";
-import type { ConfigLoader } from "~/core/config/config-loader-port";
+import { Mise, type MiseService } from "~/capabilities/tools/mise-port";
+import { ConfigLoader } from "~/core/config/config-loader-port";
+import type { ConfigLoaderService } from "~/core/config/config-loader-port";
 import { configSchema } from "~/core/config/config-schema";
 import { configError } from "~/core/errors";
-import { EnvironmentPathsTag, type EnvironmentPaths } from "~/core/runtime/path-service";
+import { EnvironmentPaths, type EnvironmentPathsService } from "~/core/runtime/path-service";
 import { makeEnvironmentPathsMock } from "~/core/runtime/path-service-mock";
 
 const mockShell = new ShellMock();
@@ -47,9 +47,9 @@ const mockFileSystem = {
   readFile: (_path) => Effect.succeed("test content"),
   getCwd: () => Effect.succeed("/test/directory"),
   findDirectoriesGlob: (_basePath, _pattern) => Effect.succeed([]),
-} satisfies FileSystem;
+} satisfies FileSystemService;
 
-const mockConfigLoader: ConfigLoader = {
+const mockConfigLoader: ConfigLoaderService = {
   parse: (content, source = "config") =>
     Effect.try({
       try: () => configSchema.parse(Bun.JSONC.parse(content)),
@@ -97,21 +97,21 @@ describe("mise-live", () => {
     environmentPaths = mockEnvironmentPaths,
   }: {
     readonly shell?: ShellMock;
-    readonly fileSystem?: FileSystem;
-    readonly configLoader?: ConfigLoader;
-    readonly environmentPaths?: EnvironmentPaths;
-  } = {}): Effect.Effect<Mise> =>
+    readonly fileSystem?: FileSystemService;
+    readonly configLoader?: ConfigLoaderService;
+    readonly environmentPaths?: EnvironmentPathsService;
+  } = {}): Effect.Effect<MiseService> =>
     Effect.gen(function* () {
-      return yield* MiseTag;
+      return yield* Mise;
     }).pipe(
       Effect.provide(
         Layer.provide(
           MiseLiveLayer,
           Layer.mergeAll(
-            Layer.succeed(ShellTag, shell),
-            Layer.succeed(FileSystemTag, fileSystem),
-            Layer.succeed(ConfigLoaderTag, configLoader),
-            Layer.succeed(EnvironmentPathsTag, environmentPaths),
+            Layer.succeed(Shell, shell),
+            Layer.succeed(FileSystem, fileSystem),
+            Layer.succeed(ConfigLoader, configLoader),
+            Layer.succeed(EnvironmentPaths, environmentPaths),
           ),
         ),
       ),
@@ -269,7 +269,7 @@ describe("mise-live", () => {
       const existsCalls: string[] = [];
       const mkdirCalls: Array<{ path: string; recursive?: boolean }> = [];
 
-      const trackingFileSystem: FileSystem = {
+      const trackingFileSystem: FileSystemService = {
         ...mockFileSystem,
         exists: (p) => {
           existsCalls.push(p);
@@ -301,7 +301,7 @@ describe("mise-live", () => {
       const mkdirCalls: Array<{ path: string }> = [];
       const writeFileCalls: Array<{ path: string; content: string }> = [];
 
-      const trackingFileSystem: FileSystem = {
+      const trackingFileSystem: FileSystemService = {
         ...mockFileSystem,
         exists: () => Effect.succeed(true),
         mkdir: (p) => {

@@ -8,8 +8,8 @@ export interface SpawnResult {
   stderr: string;
 }
 
-export class ShellTag extends Effect.Tag("Shell")<
-  ShellTag,
+export class Shell extends Effect.Tag("Shell")<
+  Shell,
   {
     /**
      * Execute a command and return the result
@@ -28,4 +28,4 @@ export class ShellTag extends Effect.Tag("Shell")<
   }
 >() {}
 
-export type Shell = (typeof ShellTag)["Service"];
+export type ShellService = (typeof Shell)["Service"];

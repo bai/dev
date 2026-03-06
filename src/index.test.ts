@@ -4,11 +4,11 @@ import { Effect } from "effect";
 import { describe, expect, vi } from "vitest";
 
 import { checkAndDisplayHelp, createMainCommand } from "~/bootstrap/cli-router";
-import type { CommandInfo, CommandRegistry } from "~/bootstrap/command-registry-port";
+import type { CommandInfo, CommandRegistryService } from "~/bootstrap/command-registry-port";
 import { cliUsageError, configError } from "~/core/errors";
 import { handleProgramError } from "~/index";
 
-const makeRegistry = (commandInfos: ReadonlyArray<CommandInfo>): CommandRegistry => ({
+const makeRegistry = (commandInfos: ReadonlyArray<CommandInfo>): CommandRegistryService => ({
   register: () => Effect.void,
   getByName: (name) => Effect.succeed(commandInfos.find((commandInfo) => commandInfo.name === name)),
   getCommands: () => Effect.succeed(commandInfos.map((commandInfo) => commandInfo.command)),

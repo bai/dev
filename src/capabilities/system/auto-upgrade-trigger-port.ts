@@ -2,11 +2,11 @@ import { Effect } from "effect";
 
 import type { UnknownError } from "~/core/errors";
 
-export class AutoUpgradeTriggerTag extends Effect.Tag("AutoUpgradeTrigger")<
-  AutoUpgradeTriggerTag,
+export class AutoUpgradeTrigger extends Effect.Tag("AutoUpgradeTrigger")<
+  AutoUpgradeTrigger,
   {
     trigger(): Effect.Effect<void, UnknownError>;
   }
 >() {}
 
-export type AutoUpgradeTrigger = (typeof AutoUpgradeTriggerTag)["Service"];
+export type AutoUpgradeTriggerService = (typeof AutoUpgradeTrigger)["Service"];

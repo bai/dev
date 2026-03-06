@@ -3,20 +3,20 @@ import path from "path";
 import { stringify } from "@iarna/toml";
 import { Effect, Layer } from "effect";
 
-import { FileSystemTag } from "~/capabilities/system/file-system-port";
-import { ShellTag } from "~/capabilities/system/shell-port";
-import { MiseTag, type Mise, type MiseInfo } from "~/capabilities/tools/mise-port";
-import { ConfigLoaderTag } from "~/core/config/config-loader-port";
+import { FileSystem } from "~/capabilities/system/file-system-port";
+import { Shell } from "~/capabilities/system/shell-port";
+import { Mise, type MiseService, type MiseInfo } from "~/capabilities/tools/mise-port";
+import { ConfigLoader } from "~/core/config/config-loader-port";
 import { shellExecutionError, unknownError, type ShellExecutionError, type UnknownError } from "~/core/errors";
-import { EnvironmentPathsTag } from "~/core/runtime/path-service";
+import { EnvironmentPaths } from "~/core/runtime/path-service";
 
 export const MiseLiveLayer = Layer.effect(
-  MiseTag,
+  Mise,
   Effect.gen(function* () {
-    const shell = yield* ShellTag;
-    const fileSystem = yield* FileSystemTag;
-    const configLoader = yield* ConfigLoaderTag;
-    const environmentPaths = yield* EnvironmentPathsTag;
+    const shell = yield* Shell;
+    const fileSystem = yield* FileSystem;
+    const configLoader = yield* ConfigLoader;
+    const environmentPaths = yield* EnvironmentPaths;
     return {
       checkInstallation: (): Effect.Effect<MiseInfo, ShellExecutionError> =>
         shell.exec("mise", ["--version"]).pipe(
@@ -138,6 +138,6 @@ export const MiseLiveLayer = Layer.effect(
             yield* Effect.logDebug("   ⚠️  No mise global config found in loaded configuration");
           }
         }),
-    } satisfies Mise;
+    } satisfies MiseService;
   }),
 );

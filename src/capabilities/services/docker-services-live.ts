@@ -4,18 +4,18 @@ import { Clock, Effect, Layer } from "effect";
 
 import {
   DOCKER_SERVICE_NAMES,
-  DockerServicesTag,
-  type DockerServices,
+  DockerServices,
+  type DockerServicesService,
   type ServiceName,
   type ServiceStatus,
 } from "~/capabilities/services/docker-services-port";
-import { FileSystemTag } from "~/capabilities/system/file-system-port";
-import { ShellTag } from "~/capabilities/system/shell-port";
+import { FileSystem } from "~/capabilities/system/file-system-port";
+import { Shell } from "~/capabilities/system/shell-port";
 import type { HealthCheckResult } from "~/capabilities/tools/health-check-port";
-import { AppConfigTag } from "~/core/config/app-config-port";
+import { AppConfig } from "~/core/config/app-config-port";
 import { dockerServiceError, type DockerServiceError, type ShellExecutionError } from "~/core/errors";
 import { annotateErrorTypeOnFailure } from "~/core/observability/error-type";
-import { StatePathsTag } from "~/core/runtime/path-service";
+import { StatePaths } from "~/core/runtime/path-service";
 
 const SERVICE_PORTS: Record<ServiceName, number> = {
   postgres17: 55432,
@@ -94,9 +94,9 @@ const getEnabledServices = (services: Partial<Record<ServiceName, unknown>> | un
 
 const createDockerServices = (enabledServices: readonly ServiceName[] = DOCKER_SERVICE_NAMES) =>
   Effect.gen(function* () {
-    const shell = yield* ShellTag;
-    const fs = yield* FileSystemTag;
-    const statePaths = yield* StatePathsTag;
+    const shell = yield* Shell;
+    const fs = yield* FileSystem;
+    const statePaths = yield* StatePaths;
     const getComposeFilePath = (): string => {
       return path.join(statePaths.dockerDir, "docker-compose.yml");
     };
@@ -189,7 +189,7 @@ const createDockerServices = (enabledServices: readonly ServiceName[] = DOCKER_S
       return match?.[1];
     };
 
-    const dockerServices: DockerServices = {
+    const dockerServices: DockerServicesService = {
       up: (services?: readonly ServiceName[]): Effect.Effect<void, DockerServiceError | ShellExecutionError> =>
         Effect.gen(function* () {
           const serviceList = services ?? enabledServices;
@@ -435,12 +435,12 @@ const createDockerServices = (enabledServices: readonly ServiceName[] = DOCKER_S
   });
 
 export const createDockerServicesLiveLayer = (enabledServices?: readonly ServiceName[]) =>
-  Layer.effect(DockerServicesTag, createDockerServices(enabledServices));
+  Layer.effect(DockerServices, createDockerServices(enabledServices));
 
 export const DockerServicesLiveLayer = Layer.effect(
-  DockerServicesTag,
+  DockerServices,
   Effect.gen(function* () {
-    const config = yield* AppConfigTag;
+    const config = yield* AppConfig;
     return yield* createDockerServices(getEnabledServices(config.services));
   }),
 );

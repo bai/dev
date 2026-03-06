@@ -3,10 +3,10 @@ import { Effect, Layer } from "effect";
 import { describe, expect } from "vitest";
 
 import { ShellMock } from "~/capabilities/system/shell-mock";
-import { ShellTag } from "~/capabilities/system/shell-port";
-import { MiseToolsTag } from "~/capabilities/tools/adapters/mise-tools-live";
+import { Shell } from "~/capabilities/system/shell-port";
+import { MiseTools } from "~/capabilities/tools/adapters/mise-tools-live";
 import { MiseMock } from "~/capabilities/tools/mise-mock";
-import { MiseTag } from "~/capabilities/tools/mise-port";
+import { Mise } from "~/capabilities/tools/mise-port";
 
 const makeSubject = () => {
   const shell = new ShellMock();
@@ -22,10 +22,10 @@ const makeSubject = () => {
     },
   });
   const miseTools = Effect.gen(function* () {
-    return yield* MiseToolsTag;
+    return yield* MiseTools;
   }).pipe(
     Effect.provide(
-      Layer.provide(MiseToolsTag.DefaultWithoutDependencies, Layer.mergeAll(Layer.succeed(ShellTag, shell), Layer.succeed(MiseTag, mise))),
+      Layer.provide(MiseTools.DefaultWithoutDependencies, Layer.mergeAll(Layer.succeed(Shell, shell), Layer.succeed(Mise, mise))),
     ),
   );
   return { mise, miseTools };

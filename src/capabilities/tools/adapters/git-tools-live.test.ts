@@ -3,14 +3,14 @@ import { Effect, Layer } from "effect";
 import { describe, expect } from "vitest";
 
 import { ShellMock } from "~/capabilities/system/shell-mock";
-import { ShellTag } from "~/capabilities/system/shell-port";
-import { GIT_MIN_VERSION, GitToolsTag } from "~/capabilities/tools/adapters/git-tools-live";
+import { Shell } from "~/capabilities/system/shell-port";
+import { GIT_MIN_VERSION, GitTools } from "~/capabilities/tools/adapters/git-tools-live";
 
 describe("git-tools-live", () => {
   const makeGitTools = (shell: ShellMock) =>
     Effect.gen(function* () {
-      return yield* GitToolsTag;
-    }).pipe(Effect.provide(Layer.provide(GitToolsTag.DefaultWithoutDependencies, Layer.succeed(ShellTag, shell))));
+      return yield* GitTools;
+    }).pipe(Effect.provide(Layer.provide(GitTools.DefaultWithoutDependencies, Layer.succeed(Shell, shell))));
 
   it.effect("parses git version from shell output", () =>
     Effect.gen(function* () {

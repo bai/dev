@@ -3,9 +3,9 @@ import { Effect, Layer } from "effect";
 import { afterEach, beforeEach, describe, expect, vi } from "vitest";
 
 import { GitLiveLayer } from "~/capabilities/system/git-live";
-import { GitTag, type Git } from "~/capabilities/system/git-port";
+import { Git, type GitService } from "~/capabilities/system/git-port";
 import { ShellMock } from "~/capabilities/system/shell-mock";
-import { ShellTag, type SpawnResult } from "~/capabilities/system/shell-port";
+import { Shell, type SpawnResult } from "~/capabilities/system/shell-port";
 import { gitError } from "~/core/errors";
 import type { Repository } from "~/core/models";
 
@@ -23,10 +23,10 @@ class MockShell extends ShellMock {
 describe("git-live", () => {
   let mockShell: MockShell;
 
-  const makeGit = (shell: MockShell): Effect.Effect<Git> =>
+  const makeGit = (shell: MockShell): Effect.Effect<GitService> =>
     Effect.gen(function* () {
-      return yield* GitTag;
-    }).pipe(Effect.provide(Layer.provide(GitLiveLayer, Layer.succeed(ShellTag, shell))));
+      return yield* Git;
+    }).pipe(Effect.provide(Layer.provide(GitLiveLayer, Layer.succeed(Shell, shell))));
 
   beforeEach(() => {
     mockShell = new MockShell();

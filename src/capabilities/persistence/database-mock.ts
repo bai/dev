@@ -2,15 +2,15 @@ import type { Database as BunSQLiteDatabase } from "bun:sqlite";
 
 import { Effect } from "effect";
 
-import type { Database } from "~/capabilities/persistence/database-port";
+import type { DatabaseService } from "~/capabilities/persistence/database-port";
 import type { DrizzleDatabase } from "~/capabilities/persistence/drizzle-types";
 import type { ConfigError, UnknownError } from "~/core/errors";
 
 interface DatabaseMockOverrides {
-  readonly query?: Database["query"];
-  readonly transaction?: Database["transaction"];
-  readonly raw?: Database["raw"];
-  readonly migrate?: Database["migrate"];
+  readonly query?: DatabaseService["query"];
+  readonly transaction?: DatabaseService["transaction"];
+  readonly raw?: DatabaseService["raw"];
+  readonly migrate?: DatabaseService["migrate"];
 }
 
 interface DatabaseMockOptions {
@@ -20,7 +20,7 @@ interface DatabaseMockOptions {
   readonly overrides?: DatabaseMockOverrides;
 }
 
-export class DatabaseMock implements Database {
+export class DatabaseMock implements DatabaseService {
   public queryCalls = 0;
   public transactionCalls = 0;
   public rawCalls = 0;

@@ -1,13 +1,13 @@
 import { Effect } from "effect";
 
-import type { Directory } from "~/capabilities/workspace/directory-port";
+import type { DirectoryService } from "~/capabilities/workspace/directory-port";
 
 interface DirectoryMockOverrides {
-  readonly ensureBaseDirectoryExists?: Directory["ensureBaseDirectoryExists"];
-  readonly findDirs?: Directory["findDirs"];
+  readonly ensureBaseDirectoryExists?: DirectoryService["ensureBaseDirectoryExists"];
+  readonly findDirs?: DirectoryService["findDirs"];
 }
 
-export class DirectoryMock implements Directory {
+export class DirectoryMock implements DirectoryService {
   public ensureBaseDirectoryExistsCalls = 0;
   public findDirsCalls = 0;
   public directories: string[];

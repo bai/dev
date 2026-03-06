@@ -3,8 +3,8 @@ import { Effect } from "effect";
 import type { GitError, ShellExecutionError } from "~/core/errors";
 import type { Repository } from "~/core/models";
 
-export class GitTag extends Effect.Tag("Git")<
-  GitTag,
+export class Git extends Effect.Tag("Git")<
+  Git,
   {
     /**
      * Clone a repository to a destination path
@@ -38,4 +38,4 @@ export class GitTag extends Effect.Tag("Git")<
   }
 >() {}
 
-export type Git = (typeof GitTag)["Service"];
+export type GitService = (typeof Git)["Service"];

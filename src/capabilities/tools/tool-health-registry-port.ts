@@ -7,8 +7,8 @@ import type { HealthCheckError } from "~/core/errors";
  * Domain port for tool health registry
  * Provides health check capabilities for tools
  */
-export class ToolHealthRegistryTag extends Effect.Tag("ToolHealthRegistry")<
-  ToolHealthRegistryTag,
+export class ToolHealthRegistry extends Effect.Tag("ToolHealthRegistry")<
+  ToolHealthRegistry,
   {
     /**
      * Get list of all registered tools that can be health checked
@@ -27,4 +27,4 @@ export class ToolHealthRegistryTag extends Effect.Tag("ToolHealthRegistry")<
   }
 >() {}
 
-export type ToolHealthRegistry = (typeof ToolHealthRegistryTag)["Service"];
+export type ToolHealthRegistryService = (typeof ToolHealthRegistry)["Service"];

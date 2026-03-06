@@ -15,9 +15,9 @@ import { ATTR_FILE_PATH } from "@opentelemetry/semantic-conventions/incubating";
 import { Cause, Effect, Exit, Layer, Option } from "effect";
 import { afterEach, describe, expect, vi } from "vitest";
 
-import { FileSystemTag, type FileSystem } from "~/capabilities/system/file-system-port";
+import { FileSystem, type FileSystemService } from "~/capabilities/system/file-system-port";
 import { NetworkLiveLayer } from "~/capabilities/system/network-live";
-import { NetworkTag } from "~/capabilities/system/network-port";
+import { Network } from "~/capabilities/system/network-port";
 import { fileSystemError } from "~/core/errors";
 
 const createMockFileSystem = (
@@ -25,7 +25,7 @@ const createMockFileSystem = (
 ) => {
   const writes: Array<{ path: string; content: string }> = [];
 
-  const fileSystem: FileSystem = {
+  const fileSystem: FileSystemService = {
     readFile: () => Effect.succeed(""),
     writeFile: (path, content) => {
       writes.push({ path, content });
@@ -49,10 +49,10 @@ const createTelemetryLayer = (exporter: InMemorySpanExporter) =>
   }));
 
 describe("network-live", () => {
-  const makeNetwork = (fileSystem: FileSystem) =>
+  const makeNetwork = (fileSystem: FileSystemService) =>
     Effect.gen(function* () {
-      return yield* NetworkTag;
-    }).pipe(Effect.provide(Layer.provide(NetworkLiveLayer, Layer.succeed(FileSystemTag, fileSystem))));
+      return yield* Network;
+    }).pipe(Effect.provide(Layer.provide(NetworkLiveLayer, Layer.succeed(FileSystem, fileSystem))));
 
   afterEach(() => {
     vi.restoreAllMocks();

@@ -2,12 +2,12 @@ import { it } from "@effect/vitest";
 import { Effect, Layer } from "effect";
 import { describe, expect } from "vitest";
 
-import { type FileSystem, FileSystemTag } from "~/capabilities/system/file-system-port";
+import { type FileSystemService, FileSystem } from "~/capabilities/system/file-system-port";
 import { MiseMock } from "~/capabilities/tools/mise-mock";
-import { MiseTag } from "~/capabilities/tools/mise-port";
+import { Mise } from "~/capabilities/tools/mise-port";
 import { upCommand } from "~/features/up/up-command";
 
-const makeFileSystem = (cwd: string): FileSystem => ({
+const makeFileSystem = (cwd: string): FileSystemService => ({
   readFile: () => Effect.succeed(""),
   writeFile: () => Effect.void,
   exists: () => Effect.succeed(false),
@@ -26,7 +26,7 @@ describe("up-command", () => {
           runtimeVersions: {},
         },
       });
-      const testLayer = Layer.mergeAll(Layer.succeed(MiseTag, mise), Layer.succeed(FileSystemTag, makeFileSystem("/tmp/project")));
+      const testLayer = Layer.mergeAll(Layer.succeed(Mise, mise), Layer.succeed(FileSystem, makeFileSystem("/tmp/project")));
 
       yield* upCommand.handler({}).pipe(Effect.provide(testLayer));
 
@@ -44,7 +44,7 @@ describe("up-command", () => {
           runtimeVersions: {},
         },
       });
-      const testLayer = Layer.mergeAll(Layer.succeed(MiseTag, mise), Layer.succeed(FileSystemTag, makeFileSystem("/tmp/project")));
+      const testLayer = Layer.mergeAll(Layer.succeed(Mise, mise), Layer.succeed(FileSystem, makeFileSystem("/tmp/project")));
 
       yield* upCommand.handler({}).pipe(Effect.provide(testLayer));
 
