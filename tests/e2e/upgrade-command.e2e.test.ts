@@ -14,7 +14,7 @@ describe("upgrade command e2e", () => {
         expect(result.exitCode).toBe(0);
         expect(result.stdout).toContain("Upgrade completed successfully");
 
-        const miseConfigPath = path.join(fixture.configHome, "mise", "config.toml");
+        const miseConfigPath = path.join(fixture.toolConfigHome, "mise", "config.toml");
         const miseConfigExists = await fs
           .access(miseConfigPath)
           .then(() => true)
@@ -34,7 +34,7 @@ describe("upgrade command e2e", () => {
     "runs 'upgrade' and rewrites local config URL when it drifts",
     async () =>
       withFixture(async (fixture) => {
-        const localConfigPath = path.join(fixture.configHome, "dev", "config.json");
+        const localConfigPath = fixture.configPath;
         const localConfigContent = await fs.readFile(localConfigPath, "utf8");
         const localConfig = JSON.parse(localConfigContent) as Record<string, unknown>;
         const driftedConfig = { ...localConfig, configUrl: "https://example.com/stale-config.json" };
@@ -76,11 +76,9 @@ describe("upgrade command e2e", () => {
     async () =>
       withFixture(async (fixture) => {
         const invalidRemoteConfigUrl = "data:application/json,%7B%22defaultOrg%22%3A";
-        const projectConfigPath = path.join(fixture.homeDir, ".dev", "config.json");
-        const localConfigPath = path.join(fixture.configHome, "dev", "config.json");
-
-        const projectConfigContent = await fs.readFile(projectConfigPath, "utf8");
-        const projectConfig = JSON.parse(projectConfigContent) as Record<string, unknown>;
+        const projectConfigPath = path.join(fixture.installDir, "config.json");
+        const localConfigPath = fixture.configPath;
+        const projectConfig = JSON.parse(await fs.readFile(projectConfigPath, "utf8")) as Record<string, unknown>;
         await fs.writeFile(projectConfigPath, JSON.stringify({ ...projectConfig, configUrl: invalidRemoteConfigUrl }, null, 2), "utf8");
 
         const localConfigContent = await fs.readFile(localConfigPath, "utf8");

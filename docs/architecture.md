@@ -315,7 +315,7 @@ Concrete implementations live in `src/core/` and `src/capabilities/` and are wir
 
 ## 8 · Local Run Analytics
 
-Drizzle stores command runs in `~/.local/share/dev/dev.db` (following XDG Base Directory Specification).
+Drizzle stores command runs in `~/.dev/state/dev.db` by default.
 
 ```ts
 import { sqliteTable, text, integer, sql } from "drizzle-orm/sqlite-core";
@@ -339,7 +339,15 @@ A tiny adapter (`RunStoreLive`) inserts a row *before* command execution and fin
 
 ## 9 · Configuration Handling
 
-`ConfigLoader` reads `~/.config/dev/config.json` (following XDG Base Directory Specification) and validates via a Zod schema (`configSchema`). The composition root performs this bootstrap step once, then re-exposes the loaded `Config` plus the derived host/workspace path services (`AppConfigTag`, `HostPathsTag`, `WorkspacePathsTag`) so config-aware adapters can depend on services instead of constructor arguments.
+`ConfigLoader` reads `~/.dev/state/config.json` by default and validates via the config schema. The composition root performs this bootstrap step once, then re-exposes the loaded `Config` plus the derived runtime path services (`AppConfigTag`, `EnvironmentPathsTag`, `InstallPathsTag`, `StatePathsTag`, `WorkspacePathsTag`) so config-aware adapters can depend on services instead of constructor arguments.
+
+App-owned mutable state is intentionally split from the install root:
+
+* `InstallPaths` describes where the CLI is installed (`~/.dev` for the repo install path by default).
+* `StatePaths` describes writable runtime state (`~/.dev/state` by default).
+* Runtime code reads repo-owned assets directly from `InstallPaths.installDir` when needed (for example `config.json` and `drizzle/migrations`).
+* The temporary `AppAssets` abstraction was removed because repo distribution is the only supported runtime mode today.
+* XDG paths remain only for third-party tool configuration (for example `mise` and `gcloud`), not for app-owned state.
 
 `ConfigLoaderTag` remains the port for reading, saving, and refreshing config from disk and remote sources after startup.
 
@@ -403,10 +411,10 @@ const telemetryConfigSchema = z
 
 ## 11 · Upgrade Sequence
 
-1. Self-update CLI repository if in git repo.
+1. Self-update CLI repository if `InstallPaths.upgradeCapable` and the install root is a git repo.
 2. Ensure necessary directories exist.
 3. Update shell integration.
-4. Fetch remote `configUrl`, migrate & overwrite local.
+4. Read the authoritative project config from `${installDir}/config.json`, ensure local `configUrl` matches it, then refresh from remote.
 5. Check and upgrade essential tools (bun, git, mise, fzf, gcloud).
 6. Print success message and usage examples.
 

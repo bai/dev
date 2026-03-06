@@ -5,6 +5,7 @@ import { describe, expect } from "vitest";
 import { RunStoreMock } from "~/capabilities/persistence/run-store-mock";
 import { configError, unknownError } from "~/core/errors";
 import type { CommandRun } from "~/core/models";
+import { makeInstallPathsMock } from "~/core/runtime/path-service-mock";
 import type { RuntimeContext } from "~/core/runtime/runtime-context-port";
 import { makeUpdateChecker } from "~/features/upgrade/update-check-service";
 
@@ -25,6 +26,7 @@ describe("update-check-service", () => {
             autoUpgradeCalls += 1;
           }),
         makeRuntimeContext(["bun", "src/index.ts", "status"]),
+        makeInstallPathsMock(),
       );
 
       yield* checker.runPeriodicUpgradeCheck();
@@ -59,6 +61,7 @@ describe("update-check-service", () => {
             autoUpgradeCalls += 1;
           }),
         makeRuntimeContext(["bun", "src/index.ts", "status"]),
+        makeInstallPathsMock(),
       );
 
       yield* checker.runPeriodicUpgradeCheck();
@@ -93,6 +96,7 @@ describe("update-check-service", () => {
             autoUpgradeCalls += 1;
           }),
         makeRuntimeContext(["bun", "src/index.ts", "status"]),
+        makeInstallPathsMock(),
       );
 
       yield* checker.runPeriodicUpgradeCheck();
@@ -114,7 +118,12 @@ describe("update-check-service", () => {
             }),
         },
       });
-      const checker = makeUpdateChecker(runStore, () => Effect.void, makeRuntimeContext(["bun", "src/index.ts", "upgrade"]));
+      const checker = makeUpdateChecker(
+        runStore,
+        () => Effect.void,
+        makeRuntimeContext(["bun", "src/index.ts", "upgrade"]),
+        makeInstallPathsMock(),
+      );
 
       yield* checker.runPeriodicUpgradeCheck();
 
@@ -145,7 +154,12 @@ describe("update-check-service", () => {
             }),
         },
       });
-      const checker = makeUpdateChecker(runStore, () => Effect.void, makeRuntimeContext(["bun", "src/index.ts", "status"]));
+      const checker = makeUpdateChecker(
+        runStore,
+        () => Effect.void,
+        makeRuntimeContext(["bun", "src/index.ts", "status"]),
+        makeInstallPathsMock(),
+      );
 
       yield* checker.runPeriodicUpgradeCheck();
 
@@ -160,6 +174,7 @@ describe("update-check-service", () => {
         new RunStoreMock(),
         () => unknownError("cannot spawn background process"),
         makeRuntimeContext(["bun", "src/index.ts", "status"]),
+        makeInstallPathsMock(),
       );
 
       const result = yield* Effect.exit(checker.runPeriodicUpgradeCheck());
@@ -175,7 +190,12 @@ describe("update-check-service", () => {
           getRecentRuns: () => configError("database unavailable"),
         },
       });
-      const checker = makeUpdateChecker(runStore, () => Effect.void, makeRuntimeContext(["bun", "src/index.ts", "status"]));
+      const checker = makeUpdateChecker(
+        runStore,
+        () => Effect.void,
+        makeRuntimeContext(["bun", "src/index.ts", "status"]),
+        makeInstallPathsMock(),
+      );
 
       const result = yield* Effect.exit(checker.runPeriodicUpgradeCheck());
 
@@ -190,11 +210,52 @@ describe("update-check-service", () => {
           getRecentRuns: () => unknownError("unexpected failure"),
         },
       });
-      const checker = makeUpdateChecker(runStore, () => Effect.void, makeRuntimeContext(["bun", "src/index.ts", "status"]));
+      const checker = makeUpdateChecker(
+        runStore,
+        () => Effect.void,
+        makeRuntimeContext(["bun", "src/index.ts", "status"]),
+        makeInstallPathsMock(),
+      );
 
       const result = yield* Effect.exit(checker.runPeriodicUpgradeCheck());
 
       expect(Exit.isSuccess(result)).toBe(true);
+    }),
+  );
+
+  it.effect("skips background auto-upgrade entirely for binary installs", () =>
+    Effect.gen(function* () {
+      let autoUpgradeCalls = 0;
+      let getRecentRunsCalls = 0;
+
+      const runStore = new RunStoreMock({
+        overrides: {
+          getRecentRuns: () =>
+            Effect.sync(() => {
+              getRecentRunsCalls += 1;
+              return [] as CommandRun[];
+            }),
+        },
+      });
+
+      const checker = makeUpdateChecker(
+        runStore,
+        () =>
+          Effect.sync(() => {
+            autoUpgradeCalls += 1;
+          }),
+        makeRuntimeContext(["/tmp/dist/dev", "/tmp/dist/dev", "status"]),
+        makeInstallPathsMock({
+          installMode: "binary",
+          installDir: "/tmp/dist",
+          upgradeCapable: false,
+        }),
+      );
+
+      yield* checker.runPeriodicUpgradeCheck();
+
+      expect(getRecentRunsCalls).toBe(0);
+      expect(autoUpgradeCalls).toBe(0);
     }),
   );
 });

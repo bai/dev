@@ -8,7 +8,7 @@ import { ShellTag } from "~/capabilities/system/shell-port";
 import { MiseTag, type Mise, type MiseInfo } from "~/capabilities/tools/mise-port";
 import { ConfigLoaderTag } from "~/core/config/config-loader-port";
 import { shellExecutionError, unknownError, type ShellExecutionError, type UnknownError } from "~/core/errors";
-import { HostPathsTag } from "~/core/runtime/path-service";
+import { EnvironmentPathsTag } from "~/core/runtime/path-service";
 
 export const MiseLiveLayer = Layer.effect(
   MiseTag,
@@ -16,7 +16,7 @@ export const MiseLiveLayer = Layer.effect(
     const shell = yield* ShellTag;
     const fileSystem = yield* FileSystemTag;
     const configLoader = yield* ConfigLoaderTag;
-    const hostPaths = yield* HostPathsTag;
+    const environmentPaths = yield* EnvironmentPathsTag;
     return {
       checkInstallation: (): Effect.Effect<MiseInfo, ShellExecutionError> =>
         shell.exec("mise", ["--version"]).pipe(
@@ -105,7 +105,7 @@ export const MiseLiveLayer = Layer.effect(
         Effect.gen(function* () {
           yield* Effect.logDebug("🔧 Setting up mise global configuration...");
 
-          const xdgConfigHome = path.dirname(hostPaths.configDir);
+          const xdgConfigHome = environmentPaths.xdgConfigHome;
           const miseConfigDir = path.join(xdgConfigHome, "mise");
           const miseConfigFile = path.join(miseConfigDir, "config.toml");
 

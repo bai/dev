@@ -3,32 +3,57 @@ import path from "path";
 import { Effect } from "effect";
 
 export const DEFAULT_BASE_SEARCH_DIR = "src";
-const DEFAULT_DEV_DIR = ".dev";
+export const DEFAULT_INSTALL_DIR = "~/.dev";
+export const DEFAULT_STATE_DIR = "~/.dev/state";
 
-export interface HostPathsRuntime {
+export interface PathRuntime {
   readonly homeDir: string;
-  readonly xdgConfigHome: string;
-  readonly xdgDataHome: string;
-  readonly xdgCacheHome: string;
   readonly cwd: string;
+  readonly xdgConfigHome: string;
+  readonly argv: readonly string[];
+  readonly execPath: string;
+  readonly devInstallDir?: string;
+  readonly devStateDir?: string;
 }
 
-export class HostPathsTag extends Effect.Tag("HostPaths")<
-  HostPathsTag,
+export type InstallMode = "repo" | "binary";
+
+export class EnvironmentPathsTag extends Effect.Tag("EnvironmentPaths")<
+  EnvironmentPathsTag,
   {
     readonly homeDir: string;
     readonly cwd: string;
-    readonly devDir: string;
-    readonly configDir: string;
-    readonly configPath: string;
-    readonly dataDir: string;
-    readonly dbPath: string;
-    readonly cacheDir: string;
+    readonly xdgConfigHome: string;
     resolveUserPath(filePath: string): string;
   }
 >() {}
 
-export type HostPaths = (typeof HostPathsTag)["Service"];
+export type EnvironmentPaths = (typeof EnvironmentPathsTag)["Service"];
+
+export class InstallPathsTag extends Effect.Tag("InstallPaths")<
+  InstallPathsTag,
+  {
+    readonly installMode: InstallMode;
+    readonly installDir: string;
+    readonly upgradeCapable: boolean;
+  }
+>() {}
+
+export type InstallPaths = (typeof InstallPathsTag)["Service"];
+
+export class StatePathsTag extends Effect.Tag("StatePaths")<
+  StatePathsTag,
+  {
+    readonly stateDir: string;
+    readonly configPath: string;
+    readonly dbPath: string;
+    readonly cacheDir: string;
+    readonly dockerDir: string;
+    readonly runDir: string;
+  }
+>() {}
+
+export type StatePaths = (typeof StatePathsTag)["Service"];
 
 export class WorkspacePathsTag extends Effect.Tag("WorkspacePaths")<
   WorkspacePathsTag,
@@ -39,7 +64,7 @@ export class WorkspacePathsTag extends Effect.Tag("WorkspacePaths")<
 
 export type WorkspacePaths = (typeof WorkspacePathsTag)["Service"];
 
-export const resolveUserPath = (filePath: string, runtime: Pick<HostPathsRuntime, "homeDir" | "cwd">): string => {
+export const resolveUserPath = (filePath: string, runtime: Pick<PathRuntime, "homeDir" | "cwd">): string => {
   if (filePath.startsWith("~/")) {
     return path.join(runtime.homeDir, filePath.slice(2));
   }
@@ -49,27 +74,71 @@ export const resolveUserPath = (filePath: string, runtime: Pick<HostPathsRuntime
   return path.resolve(runtime.cwd, filePath);
 };
 
-export const createHostPaths = (runtime: HostPathsRuntime, overrides: { readonly configPath?: string } = {}): HostPaths => {
-  const configPath = overrides.configPath
-    ? resolveUserPath(overrides.configPath, runtime)
-    : path.join(runtime.xdgConfigHome, "dev", "config.json");
+export const isBundledBinaryInvocation = (argv: readonly string[], execPath: string): boolean => {
+  const scriptPath = argv[1];
+  return Boolean(execPath && scriptPath && (scriptPath === execPath || scriptPath.startsWith("/$bunfs/")));
+};
+
+export const resolveRepoInstallDirFromArgv = (argv: readonly string[]): string | null => {
+  const scriptPath = argv[1];
+
+  if (!scriptPath || scriptPath.startsWith("/$bunfs/")) {
+    return null;
+  }
+
+  return path.resolve(scriptPath, "..", "..");
+};
+
+export const createEnvironmentPaths = (runtime: Pick<PathRuntime, "homeDir" | "cwd" | "xdgConfigHome">): EnvironmentPaths => ({
+  homeDir: runtime.homeDir,
+  cwd: runtime.cwd,
+  xdgConfigHome: runtime.xdgConfigHome,
+  resolveUserPath: (filePath) => resolveUserPath(filePath, runtime),
+});
+
+export const createInstallPaths = (
+  runtime: PathRuntime,
+  overrides: {
+    readonly installDir?: string;
+    readonly installMode?: InstallMode;
+    readonly upgradeCapable?: boolean;
+  } = {},
+): InstallPaths => {
+  const inferredInstallMode = isBundledBinaryInvocation(runtime.argv, runtime.execPath) ? "binary" : "repo";
+  const installMode = overrides.installMode ?? inferredInstallMode;
+  const inferredInstallDir =
+    installMode === "repo"
+      ? (resolveRepoInstallDirFromArgv(runtime.argv) ?? DEFAULT_INSTALL_DIR)
+      : path.dirname(runtime.execPath || runtime.cwd);
 
   return {
-    homeDir: runtime.homeDir,
-    cwd: runtime.cwd,
-    devDir: path.join(runtime.homeDir, DEFAULT_DEV_DIR),
-    configDir: path.dirname(configPath),
-    configPath,
-    dataDir: path.join(runtime.xdgDataHome, "dev"),
-    dbPath: path.join(runtime.xdgDataHome, "dev", "dev.db"),
-    cacheDir: path.join(runtime.xdgCacheHome, "dev"),
-    resolveUserPath: (filePath) => resolveUserPath(filePath, runtime),
+    installMode,
+    installDir: resolveUserPath(overrides.installDir ?? runtime.devInstallDir ?? inferredInstallDir, runtime),
+    upgradeCapable: overrides.upgradeCapable ?? installMode === "repo",
+  };
+};
+
+export const createStatePaths = (
+  runtime: Pick<PathRuntime, "homeDir" | "cwd" | "devStateDir">,
+  overrides: {
+    readonly stateDir?: string;
+    readonly configPath?: string;
+  } = {},
+): StatePaths => {
+  const stateDir = resolveUserPath(overrides.stateDir ?? runtime.devStateDir ?? DEFAULT_STATE_DIR, runtime);
+  return {
+    stateDir,
+    configPath: overrides.configPath ? resolveUserPath(overrides.configPath, runtime) : path.join(stateDir, "config.json"),
+    dbPath: path.join(stateDir, "dev.db"),
+    cacheDir: path.join(stateDir, "cache"),
+    dockerDir: path.join(stateDir, "docker"),
+    runDir: path.join(stateDir, "run"),
   };
 };
 
 export const createWorkspacePaths = (
-  hostPaths: Pick<HostPaths, "homeDir" | "resolveUserPath">,
+  environmentPaths: Pick<EnvironmentPaths, "homeDir" | "resolveUserPath">,
   baseSearchPath?: string,
 ): WorkspacePaths => ({
-  baseSearchPath: hostPaths.resolveUserPath(baseSearchPath ?? path.join(hostPaths.homeDir, DEFAULT_BASE_SEARCH_DIR)),
+  baseSearchPath: environmentPaths.resolveUserPath(baseSearchPath ?? path.join(environmentPaths.homeDir, DEFAULT_BASE_SEARCH_DIR)),
 });

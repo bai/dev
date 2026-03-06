@@ -24,7 +24,15 @@ This CLI tool follows hexagonal architecture principles with dependency injectio
 **Two-Stage Dynamic Wiring**:
 
 1. **Stage 1**: Load configuration via `loadConfiguration()` (self-contained with bootstrap dependencies)
-2. **Stage 2**: Build dynamic layers in `src/bootstrap/wiring.ts` using the loaded configuration services
+2. **Stage 2**: Build dynamic layers in `src/bootstrap/wiring.ts` using the loaded configuration plus runtime path services
+
+**Runtime Path Model**:
+
+- `EnvironmentPaths`: process/home/cwd-aware path resolution
+- `InstallPaths`: install root and install mode (`repo` or `binary`)
+- `StatePaths`: app-owned mutable state under `~/.dev/state` by default
+- App-owned runtime state does **not** live in XDG paths anymore
+- `XDG_CONFIG_HOME` remains only for third-party tool config like `mise` and `gcloud`
 
 **Effect-TS Patterns**:
 
@@ -160,7 +168,7 @@ Uses Drizzle ORM with SQLite for:
 
 - Command execution tracking (`runs` table)
 - Health check results (`tool_health_checks` table)
-- XDG Base Directory compliant storage
+- App-owned state storage in `~/.dev/state/dev.db` by default
 
 ### Schema Definitions
 

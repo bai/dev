@@ -1,6 +1,6 @@
 import path from "path";
 
-import { type HostPaths, type WorkspacePaths } from "~/core/runtime/path-service";
+import { type EnvironmentPaths, type InstallPaths, type StatePaths, type WorkspacePaths } from "~/core/runtime/path-service";
 
 const resolveMockUserPath = (filePath: string, runtime: { readonly homeDir: string; readonly cwd: string }): string => {
   if (filePath.startsWith("~/")) {
@@ -12,44 +12,56 @@ const resolveMockUserPath = (filePath: string, runtime: { readonly homeDir: stri
   return path.resolve(runtime.cwd, filePath);
 };
 
-export const makeHostPathsMock = (
+export const makeEnvironmentPathsMock = (
   overrides: {
     readonly homeDir?: string;
     readonly cwd?: string;
     readonly xdgConfigHome?: string;
-    readonly xdgDataHome?: string;
-    readonly xdgCacheHome?: string;
-    readonly devDir?: string;
-    readonly configDir?: string;
-    readonly configPath?: string;
-    readonly dataDir?: string;
-    readonly dbPath?: string;
-    readonly cacheDir?: string;
   } = {},
-): HostPaths => {
+): EnvironmentPaths => {
   const homeDir = overrides.homeDir ?? "/home/user";
   const cwd = overrides.cwd ?? homeDir;
-  const xdgConfigHome = overrides.xdgConfigHome ?? `${homeDir}/.config`;
-  const xdgDataHome = overrides.xdgDataHome ?? `${homeDir}/.local/share`;
-  const xdgCacheHome = overrides.xdgCacheHome ?? `${homeDir}/.cache`;
-  const configPath =
-    overrides.configPath ??
-    (overrides.configDir ? path.join(overrides.configDir, "config.json") : path.join(xdgConfigHome, "dev", "config.json"));
-  const configDir = overrides.configDir ?? path.dirname(configPath);
-  const dataDir = overrides.dataDir ?? path.join(xdgDataHome, "dev");
-  const dbPath = overrides.dbPath ?? path.join(dataDir, "dev.db");
-  const cacheDir = overrides.cacheDir ?? path.join(xdgCacheHome, "dev");
-
   return {
     homeDir,
     cwd,
-    devDir: overrides.devDir ?? `${homeDir}/.dev`,
-    configDir,
-    configPath,
-    dataDir,
-    dbPath,
-    cacheDir,
+    xdgConfigHome: overrides.xdgConfigHome ?? `${homeDir}/.config`,
     resolveUserPath: (filePath) => resolveMockUserPath(filePath, { homeDir, cwd }),
+  };
+};
+
+export const makeInstallPathsMock = (
+  overrides: {
+    readonly installMode?: InstallPaths["installMode"];
+    readonly installDir?: string;
+    readonly upgradeCapable?: boolean;
+  } = {},
+): InstallPaths => {
+  const installMode = overrides.installMode ?? "repo";
+  return {
+    installMode,
+    installDir: overrides.installDir ?? "/home/user/.dev",
+    upgradeCapable: overrides.upgradeCapable ?? installMode === "repo",
+  };
+};
+
+export const makeStatePathsMock = (
+  overrides: {
+    readonly stateDir?: string;
+    readonly configPath?: string;
+    readonly dbPath?: string;
+    readonly cacheDir?: string;
+    readonly dockerDir?: string;
+    readonly runDir?: string;
+  } = {},
+): StatePaths => {
+  const stateDir = overrides.stateDir ?? "/home/user/.dev/state";
+  return {
+    stateDir,
+    configPath: overrides.configPath ?? path.join(stateDir, "config.json"),
+    dbPath: overrides.dbPath ?? path.join(stateDir, "dev.db"),
+    cacheDir: overrides.cacheDir ?? path.join(stateDir, "cache"),
+    dockerDir: overrides.dockerDir ?? path.join(stateDir, "docker"),
+    runDir: overrides.runDir ?? path.join(stateDir, "run"),
   };
 };
 

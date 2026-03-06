@@ -49,9 +49,8 @@ describe("dev command e2e", () => {
           const result = await runCli(fixture, ["--help"]);
           expect(result.exitCode).toBe(0);
 
-          const configPath = path.join(fixture.configHome, "dev", "config.json");
           const configExists = await fs
-            .access(configPath)
+            .access(fixture.configPath)
             .then(() => true)
             .catch(() => false);
 

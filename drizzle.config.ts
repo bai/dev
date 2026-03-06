@@ -3,9 +3,8 @@ import path from "path";
 
 import type { Config } from "drizzle-kit";
 
-// XDG Base Directory Specification compliant path resolution
-const XDG_DATA_HOME = process.env.XDG_DATA_HOME || path.join(os.homedir(), ".local", "share");
-const dbPath = path.join(XDG_DATA_HOME, "dev", "dev.db");
+const stateDir = process.env.DEV_STATE_DIR || path.join(os.homedir(), ".dev", "state");
+const dbPath = path.join(stateDir, "dev.db");
 
 export default {
   out: "./drizzle/migrations",

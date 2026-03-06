@@ -107,7 +107,7 @@ describe("services command e2e", () => {
         const result = await runCli(fixture, ["services", "reset"]);
         expect(result.exitCode).toBe(0);
 
-        const composePath = path.join(fixture.dataHome, "dev", "docker", "docker-compose.yml");
+        const composePath = path.join(fixture.stateDir, "docker", "docker-compose.yml");
         const composeExists = await fs
           .access(composePath)
           .then(() => true)

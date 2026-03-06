@@ -9,9 +9,11 @@
 [ -f "$HOME"/.local/share/mise/installs/gcloud/latest/completion.zsh.inc ] && source "$HOME"/.local/share/mise/installs/gcloud/latest/completion.zsh.inc
 
 function dev() {
+  local dev_state_dir="${DEV_STATE_DIR:-$HOME/.dev/state}"
+
   # Use shell's PID to make filename unique per shell, avoiding race conditions
   # when multiple processes call dev cd concurrently (e.g., in Overmind)
-  local cd_target_file="$HOME/.local/share/dev/cd_target.$$"
+  local cd_target_file="$dev_state_dir/run/cd_target.$$"
 
   # Ensure the file doesn't exist before running
   rm -f "$cd_target_file"

@@ -12,8 +12,8 @@ import type { DrizzleDatabase } from "~/capabilities/persistence/drizzle-types";
 import { FileSystemMock } from "~/capabilities/system/file-system-mock";
 import { FileSystemTag } from "~/capabilities/system/file-system-port";
 import { configError } from "~/core/errors";
-import { HostPathsTag } from "~/core/runtime/path-service";
-import { makeHostPathsMock } from "~/core/runtime/path-service-mock";
+import { InstallPathsTag, StatePathsTag } from "~/core/runtime/path-service";
+import { makeInstallPathsMock, makeStatePathsMock } from "~/core/runtime/path-service-mock";
 
 const isTaggedError = (error: unknown): error is { readonly _tag: string; readonly message: string } =>
   typeof error === "object" && error !== null && "_tag" in error && "message" in error && typeof error.message === "string";
@@ -275,12 +275,16 @@ describe("database-live", () => {
     Effect.gen(function* () {
       const dbPath = `/tmp/dev-live-layer-${Date.now()}.db`;
       const fileSystem = new FileSystemMock();
-      const hostPaths = makeHostPathsMock({
+      const statePaths = makeStatePathsMock({
+        stateDir: "/tmp/dev-live-layer-state",
         dbPath,
-        devDir: process.cwd(),
       });
 
-      const dependencies = Layer.mergeAll(Layer.succeed(FileSystemTag, fileSystem), Layer.succeed(HostPathsTag, hostPaths));
+      const dependencies = Layer.mergeAll(
+        Layer.succeed(FileSystemTag, fileSystem),
+        Layer.succeed(InstallPathsTag, makeInstallPathsMock({ installDir: process.cwd() })),
+        Layer.succeed(StatePathsTag, statePaths),
+      );
       const databaseLayer = Layer.provide(DatabaseLiveLayer, dependencies);
 
       const tableNames = yield* Effect.scoped(
@@ -299,6 +303,32 @@ describe("database-live", () => {
       expect(tableNames.map((table) => table.name).sort()).toEqual(["install_metadata", "runs", "tool_health_checks"]);
       expect(fileSystem.mkdirCalls[0]?.path).toBe("/tmp");
       expect(fileSystem.mkdirCalls[0]?.recursive).toBe(true);
+    }),
+  );
+
+  it.effect("DatabaseLiveLayer fails clearly for non-repo installs", () =>
+    Effect.gen(function* () {
+      const fileSystem = new FileSystemMock();
+      const databaseLayer = Layer.provide(
+        DatabaseLiveLayer,
+        Layer.mergeAll(
+          Layer.succeed(FileSystemTag, fileSystem),
+          Layer.succeed(InstallPathsTag, makeInstallPathsMock({ installMode: "binary", installDir: "/tmp/dist", upgradeCapable: false })),
+          Layer.succeed(StatePathsTag, makeStatePathsMock({ dbPath: "/tmp/dev-live-layer-binary.db" })),
+        ),
+      );
+
+      const error = yield* Effect.flip(
+        Effect.scoped(
+          Effect.gen(function* () {
+            return yield* DatabaseTag;
+          }).pipe(Effect.provide(databaseLayer)),
+        ),
+      );
+
+      expect(error._tag).toBe("ConfigError");
+      expect(error.message).toContain("Standalone binary distribution is not supported yet");
+      expect(fileSystem.mkdirCalls).toEqual([]);
     }),
   );
 });

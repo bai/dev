@@ -4,7 +4,7 @@ import path from "path";
 
 import { it } from "@effect/vitest";
 import { Deferred, Effect, Fiber, Layer, Ref } from "effect";
-import { describe, expect } from "vitest";
+import { describe, expect, it as vitestIt } from "vitest";
 
 import { FileSystemLive } from "~/capabilities/system/file-system-live";
 import { FileSystemTag } from "~/capabilities/system/file-system-port";
@@ -18,8 +18,8 @@ import { ToolManagementTag } from "~/capabilities/tools/tool-management-port";
 import { ConfigLoaderLiveLayer } from "~/core/config/config-loader-live";
 import { ConfigLoaderTag } from "~/core/config/config-loader-port";
 import { gitError, shellExecutionError } from "~/core/errors";
-import { HostPathsTag } from "~/core/runtime/path-service";
-import { makeHostPathsMock } from "~/core/runtime/path-service-mock";
+import { StatePathsTag, type InstallPaths } from "~/core/runtime/path-service";
+import { makeInstallPathsMock, makeStatePathsMock } from "~/core/runtime/path-service-mock";
 import { checkTool, ensureCorrectConfigUrl, selfUpdateCli, upgradeEssentialTools } from "~/features/upgrade/upgrade-command";
 
 const unusedNetwork: Network = {
@@ -35,7 +35,22 @@ const createManagedTool = (id: string, displayName: string, manager: ToolManager
   manager,
 });
 
-const makeConfigLoader = (hostPaths: ReturnType<typeof makeHostPathsMock>, network: Network) =>
+const makeTestStatePaths = (tempDir: string) =>
+  makeStatePathsMock({
+    stateDir: path.join(tempDir, "state"),
+    configPath: path.join(tempDir, "state", "config.json"),
+    dbPath: path.join(tempDir, "state", "dev.db"),
+    cacheDir: path.join(tempDir, "state", "cache"),
+    dockerDir: path.join(tempDir, "state", "docker"),
+    runDir: path.join(tempDir, "state", "run"),
+  });
+
+const writeProjectConfig = (installPaths: InstallPaths, projectConfigContent: string) =>
+  fs
+    .mkdir(installPaths.installDir, { recursive: true })
+    .then(() => fs.writeFile(path.join(installPaths.installDir, "config.json"), projectConfigContent));
+
+const makeConfigLoader = (configPath: string, network: Network) =>
   Effect.gen(function* () {
     return yield* ConfigLoaderTag;
   }).pipe(
@@ -45,7 +60,7 @@ const makeConfigLoader = (hostPaths: ReturnType<typeof makeHostPathsMock>, netwo
         Layer.mergeAll(
           Layer.succeed(FileSystemTag, FileSystemLive),
           Layer.succeed(NetworkTag, network),
-          Layer.succeed(HostPathsTag, hostPaths),
+          Layer.succeed(StatePathsTag, makeStatePathsMock({ configPath })),
         ),
       ),
     ),
@@ -56,15 +71,8 @@ describe("upgrade-command", () => {
     it.effect("parses JSONC in project and local config files", () =>
       Effect.gen(function* () {
         const tempDir = path.join(os.tmpdir(), `upgrade-command-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
-        yield* Effect.promise(() => fs.mkdir(tempDir, { recursive: true }));
-
-        const devDir = path.join(tempDir, ".dev");
-        const configDir = path.join(tempDir, ".config", "dev");
-        const configPath = path.join(configDir, "config.json");
-
-        yield* Effect.promise(() => fs.mkdir(devDir, { recursive: true }));
-        yield* Effect.promise(() => fs.mkdir(configDir, { recursive: true }));
-
+        const statePaths = makeTestStatePaths(tempDir);
+        const installPaths = makeInstallPathsMock({ installDir: path.join(tempDir, ".dev") });
         const projectConfigWithComments = `{
   // Source of truth remote config
   "configUrl": "https://example.com/remote-config.json",
@@ -76,25 +84,16 @@ describe("upgrade-command", () => {
   "defaultOrg": "acme",
 }`;
 
-        yield* Effect.promise(() => fs.writeFile(path.join(devDir, "config.json"), projectConfigWithComments));
-        yield* Effect.promise(() => fs.writeFile(configPath, localConfigWithComments));
-
-        const hostPaths = makeHostPathsMock({
-          homeDir: tempDir,
-          devDir,
-          configDir,
-          configPath,
-          dataDir: path.join(tempDir, ".local", "share", "dev"),
-          dbPath: path.join(tempDir, ".local", "share", "dev", "dev.db"),
-          cacheDir: path.join(tempDir, ".cache", "dev"),
-        });
+        yield* Effect.promise(() => fs.mkdir(path.dirname(statePaths.configPath), { recursive: true }));
+        yield* Effect.promise(() => fs.writeFile(statePaths.configPath, localConfigWithComments));
+        yield* Effect.promise(() => writeProjectConfig(installPaths, projectConfigWithComments));
 
         const fileSystemLayer = Layer.succeed(FileSystemTag, FileSystemLive);
-        const configLoader = yield* makeConfigLoader(hostPaths, unusedNetwork);
+        const configLoader = yield* makeConfigLoader(statePaths.configPath, unusedNetwork);
 
-        yield* ensureCorrectConfigUrl(hostPaths, configLoader).pipe(Effect.provide(fileSystemLayer));
+        yield* ensureCorrectConfigUrl(statePaths, installPaths, configLoader).pipe(Effect.provide(fileSystemLayer));
 
-        const updatedLocalConfigContent = yield* Effect.promise(() => fs.readFile(configPath, "utf8"));
+        const updatedLocalConfigContent = yield* Effect.promise(() => fs.readFile(statePaths.configPath, "utf8"));
         const updatedLocalConfig = JSON.parse(updatedLocalConfigContent) as { configUrl: string };
 
         expect(updatedLocalConfig.configUrl).toBe("https://example.com/remote-config.json");
@@ -106,48 +105,34 @@ describe("upgrade-command", () => {
     it.effect("fails when project config is malformed", () =>
       Effect.gen(function* () {
         const tempDir = path.join(os.tmpdir(), `upgrade-command-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
-        yield* Effect.promise(() => fs.mkdir(tempDir, { recursive: true }));
+        const statePaths = makeTestStatePaths(tempDir);
+        const installPaths = makeInstallPathsMock({ installDir: path.join(tempDir, ".dev") });
 
-        const devDir = path.join(tempDir, ".dev");
-        const configDir = path.join(tempDir, ".config", "dev");
-        const configPath = path.join(configDir, "config.json");
-
-        yield* Effect.promise(() => fs.mkdir(devDir, { recursive: true }));
-        yield* Effect.promise(() => fs.mkdir(configDir, { recursive: true }));
-
+        yield* Effect.promise(() => fs.mkdir(path.dirname(statePaths.configPath), { recursive: true }));
         yield* Effect.promise(() =>
           fs.writeFile(
-            path.join(devDir, "config.json"),
-            JSON.stringify({
-              configUrl: 123,
-              defaultOrg: "acme",
-            }),
-          ),
-        );
-        yield* Effect.promise(() =>
-          fs.writeFile(
-            configPath,
+            statePaths.configPath,
             JSON.stringify({
               configUrl: "https://example.com/old-config.json",
               defaultOrg: "acme",
             }),
           ),
         );
-
-        const hostPaths = makeHostPathsMock({
-          homeDir: tempDir,
-          devDir,
-          configDir,
-          configPath,
-          dataDir: path.join(tempDir, ".local", "share", "dev"),
-          dbPath: path.join(tempDir, ".local", "share", "dev", "dev.db"),
-          cacheDir: path.join(tempDir, ".cache", "dev"),
-        });
+        yield* Effect.promise(() =>
+          writeProjectConfig(
+            installPaths,
+            JSON.stringify({
+              configUrl: 123,
+              defaultOrg: "acme",
+            }),
+          ),
+        );
 
         const fileSystemLayer = Layer.succeed(FileSystemTag, FileSystemLive);
-        const configLoader = yield* makeConfigLoader(hostPaths, unusedNetwork);
-
-        const result = yield* Effect.either(ensureCorrectConfigUrl(hostPaths, configLoader).pipe(Effect.provide(fileSystemLayer)));
+        const configLoader = yield* makeConfigLoader(statePaths.configPath, unusedNetwork);
+        const result = yield* Effect.either(
+          ensureCorrectConfigUrl(statePaths, installPaths, configLoader).pipe(Effect.provide(fileSystemLayer)),
+        );
 
         expect(result._tag).toBe("Left");
         if (result._tag === "Left") {
@@ -180,16 +165,29 @@ describe("upgrade-command", () => {
     }),
   );
 
+  it.effect("selfUpdateCli skips repo updates for externally managed binary installs", () =>
+    Effect.gen(function* () {
+      const installPaths = makeInstallPathsMock({
+        installMode: "binary",
+        installDir: "/tmp/dist",
+        upgradeCapable: false,
+      });
+      const git = new GitMock({ gitRepositories: ["/tmp/dist"] });
+      const shell = new ShellMock();
+
+      yield* selfUpdateCli(installPaths).pipe(Effect.provideService(GitTag, git), Effect.provideService(ShellTag, shell));
+
+      expect(git.isGitRepositoryCalls).toEqual([]);
+      expect(git.pullCalls).toEqual([]);
+      expect(shell.execCalls).toEqual([]);
+    }),
+  );
+
   it.effect("selfUpdateCli fails when bun install exits non-zero", () =>
     Effect.gen(function* () {
       const tempDir = path.join(os.tmpdir(), `upgrade-self-update-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
-      const hostPaths = makeHostPathsMock({
-        homeDir: tempDir,
-        devDir: tempDir,
-        configDir: path.join(tempDir, ".config", "dev"),
-        dataDir: path.join(tempDir, ".local", "share", "dev"),
-        cacheDir: path.join(tempDir, ".cache", "dev"),
-      });
+      yield* Effect.promise(() => fs.mkdir(tempDir, { recursive: true }));
+      const installPaths = makeInstallPathsMock({ installDir: tempDir });
       const git = new GitMock({ gitRepositories: [tempDir] });
       const shell = new ShellMock();
       shell.setExecResponse("bun", ["install"], {
@@ -199,7 +197,7 @@ describe("upgrade-command", () => {
       });
 
       const error = yield* Effect.flip(
-        selfUpdateCli(hostPaths).pipe(Effect.provideService(GitTag, git), Effect.provideService(ShellTag, shell)),
+        selfUpdateCli(installPaths).pipe(Effect.provideService(GitTag, git), Effect.provideService(ShellTag, shell)),
       );
 
       expect(error._tag).toBe("ExternalToolError");
@@ -213,13 +211,8 @@ describe("upgrade-command", () => {
   it.effect("selfUpdateCli skips git pull when local unstaged changes block rebase and still runs bun install", () =>
     Effect.gen(function* () {
       const tempDir = path.join(os.tmpdir(), `upgrade-self-update-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
-      const hostPaths = makeHostPathsMock({
-        homeDir: tempDir,
-        devDir: tempDir,
-        configDir: path.join(tempDir, ".config", "dev"),
-        dataDir: path.join(tempDir, ".local", "share", "dev"),
-        cacheDir: path.join(tempDir, ".cache", "dev"),
-      });
+      yield* Effect.promise(() => fs.mkdir(tempDir, { recursive: true }));
+      const installPaths = makeInstallPathsMock({ installDir: tempDir });
       const git = new GitMock({
         gitRepositories: [tempDir],
         overrides: {
@@ -229,7 +222,7 @@ describe("upgrade-command", () => {
       });
       const shell = new ShellMock();
 
-      yield* selfUpdateCli(hostPaths).pipe(Effect.provideService(GitTag, git), Effect.provideService(ShellTag, shell));
+      yield* selfUpdateCli(installPaths).pipe(Effect.provideService(GitTag, git), Effect.provideService(ShellTag, shell));
 
       expect(git.pullCalls).toEqual([tempDir]);
       expect(shell.execCalls).toContainEqual({
@@ -243,13 +236,8 @@ describe("upgrade-command", () => {
   it.effect("selfUpdateCli continues on other git pull GitErrors and still runs bun install", () =>
     Effect.gen(function* () {
       const tempDir = path.join(os.tmpdir(), `upgrade-self-update-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
-      const hostPaths = makeHostPathsMock({
-        homeDir: tempDir,
-        devDir: tempDir,
-        configDir: path.join(tempDir, ".config", "dev"),
-        dataDir: path.join(tempDir, ".local", "share", "dev"),
-        cacheDir: path.join(tempDir, ".cache", "dev"),
-      });
+      yield* Effect.promise(() => fs.mkdir(tempDir, { recursive: true }));
+      const installPaths = makeInstallPathsMock({ installDir: tempDir });
       const git = new GitMock({
         gitRepositories: [tempDir],
         overrides: {
@@ -258,7 +246,7 @@ describe("upgrade-command", () => {
       });
       const shell = new ShellMock();
 
-      yield* selfUpdateCli(hostPaths).pipe(Effect.provideService(GitTag, git), Effect.provideService(ShellTag, shell));
+      yield* selfUpdateCli(installPaths).pipe(Effect.provideService(GitTag, git), Effect.provideService(ShellTag, shell));
 
       expect(git.pullCalls).toEqual([tempDir]);
       expect(shell.execCalls).toContainEqual({
@@ -272,13 +260,8 @@ describe("upgrade-command", () => {
   it.effect("selfUpdateCli still fails when git command execution itself fails", () =>
     Effect.gen(function* () {
       const tempDir = path.join(os.tmpdir(), `upgrade-self-update-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
-      const hostPaths = makeHostPathsMock({
-        homeDir: tempDir,
-        devDir: tempDir,
-        configDir: path.join(tempDir, ".config", "dev"),
-        dataDir: path.join(tempDir, ".local", "share", "dev"),
-        cacheDir: path.join(tempDir, ".cache", "dev"),
-      });
+      yield* Effect.promise(() => fs.mkdir(tempDir, { recursive: true }));
+      const installPaths = makeInstallPathsMock({ installDir: tempDir });
       const git = new GitMock({
         gitRepositories: [tempDir],
         overrides: {
@@ -288,12 +271,43 @@ describe("upgrade-command", () => {
       const shell = new ShellMock();
 
       const error = yield* Effect.flip(
-        selfUpdateCli(hostPaths).pipe(Effect.provideService(GitTag, git), Effect.provideService(ShellTag, shell)),
+        selfUpdateCli(installPaths).pipe(Effect.provideService(GitTag, git), Effect.provideService(ShellTag, shell)),
       );
 
       expect(error._tag).toBe("ShellExecutionError");
       expect(shell.execCalls).toEqual([]);
     }),
+  );
+
+  vitestIt(
+    "selfUpdateCli waits for an existing install lock before mutating the shared repo",
+    async () => {
+      const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), `upgrade-lock-test-${Date.now()}-${Math.random().toString(36).slice(2)}-`));
+      const installPaths = makeInstallPathsMock({ installDir: tempDir });
+      const installLockPath = path.join(tempDir, ".dev-upgrade.lock");
+      const git = new GitMock({ gitRepositories: [tempDir] });
+      const shell = new ShellMock();
+      const startedAt = Date.now();
+
+      await fs.mkdir(installLockPath, { recursive: true });
+      const lockReleaseTimer = setTimeout(() => {
+        void fs.rm(installLockPath, { recursive: true, force: true });
+      }, 50);
+
+      await Effect.runPromise(selfUpdateCli(installPaths).pipe(Effect.provideService(GitTag, git), Effect.provideService(ShellTag, shell)));
+
+      clearTimeout(lockReleaseTimer);
+
+      expect(Date.now() - startedAt).toBeGreaterThanOrEqual(40);
+      expect(git.pullCalls).toEqual([tempDir]);
+      expect(shell.execCalls).toContainEqual({
+        command: "bun",
+        args: ["install"],
+        options: { cwd: tempDir },
+      });
+      await fs.rm(tempDir, { recursive: true, force: true });
+    },
+    10_000,
   );
 
   it.effect("upgradeEssentialTools fails fast on the first essential tool error", () =>

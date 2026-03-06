@@ -1,15 +1,18 @@
 import { Effect, Layer } from "effect";
 
 import { GitTag, type Git } from "~/capabilities/system/git-port";
-import { HostPathsTag, type HostPaths } from "~/core/runtime/path-service";
+import { InstallPathsTag, type InstallPaths } from "~/core/runtime/path-service";
 import { VersionTag, type Version } from "~/core/runtime/version-port";
 
-export const makeVersionLive = (gitPort: Git, hostPaths: HostPaths): Version => {
-  const getCurrentGitCommitSha = () => gitPort.getCurrentCommitSha(hostPaths.devDir).pipe(Effect.orElseSucceed(() => "unknown"));
+export const makeVersionLive = (gitPort: Git, installPaths: InstallPaths): Version => {
+  const getCurrentGitCommitSha = () =>
+    installPaths.installMode === "repo"
+      ? gitPort.getCurrentCommitSha(installPaths.installDir).pipe(Effect.orElseSucceed(() => "unknown"))
+      : Effect.succeed("unknown");
 
   return {
     getCurrentGitCommitSha,
-    getVersion: () => getCurrentGitCommitSha(),
+    getVersion: getCurrentGitCommitSha,
   };
 };
 
@@ -17,8 +20,8 @@ export const makeVersionLive = (gitPort: Git, hostPaths: HostPaths): Version => 
 export const VersionLiveLayer = Layer.effect(
   VersionTag,
   Effect.gen(function* () {
-    const hostPaths = yield* HostPathsTag;
+    const installPaths = yield* InstallPathsTag;
     const gitPort = yield* GitTag;
-    return makeVersionLive(gitPort, hostPaths);
+    return makeVersionLive(gitPort, installPaths);
   }),
 );

@@ -6,15 +6,15 @@ import { ConfigLoaderTag, type ConfigLoader } from "~/core/config/config-loader-
 import { configSchema, type Config } from "~/core/config/config-schema";
 import { configError, type ConfigError, type FileSystemError, type NetworkError, type UnknownError } from "~/core/errors";
 import { annotateErrorTypeOnFailure } from "~/core/observability/error-type";
-import { HostPathsTag } from "~/core/runtime/path-service";
+import { StatePathsTag } from "~/core/runtime/path-service";
 
 export const ConfigLoaderLiveLayer = Layer.effect(
   ConfigLoaderTag,
   Effect.gen(function* () {
     const fileSystem = yield* FileSystemTag;
     const network = yield* NetworkTag;
-    const hostPaths = yield* HostPathsTag;
-    const configPath = hostPaths.configPath;
+    const statePaths = yield* StatePathsTag;
+    const configPath = statePaths.configPath;
     const parse = (content: string, source = "config"): Effect.Effect<Config, ConfigError> =>
       Effect.try({
         try: () => {

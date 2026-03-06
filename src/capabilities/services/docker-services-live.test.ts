@@ -10,26 +10,24 @@ import { FileSystemMock } from "~/capabilities/system/file-system-mock";
 import { FileSystemTag } from "~/capabilities/system/file-system-port";
 import { ShellMock } from "~/capabilities/system/shell-mock";
 import { ShellTag } from "~/capabilities/system/shell-port";
-import { HostPathsTag } from "~/core/runtime/path-service";
-import { makeHostPathsMock } from "~/core/runtime/path-service-mock";
+import { StatePathsTag } from "~/core/runtime/path-service";
+import { makeStatePathsMock } from "~/core/runtime/path-service-mock";
 
 const makeSubject = () => {
   const shell = new ShellMock();
   const fileSystem = new FileSystemMock();
-  const hostPaths = makeHostPathsMock({
-    homeDir: "/home/user",
-    dataDir: "/tmp/dev-data",
-    dbPath: "/tmp/dev-data/dev.db",
-    cacheDir: "/tmp/dev-cache",
+  const statePaths = makeStatePathsMock({
+    stateDir: "/tmp/dev-state",
+    dockerDir: "/tmp/dev-state/docker",
   });
-  const composeFilePath = path.join(hostPaths.dataDir, "docker", "docker-compose.yml");
+  const composeFilePath = path.join(statePaths.dockerDir, "docker-compose.yml");
   const dockerServices = Effect.gen(function* () {
     return yield* DockerServicesTag;
   }).pipe(
     Effect.provide(
       Layer.provide(
         createDockerServicesLiveLayer(),
-        Layer.mergeAll(Layer.succeed(ShellTag, shell), Layer.succeed(FileSystemTag, fileSystem), Layer.succeed(HostPathsTag, hostPaths)),
+        Layer.mergeAll(Layer.succeed(ShellTag, shell), Layer.succeed(FileSystemTag, fileSystem), Layer.succeed(StatePathsTag, statePaths)),
       ),
     ),
   );
@@ -43,7 +41,7 @@ const makeSubject = () => {
 };
 
 describe("docker-services-live", () => {
-  it.effect("uses the host paths compose location for docker compose up", () =>
+  it.effect("uses the state paths compose location for docker compose up", () =>
     Effect.gen(function* () {
       const { shell, fileSystem, dockerServices, composeFilePath } = makeSubject();
       const composeDir = path.dirname(composeFilePath);

@@ -9,27 +9,28 @@ import { FileSystemTag } from "~/capabilities/system/file-system-port";
 import { ShellMock } from "~/capabilities/system/shell-mock";
 import { ShellTag } from "~/capabilities/system/shell-port";
 import { GcloudToolsTag } from "~/capabilities/tools/adapters/gcloud-tools-live";
-import { HostPathsTag } from "~/core/runtime/path-service";
-import { makeHostPathsMock } from "~/core/runtime/path-service-mock";
+import { EnvironmentPathsTag } from "~/core/runtime/path-service";
+import { makeEnvironmentPathsMock } from "~/core/runtime/path-service-mock";
 
 const makeSubject = () => {
   const shell = new ShellMock();
   const fileSystem = new FileSystemMock();
-  const hostPaths = makeHostPathsMock({
+  const environmentPaths = makeEnvironmentPathsMock({
     homeDir: "/custom/home",
     xdgConfigHome: "/custom/xdg",
-    xdgDataHome: "/custom/data",
-    xdgCacheHome: "/custom/cache",
-    devDir: "/custom/home/.dev",
   });
-  const configDir = path.join(path.dirname(hostPaths.configDir), "gcloud");
+  const configDir = path.join(environmentPaths.xdgConfigHome, "gcloud");
   const gcloudTools = Effect.gen(function* () {
     return yield* GcloudToolsTag;
   }).pipe(
     Effect.provide(
       Layer.provide(
         GcloudToolsTag.DefaultWithoutDependencies,
-        Layer.mergeAll(Layer.succeed(ShellTag, shell), Layer.succeed(FileSystemTag, fileSystem), Layer.succeed(HostPathsTag, hostPaths)),
+        Layer.mergeAll(
+          Layer.succeed(ShellTag, shell),
+          Layer.succeed(FileSystemTag, fileSystem),
+          Layer.succeed(EnvironmentPathsTag, environmentPaths),
+        ),
       ),
     ),
   );

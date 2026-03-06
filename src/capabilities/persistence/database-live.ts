@@ -9,7 +9,7 @@ import { DatabaseTag, type Database } from "~/capabilities/persistence/database-
 import type { DrizzleDatabase } from "~/capabilities/persistence/drizzle-types";
 import { FileSystemTag } from "~/capabilities/system/file-system-port";
 import { configError, unknownError, type ConfigError, type UnknownError } from "~/core/errors";
-import { HostPathsTag } from "~/core/runtime/path-service";
+import { InstallPathsTag, StatePathsTag } from "~/core/runtime/path-service";
 
 // Extended interface for internal use with close method
 export interface DatabaseWithClose extends Database {
@@ -122,8 +122,13 @@ export const createDatabaseService = (
 // Create and initialize database with migrations
 const createDatabase = Effect.gen(function* () {
   const fileSystem = yield* FileSystemTag;
-  const hostPaths = yield* HostPathsTag;
-  const dbPath = hostPaths.dbPath;
+  const installPaths = yield* InstallPathsTag;
+  const statePaths = yield* StatePathsTag;
+  const dbPath = statePaths.dbPath;
+
+  if (installPaths.installMode !== "repo") {
+    return yield* configError("Standalone binary distribution is not supported yet");
+  }
 
   // Ensure directory exists
   yield* fileSystem.mkdir(path.dirname(dbPath), true);
@@ -144,7 +149,7 @@ const createDatabase = Effect.gen(function* () {
   });
 
   const drizzleDb = drizzle(sqlite);
-  const migrationsPath = `${hostPaths.devDir}/drizzle/migrations`;
+  const migrationsPath = path.join(installPaths.installDir, "drizzle", "migrations");
   const accessSemaphore = yield* Effect.makeSemaphore(1);
 
   // Create the database service

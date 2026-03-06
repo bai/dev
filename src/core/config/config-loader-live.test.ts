@@ -12,8 +12,8 @@ import { NetworkTag, type Network } from "~/capabilities/system/network-port";
 import { ConfigLoaderLiveLayer } from "~/core/config/config-loader-live";
 import { ConfigLoaderTag } from "~/core/config/config-loader-port";
 import { configSchema } from "~/core/config/config-schema";
-import { HostPathsTag } from "~/core/runtime/path-service";
-import { makeHostPathsMock } from "~/core/runtime/path-service-mock";
+import { StatePathsTag } from "~/core/runtime/path-service";
+import { makeStatePathsMock } from "~/core/runtime/path-service-mock";
 
 describe("config-loader-live", () => {
   let tempDir: string;
@@ -36,7 +36,7 @@ describe("config-loader-live", () => {
           Layer.mergeAll(
             Layer.succeed(FileSystemTag, FileSystemLive),
             Layer.succeed(NetworkTag, network),
-            Layer.succeed(HostPathsTag, makeHostPathsMock({ configPath })),
+            Layer.succeed(StatePathsTag, makeStatePathsMock({ configPath })),
           ),
         ),
       ),

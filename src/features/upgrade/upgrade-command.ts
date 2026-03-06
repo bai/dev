@@ -1,3 +1,6 @@
+import fs from "fs/promises";
+import path from "path";
+
 import { Command } from "@effect/cli";
 import { Effect } from "effect";
 
@@ -13,15 +16,67 @@ import {
   configError,
   type ExternalToolError,
   externalToolError,
+  type FileSystemError,
   type ShellExecutionError,
   shellExecutionError,
   unknownError,
   type UnknownError,
   type DevError,
 } from "~/core/errors";
-import { HostPathsTag, type HostPaths } from "~/core/runtime/path-service";
+import { InstallPathsTag, StatePathsTag, type InstallPaths, type StatePaths } from "~/core/runtime/path-service";
 
 // No options needed for upgrade command
+const INSTALL_LOCK_DIR_NAME = ".dev-upgrade.lock";
+
+const getInstallLockPath = (installPaths: InstallPaths) => path.join(installPaths.installDir, INSTALL_LOCK_DIR_NAME);
+
+const tryAcquireInstallLock = (lockPath: string): Effect.Effect<boolean, UnknownError> =>
+  Effect.tryPromise({
+    try: async () => {
+      try {
+        await fs.mkdir(lockPath);
+        return true;
+      } catch (error) {
+        if (typeof error === "object" && error !== null && "code" in error && error.code === "EEXIST") {
+          return false;
+        }
+        throw error;
+      }
+    },
+    catch: (error) => unknownError(`Failed to acquire install lock at ${lockPath}: ${error}`),
+  });
+
+const waitForInstallLock = (lockPath: string, remainingAttempts = 80): Effect.Effect<string, UnknownError> =>
+  Effect.gen(function* () {
+    const acquired = yield* tryAcquireInstallLock(lockPath);
+
+    if (acquired) {
+      return lockPath;
+    }
+
+    if (remainingAttempts <= 0) {
+      return yield* unknownError(`Timed out waiting for install lock at ${lockPath}`);
+    }
+
+    yield* Effect.sleep("250 millis");
+    return yield* waitForInstallLock(lockPath, remainingAttempts - 1);
+  });
+
+const releaseInstallLock = (lockPath: string): Effect.Effect<void, UnknownError> =>
+  Effect.tryPromise({
+    try: () => fs.rm(lockPath, { recursive: true, force: true }),
+    catch: (error) => unknownError(`Failed to release install lock at ${lockPath}: ${error}`),
+  });
+
+const withInstallLock = <A, E, R>(installPaths: InstallPaths, effect: Effect.Effect<A, E, R>): Effect.Effect<A, E | UnknownError, R> =>
+  Effect.acquireUseRelease(
+    waitForInstallLock(getInstallLockPath(installPaths)),
+    () => effect,
+    (lockPath) =>
+      releaseInstallLock(lockPath).pipe(
+        Effect.catchAll((error) => Effect.logWarning(`⚠️  Failed to release install lock cleanly: ${error.message}`)),
+      ),
+  );
 
 /**
  * Display help for the upgrade command
@@ -41,22 +96,23 @@ export const displayHelp = (): Effect.Effect<void, never, never> =>
 export const upgradeCommand = Command.make("upgrade", {}, () =>
   Effect.gen(function* () {
     const configLoader = yield* ConfigLoaderTag;
-    const hostPaths = yield* HostPathsTag;
+    const installPaths = yield* InstallPathsTag;
+    const statePaths = yield* StatePathsTag;
 
     yield* Effect.logInfo("🔄 Upgrading dev CLI tool...");
 
     // Step 1: Self-update the CLI repository
-    yield* selfUpdateCli(hostPaths).pipe(Effect.withSpan("cli.self_update"));
+    yield* selfUpdateCli(installPaths).pipe(Effect.withSpan("cli.self_update"));
 
     // Step 2: Ensure necessary directories exist
-    yield* ensureDirectoriesExist(hostPaths).pipe(Effect.withSpan("directory.ensure"));
+    yield* ensureDirectoriesExist(statePaths).pipe(Effect.withSpan("directory.ensure"));
 
     // Step 3: Update shell integration
-    yield* ensureShellIntegration(hostPaths).pipe(Effect.withSpan("shell.ensure_integration"));
+    yield* ensureShellIntegration(statePaths).pipe(Effect.withSpan("shell.ensure_integration"));
 
     // Step 4: Ensure local config has correct remote URL, then refresh from remote
     yield* Effect.logInfo("🔄 Updating local config with correct remote URL...");
-    yield* ensureCorrectConfigUrl(hostPaths, configLoader).pipe(Effect.withSpan("config.ensure_url"));
+    yield* ensureCorrectConfigUrl(statePaths, installPaths, configLoader).pipe(Effect.withSpan("config.ensure_url"));
     yield* Effect.logInfo("🔄 Refreshing dev configuration from remote...");
     const refreshedConfig = yield* configLoader.refresh().pipe(Effect.withSpan("config.refresh"));
     yield* Effect.logInfo("✅ Configuration refreshed successfully");
@@ -75,46 +131,53 @@ export const upgradeCommand = Command.make("upgrade", {}, () =>
 /**
  * Self-update the CLI repository
  */
-export function selfUpdateCli(hostPaths: HostPaths): Effect.Effect<void, DevError, GitTag | ShellTag> {
+export function selfUpdateCli(installPaths: InstallPaths): Effect.Effect<void, DevError, GitTag | ShellTag> {
   return Effect.gen(function* () {
+    if (!installPaths.upgradeCapable) {
+      yield* Effect.logInfo("📝 This dev installation is managed externally; skipping CLI self-update");
+      return;
+    }
+
     yield* Effect.logInfo("🔄 Self-updating CLI repository...");
 
     const git = yield* GitTag;
     const shell = yield* ShellTag;
 
-    // Check if we're in a git repository
-    const isGitRepo = yield* git.isGitRepository(hostPaths.devDir).pipe(Effect.withSpan("git.check_repository"));
-    yield* Effect.annotateCurrentSpan("git.repository.exists", isGitRepo.toString());
+    yield* withInstallLock(
+      installPaths,
+      Effect.gen(function* () {
+        const isGitRepo = yield* git.isGitRepository(installPaths.installDir).pipe(Effect.withSpan("git.check_repository"));
+        yield* Effect.annotateCurrentSpan("git.repository.exists", isGitRepo.toString());
 
-    if (!isGitRepo) {
-      yield* Effect.logInfo("📝 Not in a git repository, skipping self-update");
-      return;
-    }
-
-    // Pull latest changes
-    yield* git.pullLatestChanges(hostPaths.devDir).pipe(
-      Effect.tap(() => Effect.logInfo("✅ CLI repository updated successfully")),
-      Effect.catchTag("GitError", (error) =>
-        Effect.logWarning(`⚠️  Git pull failed during self-update; continuing upgrade: ${error.message}`),
-      ),
-    );
-
-    // Run bun install to update dependencies
-    yield* Effect.logInfo("📦 Installing/updating dependencies...");
-    yield* shell.exec("bun", ["install"], { cwd: hostPaths.devDir }).pipe(
-      Effect.flatMap((result) => {
-        if (result.exitCode !== 0) {
-          return Effect.fail(
-            externalToolError("Failed to install CLI dependencies", {
-              tool: "bun",
-              toolExitCode: result.exitCode,
-              stderr: result.stderr,
-            }),
-          );
+        if (!isGitRepo) {
+          yield* Effect.logInfo("📝 Not in a git repository, skipping self-update");
+          return;
         }
-        return Effect.succeed(result);
+
+        yield* git.pullLatestChanges(installPaths.installDir).pipe(
+          Effect.tap(() => Effect.logInfo("✅ CLI repository updated successfully")),
+          Effect.catchTag("GitError", (error) =>
+            Effect.logWarning(`⚠️  Git pull failed during self-update; continuing upgrade: ${error.message}`),
+          ),
+        );
+
+        yield* Effect.logInfo("📦 Installing/updating dependencies...");
+        yield* shell.exec("bun", ["install"], { cwd: installPaths.installDir }).pipe(
+          Effect.flatMap((result) => {
+            if (result.exitCode !== 0) {
+              return Effect.fail(
+                externalToolError("Failed to install CLI dependencies", {
+                  tool: "bun",
+                  toolExitCode: result.exitCode,
+                  stderr: result.stderr,
+                }),
+              );
+            }
+            return Effect.succeed(result);
+          }),
+          Effect.tap(() => Effect.logInfo("✅ Dependencies updated successfully")),
+        );
       }),
-      Effect.tap(() => Effect.logInfo("✅ Dependencies updated successfully")),
     );
   });
 }
@@ -122,20 +185,23 @@ export function selfUpdateCli(hostPaths: HostPaths): Effect.Effect<void, DevErro
 /**
  * Ensure necessary directories exist
  */
-function ensureDirectoriesExist(hostPaths: HostPaths): Effect.Effect<void, DevError, FileSystemTag> {
+function ensureDirectoriesExist(statePaths: StatePaths): Effect.Effect<void, DevError, FileSystemTag> {
   return Effect.gen(function* () {
     yield* Effect.logInfo("📁 Ensuring necessary directories exist...");
 
     const fileSystem = yield* FileSystemTag;
+    const directories = Array.from(
+      new Set([
+        statePaths.stateDir,
+        path.dirname(statePaths.configPath),
+        path.dirname(statePaths.dbPath),
+        statePaths.cacheDir,
+        statePaths.dockerDir,
+        statePaths.runDir,
+      ]),
+    );
 
-    // Ensure config directory exists
-    yield* fileSystem.mkdir(hostPaths.configDir, true);
-
-    // Ensure data directory exists
-    yield* fileSystem.mkdir(hostPaths.dataDir, true);
-
-    // Ensure cache directory exists
-    yield* fileSystem.mkdir(hostPaths.cacheDir, true);
+    yield* Effect.forEach(directories, (directoryPath) => fileSystem.mkdir(directoryPath, true), { discard: true });
 
     yield* Effect.logInfo("✅ Directories ensured successfully");
   });
@@ -144,15 +210,13 @@ function ensureDirectoriesExist(hostPaths: HostPaths): Effect.Effect<void, DevEr
 /**
  * Update shell integration
  */
-function ensureShellIntegration(hostPaths: HostPaths): Effect.Effect<void, DevError, FileSystemTag> {
+function ensureShellIntegration(statePaths: StatePaths): Effect.Effect<void, DevError, FileSystemTag> {
   return Effect.gen(function* () {
     yield* Effect.logInfo("🐚 Ensuring shell integration...");
 
     const fileSystem = yield* FileSystemTag;
 
-    // For now, just ensure the directory exists
-    // In the future, this could copy shell scripts, update PATH, etc.
-    yield* fileSystem.mkdir(`${hostPaths.configDir}/shell`, true);
+    yield* fileSystem.mkdir(path.join(statePaths.stateDir, "shell"), true);
 
     yield* Effect.logInfo("✅ Shell integration ensured");
   });
@@ -162,19 +226,19 @@ function ensureShellIntegration(hostPaths: HostPaths): Effect.Effect<void, DevEr
  * Ensure local config has the correct configUrl from project config
  * This updates only the configUrl field so that configLoader.refresh() works correctly
  */
-export function ensureCorrectConfigUrl(hostPaths: HostPaths, configLoader: ConfigLoader): Effect.Effect<void, DevError, FileSystemTag> {
+export function ensureCorrectConfigUrl(
+  statePaths: StatePaths,
+  installPaths: InstallPaths,
+  configLoader: ConfigLoader,
+): Effect.Effect<void, DevError, FileSystemTag> {
   return Effect.gen(function* () {
     const fileSystem = yield* FileSystemTag;
 
-    // Step 1: Read the project config to get the authoritative configUrl
-    const projectConfigPath = `${hostPaths.devDir}/config.json`;
-    const projectConfigExists = yield* fileSystem.exists(projectConfigPath);
-
-    if (!projectConfigExists) {
-      return yield* configError("Project config.json not found. Cannot determine source of truth config URL.");
+    if (installPaths.installMode !== "repo") {
+      return yield* configError("Standalone binary distribution is not supported yet");
     }
 
-    const projectConfigContent = yield* fileSystem.readFile(projectConfigPath);
+    const projectConfigContent = yield* fileSystem.readFile(path.join(installPaths.installDir, "config.json"));
     const projectConfig = yield* configLoader.parse(projectConfigContent, "project config.json");
 
     if (!projectConfig.configUrl) {
@@ -182,7 +246,7 @@ export function ensureCorrectConfigUrl(hostPaths: HostPaths, configLoader: Confi
     }
 
     // Step 2: Read the current local config
-    const localConfigPath = `${hostPaths.configDir}/config.json`;
+    const localConfigPath = statePaths.configPath;
     const localConfigExists = yield* fileSystem.exists(localConfigPath);
 
     const localConfig = localConfigExists

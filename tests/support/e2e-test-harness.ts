@@ -16,9 +16,10 @@ export interface CliRunResult {
 export interface E2eFixture {
   readonly rootDir: string;
   readonly homeDir: string;
-  readonly configHome: string;
-  readonly dataHome: string;
-  readonly cacheHome: string;
+  readonly installDir: string;
+  readonly stateDir: string;
+  readonly configPath: string;
+  readonly toolConfigHome: string;
   readonly baseSearchPath: string;
   readonly fakeBinDir: string;
   readonly commandLogPath: string;
@@ -353,25 +354,19 @@ echo "/usr/bin/\${1-}"
 export const createFixture = async (options: FixtureOptions = {}): Promise<E2eFixture> => {
   const rootDir = await fs.mkdtemp(path.join(os.tmpdir(), "dev-e2e-"));
   const homeDir = path.join(rootDir, "home");
-  const configHome = path.join(rootDir, "xdg-config");
-  const dataHome = path.join(rootDir, "xdg-data");
-  const cacheHome = path.join(rootDir, "xdg-cache");
+  const installDir = path.join(rootDir, "install");
+  const stateDir = path.join(rootDir, "state");
+  const configPath = path.join(stateDir, "config.json");
+  const toolConfigHome = path.join(rootDir, "xdg-config");
   const baseSearchPath = path.join(rootDir, "workspace");
   const fakeBinDir = path.join(rootDir, "fake-bin");
   const commandLogPath = path.join(rootDir, "command.log");
 
   await fs.mkdir(homeDir, { recursive: true });
-  await fs.mkdir(configHome, { recursive: true });
-  await fs.mkdir(dataHome, { recursive: true });
-  await fs.mkdir(cacheHome, { recursive: true });
+  await fs.mkdir(installDir, { recursive: true });
+  await fs.mkdir(stateDir, { recursive: true });
+  await fs.mkdir(toolConfigHome, { recursive: true });
   await fs.mkdir(baseSearchPath, { recursive: true });
-
-  // Mimic the runtime expectation that migrations live under $HOME/.dev.
-  const devDir = path.join(homeDir, ".dev");
-  const migrationsSource = path.join(REPO_ROOT, "drizzle", "migrations");
-  const migrationsDestination = path.join(devDir, "drizzle", "migrations");
-  await fs.mkdir(path.dirname(migrationsDestination), { recursive: true });
-  await fs.cp(migrationsSource, migrationsDestination, { recursive: true });
 
   const remoteConfig = {
     configUrl: REMOTE_CONFIG_CANONICAL_URL,
@@ -394,12 +389,12 @@ export const createFixture = async (options: FixtureOptions = {}): Promise<E2eFi
     ...remoteConfig,
     configUrl: remoteConfigFetchUrl,
   };
-  await fs.writeFile(path.join(devDir, "config.json"), JSON.stringify(projectConfig, null, 2), "utf8");
+  await fs.mkdir(path.join(installDir, "drizzle"), { recursive: true });
+  await fs.cp(path.join(REPO_ROOT, "drizzle", "migrations"), path.join(installDir, "drizzle", "migrations"), { recursive: true });
+  await fs.writeFile(path.join(installDir, "config.json"), JSON.stringify(projectConfig, null, 2), "utf8");
 
   if (options.includeLocalConfig !== false) {
-    const localConfigPath = path.join(configHome, "dev", "config.json");
-    await fs.mkdir(path.dirname(localConfigPath), { recursive: true });
-    await fs.writeFile(localConfigPath, JSON.stringify(projectConfig, null, 2), "utf8");
+    await fs.writeFile(configPath, JSON.stringify(projectConfig, null, 2), "utf8");
   }
 
   if (options.seedDefaultRepositories !== false) {
@@ -412,9 +407,10 @@ export const createFixture = async (options: FixtureOptions = {}): Promise<E2eFi
   return {
     rootDir,
     homeDir,
-    configHome,
-    dataHome,
-    cacheHome,
+    installDir,
+    stateDir,
+    configPath,
+    toolConfigHome,
     baseSearchPath,
     fakeBinDir,
     commandLogPath,
@@ -426,9 +422,9 @@ export const runCli = async (fixture: E2eFixture, args: readonly string[], optio
   const env = {
     ...process.env,
     HOME: fixture.homeDir,
-    XDG_CONFIG_HOME: fixture.configHome,
-    XDG_DATA_HOME: fixture.dataHome,
-    XDG_CACHE_HOME: fixture.cacheHome,
+    DEV_STATE_DIR: fixture.stateDir,
+    DEV_INSTALL_DIR: fixture.installDir,
+    XDG_CONFIG_HOME: fixture.toolConfigHome,
     PATH: `${fixture.fakeBinDir}${inheritedPath}`,
     DEV_E2E_LOG: fixture.commandLogPath,
     NO_COLOR: "1",
@@ -460,23 +456,20 @@ export const readCommandLog = async (fixture: E2eFixture): Promise<string> => {
 };
 
 export const readCdTargets = async (fixture: E2eFixture): Promise<string[]> => {
-  const candidateDirectories = [path.join(fixture.dataHome, "dev"), path.join(fixture.homeDir, ".local", "share", "dev")];
-
   const targets: string[] = [];
 
-  for (const directoryPath of candidateDirectories) {
-    const files = await fs.readdir(directoryPath).catch(() => [] as string[]);
-    const targetFiles = files.filter((fileName) => fileName.startsWith("cd_target."));
+  const runDir = path.join(fixture.stateDir, "run");
+  const files = await fs.readdir(runDir).catch(() => [] as string[]);
+  const targetFiles = files.filter((fileName) => fileName.startsWith("cd_target."));
 
-    for (const targetFile of targetFiles) {
-      const targetPath = await fs
-        .readFile(path.join(directoryPath, targetFile), "utf8")
-        .then((content) => content.trim())
-        .catch(() => "");
+  for (const targetFile of targetFiles) {
+    const targetPath = await fs
+      .readFile(path.join(runDir, targetFile), "utf8")
+      .then((content) => content.trim())
+      .catch(() => "");
 
-      if (targetPath.length > 0) {
-        targets.push(targetPath);
-      }
+    if (targetPath.length > 0) {
+      targets.push(targetPath);
     }
   }
 

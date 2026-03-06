@@ -28,36 +28,66 @@ import { ConfigLoaderLiveLayer } from "~/core/config/config-loader-live";
 import { ConfigLoaderTag } from "~/core/config/config-loader-port";
 import { type Config } from "~/core/config/config-schema";
 import { TracingLiveLayer } from "~/core/observability/tracing-live";
-import { WorkspacePathsTag } from "~/core/runtime/path-service";
-import { createHostPathsLiveLayer, WorkspacePathsLiveLayer } from "~/core/runtime/path-service-live";
+import {
+  EnvironmentPathsTag,
+  type EnvironmentPaths,
+  InstallPathsTag,
+  type InstallPaths,
+  StatePathsTag,
+  type StatePaths,
+  WorkspacePathsTag,
+} from "~/core/runtime/path-service";
+import {
+  createEnvironmentPathsLiveLayer,
+  createInstallPathsLiveLayer,
+  createStatePathsLiveLayer,
+  WorkspacePathsLiveLayer,
+} from "~/core/runtime/path-service-live";
 import { RuntimeContextLiveLayer } from "~/core/runtime/runtime-context-live";
 import { VersionLiveLayer } from "~/core/runtime/version-service";
 import { UpdateCheckerLiveLayer } from "~/features/upgrade/update-check-service";
 
 interface SetupOptions {
   readonly configPath?: string;
+  readonly environmentPaths?: EnvironmentPaths;
+  readonly installPaths?: InstallPaths;
+  readonly statePaths?: StatePaths;
 }
 
+const buildEnvironmentPathsLayer = (options: SetupOptions) =>
+  options.environmentPaths ? Layer.succeed(EnvironmentPathsTag, options.environmentPaths) : createEnvironmentPathsLiveLayer();
+
+const buildInstallPathsLayer = (options: SetupOptions) =>
+  options.installPaths ? Layer.succeed(InstallPathsTag, options.installPaths) : createInstallPathsLiveLayer();
+
+const buildStatePathsLayer = (options: SetupOptions) =>
+  options.statePaths ? Layer.succeed(StatePathsTag, options.statePaths) : createStatePathsLiveLayer(options.configPath);
+
 const buildBootstrapLayer = (options: SetupOptions) => {
-  const hostPathsLayer = createHostPathsLiveLayer(options.configPath);
+  const statePathsLayer = buildStatePathsLayer(options);
   const networkLayer = NetworkLiveLayer.pipe(Layer.provideMerge(FileSystemLiveLayer));
 
-  return ConfigLoaderLiveLayer.pipe(Layer.provideMerge(Layer.mergeAll(hostPathsLayer, networkLayer)));
+  return ConfigLoaderLiveLayer.pipe(Layer.provideMerge(Layer.mergeAll(statePathsLayer, networkLayer)));
 };
 
 const buildContextLayer = (config: Config, options: SetupOptions) => {
-  const hostPathsLayer = createHostPathsLiveLayer(options.configPath);
+  const environmentPathsLayer = buildEnvironmentPathsLayer(options);
+  const installPathsLayer = buildInstallPathsLayer(options);
+  const statePathsLayer = buildStatePathsLayer(options);
   const appConfigLayer = Layer.succeed(AppConfigTag, config);
   const baseLayer = Layer.mergeAll(
-    hostPathsLayer,
+    environmentPathsLayer,
+    installPathsLayer,
+    statePathsLayer,
     appConfigLayer,
     FileSystemLiveLayer,
     ShellLiveLayer,
     AutoUpgradeTriggerLiveLayer,
     RuntimeContextLiveLayer,
   );
+  const workspaceLayer = WorkspacePathsLiveLayer.pipe(Layer.provideMerge(baseLayer));
 
-  return WorkspacePathsLiveLayer.pipe(Layer.provideMerge(baseLayer));
+  return Layer.mergeAll(baseLayer, workspaceLayer);
 };
 
 const buildDirectorySetupLayer = (contextLayer: ReturnType<typeof buildContextLayer>) =>

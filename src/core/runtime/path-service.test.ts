@@ -2,14 +2,21 @@ import path from "path";
 
 import { describe, expect, it } from "vitest";
 
-import { createHostPaths, createWorkspacePaths, resolveUserPath, type HostPathsRuntime } from "~/core/runtime/path-service";
+import {
+  createEnvironmentPaths,
+  createInstallPaths,
+  createStatePaths,
+  createWorkspacePaths,
+  resolveUserPath,
+  type PathRuntime,
+} from "~/core/runtime/path-service";
 
-const runtime: HostPathsRuntime = {
+const runtime: PathRuntime = {
   homeDir: "/tmp/home",
   xdgConfigHome: "/tmp/home/.config",
-  xdgDataHome: "/tmp/home/.local/share",
-  xdgCacheHome: "/tmp/home/.cache",
   cwd: "/tmp/workspace",
+  argv: ["bun", "/tmp/home/.dev/src/index.ts", "status"],
+  execPath: "/opt/homebrew/bin/bun",
 };
 
 describe("path-service", () => {
@@ -23,35 +30,55 @@ describe("path-service", () => {
     expect(resolveUserPath("/tmp/absolute", runtime)).toBe("/tmp/absolute");
   });
 
-  it("createHostPaths derives host-local dev and XDG paths", () => {
-    const hostPaths = createHostPaths(runtime);
+  it("createStatePaths derives app-owned state paths under ~/.dev/state by default", () => {
+    const statePaths = createStatePaths(runtime);
 
-    expect(hostPaths.devDir).toBe(path.join(runtime.homeDir, ".dev"));
-    expect(hostPaths.configDir).toBe(path.join(runtime.xdgConfigHome, "dev"));
-    expect(hostPaths.configPath).toBe(path.join(runtime.xdgConfigHome, "dev", "config.json"));
-    expect(hostPaths.dataDir).toBe(path.join(runtime.xdgDataHome, "dev"));
-    expect(hostPaths.dbPath).toBe(path.join(runtime.xdgDataHome, "dev", "dev.db"));
-    expect(hostPaths.cacheDir).toBe(path.join(runtime.xdgCacheHome, "dev"));
+    expect(statePaths.stateDir).toBe(path.join(runtime.homeDir, ".dev", "state"));
+    expect(statePaths.configPath).toBe(path.join(runtime.homeDir, ".dev", "state", "config.json"));
+    expect(statePaths.dbPath).toBe(path.join(runtime.homeDir, ".dev", "state", "dev.db"));
+    expect(statePaths.cacheDir).toBe(path.join(runtime.homeDir, ".dev", "state", "cache"));
+    expect(statePaths.dockerDir).toBe(path.join(runtime.homeDir, ".dev", "state", "docker"));
+    expect(statePaths.runDir).toBe(path.join(runtime.homeDir, ".dev", "state", "run"));
   });
 
-  it("createHostPaths lets configPath override the default config location", () => {
-    const hostPaths = createHostPaths(runtime, { configPath: "~/custom/dev.json" });
+  it("createStatePaths lets configPath override the default config location", () => {
+    const statePaths = createStatePaths(runtime, { configPath: "~/custom/dev.json" });
 
-    expect(hostPaths.configPath).toBe(path.join(runtime.homeDir, "custom/dev.json"));
-    expect(hostPaths.configDir).toBe(path.join(runtime.homeDir, "custom"));
+    expect(statePaths.configPath).toBe(path.join(runtime.homeDir, "custom/dev.json"));
+    expect(statePaths.stateDir).toBe(path.join(runtime.homeDir, ".dev", "state"));
+  });
+
+  it("createInstallPaths derives repo-mode install metadata from the script path", () => {
+    const installPaths = createInstallPaths(runtime);
+
+    expect(installPaths.installMode).toBe("repo");
+    expect(installPaths.installDir).toBe(path.join(runtime.homeDir, ".dev"));
+    expect(installPaths.upgradeCapable).toBe(true);
+  });
+
+  it("createInstallPaths derives binary-mode install metadata from the executable path", () => {
+    const installPaths = createInstallPaths({
+      ...runtime,
+      argv: ["/tmp/dist/dev", "/tmp/dist/dev", "status"],
+      execPath: "/tmp/dist/dev",
+    });
+
+    expect(installPaths.installMode).toBe("binary");
+    expect(installPaths.installDir).toBe("/tmp/dist");
+    expect(installPaths.upgradeCapable).toBe(false);
   });
 
   it("createWorkspacePaths uses the default search root when none is provided", () => {
-    const hostPaths = createHostPaths(runtime);
-    const workspacePaths = createWorkspacePaths(hostPaths);
+    const environmentPaths = createEnvironmentPaths(runtime);
+    const workspacePaths = createWorkspacePaths(environmentPaths);
 
     expect(workspacePaths.baseSearchPath).toBe(path.join(runtime.homeDir, "src"));
   });
 
-  it("createWorkspacePaths resolves explicit search roots through host path resolution", () => {
-    const hostPaths = createHostPaths(runtime);
+  it("createWorkspacePaths resolves explicit search roots through environment path resolution", () => {
+    const environmentPaths = createEnvironmentPaths(runtime);
 
-    expect(createWorkspacePaths(hostPaths, "~/projects").baseSearchPath).toBe(path.join(runtime.homeDir, "projects"));
-    expect(createWorkspacePaths(hostPaths, "projects").baseSearchPath).toBe(path.join(runtime.cwd, "projects"));
+    expect(createWorkspacePaths(environmentPaths, "~/projects").baseSearchPath).toBe(path.join(runtime.homeDir, "projects"));
+    expect(createWorkspacePaths(environmentPaths, "projects").baseSearchPath).toBe(path.join(runtime.cwd, "projects"));
   });
 });

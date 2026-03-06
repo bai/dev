@@ -15,7 +15,7 @@ import type { HealthCheckResult } from "~/capabilities/tools/health-check-port";
 import { AppConfigTag } from "~/core/config/app-config-port";
 import { dockerServiceError, type DockerServiceError, type ShellExecutionError } from "~/core/errors";
 import { annotateErrorTypeOnFailure } from "~/core/observability/error-type";
-import { HostPathsTag } from "~/core/runtime/path-service";
+import { StatePathsTag } from "~/core/runtime/path-service";
 
 const SERVICE_PORTS: Record<ServiceName, number> = {
   postgres17: 55432,
@@ -96,13 +96,13 @@ const createDockerServices = (enabledServices: readonly ServiceName[] = DOCKER_S
   Effect.gen(function* () {
     const shell = yield* ShellTag;
     const fs = yield* FileSystemTag;
-    const hostPaths = yield* HostPathsTag;
+    const statePaths = yield* StatePathsTag;
     const getComposeFilePath = (): string => {
-      return path.join(hostPaths.dataDir, "docker", "docker-compose.yml");
+      return path.join(statePaths.dockerDir, "docker-compose.yml");
     };
 
     const getComposeDir = (): string => {
-      return path.dirname(getComposeFilePath());
+      return statePaths.dockerDir;
     };
 
     const ensureComposeFile = (): Effect.Effect<void, DockerServiceError | ShellExecutionError> =>

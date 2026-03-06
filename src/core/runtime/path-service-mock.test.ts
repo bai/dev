@@ -1,43 +1,64 @@
 import { describe, expect, it } from "vitest";
 
-import { makeHostPathsMock, makeWorkspacePathsMock } from "~/core/runtime/path-service-mock";
+import {
+  makeEnvironmentPathsMock,
+  makeInstallPathsMock,
+  makeStatePathsMock,
+  makeWorkspacePathsMock,
+} from "~/core/runtime/path-service-mock";
 
 describe("path-service-mock", () => {
-  it("derives dev config, data, and cache paths from XDG roots", () => {
-    const hostPaths = makeHostPathsMock({
+  it("derives environment paths from the provided home and cwd", () => {
+    const environmentPaths = makeEnvironmentPathsMock({
       homeDir: "/home/user",
+      cwd: "/workspace",
       xdgConfigHome: "/xdg/config",
-      xdgDataHome: "/xdg/data",
-      xdgCacheHome: "/xdg/cache",
     });
 
-    expect(hostPaths.configDir).toBe("/xdg/config/dev");
-    expect(hostPaths.configPath).toBe("/xdg/config/dev/config.json");
-    expect(hostPaths.dataDir).toBe("/xdg/data/dev");
-    expect(hostPaths.dbPath).toBe("/xdg/data/dev/dev.db");
-    expect(hostPaths.cacheDir).toBe("/xdg/cache/dev");
-    expect(hostPaths.devDir).toBe("/home/user/.dev");
+    expect(environmentPaths.homeDir).toBe("/home/user");
+    expect(environmentPaths.cwd).toBe("/workspace");
+    expect(environmentPaths.xdgConfigHome).toBe("/xdg/config");
+    expect(environmentPaths.resolveUserPath("~/src")).toBe("/home/user/src");
   });
 
-  it("lets explicit path overrides win over derived XDG paths", () => {
-    const hostPaths = makeHostPathsMock({
-      homeDir: "/home/user",
-      xdgConfigHome: "/xdg/config",
-      configDir: "/custom/config/dev",
-      configPath: "/custom/config/dev/custom.json",
-      dataDir: "/custom/data/dev",
-      dbPath: "/custom/data/dev/custom.db",
-      cacheDir: "/custom/cache/dev",
+  it("derives app-owned state paths under ~/.dev/state by default", () => {
+    const statePaths = makeStatePathsMock();
+
+    expect(statePaths.stateDir).toBe("/home/user/.dev/state");
+    expect(statePaths.configPath).toBe("/home/user/.dev/state/config.json");
+    expect(statePaths.dbPath).toBe("/home/user/.dev/state/dev.db");
+    expect(statePaths.cacheDir).toBe("/home/user/.dev/state/cache");
+    expect(statePaths.dockerDir).toBe("/home/user/.dev/state/docker");
+    expect(statePaths.runDir).toBe("/home/user/.dev/state/run");
+  });
+
+  it("lets explicit state path overrides win over defaults", () => {
+    const statePaths = makeStatePathsMock({
+      stateDir: "/custom/state",
+      configPath: "/custom/config/dev.json",
+      dbPath: "/custom/data/dev.db",
+      cacheDir: "/custom/cache",
+      dockerDir: "/custom/docker",
+      runDir: "/custom/run",
     });
 
-    expect(hostPaths.configDir).toBe("/custom/config/dev");
-    expect(hostPaths.configPath).toBe("/custom/config/dev/custom.json");
-    expect(hostPaths.dataDir).toBe("/custom/data/dev");
-    expect(hostPaths.dbPath).toBe("/custom/data/dev/custom.db");
-    expect(hostPaths.cacheDir).toBe("/custom/cache/dev");
+    expect(statePaths.stateDir).toBe("/custom/state");
+    expect(statePaths.configPath).toBe("/custom/config/dev.json");
+    expect(statePaths.dbPath).toBe("/custom/data/dev.db");
+    expect(statePaths.cacheDir).toBe("/custom/cache");
+    expect(statePaths.dockerDir).toBe("/custom/docker");
+    expect(statePaths.runDir).toBe("/custom/run");
   });
 
-  it("creates workspace paths independently from host paths", () => {
+  it("creates repo-mode install paths by default", () => {
+    const installPaths = makeInstallPathsMock();
+
+    expect(installPaths.installMode).toBe("repo");
+    expect(installPaths.installDir).toBe("/home/user/.dev");
+    expect(installPaths.upgradeCapable).toBe(true);
+  });
+
+  it("creates workspace paths independently from install and state paths", () => {
     const workspacePaths = makeWorkspacePathsMock("/workspace/src");
 
     expect(workspacePaths.baseSearchPath).toBe("/workspace/src");

@@ -13,7 +13,7 @@ import {
 } from "~/capabilities/tools/adapters/versioned-tools-live";
 import { type HealthCheckResult } from "~/capabilities/tools/health-check-port";
 import { unknownError, type ExternalToolError, type HealthCheckError, type ShellExecutionError, type UnknownError } from "~/core/errors";
-import { HostPathsTag } from "~/core/runtime/path-service";
+import { EnvironmentPathsTag } from "~/core/runtime/path-service";
 
 export const GCLOUD_MIN_VERSION = "552.0.0";
 
@@ -31,7 +31,7 @@ export class GcloudToolsTag extends Effect.Service<GcloudTools>()("GcloudTools",
   effect: Effect.gen(function* () {
     const shell = yield* ShellTag;
     const filesystem = yield* FileSystemTag;
-    const hostPaths = yield* HostPathsTag;
+    const environmentPaths = yield* EnvironmentPathsTag;
     const getBinaryPath = (): Effect.Effect<string | undefined, never> =>
       shell.exec("which", ["gcloud"]).pipe(
         Effect.map((result) => (result.exitCode === 0 && result.stdout ? result.stdout.trim() : undefined)),
@@ -80,7 +80,7 @@ export class GcloudToolsTag extends Effect.Service<GcloudTools>()("GcloudTools",
       Effect.gen(function* () {
         yield* Effect.logInfo("☁️  Setting up Google Cloud configuration...");
 
-        const xdgConfigHome = path.dirname(hostPaths.configDir);
+        const xdgConfigHome = environmentPaths.xdgConfigHome;
         const gcloudConfigDir = path.join(xdgConfigHome, "gcloud");
 
         const exists = yield* filesystem.exists(gcloudConfigDir);

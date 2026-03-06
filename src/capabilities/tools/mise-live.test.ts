@@ -12,8 +12,8 @@ import { ConfigLoaderTag } from "~/core/config/config-loader-port";
 import type { ConfigLoader } from "~/core/config/config-loader-port";
 import { configSchema } from "~/core/config/config-schema";
 import { configError } from "~/core/errors";
-import { HostPathsTag, type HostPaths } from "~/core/runtime/path-service";
-import { makeHostPathsMock } from "~/core/runtime/path-service-mock";
+import { EnvironmentPathsTag, type EnvironmentPaths } from "~/core/runtime/path-service";
+import { makeEnvironmentPathsMock } from "~/core/runtime/path-service-mock";
 
 const mockShell = new ShellMock();
 
@@ -84,11 +84,9 @@ const mockConfigLoader: ConfigLoader = {
     ),
 };
 
-const mockHostPaths = makeHostPathsMock({
+const mockEnvironmentPaths = makeEnvironmentPathsMock({
   homeDir: "/home/user",
   xdgConfigHome: "/xdg/config",
-  xdgDataHome: "/xdg/data",
-  xdgCacheHome: "/xdg/cache",
 });
 
 describe("mise-live", () => {
@@ -96,12 +94,12 @@ describe("mise-live", () => {
     shell = mockShell,
     fileSystem = mockFileSystem,
     configLoader = mockConfigLoader,
-    hostPaths = mockHostPaths,
+    environmentPaths = mockEnvironmentPaths,
   }: {
     readonly shell?: ShellMock;
     readonly fileSystem?: FileSystem;
     readonly configLoader?: ConfigLoader;
-    readonly hostPaths?: HostPaths;
+    readonly environmentPaths?: EnvironmentPaths;
   } = {}): Effect.Effect<Mise> =>
     Effect.gen(function* () {
       return yield* MiseTag;
@@ -113,7 +111,7 @@ describe("mise-live", () => {
             Layer.succeed(ShellTag, shell),
             Layer.succeed(FileSystemTag, fileSystem),
             Layer.succeed(ConfigLoaderTag, configLoader),
-            Layer.succeed(HostPathsTag, hostPaths),
+            Layer.succeed(EnvironmentPathsTag, environmentPaths),
           ),
         ),
       ),
