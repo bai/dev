@@ -1,4 +1,4 @@
-import { Context, type Effect } from "effect";
+import { Effect } from "effect";
 
 import { type HealthCheckError } from "./errors";
 
@@ -19,4 +19,4 @@ export interface HealthCheck {
   runHealthChecks(): Effect.Effect<readonly HealthCheckResult[], HealthCheckError>;
 }
 
-export class HealthCheckTag extends Context.Tag("HealthCheck")<HealthCheckTag, HealthCheck>() {}
+export class HealthCheckTag extends Effect.Tag("HealthCheck")<HealthCheckTag, HealthCheck>() {}

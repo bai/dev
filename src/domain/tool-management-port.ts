@@ -1,4 +1,4 @@
-import { Context, type Effect } from "effect";
+import { Effect } from "effect";
 
 import { type ExternalToolError, type ShellExecutionError, type UnknownError } from "./errors";
 
@@ -36,4 +36,4 @@ export interface ToolManagement {
   readonly listEssentialTools: () => readonly ManagedTool[];
 }
 
-export class ToolManagementTag extends Context.Tag("ToolManagement")<ToolManagementTag, ToolManagement>() {}
+export class ToolManagementTag extends Effect.Tag("ToolManagement")<ToolManagementTag, ToolManagement>() {}

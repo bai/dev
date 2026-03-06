@@ -1,4 +1,4 @@
-import { Context, type Effect } from "effect";
+import { Effect } from "effect";
 
 import type { FileSystemError, UnknownError } from "./errors";
 
@@ -34,4 +34,4 @@ export interface FileSystem {
   getCwd(): Effect.Effect<string>;
 }
 
-export class FileSystemTag extends Context.Tag("FileSystem")<FileSystemTag, FileSystem>() {}
+export class FileSystemTag extends Effect.Tag("FileSystem")<FileSystemTag, FileSystem>() {}

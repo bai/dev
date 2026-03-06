@@ -1,4 +1,4 @@
-import { Data, absurd } from "effect";
+import { Schema, absurd } from "effect";
 
 import type { TracingError } from "./tracing-port";
 
@@ -6,62 +6,62 @@ import type { TracingError } from "./tracing-port";
 export { TracingError } from "./tracing-port";
 
 // Tagged error classes for Effect.ts
-export class ConfigError extends Data.TaggedError("ConfigError")<{
-  readonly reason: string;
-}> {}
+export class ConfigError extends Schema.TaggedError<ConfigError>()("ConfigError", {
+  reason: Schema.String,
+}) {}
 
-export class GitError extends Data.TaggedError("GitError")<{
-  readonly reason: string;
-}> {}
+export class GitError extends Schema.TaggedError<GitError>()("GitError", {
+  reason: Schema.String,
+}) {}
 
-export class NetworkError extends Data.TaggedError("NetworkError")<{
-  readonly reason: string;
-}> {}
+export class NetworkError extends Schema.TaggedError<NetworkError>()("NetworkError", {
+  reason: Schema.String,
+}) {}
 
-export class AuthError extends Data.TaggedError("AuthError")<{
-  readonly reason: string;
-}> {}
+export class AuthError extends Schema.TaggedError<AuthError>()("AuthError", {
+  reason: Schema.String,
+}) {}
 
-export class UnknownError extends Data.TaggedError("UnknownError")<{
-  readonly reason: unknown;
-}> {}
+export class UnknownError extends Schema.TaggedError<UnknownError>()("UnknownError", {
+  reason: Schema.Unknown,
+}) {}
 
-export class ExternalToolError extends Data.TaggedError("ExternalToolError")<{
-  readonly message: string;
-  readonly tool?: string;
-  readonly exitCode?: number;
-  readonly stderr?: string;
-}> {}
+export class ExternalToolError extends Schema.TaggedError<ExternalToolError>()("ExternalToolError", {
+  message: Schema.String,
+  tool: Schema.optional(Schema.String),
+  exitCode: Schema.optional(Schema.Number),
+  stderr: Schema.optional(Schema.String),
+}) {}
 
-export class FileSystemError extends Data.TaggedError("FileSystemError")<{
-  readonly reason: string;
-  readonly path?: string;
-}> {}
+export class FileSystemError extends Schema.TaggedError<FileSystemError>()("FileSystemError", {
+  reason: Schema.String,
+  path: Schema.optional(Schema.String),
+}) {}
 
-export class StatusCheckError extends Data.TaggedError("StatusCheckError")<{
-  readonly reason: string;
-  readonly failedComponents: string[];
-}> {}
+export class StatusCheckError extends Schema.TaggedError<StatusCheckError>()("StatusCheckError", {
+  reason: Schema.String,
+  failedComponents: Schema.Array(Schema.String),
+}) {}
 
-export class HealthCheckError extends Data.TaggedError("HealthCheckError")<{
-  readonly reason: string;
-  readonly tool?: string;
-}> {}
+export class HealthCheckError extends Schema.TaggedError<HealthCheckError>()("HealthCheckError", {
+  reason: Schema.String,
+  tool: Schema.optional(Schema.String),
+}) {}
 
-export class ShellExecutionError extends Data.TaggedError("ShellExecutionError")<{
-  readonly command: string;
-  readonly args: readonly string[];
-  readonly reason: string;
-  readonly cwd?: string;
-  readonly underlyingError?: unknown;
-}> {}
+export class ShellExecutionError extends Schema.TaggedError<ShellExecutionError>()("ShellExecutionError", {
+  command: Schema.String,
+  args: Schema.Array(Schema.String),
+  reason: Schema.String,
+  cwd: Schema.optional(Schema.String),
+  underlyingError: Schema.optional(Schema.Unknown),
+}) {}
 
-export class DockerServiceError extends Data.TaggedError("DockerServiceError")<{
-  readonly reason: string;
-  readonly service?: string;
-  readonly exitCode?: number;
-  readonly stderr?: string;
-}> {}
+export class DockerServiceError extends Schema.TaggedError<DockerServiceError>()("DockerServiceError", {
+  reason: Schema.String,
+  service: Schema.optional(Schema.String),
+  exitCode: Schema.optional(Schema.Number),
+  stderr: Schema.optional(Schema.String),
+}) {}
 
 // Union type for all domain errors
 export type DevError =

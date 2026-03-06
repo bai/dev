@@ -7,7 +7,7 @@ import { DirectoryTag } from "../domain/directory-port";
 import { unknownError, type DevError } from "../domain/errors";
 import { InteractiveSelectorTag } from "../domain/interactive-selector-port";
 import { filter } from "../domain/matching";
-import { ShellIntegrationTag } from "./shell-integration-service";
+import { ShellIntegrationTag, type ShellIntegration } from "./shell-integration-service";
 
 // Define the folder name argument as optional
 const folderName = Args.text({ name: "folder_name" }).pipe(Args.optional);
@@ -45,7 +45,7 @@ export const cdCommand = Command.make("cd", { folderName }, ({ folderName }) =>
   }).pipe(Effect.withSpan("cd.execute")),
 );
 
-export function handleDirectCd(folderName: string): Effect.Effect<void, DevError, DirectoryTag | ShellIntegrationTag> {
+export function handleDirectCd(folderName: string): Effect.Effect<void, DevError, DirectoryTag | ShellIntegration> {
   return Effect.gen(function* () {
     if (!folderName || folderName.trim() === "") {
       return yield* unknownError("Folder name for 'cd' command cannot be empty.");
@@ -78,7 +78,7 @@ export function handleDirectCd(folderName: string): Effect.Effect<void, DevError
   }).pipe(Effect.withSpan("cd.handle_direct"));
 }
 
-export function handleInteractiveCd(): Effect.Effect<void, DevError, DirectoryTag | InteractiveSelectorTag | ShellIntegrationTag> {
+export function handleInteractiveCd(): Effect.Effect<void, DevError, DirectoryTag | InteractiveSelectorTag | ShellIntegration> {
   return Effect.gen(function* () {
     // Use DirectoryService to get directories
     const directoryService = yield* DirectoryTag;

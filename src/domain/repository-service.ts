@@ -1,6 +1,6 @@
 import path from "path";
 
-import { Context, Effect, Layer } from "effect";
+import { Effect } from "effect";
 
 import { configError, type ConfigError } from "./errors";
 import type { GitProviderType, Repository } from "./models";
@@ -123,14 +123,11 @@ export const makeRepositoryService = (pathService: PathService): RepositoryServi
   };
 };
 
-// Service tag for Effect Context system
-export class RepositoryServiceTag extends Context.Tag("RepositoryService")<RepositoryServiceTag, RepositoryService>() {}
-
-// Layer that provides RepositoryService
-export const RepositoryServiceLiveLayer = Layer.effect(
-  RepositoryServiceTag,
-  Effect.gen(function* () {
+export class RepositoryServiceTag extends Effect.Service<RepositoryService>()("RepositoryService", {
+  effect: Effect.gen(function* () {
     const pathService = yield* PathServiceTag;
     return makeRepositoryService(pathService);
   }),
-);
+}) {}
+
+export const RepositoryServiceLiveLayer = RepositoryServiceTag.Default;

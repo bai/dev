@@ -1,6 +1,6 @@
 import path from "path";
 
-import { Context, Effect, Layer } from "effect";
+import { Effect } from "effect";
 
 import {
   unknownError,
@@ -133,16 +133,13 @@ export const makeGcloudToolsLive = (shell: Shell, filesystem: FileSystem, pathSe
   };
 };
 
-// Service tag for Effect Context system
-export class GcloudToolsTag extends Context.Tag("GcloudTools")<GcloudToolsTag, GcloudTools>() {}
-
-// Effect Layer for dependency injection using factory function
-export const GcloudToolsLiveLayer = Layer.effect(
-  GcloudToolsTag,
-  Effect.gen(function* () {
+export class GcloudToolsTag extends Effect.Service<GcloudTools>()("GcloudTools", {
+  effect: Effect.gen(function* () {
     const shell = yield* ShellTag;
     const filesystem = yield* FileSystemTag;
     const pathService = yield* PathServiceTag;
     return makeGcloudToolsLive(shell, filesystem, pathService);
   }),
-);
+}) {}
+
+export const GcloudToolsLiveLayer = GcloudToolsTag.Default;

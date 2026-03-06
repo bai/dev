@@ -1,4 +1,4 @@
-import { Context, Effect, Layer } from "effect";
+import { Effect } from "effect";
 
 import { type ExternalToolError, type HealthCheckError, type ShellExecutionError } from "../../domain/errors";
 import { type HealthCheckResult } from "../../domain/health-check-port";
@@ -83,14 +83,11 @@ export const makeFzfToolsLive = (shell: Shell): FzfTools => {
   };
 };
 
-// Service tag for Effect Context system
-export class FzfToolsTag extends Context.Tag("FzfTools")<FzfToolsTag, FzfTools>() {}
-
-// Effect Layer for dependency injection
-export const FzfToolsLiveLayer = Layer.effect(
-  FzfToolsTag,
-  Effect.gen(function* () {
+export class FzfToolsTag extends Effect.Service<FzfTools>()("FzfTools", {
+  effect: Effect.gen(function* () {
     const shell = yield* ShellTag;
     return makeFzfToolsLive(shell);
   }),
-);
+}) {}
+
+export const FzfToolsLiveLayer = FzfToolsTag.Default;

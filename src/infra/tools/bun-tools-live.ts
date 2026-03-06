@@ -1,4 +1,4 @@
-import { Context, Effect, Layer } from "effect";
+import { Effect } from "effect";
 
 import { type ExternalToolError, type HealthCheckError, type ShellExecutionError } from "../../domain/errors";
 import { type HealthCheckResult } from "../../domain/health-check-port";
@@ -85,14 +85,11 @@ export const makeBunToolsLive = (shell: Shell): BunTools => {
   };
 };
 
-// Service tag for Effect Context system
-export class BunToolsTag extends Context.Tag("BunTools")<BunToolsTag, BunTools>() {}
-
-// Effect Layer for dependency injection
-export const BunToolsLiveLayer = Layer.effect(
-  BunToolsTag,
-  Effect.gen(function* () {
+export class BunToolsTag extends Effect.Service<BunTools>()("BunTools", {
+  effect: Effect.gen(function* () {
     const shell = yield* ShellTag;
     return makeBunToolsLive(shell);
   }),
-);
+}) {}
+
+export const BunToolsLiveLayer = BunToolsTag.Default;

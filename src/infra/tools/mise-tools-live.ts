@@ -1,4 +1,4 @@
-import { Context, Effect, Layer } from "effect";
+import { Effect } from "effect";
 
 import { type ExternalToolError, type HealthCheckError, type ShellExecutionError, type UnknownError } from "../../domain/errors";
 import { type HealthCheckResult } from "../../domain/health-check-port";
@@ -136,15 +136,12 @@ export const makeMiseToolsLive = (shell: Shell, mise: Mise): MiseTools => {
   };
 };
 
-// Service tag for Effect Context system
-export class MiseToolsTag extends Context.Tag("MiseTools")<MiseToolsTag, MiseTools>() {}
-
-// Effect Layer for dependency injection using factory function
-export const MiseToolsLiveLayer = Layer.effect(
-  MiseToolsTag,
-  Effect.gen(function* () {
+export class MiseToolsTag extends Effect.Service<MiseTools>()("MiseTools", {
+  effect: Effect.gen(function* () {
     const shell = yield* ShellTag;
     const mise = yield* MiseTag;
     return makeMiseToolsLive(shell, mise);
   }),
-);
+}) {}
+
+export const MiseToolsLiveLayer = MiseToolsTag.Default;

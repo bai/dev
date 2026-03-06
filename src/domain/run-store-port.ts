@@ -1,4 +1,4 @@
-import { Context, type Effect } from "effect";
+import { Effect } from "effect";
 
 import type { ConfigError, UnknownError } from "./errors";
 import type { CommandRun } from "./models";
@@ -30,4 +30,4 @@ export interface RunStore {
   completeIncompleteRuns(): Effect.Effect<void, ConfigError | UnknownError>;
 }
 
-export class RunStoreTag extends Context.Tag("RunStore")<RunStoreTag, RunStore>() {}
+export class RunStoreTag extends Effect.Tag("RunStore")<RunStoreTag, RunStore>() {}

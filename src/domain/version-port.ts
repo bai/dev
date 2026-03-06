@@ -1,4 +1,4 @@
-import { Context, type Effect } from "effect";
+import { Effect } from "effect";
 
 /**
  * Version service port for getting CLI version information
@@ -8,4 +8,4 @@ export interface Version {
   readonly getVersion: () => Effect.Effect<string, never, never>;
 }
 
-export class VersionTag extends Context.Tag("Version")<VersionTag, Version>() {}
+export class VersionTag extends Effect.Tag("Version")<VersionTag, Version>() {}

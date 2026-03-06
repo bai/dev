@@ -1,6 +1,6 @@
 import path from "path";
 
-import { Context } from "effect";
+import { Effect } from "effect";
 
 import type { Config } from "./config-schema";
 
@@ -57,4 +57,4 @@ export const createPathService = (runtime: PathServiceRuntime, baseSearchPath?: 
   };
 };
 
-export class PathServiceTag extends Context.Tag("PathService")<PathServiceTag, PathService>() {}
+export class PathServiceTag extends Effect.Tag("PathService")<PathServiceTag, PathService>() {}

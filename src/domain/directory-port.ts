@@ -1,4 +1,4 @@
-import { Context, type Effect } from "effect";
+import { Effect } from "effect";
 
 import type { FileSystemError, UnknownError } from "./errors";
 
@@ -11,4 +11,4 @@ export interface Directory {
   findDirs(): Effect.Effect<string[], FileSystemError | UnknownError, never>;
 }
 
-export class DirectoryTag extends Context.Tag("Directory")<DirectoryTag, Directory>() {}
+export class DirectoryTag extends Effect.Tag("Directory")<DirectoryTag, Directory>() {}

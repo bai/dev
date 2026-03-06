@@ -1,4 +1,4 @@
-import { Context, type Effect } from "effect";
+import { Effect } from "effect";
 
 import type { ShellExecutionError } from "./errors";
 
@@ -25,4 +25,4 @@ export interface Shell {
   setProcessCwd(path: string): Effect.Effect<void>;
 }
 
-export class ShellTag extends Context.Tag("Shell")<ShellTag, Shell>() {}
+export class ShellTag extends Effect.Tag("Shell")<ShellTag, Shell>() {}

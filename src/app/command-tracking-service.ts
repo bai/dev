@@ -1,4 +1,4 @@
-import { Clock, Context, Effect, Layer } from "effect";
+import { Clock, Effect } from "effect";
 
 import { type ConfigError, type UnknownError } from "../domain/errors";
 import { RunStoreTag, type RunStore } from "../domain/run-store-port";
@@ -71,14 +71,13 @@ export const makeCommandTracker = (runStore: RunStore, version: Version, runtime
   };
 };
 
-export class CommandTrackerTag extends Context.Tag("CommandTracker")<CommandTrackerTag, CommandTracker>() {}
-
-export const CommandTrackerLiveLayer = Layer.effect(
-  CommandTrackerTag,
-  Effect.gen(function* () {
+export class CommandTrackerTag extends Effect.Service<CommandTracker>()("CommandTracker", {
+  effect: Effect.gen(function* () {
     const runStore = yield* RunStoreTag;
     const version = yield* VersionTag;
     const runtimeContext = yield* RuntimeContextTag;
     return makeCommandTracker(runStore, version, runtimeContext);
   }),
-);
+}) {}
+
+export const CommandTrackerLiveLayer = CommandTrackerTag.Default;

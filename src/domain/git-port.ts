@@ -1,4 +1,4 @@
-import { Context, type Effect } from "effect";
+import { Effect } from "effect";
 
 import type { GitError, ShellExecutionError } from "./errors";
 import type { Repository } from "./models";
@@ -35,4 +35,4 @@ export interface Git {
   getRemoteUrl(repositoryPath: string, remoteName: string): Effect.Effect<string, GitError | ShellExecutionError>;
 }
 
-export class GitTag extends Context.Tag("Git")<GitTag, Git>() {}
+export class GitTag extends Effect.Tag("Git")<GitTag, Git>() {}

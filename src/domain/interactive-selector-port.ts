@@ -1,4 +1,4 @@
-import { Context, type Effect } from "effect";
+import { Effect } from "effect";
 
 import type { UnknownError } from "./errors";
 
@@ -14,4 +14,4 @@ export interface InteractiveSelector {
   selectFromList(choices: string[]): Effect.Effect<string | null, UnknownError>;
 }
 
-export class InteractiveSelectorTag extends Context.Tag("InteractiveSelector")<InteractiveSelectorTag, InteractiveSelector>() {}
+export class InteractiveSelectorTag extends Effect.Tag("InteractiveSelector")<InteractiveSelectorTag, InteractiveSelector>() {}

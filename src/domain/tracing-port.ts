@@ -1,12 +1,12 @@
 import type { NodeSdk } from "@effect/opentelemetry";
-import { Context, Data, type Effect } from "effect";
+import { Effect, Schema } from "effect";
 
 /**
  * Error types for tracing
  */
-export class TracingError extends Data.TaggedError("TracingError")<{
-  readonly reason: string;
-}> {}
+export class TracingError extends Schema.TaggedError<TracingError>()("TracingError", {
+  reason: Schema.String,
+}) {}
 
 /**
  * Port for OpenTelemetry telemetry configuration (tracing)
@@ -19,4 +19,4 @@ export interface Tracing {
   readonly createSdkConfig: () => Effect.Effect<NodeSdk.Configuration, TracingError>;
 }
 
-export class TracingTag extends Context.Tag("Tracing")<TracingTag, Tracing>() {}
+export class TracingTag extends Effect.Tag("Tracing")<TracingTag, Tracing>() {}

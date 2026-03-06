@@ -1,8 +1,8 @@
-import { Context } from "effect";
+import { Effect } from "effect";
 
 export interface RuntimeContext {
   readonly getArgv: () => readonly string[];
   readonly getCwd: () => string;
 }
 
-export class RuntimeContextTag extends Context.Tag("RuntimeContext")<RuntimeContextTag, RuntimeContext>() {}
+export class RuntimeContextTag extends Effect.Tag("RuntimeContext")<RuntimeContextTag, RuntimeContext>() {}

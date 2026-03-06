@@ -1,4 +1,4 @@
-import { Context, type Effect } from "effect";
+import { Effect } from "effect";
 
 import type { UnknownError } from "./errors";
 
@@ -6,4 +6,4 @@ export interface AutoUpgradeTrigger {
   trigger(): Effect.Effect<void, UnknownError>;
 }
 
-export class AutoUpgradeTriggerTag extends Context.Tag("AutoUpgradeTrigger")<AutoUpgradeTriggerTag, AutoUpgradeTrigger>() {}
+export class AutoUpgradeTriggerTag extends Effect.Tag("AutoUpgradeTrigger")<AutoUpgradeTriggerTag, AutoUpgradeTrigger>() {}

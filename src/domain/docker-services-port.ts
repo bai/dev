@@ -1,4 +1,4 @@
-import { Context, type Effect } from "effect";
+import { Effect } from "effect";
 
 import type { DockerServiceError, ShellExecutionError } from "./errors";
 import type { HealthCheckResult } from "./health-check-port";
@@ -28,4 +28,4 @@ export interface DockerServices {
   performHealthCheck(): Effect.Effect<HealthCheckResult, never>;
 }
 
-export class DockerServicesTag extends Context.Tag("DockerServices")<DockerServicesTag, DockerServices>() {}
+export class DockerServicesTag extends Effect.Tag("DockerServices")<DockerServicesTag, DockerServices>() {}

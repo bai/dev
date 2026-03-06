@@ -1,6 +1,6 @@
 import path from "path";
 
-import { Context, Effect, Layer } from "effect";
+import { Effect } from "effect";
 
 import { configError, type ConfigError, type FileSystemError, type UnknownError } from "../domain/errors";
 import { FileSystemTag, type FileSystem } from "../domain/file-system-port";
@@ -45,15 +45,12 @@ const makeShellIntegration = (pathService: PathService, fileSystem: FileSystem):
     }),
 });
 
-// Service tag for Effect Context system
-export class ShellIntegrationTag extends Context.Tag("ShellIntegration")<ShellIntegrationTag, ShellIntegration>() {}
-
-// Layer that provides ShellIntegrationService, capturing dependencies
-export const ShellIntegrationLiveLayer = Layer.effect(
-  ShellIntegrationTag,
-  Effect.gen(function* () {
+export class ShellIntegrationTag extends Effect.Service<ShellIntegration>()("ShellIntegration", {
+  effect: Effect.gen(function* () {
     const pathService = yield* PathServiceTag;
     const fileSystem = yield* FileSystemTag;
     return makeShellIntegration(pathService, fileSystem);
   }),
-);
+}) {}
+
+export const ShellIntegrationLiveLayer = ShellIntegrationTag.Default;

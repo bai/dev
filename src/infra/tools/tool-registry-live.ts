@@ -1,4 +1,4 @@
-import { Context, Effect, Layer } from "effect";
+import { Effect } from "effect";
 
 import { type HealthCheckError } from "../../domain/errors";
 import { type HealthCheckResult } from "../../domain/health-check-port";
@@ -122,11 +122,8 @@ export const createToolRegistry = (dependencies: ToolRegistryDependencies): Buil
   };
 };
 
-export class BuiltToolRegistryTag extends Context.Tag("BuiltToolRegistry")<BuiltToolRegistryTag, BuiltToolRegistry>() {}
-
-export const BuiltToolRegistryLiveLayer = Layer.effect(
-  BuiltToolRegistryTag,
-  Effect.gen(function* () {
+export class BuiltToolRegistryTag extends Effect.Service<BuiltToolRegistry>()("BuiltToolRegistry", {
+  effect: Effect.gen(function* () {
     const bunTools = yield* BunToolsTag;
     const dockerTools = yield* DockerToolsTag;
     const fzfTools = yield* FzfToolsTag;
@@ -143,4 +140,6 @@ export const BuiltToolRegistryLiveLayer = Layer.effect(
       miseTools,
     });
   }),
-);
+}) {}
+
+export const BuiltToolRegistryLiveLayer = BuiltToolRegistryTag.Default;

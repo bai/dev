@@ -1,4 +1,4 @@
-import { Context, type Effect } from "effect";
+import { Effect } from "effect";
 
 import type { ShellExecutionError, UnknownError } from "./errors";
 
@@ -39,4 +39,4 @@ export interface Mise {
   setupGlobalConfig(): Effect.Effect<void, UnknownError>;
 }
 
-export class MiseTag extends Context.Tag("Mise")<MiseTag, Mise>() {}
+export class MiseTag extends Effect.Tag("Mise")<MiseTag, Mise>() {}

@@ -1,4 +1,4 @@
-import { Context, type Effect } from "effect";
+import { Effect } from "effect";
 
 import type { HealthCheckError } from "./errors";
 import type { HealthCheckResult } from "./health-check-port";
@@ -24,4 +24,4 @@ export interface ToolHealthRegistry {
   checkAllTools(): Effect.Effect<readonly HealthCheckResult[], HealthCheckError>;
 }
 
-export class ToolHealthRegistryTag extends Context.Tag("ToolHealthRegistry")<ToolHealthRegistryTag, ToolHealthRegistry>() {}
+export class ToolHealthRegistryTag extends Effect.Tag("ToolHealthRegistry")<ToolHealthRegistryTag, ToolHealthRegistry>() {}

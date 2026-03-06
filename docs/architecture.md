@@ -188,7 +188,7 @@ export interface Git {
   currentCommitSha: (cwd?: string) => Effect.Effect<string, GitError>;
 }
 
-export const GitTag = Context.Tag<Git>("Git");
+export class GitTag extends Effect.Tag("Git")<GitTag, Git>() {}
 ```
 
 ### 5.2 Functional Adapter (Factory)
@@ -270,7 +270,7 @@ export const exitCode = (e: DevError): number => ({
 
 ## 7 · Ports & Adapters (Domain Interfaces)
 
-Each port is a pure TypeScript *interface* + a Context Tag.
+Each port is a pure TypeScript *interface* + an `Effect.Tag`.
 
 ```ts
 // src/domain/file-system-port.ts
@@ -280,7 +280,7 @@ export interface FileSystem {
   writeFile: (path: string, content: string) => Effect.Effect<void, FileSystemError>;
 }
 
-export const FileSystemTag = Context.Tag<FileSystem>("FileSystem");
+export class FileSystemTag extends Effect.Tag("FileSystem")<FileSystemTag, FileSystem>() {}
 ```
 
 Adapters live in `src/infra/` (flat structure) and are wired in the composition root via **Effect Layers**.
@@ -313,7 +313,7 @@ A tiny adapter (`RunStoreLive`) inserts a row *before* command execution and fin
 
 ## 9 · Configuration Handling
 
-`ConfigLoader` reads `~/.config/dev/config.json` (following XDG Base Directory Specification), validates via a Zod schema (`configSchema`), then provides the resulting object via a Context Tag so that any Effect can simply `yield* ConfigLoaderTag`.
+`ConfigLoader` reads `~/.config/dev/config.json` (following XDG Base Directory Specification), validates via a Zod schema (`configSchema`), then provides the resulting object via an `Effect.Tag` so that any Effect can simply `yield* ConfigLoaderTag`.
 
 The `Config` type is inferred from the Zod schema, ensuring the type always matches what parsing actually produces (with defaults applied).
 
@@ -424,7 +424,7 @@ export interface Cache {
   get: (key: string) => Effect.Effect<string | null, CacheError>;
   set: (key: string, value: string, ttl?: number) => Effect.Effect<void, CacheError>;
 }
-export const CacheTag = Context.Tag<Cache>("Cache");
+export class CacheTag extends Effect.Tag("Cache")<CacheTag, Cache>() {}
 
 // 3. Functional adapter factory
 const makeRedisCache = (client: RedisClient): Cache => ({

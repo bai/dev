@@ -1,4 +1,4 @@
-import { Context, type Effect } from "effect";
+import { Effect } from "effect";
 
 import type { NetworkError, UnknownError } from "./errors";
 
@@ -26,4 +26,4 @@ export interface Network {
   checkConnectivity(url: string): Effect.Effect<boolean>;
 }
 
-export class NetworkTag extends Context.Tag("Network")<NetworkTag, Network>() {}
+export class NetworkTag extends Effect.Tag("Network")<NetworkTag, Network>() {}

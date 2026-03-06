@@ -1,4 +1,4 @@
-import { Context, type Effect } from "effect";
+import { Effect } from "effect";
 
 /**
  * Opaque command object stored by the registry.
@@ -18,4 +18,4 @@ export interface CommandRegistry {
   getCommands(): Effect.Effect<ReadonlyArray<RegisteredCommand>, never, never>;
 }
 
-export class CommandRegistryTag extends Context.Tag("CommandRegistry")<CommandRegistryTag, CommandRegistry>() {}
+export class CommandRegistryTag extends Effect.Tag("CommandRegistry")<CommandRegistryTag, CommandRegistry>() {}

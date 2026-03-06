@@ -1,6 +1,6 @@
 import type { Database as BunSQLiteDatabase } from "bun:sqlite";
 
-import { Context, type Effect } from "effect";
+import { Effect } from "effect";
 
 import type { DrizzleDatabase } from "./drizzle-types";
 import type { ConfigError, UnknownError } from "./errors";
@@ -31,4 +31,4 @@ export interface Database {
   readonly migrate: () => Effect.Effect<void, ConfigError | UnknownError>;
 }
 
-export class DatabaseTag extends Context.Tag("Database")<DatabaseTag, Database>() {}
+export class DatabaseTag extends Effect.Tag("Database")<DatabaseTag, Database>() {}

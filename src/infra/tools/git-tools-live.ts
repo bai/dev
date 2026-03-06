@@ -1,4 +1,4 @@
-import { Context, Effect, Layer } from "effect";
+import { Effect } from "effect";
 
 import { type ExternalToolError, type HealthCheckError, type ShellExecutionError } from "../../domain/errors";
 import { type HealthCheckResult } from "../../domain/health-check-port";
@@ -83,14 +83,11 @@ export const makeGitToolsLive = (shell: Shell): GitTools => {
   };
 };
 
-// Service tag for Effect Context system
-export class GitToolsTag extends Context.Tag("GitTools")<GitToolsTag, GitTools>() {}
-
-// Effect Layer for dependency injection
-export const GitToolsLiveLayer = Layer.effect(
-  GitToolsTag,
-  Effect.gen(function* () {
+export class GitToolsTag extends Effect.Service<GitTools>()("GitTools", {
+  effect: Effect.gen(function* () {
     const shell = yield* ShellTag;
     return makeGitToolsLive(shell);
   }),
-);
+}) {}
+
+export const GitToolsLiveLayer = GitToolsTag.Default;

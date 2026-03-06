@@ -1,4 +1,4 @@
-import { Clock, Context, Effect, Layer } from "effect";
+import { Clock, Effect } from "effect";
 
 import { healthCheckError, type HealthCheckError } from "../../domain/errors";
 import type { HealthCheckResult } from "../../domain/health-check-port";
@@ -101,12 +101,11 @@ export const makeDockerToolsLive = (shell: Shell): DockerTools => {
   };
 };
 
-export class DockerToolsTag extends Context.Tag("DockerTools")<DockerToolsTag, DockerTools>() {}
-
-export const DockerToolsLiveLayer = Layer.effect(
-  DockerToolsTag,
-  Effect.gen(function* () {
+export class DockerToolsTag extends Effect.Service<DockerTools>()("DockerTools", {
+  effect: Effect.gen(function* () {
     const shell = yield* ShellTag;
     return makeDockerToolsLive(shell);
   }),
-);
+}) {}
+
+export const DockerToolsLiveLayer = DockerToolsTag.Default;

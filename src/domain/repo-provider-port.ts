@@ -1,4 +1,4 @@
-import { Context, type Effect } from "effect";
+import { Effect } from "effect";
 
 import type { NetworkError, UnknownError } from "./errors";
 import type { GitProvider, Repository } from "./models";
@@ -20,4 +20,4 @@ export interface RepoProvider {
   getProvider(): GitProvider;
 }
 
-export class RepoProviderTag extends Context.Tag("RepoProvider")<RepoProviderTag, RepoProvider>() {}
+export class RepoProviderTag extends Effect.Tag("RepoProvider")<RepoProviderTag, RepoProvider>() {}

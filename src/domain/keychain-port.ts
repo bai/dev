@@ -1,4 +1,4 @@
-import { Context, type Effect } from "effect";
+import { Effect } from "effect";
 
 import type { AuthError, ShellExecutionError } from "./errors";
 
@@ -24,4 +24,4 @@ export interface Keychain {
   hasCredential(service: string, account: string): Effect.Effect<boolean>;
 }
 
-export class KeychainTag extends Context.Tag("Keychain")<KeychainTag, Keychain>() {}
+export class KeychainTag extends Effect.Tag("Keychain")<KeychainTag, Keychain>() {}

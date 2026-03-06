@@ -1,4 +1,4 @@
-import { Clock, Context, Duration, Effect, Layer } from "effect";
+import { Clock, Duration, Effect } from "effect";
 
 import { AutoUpgradeTriggerTag } from "../domain/auto-upgrade-trigger-port";
 import { type ConfigError, type UnknownError } from "../domain/errors";
@@ -58,16 +58,13 @@ export const makeUpdateChecker = (
   };
 };
 
-// Service tag for Effect Context system
-export class UpdateCheckerTag extends Context.Tag("UpdateChecker")<UpdateCheckerTag, UpdateChecker>() {}
-
-// Layer that provides UpdateCheckService
-export const UpdateCheckerLiveLayer = Layer.effect(
-  UpdateCheckerTag,
-  Effect.gen(function* () {
+export class UpdateCheckerTag extends Effect.Service<UpdateChecker>()("UpdateChecker", {
+  effect: Effect.gen(function* () {
     const runStore = yield* RunStoreTag;
     const autoUpgradeTrigger = yield* AutoUpgradeTriggerTag;
     const runtimeContext = yield* RuntimeContextTag;
     return makeUpdateChecker(runStore, () => autoUpgradeTrigger.trigger(), runtimeContext);
   }),
-);
+}) {}
+
+export const UpdateCheckerLiveLayer = UpdateCheckerTag.Default;
