@@ -2,52 +2,10 @@ import { it } from "@effect/vitest";
 import { Effect, Layer } from "effect";
 import { describe, expect } from "vitest";
 
-import { shellExecutionError } from "../domain/errors";
 import { type FileSystem, FileSystemTag } from "../domain/file-system-port";
-import { type Mise, MiseTag } from "../domain/mise-port";
+import { MiseTag } from "../domain/mise-port";
+import { MiseMock } from "../infra/mise-mock";
 import { upCommand } from "./up-command";
-
-class MockMise implements Mise {
-  public installCalls = 0;
-  public installToolsCalls: Array<string | undefined> = [];
-
-  constructor(private readonly installed: boolean) {}
-
-  checkInstallation() {
-    if (this.installed) {
-      return Effect.succeed({
-        version: "2026.1.5",
-        runtimeVersions: {},
-      });
-    }
-
-    return Effect.fail(shellExecutionError("mise", ["--version"], "not installed"));
-  }
-
-  install() {
-    return Effect.sync(() => {
-      this.installCalls += 1;
-    });
-  }
-
-  installTools(cwd?: string) {
-    return Effect.sync(() => {
-      this.installToolsCalls.push(cwd);
-    });
-  }
-
-  runTask() {
-    return Effect.void;
-  }
-
-  getTasks() {
-    return Effect.succeed([]);
-  }
-
-  setupGlobalConfig() {
-    return Effect.void;
-  }
-}
 
 const makeFileSystem = (cwd: string): FileSystem => ({
   readFile: () => Effect.succeed(""),
@@ -61,7 +19,13 @@ const makeFileSystem = (cwd: string): FileSystem => ({
 describe("up-command", () => {
   it.effect("installs mise when missing, then installs tools", () =>
     Effect.gen(function* () {
-      const mise = new MockMise(false);
+      const mise = new MiseMock({
+        installed: false,
+        info: {
+          version: "2026.1.5",
+          runtimeVersions: {},
+        },
+      });
       const testLayer = Layer.mergeAll(Layer.succeed(MiseTag, mise), Layer.succeed(FileSystemTag, makeFileSystem("/tmp/project")));
 
       yield* upCommand.handler({}).pipe(Effect.provide(testLayer));
@@ -73,7 +37,13 @@ describe("up-command", () => {
 
   it.effect("skips mise install when already present", () =>
     Effect.gen(function* () {
-      const mise = new MockMise(true);
+      const mise = new MiseMock({
+        installed: true,
+        info: {
+          version: "2026.1.5",
+          runtimeVersions: {},
+        },
+      });
       const testLayer = Layer.mergeAll(Layer.succeed(MiseTag, mise), Layer.succeed(FileSystemTag, makeFileSystem("/tmp/project")));
 
       yield* upCommand.handler({}).pipe(Effect.provide(testLayer));

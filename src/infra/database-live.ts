@@ -16,83 +16,100 @@ interface DatabaseWithClose extends Database {
   readonly close: () => Effect.Effect<void>;
 }
 
+type DatabaseAccessSemaphore = ReturnType<typeof Effect.unsafeMakeSemaphore>;
+
 // Factory function that creates Database service
-export const makeDatabaseLive = (sqlite: BunSQLiteDatabase, drizzleDb: DrizzleDatabase, migrationsPath: string): DatabaseWithClose => {
+export const makeDatabaseLive = (
+  sqlite: BunSQLiteDatabase,
+  drizzleDb: DrizzleDatabase,
+  migrationsPath: string,
+  accessSemaphore: DatabaseAccessSemaphore,
+): DatabaseWithClose => {
+  const withDatabasePermit = accessSemaphore.withPermits(1);
+
   const query = <A, E>(fn: (db: DrizzleDatabase) => Effect.Effect<A, E>): Effect.Effect<A, E | ConfigError | UnknownError> =>
-    Effect.gen(function* () {
-      yield* Effect.logDebug("Executing database query");
-      return yield* fn(drizzleDb).pipe(
-        Effect.mapError((error) => {
-          if (error && typeof error === "object" && "_tag" in error) {
-            return error as E;
-          }
-          return unknownError(`Database query failed: ${error}`);
-        }),
-      );
-    });
-
-  const transaction = <A, E>(fn: (tx: DrizzleDatabase) => Effect.Effect<A, E>): Effect.Effect<A, E | ConfigError | UnknownError> =>
-    Effect.uninterruptibleMask((restore) =>
+    withDatabasePermit(
       Effect.gen(function* () {
-        yield* Effect.logDebug("Starting database transaction");
-        yield* Effect.try({
-          try: () => sqlite.exec("BEGIN"),
-          catch: (error) => unknownError(`Failed to begin database transaction: ${error}`),
-        });
-
-        const transactionResult = yield* restore(fn(drizzleDb)).pipe(
+        yield* Effect.logDebug("Executing database query");
+        return yield* fn(drizzleDb).pipe(
           Effect.mapError((error) => {
             if (error && typeof error === "object" && "_tag" in error) {
               return error as E;
             }
-            return unknownError(`Database transaction failed: ${error}`);
+            return unknownError(`Database query failed: ${error}`);
           }),
-          Effect.exit,
         );
-
-        if (Exit.isSuccess(transactionResult)) {
-          yield* Effect.try({
-            try: () => sqlite.exec("COMMIT"),
-            catch: (error) => unknownError(`Failed to commit database transaction: ${error}`),
-          });
-          return transactionResult.value;
-        }
-
-        const rollbackResult = yield* Effect.try({
-          try: () => sqlite.exec("ROLLBACK"),
-          catch: (error) => unknownError(`Failed to rollback database transaction: ${error}`),
-        }).pipe(Effect.exit);
-
-        if (Exit.isFailure(rollbackResult)) {
-          return yield* Effect.failCause(rollbackResult.cause);
-        }
-
-        return yield* Effect.failCause(transactionResult.cause);
       }),
+    );
+
+  const transaction = <A, E>(fn: (tx: DrizzleDatabase) => Effect.Effect<A, E>): Effect.Effect<A, E | ConfigError | UnknownError> =>
+    withDatabasePermit(
+      Effect.uninterruptibleMask((restore) =>
+        Effect.gen(function* () {
+          yield* Effect.logDebug("Starting database transaction");
+          yield* Effect.try({
+            try: () => sqlite.exec("BEGIN"),
+            catch: (error) => unknownError(`Failed to begin database transaction: ${error}`),
+          });
+
+          const transactionResult = yield* restore(fn(drizzleDb)).pipe(
+            Effect.mapError((error) => {
+              if (error && typeof error === "object" && "_tag" in error) {
+                return error as E;
+              }
+              return unknownError(`Database transaction failed: ${error}`);
+            }),
+            Effect.exit,
+          );
+
+          if (Exit.isSuccess(transactionResult)) {
+            yield* Effect.try({
+              try: () => sqlite.exec("COMMIT"),
+              catch: (error) => unknownError(`Failed to commit database transaction: ${error}`),
+            });
+            return transactionResult.value;
+          }
+
+          const rollbackResult = yield* Effect.try({
+            try: () => sqlite.exec("ROLLBACK"),
+            catch: (error) => unknownError(`Failed to rollback database transaction: ${error}`),
+          }).pipe(Effect.exit);
+
+          if (Exit.isFailure(rollbackResult)) {
+            return yield* Effect.failCause(rollbackResult.cause);
+          }
+
+          return yield* Effect.failCause(transactionResult.cause);
+        }),
+      ),
     );
 
   const raw = (): Effect.Effect<BunSQLiteDatabase, ConfigError | UnknownError> => Effect.succeed(sqlite);
 
   const runMigrations = (): Effect.Effect<void, ConfigError | UnknownError> =>
-    Effect.gen(function* () {
-      yield* Effect.logDebug(`Running database migrations from ${migrationsPath}`);
-      yield* Effect.try({
-        try: () => migrate(drizzleDb, { migrationsFolder: migrationsPath }),
-        catch: (error) => configError(`Failed to run migrations: ${error}`),
-      });
-      yield* Effect.logDebug("Database migrations completed");
-    });
+    withDatabasePermit(
+      Effect.gen(function* () {
+        yield* Effect.logDebug(`Running database migrations from ${migrationsPath}`);
+        yield* Effect.try({
+          try: () => migrate(drizzleDb, { migrationsFolder: migrationsPath }),
+          catch: (error) => configError(`Failed to run migrations: ${error}`),
+        });
+        yield* Effect.logDebug("Database migrations completed");
+      }),
+    );
 
   const close = (): Effect.Effect<void> =>
-    Effect.gen(function* () {
-      yield* Effect.logDebug("Closing database connection");
-      yield* Effect.sync(() => {
-        // Checkpoint WAL before closing to ensure data is persisted
-        sqlite.exec("PRAGMA wal_checkpoint(TRUNCATE);");
-        sqlite.close();
-      });
-      yield* Effect.logDebug("Database connection closed");
-    });
+    withDatabasePermit(
+      Effect.gen(function* () {
+        yield* Effect.logDebug("Closing database connection");
+        yield* Effect.sync(() => {
+          // Checkpoint WAL before closing to ensure data is persisted
+          sqlite.exec("PRAGMA wal_checkpoint(TRUNCATE);");
+          sqlite.close();
+        });
+        yield* Effect.logDebug("Database connection closed");
+      }),
+    );
 
   return {
     query,
@@ -129,9 +146,10 @@ const createDatabase = Effect.gen(function* () {
 
   const drizzleDb = drizzle(sqlite);
   const migrationsPath = `${pathService.devDir}/drizzle/migrations`;
+  const accessSemaphore = yield* Effect.makeSemaphore(1);
 
   // Create the database service
-  const database = makeDatabaseLive(sqlite, drizzleDb, migrationsPath);
+  const database = makeDatabaseLive(sqlite, drizzleDb, migrationsPath, accessSemaphore);
 
   // Run migrations
   yield* database.migrate();

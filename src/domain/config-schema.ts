@@ -103,7 +103,7 @@ export const configSchema = z.object({
     .describe(
       "Map organization names to their git provider (e.g., { 'mycompany': 'gitlab' }); organization keys are matched case-insensitively",
     ),
-  miseGlobalConfig: miseConfigSchema.optional().describe("Mise configuration applied globally (~/.config/mise)"),
+  miseGlobalConfig: miseConfigSchema.optional().describe("Mise configuration applied globally ($XDG_CONFIG_HOME/mise)"),
   miseRepoConfig: miseConfigSchema.optional().describe("Mise configuration applied per-repository (.mise.toml)"),
   services: servicesConfigSchema,
 });

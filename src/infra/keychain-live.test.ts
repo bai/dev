@@ -2,18 +2,20 @@ import { it } from "@effect/vitest";
 import { Cause, Effect, Exit, Option } from "effect";
 import { describe, expect } from "vitest";
 
-import type { Shell, SpawnResult } from "../domain/shell-port";
+import type { SpawnResult } from "../domain/shell-port";
 import { makeKeychainLive } from "./keychain-live";
+import { ShellMock } from "./shell-mock";
 
-const createShell = (responses: Record<string, SpawnResult>): Shell => ({
-  exec: (command, args = []) =>
-    Effect.sync(() => {
-      const key = [command, ...args].join(" ");
-      return responses[key] ?? { exitCode: 1, stdout: "", stderr: "not mocked" };
-    }),
-  execInteractive: () => Effect.succeed(0),
-  setProcessCwd: () => Effect.void,
-});
+const createShell = (responses: Record<string, SpawnResult>) => {
+  const shell = new ShellMock();
+
+  for (const [key, response] of Object.entries(responses)) {
+    const [command = "", ...args] = key.split(" ");
+    shell.setExecResponse(command, args, response);
+  }
+
+  return shell;
+};
 
 describe("keychain-live", () => {
   it.effect("stores credentials when security command succeeds", () =>
@@ -76,11 +78,8 @@ describe("keychain-live", () => {
 
   it.effect("hasCredential returns false when shell execution fails", () =>
     Effect.gen(function* () {
-      const shell: Shell = {
-        exec: () => Effect.fail(new Error("shell crashed") as never),
-        execInteractive: () => Effect.succeed(0),
-        setProcessCwd: () => Effect.void,
-      };
+      const shell = new ShellMock();
+      shell.setExecFailure("security", ["find-generic-password", "-s", "dev", "-a", "me"]);
 
       const keychain = makeKeychainLive(shell);
       const hasCredential = yield* keychain.hasCredential("dev", "me");

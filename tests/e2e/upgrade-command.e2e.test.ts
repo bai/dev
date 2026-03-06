@@ -14,7 +14,7 @@ describe("upgrade command e2e", () => {
         expect(result.exitCode).toBe(0);
         expect(result.stdout).toContain("Upgrade completed successfully");
 
-        const miseConfigPath = path.join(fixture.homeDir, ".config", "mise", "config.toml");
+        const miseConfigPath = path.join(fixture.configHome, "mise", "config.toml");
         const miseConfigExists = await fs
           .access(miseConfigPath)
           .then(() => true)

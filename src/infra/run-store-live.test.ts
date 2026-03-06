@@ -2,8 +2,8 @@ import { it } from "@effect/vitest";
 import { Effect } from "effect";
 import { afterEach, describe, expect, vi } from "vitest";
 
-import type { Database } from "../domain/database-port";
 import type { DrizzleDatabase } from "../domain/drizzle-types";
+import { DatabaseMock } from "./database-mock";
 import { makeRunStoreLive } from "./run-store-live";
 
 interface MockRunRow {
@@ -29,15 +29,16 @@ const makeMockDrizzleDatabase = (rows: readonly MockRunRow[]): DrizzleDatabase =
     }),
   }) as unknown as DrizzleDatabase;
 
-const makeMockDatabase = (rows: readonly MockRunRow[]): Database => {
+const makeMockDatabase = (rows: readonly MockRunRow[]) => {
   const drizzleDatabase = makeMockDrizzleDatabase(rows);
 
-  return {
-    query: (fn) => fn(drizzleDatabase),
-    transaction: (fn) => fn(drizzleDatabase),
-    raw: () => Effect.die("raw database not implemented in test"),
-    migrate: () => Effect.void,
-  };
+  return new DatabaseMock({
+    queryDb: drizzleDatabase,
+    transactionDb: drizzleDatabase,
+    overrides: {
+      raw: () => Effect.die("raw database not implemented in test"),
+    },
+  });
 };
 
 describe("run-store-live", () => {
@@ -54,22 +55,22 @@ describe("run-store-live", () => {
           .spyOn(Bun, "randomUUIDv7")
           .mockImplementation(() => expectedRunId as unknown as ReturnType<typeof Bun.randomUUIDv7>);
 
-        const database: Database = {
-          query: (fn) =>
-            fn({
-              insert: (_table: unknown) => ({
-                values: (row: Record<string, unknown>) => {
-                  insertedRows.push(row);
-                  return {
-                    returning: async () => [{ id: row.id as string }],
-                  };
-                },
-              }),
-            } as never),
-          transaction: (fn) => fn({} as never),
-          raw: () => Effect.die("raw database not implemented in test"),
-          migrate: () => Effect.void,
-        };
+        const database = new DatabaseMock({
+          queryDb: {
+            insert: (_table: unknown) => ({
+              values: (row: Record<string, unknown>) => {
+                insertedRows.push(row);
+                return {
+                  returning: async () => [{ id: row.id as string }],
+                };
+              },
+            }),
+          } as never,
+          transactionDb: {} as never,
+          overrides: {
+            raw: () => Effect.die("raw database not implemented in test"),
+          },
+        });
 
         const runStore = makeRunStoreLive(database);
         const recordedRunId = yield* runStore.record({

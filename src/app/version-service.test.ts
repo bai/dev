@@ -3,22 +3,22 @@ import { Effect, Layer } from "effect";
 import { describe, expect, vi } from "vitest";
 
 import { gitError } from "../domain/errors";
-import { GitTag, type Git } from "../domain/git-port";
+import { GitTag } from "../domain/git-port";
 import { PathServiceTag } from "../domain/path-service";
 import { VersionTag } from "../domain/version-port";
+import { GitMock } from "../infra/git-mock";
 import { makePathServiceMock } from "../infra/path-service-mock";
 import { VersionLiveLayer } from "./version-service";
 
-const createGitMock = (getCurrentCommitShaImpl: Git["getCurrentCommitSha"]): Git => ({
-  cloneRepositoryToPath: () => Effect.void,
-  pullLatestChanges: () => Effect.void,
-  isGitRepository: () => Effect.succeed(true),
-  getCurrentCommitSha: getCurrentCommitShaImpl,
-  getCurrentBranch: () => Effect.succeed("main"),
-  getRemoteUrl: () => Effect.succeed("git@github.com:acme/dev.git"),
-});
+const createGitMock = (getCurrentCommitShaImpl: GitMock["getCurrentCommitSha"]) =>
+  new GitMock({
+    overrides: {
+      getCurrentCommitSha: getCurrentCommitShaImpl,
+    },
+    remoteUrl: "git@github.com:acme/dev.git",
+  });
 
-const makeVersionLayer = (git: Git, pathService = makePathServiceMock({ baseSearchPath: "/tmp/src", devDir: "/tmp/home/.dev" })) =>
+const makeVersionLayer = (git: GitMock, pathService = makePathServiceMock({ baseSearchPath: "/tmp/src", devDir: "/tmp/home/.dev" })) =>
   Layer.provide(VersionLiveLayer, Layer.mergeAll(Layer.succeed(GitTag, git), Layer.succeed(PathServiceTag, pathService)));
 
 describe("version-service", () => {

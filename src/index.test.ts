@@ -83,4 +83,11 @@ describe("index", () => {
       expect(code).toBe(1);
     }),
   );
+
+  it.effect("handleProgramError treats non-domain tagged errors as unknown errors", () =>
+    Effect.gen(function* () {
+      const code = yield* handleProgramError({ _tag: "InvalidArgument", message: "boom" });
+      expect(code).toBe(1);
+    }),
+  );
 });

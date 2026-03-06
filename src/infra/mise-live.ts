@@ -105,7 +105,8 @@ export const makeMiseLive = (shell: Shell, fileSystem: FileSystem, configLoader:
     Effect.gen(function* () {
       yield* Effect.logDebug("🔧 Setting up mise global configuration...");
 
-      const miseConfigDir = path.join(pathService.homeDir, ".config", "mise");
+      const xdgConfigHome = path.dirname(pathService.configDir);
+      const miseConfigDir = path.join(xdgConfigHome, "mise");
       const miseConfigFile = path.join(miseConfigDir, "config.toml");
 
       // Create config directory if it doesn't exist

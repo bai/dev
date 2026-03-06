@@ -14,16 +14,14 @@ const makeSubject = () => {
   const fileSystem = new FileSystemMock();
   const pathService = makePathServiceMock({
     homeDir: "/custom/home",
+    xdgConfigHome: "/custom/xdg",
+    xdgDataHome: "/custom/data",
+    xdgCacheHome: "/custom/cache",
     baseSearchPath: "/custom/home/src",
     devDir: "/custom/home/.dev",
-    configDir: "/custom/home/.config/dev",
-    configPath: "/custom/home/.config/dev/config.json",
-    dataDir: "/custom/home/.local/share/dev",
-    dbPath: "/custom/home/.local/share/dev/dev.db",
-    cacheDir: "/custom/home/.cache/dev",
   });
   const gcloudTools = makeGcloudToolsLive(shell, fileSystem, pathService);
-  const configDir = path.join(pathService.homeDir, ".config", "gcloud");
+  const configDir = path.join(path.dirname(pathService.configDir), "gcloud");
 
   return {
     fileSystem,
@@ -33,7 +31,7 @@ const makeSubject = () => {
 };
 
 describe("gcloud-tools-live", () => {
-  it.effect("setupConfig uses pathService home directory for gcloud config path", () =>
+  it.effect("setupConfig uses the shared XDG config root for gcloud config path", () =>
     Effect.gen(function* () {
       const { fileSystem, gcloudTools, configDir } = makeSubject();
 

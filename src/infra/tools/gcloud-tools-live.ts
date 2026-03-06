@@ -78,7 +78,8 @@ export const makeGcloudToolsLive = (shell: Shell, filesystem: FileSystem, pathSe
     Effect.gen(function* () {
       yield* Effect.logInfo("☁️  Setting up Google Cloud configuration...");
 
-      const gcloudConfigDir = path.join(pathService.homeDir, ".config", "gcloud");
+      const xdgConfigHome = path.dirname(pathService.configDir);
+      const gcloudConfigDir = path.join(xdgConfigHome, "gcloud");
 
       // Create config directory if it doesn't exist
       const exists = yield* filesystem.exists(gcloudConfigDir);

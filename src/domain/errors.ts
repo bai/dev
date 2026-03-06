@@ -78,6 +78,28 @@ export type DevError =
   | TracingError
   | UnknownError;
 
+const devErrorTags = new Set<DevError["_tag"]>([
+  "ConfigError",
+  "GitError",
+  "NetworkError",
+  "AuthError",
+  "ExternalToolError",
+  "FileSystemError",
+  "StatusCheckError",
+  "HealthCheckError",
+  "ShellExecutionError",
+  "DockerServiceError",
+  "TracingError",
+  "UnknownError",
+]);
+
+export const isDevError = (error: unknown): error is DevError =>
+  typeof error === "object" &&
+  error !== null &&
+  "_tag" in error &&
+  typeof error._tag === "string" &&
+  devErrorTags.has(error._tag as DevError["_tag"]);
+
 // Exit code mapping
 export const exitCode = (error: DevError): number => {
   switch (error._tag) {

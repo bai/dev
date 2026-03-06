@@ -8,13 +8,13 @@ import { afterEach, describe, expect, vi } from "vitest";
 import type { ConfigLoader } from "../../domain/config-loader-port";
 import { ConfigLoaderTag } from "../../domain/config-loader-port";
 import { configSchema } from "../../domain/config-schema";
-import type { Git } from "../../domain/git-port";
 import { GitTag } from "../../domain/git-port";
 import type { InstallIdentity } from "../../domain/install-identity-port";
 import { InstallIdentityTag } from "../../domain/install-identity-port";
 import { TracingTag } from "../../domain/tracing-port";
 import type { Version } from "../../domain/version-port";
 import { VersionTag } from "../../domain/version-port";
+import { GitMock } from "../git-mock";
 import { TracingLiveLayer } from "./tracing-live";
 
 const mockVersion: Version = {
@@ -22,14 +22,11 @@ const mockVersion: Version = {
   getVersion: () => Effect.succeed("1.2.3"),
 };
 
-const mockGit: Git = {
-  cloneRepositoryToPath: () => Effect.void,
-  pullLatestChanges: () => Effect.void,
-  isGitRepository: () => Effect.succeed(true),
-  getCurrentCommitSha: () => Effect.succeed("deadbeef"),
-  getCurrentBranch: () => Effect.succeed("main"),
-  getRemoteUrl: () => Effect.succeed("https://github.com/acme/repo"),
-};
+const mockGit = new GitMock({
+  currentCommitSha: "deadbeef",
+  currentBranch: "main",
+  remoteUrl: "https://github.com/acme/repo",
+});
 
 const mockInstallIdentity: InstallIdentity = {
   getOrCreateInstallId: () => Effect.succeed("0196ed78-467a-7f2f-bf6b-95e73fd43b8d"),

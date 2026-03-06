@@ -3,67 +3,36 @@ import { Effect, Exit } from "effect";
 import { beforeEach, describe, expect } from "vitest";
 
 import type { ConfigLoader } from "../domain/config-loader-port";
-import type { Config } from "../domain/config-schema";
 import { configSchema } from "../domain/config-schema";
 import type { FileSystem } from "../domain/file-system-port";
-import type { PathService } from "../domain/path-service";
-import type { Shell } from "../domain/shell-port";
 import { makeMiseLive } from "./mise-live";
+import { makePathServiceMock } from "./path-service-mock";
+import { ShellMock } from "./shell-mock";
 
-// Mock implementations
-const mockShell: Shell & {
-  lastCall: { command: string; args: readonly string[]; options?: { cwd?: string } } | undefined;
-  lastInteractiveCall: { command: string; args: readonly string[]; options?: { cwd?: string } } | undefined;
-} = {
-  exec: (command: string, args: string[] = [], options?: { cwd?: string }) => {
-    // Store the call for assertions
-    mockShell.lastCall = { command, args, options };
+const mockShell = new ShellMock();
 
-    // Return different responses based on command
-    if (command === "mise" && args[0] === "--version") {
-      return Effect.succeed({
-        exitCode: 0,
-        stdout: "2024.1.0 macos-arm64 (2024-01-01)",
-        stderr: "",
-      });
-    }
-
-    if (command === "mise" && args[0] === "current") {
-      return Effect.succeed({
-        exitCode: 0,
-        stdout: "node 20.10.0\nbun 1.2.17\n",
-        stderr: "",
-      });
-    }
-
-    if (command === "mise" && args[0] === "tasks" && args[1] === "--list") {
-      return Effect.succeed({
-        exitCode: 0,
-        stdout: "lint\ntest\nbuild\nsecrets\n",
-        stderr: "",
-      });
-    }
-
-    return Effect.succeed({
-      exitCode: 0,
-      stdout: "",
-      stderr: "",
-    });
-  },
-
-  execInteractive: (command: string, args: string[] = [], options?: { cwd?: string }) => {
-    // Store the call for assertions
-    mockShell.lastInteractiveCall = { command, args, options };
-
-    // Simulate successful execution
-    return Effect.succeed(0);
-  },
-
-  setProcessCwd: () => Effect.void,
-
-  lastCall: undefined as { command: string; args: readonly string[]; options?: { cwd?: string } } | undefined,
-  lastInteractiveCall: undefined as { command: string; args: readonly string[]; options?: { cwd?: string } } | undefined,
+const seedMockShell = (): void => {
+  mockShell.execCalls.length = 0;
+  mockShell.execInteractiveCalls.length = 0;
+  mockShell.setExecResponse("mise", ["--version"], {
+    exitCode: 0,
+    stdout: "2024.1.0 macos-arm64 (2024-01-01)",
+    stderr: "",
+  });
+  mockShell.setExecResponse("mise", ["current"], {
+    exitCode: 0,
+    stdout: "node 20.10.0\nbun 1.2.17\n",
+    stderr: "",
+  });
+  mockShell.setExecResponse("mise", ["tasks", "--list"], {
+    exitCode: 0,
+    stdout: "lint\ntest\nbuild\nsecrets\n",
+    stderr: "",
+  });
 };
+
+const getLastExecCall = () => mockShell.execCalls.at(-1);
+const getLastInteractiveCall = () => mockShell.execInteractiveCalls.at(-1);
 
 const mockFileSystem = {
   exists: (_path) => Effect.succeed(true),
@@ -104,31 +73,25 @@ const mockConfigLoader: ConfigLoader = {
     ),
 };
 
-const mockPathService: PathService = {
+const mockPathService = makePathServiceMock({
   homeDir: "/home/user",
-  baseSearchPath: "/home/user/src",
-  devDir: "/home/user/.dev",
-  configDir: "/home/user/.config/dev",
-  configPath: "/home/user/.config/dev/config.json",
-  dataDir: "/home/user/.local/share/dev",
-  dbPath: "/home/user/.local/share/dev/dev.db",
-  cacheDir: "/home/user/.cache/dev",
-  getBasePath: (_config: Config): string => "/home/user/src",
-};
+  xdgConfigHome: "/xdg/config",
+  xdgDataHome: "/xdg/data",
+  xdgCacheHome: "/xdg/cache",
+});
 
 describe("mise-live", () => {
   const mise = makeMiseLive(mockShell, mockFileSystem, mockConfigLoader, mockPathService);
 
   beforeEach(() => {
-    mockShell.lastCall = undefined;
-    mockShell.lastInteractiveCall = undefined;
+    seedMockShell();
   });
 
   it.effect("runs a task without arguments", () =>
     Effect.gen(function* () {
       yield* mise.runTask("lint");
 
-      expect(mockShell.lastInteractiveCall).toEqual({
+      expect(getLastInteractiveCall()).toEqual({
         command: "mise",
         args: ["run", "lint"],
         options: { cwd: undefined },
@@ -140,7 +103,7 @@ describe("mise-live", () => {
     Effect.gen(function* () {
       yield* mise.runTask("test", ["--watch"]);
 
-      expect(mockShell.lastInteractiveCall).toEqual({
+      expect(getLastInteractiveCall()).toEqual({
         command: "mise",
         args: ["run", "test", "--watch"],
         options: { cwd: undefined },
@@ -152,7 +115,7 @@ describe("mise-live", () => {
     Effect.gen(function* () {
       yield* mise.runTask("secrets", ["decrypt", "--env", "prod"], "/custom/path");
 
-      expect(mockShell.lastInteractiveCall).toEqual({
+      expect(getLastInteractiveCall()).toEqual({
         command: "mise",
         args: ["run", "secrets", "decrypt", "--env", "prod"],
         options: { cwd: "/custom/path" },
@@ -164,7 +127,7 @@ describe("mise-live", () => {
     Effect.gen(function* () {
       yield* mise.runTask("build", []);
 
-      expect(mockShell.lastInteractiveCall).toEqual({
+      expect(getLastInteractiveCall()).toEqual({
         command: "mise",
         args: ["run", "build"],
         options: { cwd: undefined },
@@ -174,10 +137,8 @@ describe("mise-live", () => {
 
   it.effect("handles task execution failure", () =>
     Effect.gen(function* () {
-      const failingShell: Shell = {
-        ...mockShell,
-        execInteractive: () => Effect.succeed(1), // Non-zero exit code
-      };
+      const failingShell = new ShellMock();
+      failingShell.setExecInteractiveResponse("mise", ["run", "failing-task"], 1);
 
       const failingMise = makeMiseLive(failingShell, mockFileSystem, mockConfigLoader, mockPathService);
       const result = yield* Effect.exit(failingMise.runTask("failing-task"));
@@ -212,7 +173,7 @@ describe("mise-live", () => {
     Effect.gen(function* () {
       yield* mise.installTools("/custom/path");
 
-      expect(mockShell.lastCall).toEqual({
+      expect(getLastExecCall()).toEqual({
         command: "mise",
         args: ["install"],
         options: { cwd: "/custom/path" },
@@ -224,7 +185,7 @@ describe("mise-live", () => {
     Effect.gen(function* () {
       yield* mise.install();
 
-      expect(mockShell.lastCall).toEqual({
+      expect(getLastExecCall()).toEqual({
         command: "sh",
         args: ["-c", "curl -sSfL https://mise.run | sh"],
         options: undefined,
@@ -236,7 +197,7 @@ describe("mise-live", () => {
     Effect.gen(function* () {
       yield* mise.runTask("test", ["--help"]);
 
-      expect(mockShell.lastInteractiveCall?.options?.cwd).toBeUndefined();
+      expect(getLastInteractiveCall()?.options?.cwd).toBeUndefined();
     }),
   );
 
@@ -245,7 +206,7 @@ describe("mise-live", () => {
       const args = ["subcommand", "--flag1", "value1", "--flag2", "value2"];
       yield* mise.runTask("complex-task", args);
 
-      expect(mockShell.lastInteractiveCall?.args).toEqual(["run", "complex-task", "subcommand", "--flag1", "value1", "--flag2", "value2"]);
+      expect(getLastInteractiveCall()?.args).toEqual(["run", "complex-task", "subcommand", "--flag1", "value1", "--flag2", "value2"]);
     }),
   );
 
@@ -253,11 +214,11 @@ describe("mise-live", () => {
     Effect.gen(function* () {
       yield* mise.runTask("simple-task", undefined);
 
-      expect(mockShell.lastInteractiveCall?.args).toEqual(["run", "simple-task"]);
+      expect(getLastInteractiveCall()?.args).toEqual(["run", "simple-task"]);
     }),
   );
 
-  it.effect("setupGlobalConfig writes config to correct path", () =>
+  it.effect("setupGlobalConfig writes config to the shared XDG config root", () =>
     Effect.gen(function* () {
       const writeFileCalls: Array<{ path: string; content: string }> = [];
       const existsCalls: string[] = [];
@@ -282,10 +243,10 @@ describe("mise-live", () => {
       const trackingMise = makeMiseLive(mockShell, trackingFileSystem, mockConfigLoader, mockPathService);
       yield* trackingMise.setupGlobalConfig();
 
-      expect(existsCalls).toContain("/home/user/.config/mise");
-      expect(mkdirCalls).toEqual([{ path: "/home/user/.config/mise", recursive: true }]);
+      expect(existsCalls).toContain("/xdg/config/mise");
+      expect(mkdirCalls).toEqual([{ path: "/xdg/config/mise", recursive: true }]);
       expect(writeFileCalls).toHaveLength(1);
-      expect(writeFileCalls[0]?.path).toBe("/home/user/.config/mise/config.toml");
+      expect(writeFileCalls[0]?.path).toBe("/xdg/config/mise/config.toml");
       expect(writeFileCalls[0]?.content).toContain("[settings]");
     }),
   );
@@ -312,7 +273,7 @@ describe("mise-live", () => {
       yield* trackingMise.setupGlobalConfig();
 
       expect(mkdirCalls).toHaveLength(0);
-      expect(writeFileCalls[0]?.path).toBe("/home/user/.config/mise/config.toml");
+      expect(writeFileCalls[0]?.path).toBe("/xdg/config/mise/config.toml");
     }),
   );
 });

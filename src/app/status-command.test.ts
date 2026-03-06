@@ -5,40 +5,27 @@ import { describe, expect } from "vitest";
 import type { DockerServices, ServiceName, ServiceStatus } from "../domain/docker-services-port";
 import { DockerServicesTag } from "../domain/docker-services-port";
 import { HealthCheckError, dockerServiceError, gitError, healthCheckError } from "../domain/errors";
-import type { Git } from "../domain/git-port";
 import { GitTag } from "../domain/git-port";
 import type { HealthCheck } from "../domain/health-check-port";
 import { HealthCheckTag } from "../domain/health-check-port";
 import type { HealthCheckResult } from "../domain/health-check-port";
 import type { CommandRun } from "../domain/models";
-import type { RunStore } from "../domain/run-store-port";
 import { RunStoreTag } from "../domain/run-store-port";
 import { RuntimeContextTag } from "../domain/runtime-context-port";
+import { GitMock } from "../infra/git-mock";
+import { RunStoreMock } from "../infra/run-store-mock";
 import { statusCommand } from "./status-command";
 
-const createGit = (branch: string | null, remote: string | null): { git: Git; branchCalls: string[]; remoteCalls: string[] } => {
-  const branchCalls: string[] = [];
-  const remoteCalls: string[] = [];
+const createGit = (branch: string | null, remote: string | null) => {
+  const git = new GitMock({
+    currentBranch: branch,
+    remoteUrl: remote,
+  });
 
   return {
-    branchCalls,
-    remoteCalls,
-    git: {
-      cloneRepositoryToPath: () => Effect.void,
-      pullLatestChanges: () => Effect.void,
-      isGitRepository: () => Effect.succeed(true),
-      getCurrentCommitSha: () => Effect.succeed("deadbeef"),
-      getCurrentBranch: (repositoryPath) => {
-        branchCalls.push(repositoryPath);
-        if (branch === null) return gitError("not a git repository");
-        return Effect.succeed(branch);
-      },
-      getRemoteUrl: (repositoryPath, remoteName) => {
-        remoteCalls.push(`${repositoryPath}:${remoteName}`);
-        if (remote === null) return gitError("remote origin not found");
-        return Effect.succeed(remote);
-      },
-    },
+    git,
+    branchCalls: git.getCurrentBranchCalls,
+    remoteCalls: git.getRemoteUrlCalls,
   };
 };
 
@@ -62,13 +49,7 @@ const createHealthCheck = (results: readonly HealthCheckResult[]): HealthCheck =
   runHealthChecks: () => Effect.succeed(results),
 });
 
-const createRunStore = (runs: readonly CommandRun[] = []): RunStore => ({
-  record: () => Effect.succeed("run-id"),
-  complete: () => Effect.void,
-  prune: () => Effect.void,
-  getRecentRuns: () => Effect.succeed([...runs]),
-  completeIncompleteRuns: () => Effect.void,
-});
+const createRunStore = (runs: readonly CommandRun[] = []) => new RunStoreMock({ runs });
 
 const runtimeContextLayer = Layer.succeed(RuntimeContextTag, {
   getArgv: () => ["bun", "src/index.ts", "status"] as const,

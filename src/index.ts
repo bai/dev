@@ -16,7 +16,7 @@ import { registerUpCommand } from "./app/up-command";
 import { UpdateCheckerTag } from "./app/update-check-service";
 import { registerUpgradeCommand } from "./app/upgrade-command";
 import { CommandRegistryTag, type CommandRegistry } from "./domain/command-registry-port";
-import { exitCode, extractErrorMessage, type DevError } from "./domain/errors";
+import { exitCode, extractErrorMessage, isDevError, type DevError } from "./domain/errors";
 import { TracingTag } from "./domain/tracing-port";
 import { VersionTag } from "./domain/version-port";
 import { setupApplication } from "./wiring";
@@ -167,10 +167,9 @@ export const runCli = (
 export const handleProgramError = (error: unknown): Effect.Effect<number, never, never> =>
   Effect.gen(function* () {
     // Try to handle as DevError first
-    if (error && typeof error === "object" && "_tag" in error) {
-      const devError = error as DevError;
-      yield* Effect.logError(`❌ ${devError._tag}: ${extractErrorMessage(devError)}`);
-      return exitCode(devError);
+    if (isDevError(error)) {
+      yield* Effect.logError(`❌ ${error._tag}: ${extractErrorMessage(error)}`);
+      return exitCode(error);
     }
 
     // Handle unknown errors

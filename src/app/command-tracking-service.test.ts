@@ -4,18 +4,10 @@ import { describe, expect } from "vitest";
 
 import { ConfigError, UnknownError, configError, unknownError } from "../domain/errors";
 import type { CommandRun } from "../domain/models";
-import type { RunStore } from "../domain/run-store-port";
 import type { RuntimeContext } from "../domain/runtime-context-port";
 import type { Version } from "../domain/version-port";
+import { RunStoreMock } from "../infra/run-store-mock";
 import { makeCommandTracker } from "./command-tracking-service";
-
-const baseRunStore: RunStore = {
-  record: () => Effect.succeed("run-id"),
-  complete: () => Effect.void,
-  prune: () => Effect.void,
-  getRecentRuns: () => Effect.succeed([]),
-  completeIncompleteRuns: () => Effect.void,
-};
 
 const baseVersionService: Version = {
   getCurrentGitCommitSha: () => Effect.succeed("deadbeef"),
@@ -32,14 +24,15 @@ describe("command-tracking-service", () => {
     Effect.gen(function* () {
       let recordedRun: Omit<CommandRun, "id" | "durationMs"> | undefined;
 
-      const runStore: RunStore = {
-        ...baseRunStore,
-        record: (run) =>
-          Effect.sync(() => {
-            recordedRun = run;
-            return "captured-run-id";
-          }),
-      };
+      const runStore = new RunStoreMock({
+        overrides: {
+          record: (run) =>
+            Effect.sync(() => {
+              recordedRun = run;
+              return "captured-run-id";
+            }),
+        },
+      });
 
       const versionService: Version = {
         getCurrentGitCommitSha: () => Effect.succeed("deadbeef"),
@@ -65,15 +58,16 @@ describe("command-tracking-service", () => {
       let completedExitCode = -1;
       let completedAt: Date | undefined;
 
-      const runStore: RunStore = {
-        ...baseRunStore,
-        complete: (id, exitCode, finishedAt) =>
-          Effect.sync(() => {
-            completedId = id;
-            completedExitCode = exitCode;
-            completedAt = finishedAt;
-          }),
-      };
+      const runStore = new RunStoreMock({
+        overrides: {
+          complete: (id, exitCode, finishedAt) =>
+            Effect.sync(() => {
+              completedId = id;
+              completedExitCode = exitCode;
+              completedAt = finishedAt;
+            }),
+        },
+      });
 
       const tracker = makeCommandTracker(
         runStore,
@@ -90,15 +84,17 @@ describe("command-tracking-service", () => {
 
   it.effect("gracefulShutdown succeeds even when run-store completion fails", () =>
     Effect.gen(function* () {
-      const configFailingStore: RunStore = {
-        ...baseRunStore,
-        completeIncompleteRuns: () => configError("db unavailable"),
-      };
+      const configFailingStore = new RunStoreMock({
+        overrides: {
+          completeIncompleteRuns: () => configError("db unavailable"),
+        },
+      });
 
-      const unknownFailingStore: RunStore = {
-        ...baseRunStore,
-        completeIncompleteRuns: () => unknownError("unknown db error"),
-      };
+      const unknownFailingStore = new RunStoreMock({
+        overrides: {
+          completeIncompleteRuns: () => unknownError("unknown db error"),
+        },
+      });
 
       const runtimeContext = makeRuntimeContext(["bun", "src/index.ts", "help"], "/workspace/repo");
       const configResult = yield* Effect.exit(
@@ -115,10 +111,11 @@ describe("command-tracking-service", () => {
 
   it.effect("propagates run-store failures from recordCommandRun", () =>
     Effect.gen(function* () {
-      const failingStore: RunStore = {
-        ...baseRunStore,
-        record: () => configError("write failed"),
-      };
+      const failingStore = new RunStoreMock({
+        overrides: {
+          record: () => configError("write failed"),
+        },
+      });
 
       const versionService: Version = {
         getCurrentGitCommitSha: () => Effect.succeed("deadbeef"),
@@ -145,10 +142,11 @@ describe("command-tracking-service", () => {
 
   it.effect("keeps failure type for UnknownError from run-store", () =>
     Effect.gen(function* () {
-      const failingStore: RunStore = {
-        ...baseRunStore,
-        complete: () => unknownError("db crashed"),
-      };
+      const failingStore = new RunStoreMock({
+        overrides: {
+          complete: () => unknownError("db crashed"),
+        },
+      });
 
       const result = yield* Effect.exit(
         makeCommandTracker(

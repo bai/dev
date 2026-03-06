@@ -4,17 +4,9 @@ import { describe, expect } from "vitest";
 
 import { configError, unknownError } from "../domain/errors";
 import type { CommandRun } from "../domain/models";
-import type { RunStore } from "../domain/run-store-port";
 import type { RuntimeContext } from "../domain/runtime-context-port";
+import { RunStoreMock } from "../infra/run-store-mock";
 import { makeUpdateChecker } from "./update-check-service";
-
-const baseRunStore: RunStore = {
-  record: () => Effect.succeed("run-id"),
-  complete: () => Effect.void,
-  prune: () => Effect.void,
-  getRecentRuns: () => Effect.succeed([]),
-  completeIncompleteRuns: () => Effect.void,
-};
 
 const makeRuntimeContext = (argv: readonly string[]): RuntimeContext => ({
   getArgv: () => argv,
@@ -27,7 +19,7 @@ describe("update-check-service", () => {
       let autoUpgradeCalls = 0;
 
       const checker = makeUpdateChecker(
-        baseRunStore,
+        new RunStoreMock(),
         () =>
           Effect.sync(() => {
             autoUpgradeCalls += 1;
@@ -46,19 +38,20 @@ describe("update-check-service", () => {
       let autoUpgradeCalls = 0;
       const currentTime = yield* Clock.currentTimeMillis;
 
-      const runStore: RunStore = {
-        ...baseRunStore,
-        getRecentRuns: () =>
-          Effect.succeed([
-            {
-              id: "upgrade-recent",
-              cliVersion: "abc",
-              commandName: "upgrade",
-              cwd: "/tmp",
-              startedAt: new Date(currentTime),
-            },
-          ]),
-      };
+      const runStore = new RunStoreMock({
+        overrides: {
+          getRecentRuns: () =>
+            Effect.succeed([
+              {
+                id: "upgrade-recent",
+                cliVersion: "abc",
+                commandName: "upgrade",
+                cwd: "/tmp",
+                startedAt: new Date(currentTime),
+              },
+            ]),
+        },
+      });
       const checker = makeUpdateChecker(
         runStore,
         () =>
@@ -79,19 +72,20 @@ describe("update-check-service", () => {
       let autoUpgradeCalls = 0;
       const currentTime = yield* Clock.currentTimeMillis;
 
-      const runStore: RunStore = {
-        ...baseRunStore,
-        getRecentRuns: () =>
-          Effect.succeed([
-            {
-              id: "upgrade-old",
-              cliVersion: "abc",
-              commandName: "upgrade",
-              cwd: "/tmp",
-              startedAt: new Date(currentTime - 2 * 24 * 60 * 60 * 1000),
-            },
-          ]),
-      };
+      const runStore = new RunStoreMock({
+        overrides: {
+          getRecentRuns: () =>
+            Effect.succeed([
+              {
+                id: "upgrade-old",
+                cliVersion: "abc",
+                commandName: "upgrade",
+                cwd: "/tmp",
+                startedAt: new Date(currentTime - 2 * 24 * 60 * 60 * 1000),
+              },
+            ]),
+        },
+      });
       const checker = makeUpdateChecker(
         runStore,
         () =>
@@ -111,14 +105,15 @@ describe("update-check-service", () => {
     Effect.gen(function* () {
       let getRecentRunsCalls = 0;
 
-      const runStore: RunStore = {
-        ...baseRunStore,
-        getRecentRuns: () =>
-          Effect.sync(() => {
-            getRecentRunsCalls += 1;
-            return [] as CommandRun[];
-          }),
-      };
+      const runStore = new RunStoreMock({
+        overrides: {
+          getRecentRuns: () =>
+            Effect.sync(() => {
+              getRecentRunsCalls += 1;
+              return [] as CommandRun[];
+            }),
+        },
+      });
       const checker = makeUpdateChecker(runStore, () => Effect.void, makeRuntimeContext(["bun", "src/index.ts", "upgrade"]));
 
       yield* checker.runPeriodicUpgradeCheck();
@@ -132,23 +127,24 @@ describe("update-check-service", () => {
       let getRecentRunsCalls = 0;
       let requestedLimit = 0;
 
-      const runStore: RunStore = {
-        ...baseRunStore,
-        getRecentRuns: (limit) =>
-          Effect.sync(() => {
-            getRecentRunsCalls += 1;
-            requestedLimit = limit;
-            return [
-              {
-                id: "upgrade-1",
-                cliVersion: "abc",
-                commandName: "upgrade",
-                cwd: "/tmp",
-                startedAt: new Date(),
-              },
-            ] satisfies CommandRun[];
-          }),
-      };
+      const runStore = new RunStoreMock({
+        overrides: {
+          getRecentRuns: (limit) =>
+            Effect.sync(() => {
+              getRecentRunsCalls += 1;
+              requestedLimit = limit;
+              return [
+                {
+                  id: "upgrade-1",
+                  cliVersion: "abc",
+                  commandName: "upgrade",
+                  cwd: "/tmp",
+                  startedAt: new Date(),
+                },
+              ] satisfies CommandRun[];
+            }),
+        },
+      });
       const checker = makeUpdateChecker(runStore, () => Effect.void, makeRuntimeContext(["bun", "src/index.ts", "status"]));
 
       yield* checker.runPeriodicUpgradeCheck();
@@ -161,7 +157,7 @@ describe("update-check-service", () => {
   it.effect("swallows UnknownError from auto-upgrade trigger and does not fail", () =>
     Effect.gen(function* () {
       const checker = makeUpdateChecker(
-        baseRunStore,
+        new RunStoreMock(),
         () => unknownError("cannot spawn background process"),
         makeRuntimeContext(["bun", "src/index.ts", "status"]),
       );
@@ -174,10 +170,11 @@ describe("update-check-service", () => {
 
   it.effect("swallows ConfigError from run store and does not fail", () =>
     Effect.gen(function* () {
-      const runStore: RunStore = {
-        ...baseRunStore,
-        getRecentRuns: () => configError("database unavailable"),
-      };
+      const runStore = new RunStoreMock({
+        overrides: {
+          getRecentRuns: () => configError("database unavailable"),
+        },
+      });
       const checker = makeUpdateChecker(runStore, () => Effect.void, makeRuntimeContext(["bun", "src/index.ts", "status"]));
 
       const result = yield* Effect.exit(checker.runPeriodicUpgradeCheck());
@@ -188,10 +185,11 @@ describe("update-check-service", () => {
 
   it.effect("swallows UnknownError from run store and does not fail", () =>
     Effect.gen(function* () {
-      const runStore: RunStore = {
-        ...baseRunStore,
-        getRecentRuns: () => unknownError("unexpected failure"),
-      };
+      const runStore = new RunStoreMock({
+        overrides: {
+          getRecentRuns: () => unknownError("unexpected failure"),
+        },
+      });
       const checker = makeUpdateChecker(runStore, () => Effect.void, makeRuntimeContext(["bun", "src/index.ts", "status"]));
 
       const result = yield* Effect.exit(checker.runPeriodicUpgradeCheck());

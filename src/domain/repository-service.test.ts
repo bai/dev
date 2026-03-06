@@ -2,29 +2,19 @@ import { it } from "@effect/vitest";
 import { Effect, Exit } from "effect";
 import { describe, expect, it as vitestIt } from "vitest";
 
-import type { Config } from "./config-schema";
+import { makePathServiceMock } from "../infra/path-service-mock";
 import type { GitProviderType } from "./models";
 import { PathServiceTag, type PathService } from "./path-service";
 import { isFullUrl, makeRepositoryService } from "./repository-service";
 
 describe("repository-service", () => {
-  // Mock PathService implementation
-  class MockPathService implements PathService {
-    homeDir = "/home/user";
-    baseSearchPath = "/home/user/dev";
-    devDir = "/home/user/.dev";
-    configDir = "/home/user/.config/dev";
-    configPath = "/home/user/.config/dev/config.json";
-    dataDir = "/home/user/.local/share/dev";
-    dbPath = "/home/user/.local/share/dev/dev.db";
-    cacheDir = "/home/user/.cache/dev";
+  const makePathService = (baseSearchPath = "/home/user/dev"): PathService =>
+    makePathServiceMock({
+      homeDir: "/home/user",
+      baseSearchPath,
+    });
 
-    getBasePath(_config: Config): string {
-      return this.baseSearchPath;
-    }
-  }
-
-  const createRepositoryService = (pathService: PathService = new MockPathService()) => makeRepositoryService(pathService);
+  const createRepositoryService = (pathService: PathService = makePathService()) => makeRepositoryService(pathService);
 
   describe("parseRepoUrlToPath", () => {
     it.effect("parses SSH URL with scp-style syntax", () =>
@@ -137,11 +127,7 @@ describe("repository-service", () => {
 
     it.effect("uses custom base path from PathService", () =>
       Effect.gen(function* () {
-        class CustomPathService extends MockPathService {
-          baseSearchPath = "/custom/projects";
-        }
-
-        const repositoryService = createRepositoryService(new CustomPathService());
+        const repositoryService = createRepositoryService(makePathService("/custom/projects"));
         const result = yield* repositoryService.parseRepoUrlToPath("git@github.com:myorg/myrepo.git");
 
         expect(result).toBe("/custom/projects/github.com/myorg/myrepo");
@@ -150,18 +136,11 @@ describe("repository-service", () => {
 
     it.effect("uses factory-injected PathService even when a different one exists in context", () =>
       Effect.gen(function* () {
-        const repositoryService = createRepositoryService(new MockPathService());
-        const contextPathService: PathService = {
+        const repositoryService = createRepositoryService(makePathService());
+        const contextPathService = makePathServiceMock({
           homeDir: "/ctx/home",
           baseSearchPath: "/ctx/projects",
-          devDir: "/ctx/.dev",
-          configDir: "/ctx/.config/dev",
-          configPath: "/ctx/.config/dev/config.json",
-          dataDir: "/ctx/.local/share/dev",
-          dbPath: "/ctx/.local/share/dev/dev.db",
-          cacheDir: "/ctx/.cache/dev",
-          getBasePath: () => "/ctx/projects",
-        };
+        });
 
         const result = yield* repositoryService
           .parseRepoUrlToPath("git@github.com:myorg/myrepo.git")

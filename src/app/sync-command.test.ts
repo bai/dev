@@ -4,74 +4,19 @@ import { it } from "@effect/vitest";
 import { Effect, Exit, Layer, Logger } from "effect";
 import { describe, expect } from "vitest";
 
-import { DirectoryTag, type Directory } from "../domain/directory-port";
-import { gitError } from "../domain/errors";
-import { GitTag, type Git } from "../domain/git-port";
-import { type PathService, PathServiceTag } from "../domain/path-service";
+import { DirectoryTag } from "../domain/directory-port";
+import { GitTag } from "../domain/git-port";
+import { PathServiceTag } from "../domain/path-service";
+import { DirectoryMock } from "../infra/directory-mock";
+import { GitMock } from "../infra/git-mock";
+import { makePathServiceMock } from "../infra/path-service-mock";
 import { syncCommand } from "./sync-command";
 
-class MockDirectory implements Directory {
-  constructor(private readonly directories: string[]) {}
-
-  ensureBaseDirectoryExists() {
-    return Effect.void;
-  }
-
-  findDirs() {
-    return Effect.succeed(this.directories);
-  }
-}
-
-class MockGit implements Git {
-  public pullCalls: string[] = [];
-
-  constructor(
-    private readonly gitRepositories: Set<string>,
-    private readonly failingRepositories = new Set<string>(),
-  ) {}
-
-  cloneRepositoryToPath() {
-    return Effect.void;
-  }
-
-  pullLatestChanges(repositoryPath: string) {
-    this.pullCalls.push(repositoryPath);
-
-    if (this.failingRepositories.has(repositoryPath)) {
-      return gitError("pull failed");
-    }
-
-    return Effect.void;
-  }
-
-  isGitRepository(repositoryPath: string) {
-    return Effect.succeed(this.gitRepositories.has(repositoryPath));
-  }
-
-  getCurrentCommitSha() {
-    return Effect.succeed("commit-sha");
-  }
-
-  getCurrentBranch() {
-    return Effect.succeed("main");
-  }
-
-  getRemoteUrl() {
-    return Effect.succeed("https://example.com/repo.git");
-  }
-}
-
-const makePathService = (baseSearchPath: string): PathService => ({
-  homeDir: "/tmp",
-  baseSearchPath,
-  devDir: "/tmp/.dev",
-  configDir: "/tmp/.config/dev",
-  configPath: "/tmp/.config/dev/config.json",
-  dataDir: "/tmp/.local/share/dev",
-  dbPath: "/tmp/.local/share/dev/dev.db",
-  cacheDir: "/tmp/.cache/dev",
-  getBasePath: () => baseSearchPath,
-});
+const makePathService = (baseSearchPath: string) =>
+  makePathServiceMock({
+    homeDir: "/tmp",
+    baseSearchPath,
+  });
 
 describe("sync-command", () => {
   it.effect("syncs only repositories detected as git repositories", () =>
@@ -79,10 +24,12 @@ describe("sync-command", () => {
       const baseSearchPath = "/tmp/src";
       const firstRepo = path.join(baseSearchPath, "github.com/acme/first");
       const secondRepo = path.join(baseSearchPath, "github.com/acme/second");
-      const git = new MockGit(new Set([firstRepo]));
+      const git = new GitMock({
+        gitRepositories: [firstRepo],
+      });
 
       const testLayer = Layer.mergeAll(
-        Layer.succeed(DirectoryTag, new MockDirectory(["github.com/acme/first", "github.com/acme/second"])),
+        Layer.succeed(DirectoryTag, new DirectoryMock(["github.com/acme/first", "github.com/acme/second"])),
         Layer.succeed(GitTag, git),
         Layer.succeed(PathServiceTag, makePathService(baseSearchPath)),
       );
@@ -98,10 +45,13 @@ describe("sync-command", () => {
     Effect.gen(function* () {
       const baseSearchPath = "/tmp/src";
       const repo = path.join(baseSearchPath, "github.com/acme/failing");
-      const git = new MockGit(new Set([repo]), new Set([repo]));
+      const git = new GitMock({
+        gitRepositories: [repo],
+        failingPullRepositories: [repo],
+      });
 
       const testLayer = Layer.mergeAll(
-        Layer.succeed(DirectoryTag, new MockDirectory(["github.com/acme/failing"])),
+        Layer.succeed(DirectoryTag, new DirectoryMock(["github.com/acme/failing"])),
         Layer.succeed(GitTag, git),
         Layer.succeed(PathServiceTag, makePathService(baseSearchPath)),
       );
@@ -119,14 +69,17 @@ describe("sync-command", () => {
       const successRepo = path.join(baseSearchPath, "github.com/acme/success");
       const failingRepo = path.join(baseSearchPath, "github.com/acme/failing");
       const nonGitRepo = path.join(baseSearchPath, "github.com/acme/not-git");
-      const git = new MockGit(new Set([successRepo, failingRepo]), new Set([failingRepo]));
+      const git = new GitMock({
+        gitRepositories: [successRepo, failingRepo],
+        failingPullRepositories: [failingRepo],
+      });
       const loggedMessages: string[] = [];
       const logger = Logger.make(({ message }) => {
         loggedMessages.push(String(message));
       });
 
       const testLayer = Layer.mergeAll(
-        Layer.succeed(DirectoryTag, new MockDirectory(["github.com/acme/success", "github.com/acme/failing", "github.com/acme/not-git"])),
+        Layer.succeed(DirectoryTag, new DirectoryMock(["github.com/acme/success", "github.com/acme/failing", "github.com/acme/not-git"])),
         Layer.succeed(GitTag, git),
         Layer.succeed(PathServiceTag, makePathService(baseSearchPath)),
         Logger.replace(Logger.defaultLogger, logger),

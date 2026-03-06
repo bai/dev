@@ -7,8 +7,8 @@ import { Effect, Layer } from "effect";
 import { describe, expect } from "vitest";
 
 import { FileSystemTag } from "../domain/file-system-port";
-import type { PathService } from "../domain/path-service";
 import { makeFileSystemLive } from "../infra/file-system-live";
+import { makePathServiceMock } from "../infra/path-service-mock";
 import { ensureCorrectConfigUrl } from "./upgrade-command";
 
 describe("upgrade-command", () => {
@@ -39,7 +39,7 @@ describe("upgrade-command", () => {
         yield* Effect.promise(() => fs.writeFile(path.join(devDir, "config.json"), projectConfigWithComments));
         yield* Effect.promise(() => fs.writeFile(configPath, localConfigWithComments));
 
-        const pathService: PathService = {
+        const pathService = makePathServiceMock({
           homeDir: tempDir,
           baseSearchPath: path.join(tempDir, "src"),
           devDir,
@@ -48,8 +48,7 @@ describe("upgrade-command", () => {
           dataDir: path.join(tempDir, ".local", "share", "dev"),
           dbPath: path.join(tempDir, ".local", "share", "dev", "dev.db"),
           cacheDir: path.join(tempDir, ".cache", "dev"),
-          getBasePath: () => path.join(tempDir, "src"),
-        };
+        });
 
         const fileSystem = makeFileSystemLive();
         const fileSystemLayer = Layer.succeed(FileSystemTag, fileSystem);
@@ -96,7 +95,7 @@ describe("upgrade-command", () => {
           ),
         );
 
-        const pathService: PathService = {
+        const pathService = makePathServiceMock({
           homeDir: tempDir,
           baseSearchPath: path.join(tempDir, "src"),
           devDir,
@@ -105,8 +104,7 @@ describe("upgrade-command", () => {
           dataDir: path.join(tempDir, ".local", "share", "dev"),
           dbPath: path.join(tempDir, ".local", "share", "dev", "dev.db"),
           cacheDir: path.join(tempDir, ".cache", "dev"),
-          getBasePath: () => path.join(tempDir, "src"),
-        };
+        });
 
         const fileSystem = makeFileSystemLive();
         const fileSystemLayer = Layer.succeed(FileSystemTag, fileSystem);

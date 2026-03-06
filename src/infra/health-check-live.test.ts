@@ -2,14 +2,14 @@ import { it } from "@effect/vitest";
 import { Cause, Effect, Exit, Option } from "effect";
 import { afterEach, describe, expect, vi } from "vitest";
 
-import type { Database } from "../domain/database-port";
 import { configError, healthCheckError } from "../domain/errors";
 import type { HealthCheckResult } from "../domain/health-check-port";
 import type { ToolHealthRegistry } from "../domain/tool-health-registry-port";
+import { DatabaseMock } from "./database-mock";
 import { makeHealthCheckLive } from "./health-check-live";
 
 interface DatabaseCapture {
-  readonly database: Database;
+  readonly database: DatabaseMock;
   readonly insertedRows: Array<Record<string, unknown>>;
   readonly pruneCalls: { count: number };
 }
@@ -43,12 +43,10 @@ const createDatabaseCapture = (): DatabaseCapture => {
     }),
   };
 
-  const database: Database = {
-    query: (fn) => fn(fakeDb as never),
-    transaction: (fn) => fn(fakeDb as never),
-    raw: () => Effect.succeed({} as never),
-    migrate: () => Effect.void,
-  };
+  const database = new DatabaseMock({
+    queryDb: fakeDb as never,
+    transactionDb: fakeDb as never,
+  });
 
   return {
     database,
@@ -111,7 +109,6 @@ describe("health-check-live", () => {
   it.effect("uses Database.transaction instead of raw drizzle transaction", () =>
     Effect.gen(function* () {
       const insertedRows: Array<Record<string, unknown>> = [];
-      let databaseTransactionCalls = 0;
       let rawDrizzleTransactionCalls = 0;
 
       const fakeDb = {
@@ -138,15 +135,10 @@ describe("health-check-live", () => {
         }),
       };
 
-      const database: Database = {
-        query: (fn) => fn(fakeDb as never),
-        transaction: (fn) => {
-          databaseTransactionCalls += 1;
-          return fn(fakeDb as never);
-        },
-        raw: () => Effect.succeed({} as never),
-        migrate: () => Effect.void,
-      };
+      const database = new DatabaseMock({
+        queryDb: fakeDb as never,
+        transactionDb: fakeDb as never,
+      });
 
       const toolHealthRegistry: ToolHealthRegistry = {
         checkAllTools: () =>
@@ -164,7 +156,7 @@ describe("health-check-live", () => {
       const healthCheck = makeHealthCheckLive(database, toolHealthRegistry);
       yield* healthCheck.runHealthChecks();
 
-      expect(databaseTransactionCalls).toBe(1);
+      expect(database.transactionCalls).toBe(1);
       expect(rawDrizzleTransactionCalls).toBe(0);
       expect(insertedRows).toHaveLength(1);
     }),
@@ -172,12 +164,12 @@ describe("health-check-live", () => {
 
   it.effect("maps database-level failures to HealthCheckError", () =>
     Effect.gen(function* () {
-      const failingDatabase: Database = {
-        query: (fn) => fn({} as never),
-        transaction: () => configError("database unavailable"),
-        raw: () => Effect.succeed({} as never),
-        migrate: () => Effect.void,
-      };
+      const failingDatabase = new DatabaseMock({
+        queryDb: {} as never,
+        overrides: {
+          transaction: () => configError("database unavailable"),
+        },
+      });
 
       const toolHealthRegistry: ToolHealthRegistry = {
         checkAllTools: () =>

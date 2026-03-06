@@ -9,6 +9,7 @@ import { afterEach, describe, expect, vi } from "vitest";
 import { installMetadata } from "../../drizzle/schema";
 import type { Database } from "../domain/database-port";
 import type { DrizzleDatabase } from "../domain/drizzle-types";
+import { DatabaseMock } from "./database-mock";
 import { makeInstallIdentityLive } from "./install-identity-live";
 
 const CREATE_INSTALL_METADATA_TABLE_SQL = `
@@ -20,7 +21,7 @@ CREATE TABLE install_metadata (
 `;
 
 interface TestDatabase {
-  readonly database: Database;
+  readonly database: DatabaseMock;
   readonly sqlite: BunSQLiteDatabase;
 }
 
@@ -29,17 +30,16 @@ const makeTestDatabase = (): TestDatabase => {
   sqlite.exec(CREATE_INSTALL_METADATA_TABLE_SQL);
 
   const drizzleDb: DrizzleDatabase = drizzle(sqlite);
-  const database: Database = {
-    query: (fn) => fn(drizzleDb),
-    transaction: (fn) => fn(drizzleDb),
-    raw: () => Effect.succeed(sqlite),
-    migrate: () => Effect.void,
-  };
+  const database = new DatabaseMock({
+    queryDb: drizzleDb,
+    transactionDb: drizzleDb,
+    rawDb: sqlite,
+  });
 
   return { database, sqlite };
 };
 
-const withTestDatabase = <A>(run: (database: Database) => Effect.Effect<A>) =>
+const withTestDatabase = <A>(run: (database: DatabaseMock) => Effect.Effect<A>) =>
   Effect.gen(function* () {
     const { database, sqlite } = makeTestDatabase();
     return yield* run(database).pipe(Effect.orDie, Effect.ensuring(Effect.sync(() => sqlite.close()).pipe(Effect.orDie)));

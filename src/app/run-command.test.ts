@@ -6,8 +6,8 @@ import { describe, expect } from "vitest";
 import { ShellExecutionError } from "../domain/errors";
 import type { FileSystem } from "../domain/file-system-port";
 import { FileSystemTag } from "../domain/file-system-port";
-import type { Mise } from "../domain/mise-port";
 import { MiseTag } from "../domain/mise-port";
+import { MiseMock } from "../infra/mise-mock";
 import { runCommand } from "./run-command";
 
 interface MiseCallState {
@@ -30,44 +30,25 @@ const makeFileSystem = (cwd = "/test/directory"): FileSystem => ({
 
 const makeMise = (
   overrides: {
-    readonly runTask?: Mise["runTask"];
-    readonly getTasks?: Mise["getTasks"];
+    readonly runTask?: MiseMock["runTask"];
+    readonly getTasks?: MiseMock["getTasks"];
   } = {},
-): { readonly mise: Mise; readonly state: MiseCallState } => {
-  const state: MiseCallState = {
-    getTasksCalls: [],
-    runTaskCalls: [],
+): { readonly mise: MiseMock; readonly state: MiseCallState } => {
+  const mise = new MiseMock({
+    tasks: ["lint", "test", "build"],
+    overrides,
+  });
+
+  return {
+    mise,
+    state: {
+      getTasksCalls: mise.getTasksCalls,
+      runTaskCalls: mise.runTaskCalls,
+    },
   };
-
-  const mise: Mise = {
-    checkInstallation: () => Effect.succeed({ version: "2026.1.0", runtimeVersions: {} }),
-    install: () => Effect.void,
-    installTools: () => Effect.void,
-    runTask: (taskName, args, cwd) =>
-      Effect.gen(function* () {
-        state.runTaskCalls.push({ taskName, args, cwd });
-
-        if (overrides.runTask) {
-          yield* overrides.runTask(taskName, args, cwd);
-        }
-      }),
-    getTasks: (cwd) =>
-      Effect.gen(function* () {
-        state.getTasksCalls.push(cwd);
-
-        if (overrides.getTasks) {
-          return yield* overrides.getTasks(cwd);
-        }
-
-        return ["lint", "test", "build"];
-      }),
-    setupGlobalConfig: () => Effect.void,
-  };
-
-  return { mise, state };
 };
 
-const runRunCommand = (args: readonly string[], fileSystem: FileSystem, mise: Mise) => {
+const runRunCommand = (args: readonly string[], fileSystem: FileSystem, mise: MiseMock) => {
   const dependencies = Layer.mergeAll(Layer.succeed(FileSystemTag, fileSystem), Layer.succeed(MiseTag, mise));
 
   return Command.run(runCommand, { name: "dev", version: "0.0.0" })(["node", "dev", ...args]).pipe(

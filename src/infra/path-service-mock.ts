@@ -1,9 +1,14 @@
+import path from "path";
+
 import type { Config } from "../domain/config-schema";
 import type { PathService } from "../domain/path-service";
 
 export const makePathServiceMock = (
   overrides: {
     readonly homeDir?: string;
+    readonly xdgConfigHome?: string;
+    readonly xdgDataHome?: string;
+    readonly xdgCacheHome?: string;
     readonly baseSearchPath?: string;
     readonly devDir?: string;
     readonly configDir?: string;
@@ -14,13 +19,16 @@ export const makePathServiceMock = (
   } = {},
 ): PathService => {
   const homeDir = overrides.homeDir ?? "/home/user";
+  const xdgConfigHome = overrides.xdgConfigHome ?? `${homeDir}/.config`;
+  const xdgDataHome = overrides.xdgDataHome ?? `${homeDir}/.local/share`;
+  const xdgCacheHome = overrides.xdgCacheHome ?? `${homeDir}/.cache`;
   const baseSearchPath = overrides.baseSearchPath ?? `${homeDir}/src`;
   const devDir = overrides.devDir ?? `${homeDir}/.dev`;
-  const configDir = overrides.configDir ?? `${homeDir}/.config/dev`;
+  const configDir = overrides.configDir ?? path.join(xdgConfigHome, "dev");
   const configPath = overrides.configPath ?? `${configDir}/config.json`;
-  const dataDir = overrides.dataDir ?? `${homeDir}/.local/share/dev`;
+  const dataDir = overrides.dataDir ?? path.join(xdgDataHome, "dev");
   const dbPath = overrides.dbPath ?? `${dataDir}/dev.db`;
-  const cacheDir = overrides.cacheDir ?? `${homeDir}/.cache/dev`;
+  const cacheDir = overrides.cacheDir ?? path.join(xdgCacheHome, "dev");
 
   return {
     homeDir,

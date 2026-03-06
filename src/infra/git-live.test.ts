@@ -2,46 +2,21 @@ import { it } from "@effect/vitest";
 import { Effect } from "effect";
 import { afterEach, beforeEach, describe, expect, vi } from "vitest";
 
-import { gitError, shellExecutionError } from "../domain/errors";
+import { gitError } from "../domain/errors";
 import type { Git } from "../domain/git-port";
 import type { Repository } from "../domain/models";
-import type { Shell, SpawnResult } from "../domain/shell-port";
+import type { SpawnResult } from "../domain/shell-port";
 import { makeGitLive } from "./git-live";
+import { ShellMock } from "./shell-mock";
 
-// Mock shell implementation for testing
-class MockShell implements Shell {
-  private responses = new Map<string, SpawnResult | Error>();
-
+class MockShell extends ShellMock {
   setResponse(command: string, args: string[], response: SpawnResult | Error): void {
-    const key = `${command} ${args.join(" ")}`;
-    this.responses.set(key, response);
-  }
-
-  exec(command: string, args: string[] = [], _options?: { cwd?: string }): Effect.Effect<SpawnResult, never> {
-    const key = `${command} ${args.join(" ")}`;
-    const response = this.responses.get(key);
-
-    if (!response) {
-      return Effect.succeed({
-        exitCode: 1,
-        stdout: "",
-        stderr: `Command not found: ${key}`,
-      });
-    }
-
     if (response instanceof Error) {
-      return shellExecutionError(command, args, response.message) as never;
+      this.setExecFailure(command, args);
+      return;
     }
 
-    return Effect.succeed(response);
-  }
-
-  execInteractive(_command: string, _args?: string[], _options?: { cwd?: string }): Effect.Effect<number, never> {
-    return Effect.succeed(0);
-  }
-
-  setProcessCwd(_path: string): Effect.Effect<void> {
-    return Effect.void;
+    this.setExecResponse(command, args, response);
   }
 }
 

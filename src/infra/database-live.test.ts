@@ -3,7 +3,7 @@ import { Database as BunSQLiteDatabase } from "bun:sqlite";
 import { it } from "@effect/vitest";
 import { sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/bun-sqlite";
-import { Effect, Layer } from "effect";
+import { Deferred, Effect, Fiber, Layer } from "effect";
 import { describe, expect, vi } from "vitest";
 
 import { DatabaseTag } from "../domain/database-port";
@@ -31,12 +31,18 @@ const createSqliteMock = () => {
   };
 };
 
+const makeTestDatabase = (sqlite: BunSQLiteDatabase, drizzleDb: DrizzleDatabase, migrationsPath: string) =>
+  Effect.gen(function* () {
+    const accessSemaphore = yield* Effect.makeSemaphore(1);
+    return makeDatabaseLive(sqlite, drizzleDb, migrationsPath, accessSemaphore);
+  });
+
 describe("database-live", () => {
   it.effect("query delegates to drizzle database and returns the callback result", () =>
     Effect.gen(function* () {
       const { sqlite } = createSqliteMock();
       const drizzleDb = { marker: "drizzle-db" } as unknown as DrizzleDatabase;
-      const database = makeDatabaseLive(sqlite, drizzleDb, "/tmp/migrations");
+      const database = yield* makeTestDatabase(sqlite, drizzleDb, "/tmp/migrations");
 
       const value = yield* database.query((db) => Effect.succeed(db === drizzleDb));
 
@@ -48,7 +54,7 @@ describe("database-live", () => {
     Effect.gen(function* () {
       const { sqlite } = createSqliteMock();
       const drizzleDb = {} as DrizzleDatabase;
-      const database = makeDatabaseLive(sqlite, drizzleDb, "/tmp/migrations");
+      const database = yield* makeTestDatabase(sqlite, drizzleDb, "/tmp/migrations");
       const taggedError = configError("query failed");
 
       const error = yield* Effect.flip(database.query(() => Effect.fail(taggedError)));
@@ -61,7 +67,7 @@ describe("database-live", () => {
     Effect.gen(function* () {
       const { sqlite } = createSqliteMock();
       const drizzleDb = {} as DrizzleDatabase;
-      const database = makeDatabaseLive(sqlite, drizzleDb, "/tmp/migrations");
+      const database = yield* makeTestDatabase(sqlite, drizzleDb, "/tmp/migrations");
 
       const error = yield* Effect.flip(database.query(() => Effect.fail("boom")));
 
@@ -77,7 +83,7 @@ describe("database-live", () => {
     Effect.gen(function* () {
       const { sqlite } = createSqliteMock();
       const drizzleDb = {} as DrizzleDatabase;
-      const database = makeDatabaseLive(sqlite, drizzleDb, "/tmp/migrations");
+      const database = yield* makeTestDatabase(sqlite, drizzleDb, "/tmp/migrations");
 
       const error = yield* Effect.flip(database.transaction(() => Effect.fail(new Error("tx failed"))));
 
@@ -93,7 +99,7 @@ describe("database-live", () => {
     Effect.gen(function* () {
       const sqlite = new BunSQLiteDatabase(":memory:");
       const drizzleDb: DrizzleDatabase = drizzle(sqlite);
-      const database = makeDatabaseLive(sqlite, drizzleDb, "/tmp/migrations");
+      const database = yield* makeTestDatabase(sqlite, drizzleDb, "/tmp/migrations");
 
       yield* Effect.sync(() => {
         sqlite.exec("create table tx_probe (id integer primary key, value text not null)");
@@ -101,8 +107,8 @@ describe("database-live", () => {
 
       yield* database.transaction((tx) =>
         Effect.sync(() => {
-          tx.run(sql`insert into tx_probe (value) values ('first')`);
-          tx.run(sql`insert into tx_probe (value) values ('second')`);
+          tx.run(sql`insert into tx_probe (value) values (${"first"})`);
+          tx.run(sql`insert into tx_probe (value) values (${"second"})`);
         }),
       );
 
@@ -120,7 +126,7 @@ describe("database-live", () => {
     Effect.gen(function* () {
       const sqlite = new BunSQLiteDatabase(":memory:");
       const drizzleDb: DrizzleDatabase = drizzle(sqlite);
-      const database = makeDatabaseLive(sqlite, drizzleDb, "/tmp/migrations");
+      const database = yield* makeTestDatabase(sqlite, drizzleDb, "/tmp/migrations");
       const taggedFailure = configError("force rollback");
 
       yield* Effect.sync(() => {
@@ -131,11 +137,11 @@ describe("database-live", () => {
         database.transaction((tx) =>
           Effect.gen(function* () {
             yield* Effect.sync(() => {
-              tx.run(sql`insert into tx_probe (value) values ('first')`);
+              tx.run(sql`insert into tx_probe (value) values (${"first"})`);
             });
             yield* Effect.promise(() => Promise.resolve());
             yield* Effect.sync(() => {
-              tx.run(sql`insert into tx_probe (value) values ('second')`);
+              tx.run(sql`insert into tx_probe (value) values (${"second"})`);
             });
             return yield* Effect.fail(taggedFailure);
           }),
@@ -154,11 +160,71 @@ describe("database-live", () => {
     }),
   );
 
+  it.effect("transaction blocks concurrent queries until commit", () =>
+    Effect.gen(function* () {
+      const sqlite = new BunSQLiteDatabase(":memory:");
+      const drizzleDb: DrizzleDatabase = drizzle(sqlite);
+      const database = yield* makeTestDatabase(sqlite, drizzleDb, "/tmp/migrations");
+      const transactionReady = yield* Deferred.make<void>();
+      const releaseTransaction = yield* Deferred.make<void>();
+
+      yield* Effect.sync(() => {
+        sqlite.exec("create table tx_probe (id integer primary key, value text not null)");
+      });
+
+      const transactionFiber = yield* Effect.fork(
+        database.transaction((tx) =>
+          Effect.gen(function* () {
+            yield* Effect.sync(() => {
+              tx.run(sql`insert into tx_probe (value) values (${"txrow"})`);
+            });
+            yield* Deferred.succeed(transactionReady, undefined);
+            yield* Deferred.await(releaseTransaction);
+          }),
+        ),
+      );
+
+      yield* Deferred.await(transactionReady);
+
+      const queryFiber = yield* Effect.fork(
+        database.query((db) =>
+          Effect.sync(() => {
+            db.run(sql`insert into tx_probe (value) values (${"queryrow"})`);
+          }),
+        ),
+      );
+
+      yield* Effect.promise(() => new Promise<void>((resolve) => setTimeout(resolve, 20)));
+
+      const rowCountWhileTransactionOpen = yield* Effect.sync(() => {
+        const result = sqlite.query("select count(*) as count from tx_probe").get() as { readonly count: number };
+        return Number(result.count);
+      });
+
+      expect(rowCountWhileTransactionOpen).toBe(1);
+
+      yield* Deferred.succeed(releaseTransaction, undefined);
+      const transactionExit = yield* Fiber.await(transactionFiber);
+      const queryExit = yield* Fiber.await(queryFiber);
+
+      expect(transactionExit._tag).toBe("Success");
+      expect(queryExit._tag).toBe("Success");
+
+      const rowCountAfterCommit = yield* Effect.sync(() => {
+        const result = sqlite.query("select count(*) as count from tx_probe").get() as { readonly count: number };
+        return Number(result.count);
+      });
+
+      expect(rowCountAfterCommit).toBe(2);
+      yield* database.close();
+    }),
+  );
+
   it.effect("raw returns sqlite instance and close checkpoints WAL before closing", () =>
     Effect.gen(function* () {
       const { sqlite, exec, close } = createSqliteMock();
       const drizzleDb = {} as DrizzleDatabase;
-      const database = makeDatabaseLive(sqlite, drizzleDb, "/tmp/migrations");
+      const database = yield* makeTestDatabase(sqlite, drizzleDb, "/tmp/migrations");
 
       const raw = yield* database.raw();
       yield* database.close();
@@ -173,7 +239,7 @@ describe("database-live", () => {
     Effect.gen(function* () {
       const sqlite = new BunSQLiteDatabase(":memory:");
       const drizzleDb: DrizzleDatabase = drizzle(sqlite);
-      const database = makeDatabaseLive(sqlite, drizzleDb, `${process.cwd()}/drizzle/migrations`);
+      const database = yield* makeTestDatabase(sqlite, drizzleDb, `${process.cwd()}/drizzle/migrations`);
 
       yield* database.migrate();
 
@@ -194,7 +260,7 @@ describe("database-live", () => {
     Effect.gen(function* () {
       const sqlite = new BunSQLiteDatabase(":memory:");
       const drizzleDb: DrizzleDatabase = drizzle(sqlite);
-      const database = makeDatabaseLive(sqlite, drizzleDb, `/tmp/missing-migrations-${Date.now()}`);
+      const database = yield* makeTestDatabase(sqlite, drizzleDb, `/tmp/missing-migrations-${Date.now()}`);
 
       const error = yield* Effect.flip(database.migrate());
 
