@@ -1,7 +1,7 @@
 import { Effect, Layer } from "effect";
 
 import { AutoUpgradeTrigger, type AutoUpgradeTriggerService } from "~/capabilities/system/auto-upgrade-trigger-port";
-import { unknownError, type UnknownError } from "~/core/errors";
+import { UnknownError } from "~/core/errors";
 
 export const resolveAutoUpgradeInvocation = (argv: readonly string[], execPath: string): readonly [string, ...string[]] | null => {
   const scriptPath = argv[1];
@@ -26,7 +26,10 @@ const trigger = (): Effect.Effect<void, UnknownError> =>
     const invocation = resolveAutoUpgradeInvocation(process.argv, process.execPath);
 
     if (!invocation) {
-      return yield* unknownError("Cannot determine CLI command invocation for auto-upgrade");
+      return yield* new UnknownError({
+        message: "Cannot determine CLI command invocation for auto-upgrade",
+        details: "Cannot determine CLI command invocation for auto-upgrade",
+      });
     }
 
     yield* Effect.try({
@@ -45,7 +48,11 @@ const trigger = (): Effect.Effect<void, UnknownError> =>
 
         processHandle.unref();
       },
-      catch: (error) => unknownError(`Failed to start auto-upgrade in background: ${error}`),
+      catch: (error) =>
+        new UnknownError({
+          message: `Failed to start auto-upgrade in background: ${error}`,
+          details: `Failed to start auto-upgrade in background: ${error}`,
+        }),
     });
   });
 

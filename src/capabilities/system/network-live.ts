@@ -12,7 +12,7 @@ import { Effect, Layer } from "effect";
 
 import { FileSystem, type FileSystemService } from "~/capabilities/system/file-system-port";
 import { Network, type HttpResponse, type NetworkService } from "~/capabilities/system/network-port";
-import { networkError, type NetworkError, type UnknownError } from "~/core/errors";
+import { NetworkError, type UnknownError } from "~/core/errors";
 import { annotateErrorTypeOnFailure } from "~/core/observability/error-type";
 
 const createHttpClientSpanAttributes = (url: string, method: string): Record<string, string | number> => {
@@ -45,14 +45,14 @@ export const NetworkLiveLayer = Layer.effect(
                 method: HTTP_REQUEST_METHOD_VALUE_GET,
                 headers: options.headers,
               }),
-            catch: (error) => networkError(`HTTP request failed: ${error}`),
+            catch: (error) => new NetworkError({ message: `HTTP request failed: ${error}` }),
           });
 
           yield* Effect.annotateCurrentSpan(ATTR_HTTP_RESPONSE_STATUS_CODE, response.status);
 
           const body = yield* Effect.tryPromise({
             try: () => response.text(),
-            catch: (error) => networkError(`Failed to read response body: ${error}`),
+            catch: (error) => new NetworkError({ message: `Failed to read response body: ${error}` }),
           });
 
           const headers: Record<string, string> = {};
@@ -77,29 +77,29 @@ export const NetworkLiveLayer = Layer.effect(
               fetch(url, {
                 method: HTTP_REQUEST_METHOD_VALUE_GET,
               }),
-            catch: (error) => networkError(`Failed to fetch ${url}: ${error}`),
+            catch: (error) => new NetworkError({ message: `Failed to fetch ${url}: ${error}` }),
           });
 
           yield* Effect.annotateCurrentSpan(ATTR_HTTP_RESPONSE_STATUS_CODE, response.status);
 
           if (!response.ok) {
-            return yield* networkError(`HTTP ${response.status}: ${response.statusText}`);
+            return yield* new NetworkError({ message: `HTTP ${response.status}: ${response.statusText}` });
           }
 
           const content = yield* Effect.tryPromise({
             try: () => response.text(),
-            catch: (error) => networkError(`Failed to read response body: ${error}`),
+            catch: (error) => new NetworkError({ message: `Failed to read response body: ${error}` }),
           });
 
           yield* fileSystem.writeFile(destinationPath, content).pipe(
             Effect.mapError((error) => {
               switch (error._tag) {
                 case "FileSystemError":
-                  return networkError(`Failed to write file: ${error.message}`);
+                  return new NetworkError({ message: `Failed to write file: ${error.message}` });
                 case "UnknownError":
-                  return networkError(`Failed to write file: ${error.message}`);
+                  return new NetworkError({ message: `Failed to write file: ${error.message}` });
                 default:
-                  return networkError(`Failed to write file: ${error}`);
+                  return new NetworkError({ message: `Failed to write file: ${error}` });
               }
             }),
           );
@@ -119,7 +119,7 @@ export const NetworkLiveLayer = Layer.effect(
               fetch(url, {
                 method: HTTP_REQUEST_METHOD_VALUE_HEAD,
               }),
-            catch: (error) => networkError(`Failed to check connectivity for ${url}: ${error}`),
+            catch: (error) => new NetworkError({ message: `Failed to check connectivity for ${url}: ${error}` }),
           });
           yield* Effect.annotateCurrentSpan(ATTR_HTTP_RESPONSE_STATUS_CODE, response.status);
           return response.ok;

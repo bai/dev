@@ -7,7 +7,7 @@ import { FileSystem } from "~/capabilities/system/file-system-port";
 import { Shell } from "~/capabilities/system/shell-port";
 import { Mise, type MiseService, type MiseInfo } from "~/capabilities/tools/mise-port";
 import { ConfigLoader } from "~/core/config/config-loader-port";
-import { shellExecutionError, unknownError, type ShellExecutionError, type UnknownError } from "~/core/errors";
+import { ShellExecutionError, UnknownError } from "~/core/errors";
 import { EnvironmentPaths } from "~/core/runtime/path-service";
 
 export const MiseLiveLayer = Layer.effect(
@@ -22,7 +22,7 @@ export const MiseLiveLayer = Layer.effect(
         shell.exec("mise", ["--version"]).pipe(
           Effect.flatMap((result) => {
             if (result.exitCode !== 0) {
-              return shellExecutionError("mise", ["--version"], "Mise is not installed");
+              return new ShellExecutionError({ command: "mise", args: ["--version"], message: "Mise is not installed" });
             }
 
             const version = result.stdout.split(" ")[0] || "unknown";
@@ -57,7 +57,11 @@ export const MiseLiveLayer = Layer.effect(
         shell.exec("sh", ["-c", "curl -sSfL https://mise.run | sh"]).pipe(
           Effect.flatMap((result) => {
             if (result.exitCode !== 0) {
-              return shellExecutionError("sh", ["-c", "curl -sSfL https://mise.run | sh"], `Failed to install mise: ${result.stderr}`);
+              return new ShellExecutionError({
+                command: "sh",
+                args: ["-c", "curl -sSfL https://mise.run | sh"],
+                message: `Failed to install mise: ${result.stderr}`,
+              });
             }
             return Effect.void;
           }),
@@ -66,7 +70,12 @@ export const MiseLiveLayer = Layer.effect(
         shell.exec("mise", ["install"], { cwd }).pipe(
           Effect.flatMap((result) => {
             if (result.exitCode !== 0) {
-              return shellExecutionError("mise", ["install"], `Failed to install tools: ${result.stderr}`, { cwd });
+              return new ShellExecutionError({
+                command: "mise",
+                args: ["install"],
+                message: `Failed to install tools: ${result.stderr}`,
+                cwd,
+              });
             }
             return Effect.void;
           }),
@@ -76,7 +85,10 @@ export const MiseLiveLayer = Layer.effect(
         return shell.execInteractive("mise", miseArgs, { cwd }).pipe(
           Effect.flatMap((exitCode) => {
             if (exitCode !== 0) {
-              return shellExecutionError("mise", miseArgs, `Task '${taskName}' failed with exit code ${exitCode}`, {
+              return new ShellExecutionError({
+                command: "mise",
+                args: miseArgs,
+                message: `Task '${taskName}' failed with exit code ${exitCode}`,
                 cwd,
               });
             }
@@ -88,7 +100,12 @@ export const MiseLiveLayer = Layer.effect(
         shell.exec("mise", ["tasks", "--list"], { cwd }).pipe(
           Effect.flatMap((result) => {
             if (result.exitCode !== 0) {
-              return shellExecutionError("mise", ["tasks", "--list"], `Failed to get tasks: ${result.stderr}`, { cwd });
+              return new ShellExecutionError({
+                command: "mise",
+                args: ["tasks", "--list"],
+                message: `Failed to get tasks: ${result.stderr}`,
+                cwd,
+              });
             }
 
             const tasks = result.stdout
@@ -114,14 +131,17 @@ export const MiseLiveLayer = Layer.effect(
             yield* Effect.logDebug("   📂 Creating mise config directory...");
             yield* fileSystem.mkdir(miseConfigDir, true).pipe(
               Effect.mapError((error) => {
-                return unknownError(`Failed to create mise config directory: ${error}`);
+                return new UnknownError({
+                  message: `Failed to create mise config directory: ${error}`,
+                  details: `Failed to create mise config directory: ${error}`,
+                });
               }),
             );
           }
 
           const config = yield* configLoader.load().pipe(
             Effect.mapError((error) => {
-              return unknownError(`Failed to load config: ${error}`);
+              return new UnknownError({ message: `Failed to load config: ${error}`, details: `Failed to load config: ${error}` });
             }),
           );
 
@@ -130,7 +150,10 @@ export const MiseLiveLayer = Layer.effect(
 
             yield* fileSystem.writeFile(miseConfigFile, tomlContent).pipe(
               Effect.mapError((error) => {
-                return unknownError(`Failed to write mise config: ${error}`);
+                return new UnknownError({
+                  message: `Failed to write mise config: ${error}`,
+                  details: `Failed to write mise config: ${error}`,
+                });
               }),
             );
             yield* Effect.logDebug("   ✅ Mise global config ready");

@@ -1,13 +1,7 @@
 import { Clock, Effect } from "effect";
 
 import { type HealthCheckResult } from "~/capabilities/tools/health-check-port";
-import {
-  externalToolError,
-  healthCheckError,
-  type ExternalToolError,
-  type HealthCheckError,
-  type ShellExecutionError,
-} from "~/core/errors";
+import { ExternalToolError, HealthCheckError, type ShellExecutionError } from "~/core/errors";
 import { compareVersions } from "~/core/runtime/version-utils";
 
 interface VersionedToolContext {
@@ -62,7 +56,8 @@ export const ensureMinimumVersionOrUpgrade = (
       if (context.manualUpgradeHint) {
         yield* Effect.logError(`💡 ${context.manualUpgradeHint}`);
       }
-      return yield* externalToolError(`Failed to update ${context.toolId}`, {
+      return yield* new ExternalToolError({
+        message: `Failed to update ${context.toolId}`,
         tool: context.toolId,
         toolExitCode: 1,
         stderr: `Required version: ${context.minVersion}, Current: ${versionCheck.currentVersion}`,
@@ -75,7 +70,8 @@ export const ensureMinimumVersionOrUpgrade = (
       if (versionCheckAfterUpgrade.currentVersion) {
         yield* Effect.logError(`   Current: ${versionCheckAfterUpgrade.currentVersion}, Required: ${context.minVersion}`);
       }
-      return yield* externalToolError(`${context.displayName} upgrade failed`, {
+      return yield* new ExternalToolError({
+        message: `${context.displayName} upgrade failed`,
         tool: context.toolId,
         toolExitCode: 1,
         stderr: `Required: ${context.minVersion}, Got: ${versionCheckAfterUpgrade.currentVersion}`,
@@ -96,7 +92,7 @@ export const buildMinimumVersionHealthCheck = (
 
     const currentVersion = yield* context
       .getCurrentVersion()
-      .pipe(Effect.mapError(() => healthCheckError(`Failed to get ${context.toolId} version`, context.toolId)));
+      .pipe(Effect.mapError(() => new HealthCheckError({ message: `Failed to get ${context.toolId} version`, tool: context.toolId })));
 
     if (!currentVersion) {
       return {

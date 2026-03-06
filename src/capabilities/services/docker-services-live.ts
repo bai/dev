@@ -13,7 +13,7 @@ import { FileSystem } from "~/capabilities/system/file-system-port";
 import { Shell } from "~/capabilities/system/shell-port";
 import type { HealthCheckResult } from "~/capabilities/tools/health-check-port";
 import { AppConfig } from "~/core/config/app-config-port";
-import { dockerServiceError, type DockerServiceError, type ShellExecutionError } from "~/core/errors";
+import { DockerServiceError, type ShellExecutionError } from "~/core/errors";
 import { annotateErrorTypeOnFailure } from "~/core/observability/error-type";
 import { StatePaths } from "~/core/runtime/path-service";
 
@@ -115,11 +115,13 @@ const createDockerServices = (enabledServices: readonly ServiceName[] = DOCKER_S
           return;
         }
 
-        yield* fs.mkdir(composeDir, true).pipe(Effect.mapError(() => dockerServiceError("Failed to create docker compose directory")));
+        yield* fs
+          .mkdir(composeDir, true)
+          .pipe(Effect.mapError(() => new DockerServiceError({ message: "Failed to create docker compose directory" })));
 
         yield* fs
           .writeFile(composeFilePath, COMPOSE_FILE_CONTENT)
-          .pipe(Effect.mapError(() => dockerServiceError("Failed to write docker-compose.yml")));
+          .pipe(Effect.mapError(() => new DockerServiceError({ message: "Failed to write docker-compose.yml" })));
 
         yield* Effect.logDebug(`Created docker-compose.yml at ${composeFilePath}`);
       });
@@ -147,7 +149,8 @@ const createDockerServices = (enabledServices: readonly ServiceName[] = DOCKER_S
         const result = yield* runCompose(args);
         if (result.exitCode !== 0) {
           yield* Effect.annotateCurrentSpan("docker.compose.failed", true);
-          return yield* dockerServiceError(errorMessage, {
+          return yield* new DockerServiceError({
+            message: errorMessage,
             serviceExitCode: result.exitCode,
             stderr: result.stderr,
           });
@@ -306,7 +309,7 @@ const createDockerServices = (enabledServices: readonly ServiceName[] = DOCKER_S
           const composeFilePath = getComposeFilePath();
           const exists = yield* fs.exists(composeFilePath);
           if (!exists) {
-            return yield* dockerServiceError("No services configured (compose file not found)");
+            return yield* new DockerServiceError({ message: "No services configured (compose file not found)" });
           }
 
           const args: string[] = ["logs"];
@@ -323,7 +326,8 @@ const createDockerServices = (enabledServices: readonly ServiceName[] = DOCKER_S
           const exitCode = yield* runComposeInteractive(args);
           if (exitCode !== 0 && exitCode !== 130) {
             // 130 is SIGINT (Ctrl+C)
-            return yield* dockerServiceError("Failed to get logs", {
+            return yield* new DockerServiceError({
+              message: "Failed to get logs",
               serviceExitCode: exitCode,
             });
           }
@@ -351,7 +355,8 @@ const createDockerServices = (enabledServices: readonly ServiceName[] = DOCKER_S
             .exec("rm", ["-f", composeFilePath])
             .pipe(annotateErrorTypeOnFailure, Effect.withSpan("filesystem.remove_file"));
           if (rmResult.exitCode !== 0) {
-            return yield* dockerServiceError("Failed to remove compose file", {
+            return yield* new DockerServiceError({
+              message: "Failed to remove compose file",
               serviceExitCode: rmResult.exitCode,
               stderr: rmResult.stderr,
             });

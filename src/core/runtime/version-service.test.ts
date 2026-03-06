@@ -4,7 +4,7 @@ import { describe, expect, vi } from "vitest";
 
 import { GitMock } from "~/capabilities/system/git-mock";
 import { Git } from "~/capabilities/system/git-port";
-import { gitError } from "~/core/errors";
+import { GitError } from "~/core/errors";
 import { InstallPaths } from "~/core/runtime/path-service";
 import { makeInstallPathsMock } from "~/core/runtime/path-service-mock";
 import { Version } from "~/core/runtime/version-port";
@@ -37,7 +37,7 @@ describe("version-service", () => {
   });
 
   it.effect("falls back to 'unknown' when Git commit lookup fails", () => {
-    const getCurrentCommitSha = vi.fn(() => gitError("git unavailable"));
+    const getCurrentCommitSha = vi.fn(() => new GitError({ message: "git unavailable" }));
     const gitMock = createGitMock(getCurrentCommitSha);
     const installPaths = makeInstallPathsMock({ installDir: "/tmp/home/.dev" });
 

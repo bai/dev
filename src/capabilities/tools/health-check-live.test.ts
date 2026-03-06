@@ -8,7 +8,7 @@ import { HealthCheckLiveLayer } from "~/capabilities/tools/health-check-live";
 import { HealthCheck, type HealthCheckService, type HealthCheckResult } from "~/capabilities/tools/health-check-port";
 import { ToolHealthRegistry } from "~/capabilities/tools/tool-health-registry-port";
 import type { ToolHealthRegistryService } from "~/capabilities/tools/tool-health-registry-port";
-import { configError, healthCheckError } from "~/core/errors";
+import { ConfigError, HealthCheckError } from "~/core/errors";
 
 interface DatabaseCapture {
   readonly database: DatabaseMock;
@@ -102,7 +102,7 @@ describe("health-check-live", () => {
 
       const toolHealthRegistry: ToolHealthRegistryService = {
         checkAllTools: () => Effect.succeed(results),
-        checkTool: () => healthCheckError("not used in this test"),
+        checkTool: () => new HealthCheckError({ message: "not used in this test" }),
         getRegisteredTools: () => Effect.succeed(["git", "bun"]),
       };
 
@@ -163,7 +163,7 @@ describe("health-check-live", () => {
               checkedAt: new Date(),
             } satisfies HealthCheckResult,
           ]),
-        checkTool: () => healthCheckError("not used in this test"),
+        checkTool: () => new HealthCheckError({ message: "not used in this test" }),
         getRegisteredTools: () => Effect.succeed(["git"]),
       };
 
@@ -181,7 +181,7 @@ describe("health-check-live", () => {
       const failingDatabase = new DatabaseMock({
         queryDb: {} as never,
         overrides: {
-          transaction: () => configError("database unavailable"),
+          transaction: () => new ConfigError({ message: "database unavailable" }),
         },
       });
 
@@ -194,7 +194,7 @@ describe("health-check-live", () => {
               checkedAt: new Date(),
             } satisfies HealthCheckResult,
           ]),
-        checkTool: () => healthCheckError("not used in this test"),
+        checkTool: () => new HealthCheckError({ message: "not used in this test" }),
         getRegisteredTools: () => Effect.succeed(["git"]),
       };
 
@@ -219,8 +219,8 @@ describe("health-check-live", () => {
       const databaseCapture = createDatabaseCapture();
 
       const toolHealthRegistry: ToolHealthRegistryService = {
-        checkAllTools: () => healthCheckError("tool registry unavailable"),
-        checkTool: () => healthCheckError("not used in this test"),
+        checkAllTools: () => new HealthCheckError({ message: "tool registry unavailable" }),
+        checkTool: () => new HealthCheckError({ message: "not used in this test" }),
         getRegisteredTools: () => Effect.succeed([]),
       };
 

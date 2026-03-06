@@ -3,7 +3,7 @@ import { Effect } from "effect";
 import * as Arr from "effect/Array";
 
 import { type CommandRegistryService, type CommandRegistry, type RegisteredCommand } from "~/bootstrap/command-registry-port";
-import { cliUsageError, type DevError } from "~/core/errors";
+import { CliUsageError, type DevError } from "~/core/errors";
 import { registerCdCommand } from "~/features/cd/cd-command";
 import { registerCloneCommand } from "~/features/clone/clone-command";
 import { registerRunCommand } from "~/features/run/run-command";
@@ -124,7 +124,9 @@ export const runCli = (
 
       yield* cli(process.argv).pipe(
         Effect.mapError((error) =>
-          ValidationError.isValidationError(error) ? cliUsageError(HelpDoc.toAnsiText(error.error).trim(), error._tag) : error,
+          ValidationError.isValidationError(error)
+            ? new CliUsageError({ message: HelpDoc.toAnsiText(error.error).trim(), validationTag: error._tag })
+            : error,
         ),
       );
       yield* Effect.logDebug("✅ CLI execution completed successfully");

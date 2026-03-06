@@ -3,7 +3,7 @@ import path from "path";
 import { Effect, Layer } from "effect";
 
 import { resolveRepositoryInput } from "~/capabilities/repositories/org-provider-utils";
-import { configError, type ConfigError } from "~/core/errors";
+import { ConfigError } from "~/core/errors";
 import type { GitProviderType, Repository } from "~/core/models";
 import { WorkspacePaths, type WorkspacePathsService } from "~/core/runtime/path-service";
 
@@ -46,7 +46,7 @@ const parseRepositoryCoordinatesFromUrl = (repoUrl: string): Effect.Effect<Parse
 
     const url = yield* Effect.try({
       try: () => new URL(cleaned),
-      catch: (error: unknown) => configError(`Invalid repository URL: ${repoUrl} - ${String(error)}`),
+      catch: (error: unknown) => new ConfigError({ message: `Invalid repository URL: ${repoUrl} - ${String(error)}` }),
     });
 
     // url.hostname should not include port, but use url.host and strip port to be safe
@@ -61,7 +61,7 @@ const parseRepositoryCoordinatesFromUrl = (repoUrl: string): Effect.Effect<Parse
       };
     }
 
-    return yield* configError(`URL path does not contain organization and repository: ${repoUrl}`);
+    return yield* new ConfigError({ message: `URL path does not contain organization and repository: ${repoUrl}` });
   });
 
 /**

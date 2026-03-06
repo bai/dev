@@ -3,7 +3,7 @@ import { Clock, Effect, Exit } from "effect";
 import { describe, expect } from "vitest";
 
 import { RunStoreMock } from "~/capabilities/persistence/run-store-mock";
-import { configError, unknownError } from "~/core/errors";
+import { ConfigError, UnknownError } from "~/core/errors";
 import type { CommandRun } from "~/core/models";
 import { makeInstallPathsMock } from "~/core/runtime/path-service-mock";
 import type { RuntimeContextService } from "~/core/runtime/runtime-context-port";
@@ -172,7 +172,7 @@ describe("update-check-service", () => {
     Effect.gen(function* () {
       const checker = makeUpdateChecker(
         new RunStoreMock(),
-        () => unknownError("cannot spawn background process"),
+        () => new UnknownError({ message: "cannot spawn background process", details: "cannot spawn background process" }),
         makeRuntimeContext(["bun", "src/index.ts", "status"]),
         makeInstallPathsMock(),
       );
@@ -187,7 +187,7 @@ describe("update-check-service", () => {
     Effect.gen(function* () {
       const runStore = new RunStoreMock({
         overrides: {
-          getRecentRuns: () => configError("database unavailable"),
+          getRecentRuns: () => new ConfigError({ message: "database unavailable" }),
         },
       });
       const checker = makeUpdateChecker(
@@ -207,7 +207,7 @@ describe("update-check-service", () => {
     Effect.gen(function* () {
       const runStore = new RunStoreMock({
         overrides: {
-          getRecentRuns: () => unknownError("unexpected failure"),
+          getRecentRuns: () => new UnknownError({ message: "unexpected failure", details: "unexpected failure" }),
         },
       });
       const checker = makeUpdateChecker(

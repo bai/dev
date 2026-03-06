@@ -18,7 +18,7 @@ import type { HealthCheckResult } from "~/capabilities/tools/health-check-port";
 import { ToolHealthRegistryLiveLayer } from "~/capabilities/tools/tool-health-registry-live";
 import { ToolHealthRegistry } from "~/capabilities/tools/tool-health-registry-port";
 import { BuiltToolRegistry, createToolRegistry } from "~/capabilities/tools/tool-registry-live";
-import { healthCheckError } from "~/core/errors";
+import { HealthCheckError } from "~/core/errors";
 
 const createResult = (toolName: string, status: "ok" | "warning" | "fail"): HealthCheckResult => ({
   toolName,
@@ -149,7 +149,7 @@ describe("tool-health-registry-live", () => {
       const fixtures = createFixtures();
       const failingGitTools: GitToolsService = {
         ...fixtures.gitTools,
-        performHealthCheck: () => Effect.fail(healthCheckError("git health check failed", "git")),
+        performHealthCheck: () => Effect.fail(new HealthCheckError({ message: "git health check failed", tool: "git" })),
       };
       const toolLayer = Layer.mergeAll(
         Layer.succeed(BunTools, fixtures.bunTools),

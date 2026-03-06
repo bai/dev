@@ -3,7 +3,7 @@ import { Clock, Effect, Layer } from "effect";
 
 import { Database } from "~/capabilities/persistence/database-port";
 import { RunStore, type RunStoreService } from "~/capabilities/persistence/run-store-port";
-import { configError, type ConfigError, type UnknownError } from "~/core/errors";
+import { ConfigError, type UnknownError } from "~/core/errors";
 import type { CommandRun } from "~/core/models";
 import { annotateErrorTypeOnFailure } from "~/core/observability/error-type";
 
@@ -48,14 +48,14 @@ export const RunStoreLiveLayer = Layer.scoped(
                     })
                     .returning({ id: runs.id });
                 },
-                catch: (error) => configError(`Failed to record command run: ${error}`),
+                catch: (error) => new ConfigError({ message: `Failed to record command run: ${error}` }),
               });
             }),
           )
           .pipe(
             Effect.flatMap((result) =>
               Effect.fromNullable(result[0]).pipe(
-                Effect.orElseFail(() => configError("Insert operation did not return a record")),
+                Effect.orElseFail(() => new ConfigError({ message: "Insert operation did not return a record" })),
                 Effect.map((insertedRun) => insertedRun.id),
               ),
             ),
@@ -75,7 +75,7 @@ export const RunStoreLiveLayer = Layer.scoped(
                   })
                   .where(eq(runs.id, id));
               },
-              catch: (error) => configError(`Failed to complete command run: ${error}`),
+              catch: (error) => new ConfigError({ message: `Failed to complete command run: ${error}` }),
             }),
           )
           .pipe(
@@ -93,7 +93,7 @@ export const RunStoreLiveLayer = Layer.scoped(
                 try: async () => {
                   await db.delete(runs).where(lt(runs.started_at, cutoffDate));
                 },
-                catch: (error) => configError(`Failed to prune old runs: ${error}`),
+                catch: (error) => new ConfigError({ message: `Failed to prune old runs: ${error}` }),
               }),
             );
           }),
@@ -108,7 +108,7 @@ export const RunStoreLiveLayer = Layer.scoped(
                 const result = await db.select().from(runs).orderBy(desc(runs.started_at)).limit(limit);
                 return result.map(toDomainRun);
               },
-              catch: (error) => configError(`Failed to get recent runs: ${error}`),
+              catch: (error) => new ConfigError({ message: `Failed to get recent runs: ${error}` }),
             }),
           )
           .pipe(annotateErrorTypeOnFailure, Effect.withSpan("run_store.get_recent", { attributes: { "run_store.limit": limit } })),
@@ -128,7 +128,7 @@ export const RunStoreLiveLayer = Layer.scoped(
                     })
                     .where(isNull(runs.finished_at));
                 },
-                catch: (error) => configError(`Failed to complete incomplete runs: ${error}`),
+                catch: (error) => new ConfigError({ message: `Failed to complete incomplete runs: ${error}` }),
               }),
             );
           }),

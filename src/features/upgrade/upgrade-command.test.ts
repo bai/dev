@@ -17,7 +17,7 @@ import type { ManagedTool, ToolManagementService, ToolManager } from "~/capabili
 import { ToolManagement } from "~/capabilities/tools/tool-management-port";
 import { ConfigLoaderLiveLayer } from "~/core/config/config-loader-live";
 import { ConfigLoader } from "~/core/config/config-loader-port";
-import { gitError, shellExecutionError } from "~/core/errors";
+import { GitError, ShellExecutionError } from "~/core/errors";
 import { StatePaths, type InstallPathsService } from "~/core/runtime/path-service";
 import { makeInstallPathsMock, makeStatePathsMock } from "~/core/runtime/path-service-mock";
 import { checkTool, ensureCorrectConfigUrl, selfUpdateCli, upgradeEssentialTools } from "~/features/upgrade/upgrade-command";
@@ -151,7 +151,7 @@ describe("upgrade-command", () => {
     Effect.gen(function* () {
       const toolManager: ToolManager = {
         getCurrentVersion: () => Effect.succeed(null),
-        checkVersion: () => Effect.fail(shellExecutionError("bun", ["--version"], "spawn failed")),
+        checkVersion: () => Effect.fail(new ShellExecutionError({ command: "bun", args: ["--version"], message: "spawn failed" })),
         performUpgrade: () => Effect.succeed(true),
         ensureVersionOrUpgrade: () => Effect.void,
       };
@@ -217,7 +217,9 @@ describe("upgrade-command", () => {
         gitRepositories: [tempDir],
         overrides: {
           pullLatestChanges: () =>
-            gitError("Failed to pull: error: cannot pull with rebase: You have unstaged changes.\nerror: Please commit or stash them."),
+            new GitError({
+              message: "Failed to pull: error: cannot pull with rebase: You have unstaged changes.\nerror: Please commit or stash them.",
+            }),
         },
       });
       const shell = new ShellMock();
@@ -241,7 +243,7 @@ describe("upgrade-command", () => {
       const git = new GitMock({
         gitRepositories: [tempDir],
         overrides: {
-          pullLatestChanges: () => gitError("Failed to pull: fatal: not a git repository"),
+          pullLatestChanges: () => new GitError({ message: "Failed to pull: fatal: not a git repository" }),
         },
       });
       const shell = new ShellMock();
@@ -265,7 +267,7 @@ describe("upgrade-command", () => {
       const git = new GitMock({
         gitRepositories: [tempDir],
         overrides: {
-          pullLatestChanges: () => shellExecutionError("git", ["pull"], "spawn failed", { cwd: tempDir }),
+          pullLatestChanges: () => new ShellExecutionError({ command: "git", args: ["pull"], message: "spawn failed", cwd: tempDir }),
         },
       });
       const shell = new ShellMock();
@@ -317,7 +319,8 @@ describe("upgrade-command", () => {
         getCurrentVersion: () => Effect.succeed("0.1.0"),
         checkVersion: () => Effect.succeed({ isValid: false, currentVersion: "0.1.0" }),
         performUpgrade: () => Effect.succeed(false),
-        ensureVersionOrUpgrade: () => Effect.fail(shellExecutionError("mise", ["install", "git@latest"], "upgrade failed")),
+        ensureVersionOrUpgrade: () =>
+          Effect.fail(new ShellExecutionError({ command: "mise", args: ["install", "git@latest"], message: "upgrade failed" })),
       };
       const untouchedTool: ToolManager = {
         getCurrentVersion: () => Effect.succeed("1.0.0"),

@@ -5,7 +5,7 @@ import { describe, expect, vi } from "vitest";
 
 import { checkAndDisplayHelp, createMainCommand } from "~/bootstrap/cli-router";
 import type { CommandInfo, CommandRegistryService } from "~/bootstrap/command-registry-port";
-import { cliUsageError, configError } from "~/core/errors";
+import { CliUsageError, ConfigError } from "~/core/errors";
 import { handleProgramError } from "~/index";
 
 const makeRegistry = (commandInfos: ReadonlyArray<CommandInfo>): CommandRegistryService => ({
@@ -73,14 +73,14 @@ describe("index", () => {
 
   it.effect("handleProgramError maps DevError to exit code 1", () =>
     Effect.gen(function* () {
-      const code = yield* handleProgramError(configError("invalid config"));
+      const code = yield* handleProgramError(new ConfigError({ message: "invalid config" }));
       expect(code).toBe(1);
     }),
   );
 
   it.effect("handleProgramError maps CLI usage errors to exit code 1", () =>
     Effect.gen(function* () {
-      const code = yield* handleProgramError(cliUsageError("boom", "InvalidArgument"));
+      const code = yield* handleProgramError(new CliUsageError({ message: "boom", validationTag: "InvalidArgument" }));
       expect(code).toBe(1);
     }),
   );

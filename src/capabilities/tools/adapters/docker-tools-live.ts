@@ -3,7 +3,7 @@ import { Clock, Effect } from "effect";
 import { ShellLiveLayer } from "~/capabilities/system/shell-live";
 import { Shell } from "~/capabilities/system/shell-port";
 import type { HealthCheckResult } from "~/capabilities/tools/health-check-port";
-import { healthCheckError, type HealthCheckError } from "~/core/errors";
+import { HealthCheckError } from "~/core/errors";
 import { compareVersions } from "~/core/runtime/version-utils";
 
 export const DOCKER_MIN_VERSION = "29.1.3";
@@ -62,7 +62,7 @@ export class DockerTools extends Effect.Service<DockerToolsService>()("DockerToo
           const binaryPath = yield* getBinaryPath();
 
           const dockerVersion = yield* getDockerVersion().pipe(
-            Effect.mapError(() => healthCheckError("Failed to get docker version", "docker")),
+            Effect.mapError(() => new HealthCheckError({ message: "Failed to get docker version", tool: "docker" })),
           );
 
           if (!dockerVersion) {

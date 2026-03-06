@@ -12,7 +12,7 @@ import { Git } from "~/capabilities/system/git-port";
 import type { ConfigLoaderService } from "~/core/config/config-loader-port";
 import { ConfigLoader } from "~/core/config/config-loader-port";
 import { configSchema } from "~/core/config/config-schema";
-import { configError } from "~/core/errors";
+import { ConfigError } from "~/core/errors";
 import { TracingLiveLayer } from "~/core/observability/tracing-live";
 import { Tracing } from "~/core/observability/tracing-port";
 import type { VersionService } from "~/core/runtime/version-port";
@@ -37,7 +37,7 @@ const makeConfigLoader = (config: ReturnType<typeof configSchema.parse>): Config
   parse: (content, source = "config") =>
     Effect.try({
       try: () => configSchema.parse(Bun.JSONC.parse(content)),
-      catch: (error) => configError(`Invalid ${source}: ${error}`),
+      catch: (error) => new ConfigError({ message: `Invalid ${source}: ${error}` }),
     }),
   load: () => Effect.succeed(config),
   save: () => Effect.void,

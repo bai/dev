@@ -6,7 +6,7 @@ import { RunStore } from "~/capabilities/persistence/run-store-port";
 import { DockerServices, type ServiceStatus } from "~/capabilities/services/docker-services-port";
 import { Git } from "~/capabilities/system/git-port";
 import { HealthCheck } from "~/capabilities/tools/health-check-port";
-import { statusCheckError } from "~/core/errors";
+import { StatusCheckError } from "~/core/errors";
 import type { EnvironmentInfo, GitInfo } from "~/core/models";
 import { RuntimeContext } from "~/core/runtime/runtime-context-port";
 
@@ -324,7 +324,7 @@ const showSummary = (statusItems: readonly StatusItem[]): Effect.Effect<void, ne
 /**
  * Check for failures and exit with error if found
  */
-const checkForFailures = (statusItems: readonly StatusItem[]): Effect.Effect<void, ReturnType<typeof statusCheckError>, never> =>
+const checkForFailures = (statusItems: readonly StatusItem[]): Effect.Effect<void, StatusCheckError, never> =>
   Effect.gen(function* () {
     const failedItems = statusItems.filter((item) => item.status === "fail");
 
@@ -333,7 +333,10 @@ const checkForFailures = (statusItems: readonly StatusItem[]): Effect.Effect<voi
       const failCount = failedItems.length;
       const warnCount = statusItems.filter((item) => item.status === "warning").length;
 
-      yield* statusCheckError(`Found ${failCount} failing tool(s) and ${warnCount} warning(s)`, failedComponents);
+      yield* new StatusCheckError({
+        message: `Found ${failCount} failing tool(s) and ${warnCount} warning(s)`,
+        failedComponents,
+      });
     }
   });
 

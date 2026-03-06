@@ -11,7 +11,7 @@ import { Mise, type MiseService } from "~/capabilities/tools/mise-port";
 import { ConfigLoader } from "~/core/config/config-loader-port";
 import type { ConfigLoaderService } from "~/core/config/config-loader-port";
 import { configSchema } from "~/core/config/config-schema";
-import { configError } from "~/core/errors";
+import { ConfigError } from "~/core/errors";
 import { EnvironmentPaths, type EnvironmentPathsService } from "~/core/runtime/path-service";
 import { makeEnvironmentPathsMock } from "~/core/runtime/path-service-mock";
 
@@ -53,7 +53,7 @@ const mockConfigLoader: ConfigLoaderService = {
   parse: (content, source = "config") =>
     Effect.try({
       try: () => configSchema.parse(Bun.JSONC.parse(content)),
-      catch: (error) => configError(`Invalid ${source}: ${error}`),
+      catch: (error) => new ConfigError({ message: `Invalid ${source}: ${error}` }),
     }),
   load: () =>
     Effect.succeed(

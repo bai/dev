@@ -4,7 +4,7 @@ import { Clock, Effect, Layer } from "effect";
 import { Database, type DatabaseService } from "~/capabilities/persistence/database-port";
 import { HealthCheck, type HealthCheckService, type HealthCheckResult } from "~/capabilities/tools/health-check-port";
 import { ToolHealthRegistry, type ToolHealthRegistryService } from "~/capabilities/tools/tool-health-registry-port";
-import { healthCheckError, type HealthCheckError } from "~/core/errors";
+import { HealthCheckError } from "~/core/errors";
 import { annotateErrorTypeOnFailure } from "~/core/observability/error-type";
 
 import { toolHealthChecks } from "../../../drizzle/schema";
@@ -43,7 +43,7 @@ const storeHealthCheckResults = (results: InternalHealthCheckResult[], database:
                     checked_at: new Date(result.checkedAt),
                   });
                 },
-                catch: (error) => healthCheckError(`Failed to insert health check results: ${error}`),
+                catch: (error) => new HealthCheckError({ message: `Failed to insert health check results: ${error}` }),
               });
             }),
           { discard: true },
@@ -59,14 +59,14 @@ const storeHealthCheckResults = (results: InternalHealthCheckResult[], database:
           try: async () => {
             await tx.delete(toolHealthChecks).where(sql`checked_at < ${cutoffDate}`);
           },
-          catch: (error) => healthCheckError(`Failed to prune old records: ${error}`),
+          catch: (error) => new HealthCheckError({ message: `Failed to prune old records: ${error}` }),
         });
       }),
     )
     .pipe(
       Effect.mapError((error) => {
         if (error._tag === "HealthCheckError") return error;
-        return healthCheckError(`Database operation failed: ${String(error)}`);
+        return new HealthCheckError({ message: `Database operation failed: ${String(error)}` });
       }),
     );
 

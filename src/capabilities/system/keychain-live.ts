@@ -2,7 +2,7 @@ import { Effect, Layer } from "effect";
 
 import { Keychain, type KeychainService } from "~/capabilities/system/keychain-port";
 import { Shell, type ShellService } from "~/capabilities/system/shell-port";
-import { authError, type AuthError, type ShellExecutionError } from "~/core/errors";
+import { AuthError, type ShellExecutionError } from "~/core/errors";
 
 // Effect Layer for dependency injection
 export const KeychainLiveLayer = Layer.effect(
@@ -14,7 +14,7 @@ export const KeychainLiveLayer = Layer.effect(
         shell.exec("security", ["add-generic-password", "-s", service, "-a", account, "-w", password, "-U"]).pipe(
           Effect.flatMap((result) => {
             if (result.exitCode !== 0) {
-              return authError(`Failed to store credential: ${result.stderr}`);
+              return new AuthError({ message: `Failed to store credential: ${result.stderr}` });
             }
             return Effect.void;
           }),
@@ -23,7 +23,7 @@ export const KeychainLiveLayer = Layer.effect(
         shell.exec("security", ["find-generic-password", "-s", service, "-a", account, "-w"]).pipe(
           Effect.flatMap((result) => {
             if (result.exitCode !== 0) {
-              return authError(`Credential not found for service '${service}' and account '${account}'`);
+              return new AuthError({ message: `Credential not found for service '${service}' and account '${account}'` });
             }
             return Effect.succeed(result.stdout.trim());
           }),
@@ -32,7 +32,7 @@ export const KeychainLiveLayer = Layer.effect(
         shell.exec("security", ["delete-generic-password", "-s", service, "-a", account]).pipe(
           Effect.flatMap((result) => {
             if (result.exitCode !== 0) {
-              return authError(`Failed to remove credential: ${result.stderr}`);
+              return new AuthError({ message: `Failed to remove credential: ${result.stderr}` });
             }
             return Effect.void;
           }),

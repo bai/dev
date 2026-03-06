@@ -3,7 +3,7 @@ import path from "path";
 import { Effect, Layer } from "effect";
 
 import { FileSystem, type FileSystemService } from "~/capabilities/system/file-system-port";
-import { configError, type ConfigError, type FileSystemError, type UnknownError } from "~/core/errors";
+import { ConfigError, type FileSystemError, type UnknownError } from "~/core/errors";
 import { StatePaths, type StatePathsService, WorkspacePaths, type WorkspacePathsService } from "~/core/runtime/path-service";
 
 /**
@@ -35,7 +35,7 @@ const makeShellIntegration = (
       // Validate path exists before attempting to cd
       const exists = yield* fileSystem.exists(absolutePath);
       if (!exists) {
-        return yield* configError(`Directory does not exist: ${absolutePath}`);
+        return yield* new ConfigError({ message: `Directory does not exist: ${absolutePath}` });
       }
 
       // Ensure the run directory exists

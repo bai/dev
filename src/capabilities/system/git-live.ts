@@ -2,7 +2,7 @@ import { Effect, Layer } from "effect";
 
 import { Git, type GitService } from "~/capabilities/system/git-port";
 import { Shell, type ShellService } from "~/capabilities/system/shell-port";
-import { gitError, type GitError, type ShellExecutionError } from "~/core/errors";
+import { GitError, type ShellExecutionError } from "~/core/errors";
 import type { Repository } from "~/core/models";
 
 // Effect Layer for dependency injection
@@ -19,7 +19,7 @@ export const GitLiveLayer = Layer.effect(
             const result = yield* shell.exec("git", ["clone", repository.cloneUrl, destinationPath]);
 
             if (result.exitCode !== 0) {
-              return yield* gitError(`Failed to clone repository: ${result.stderr}`);
+              return yield* new GitError({ message: `Failed to clone repository: ${result.stderr}` });
             }
           }),
         ),
@@ -27,7 +27,7 @@ export const GitLiveLayer = Layer.effect(
         shell.exec("git", ["pull"], { cwd: repositoryPath }).pipe(
           Effect.flatMap((result) => {
             if (result.exitCode !== 0) {
-              return gitError(`Failed to pull: ${result.stderr}`);
+              return new GitError({ message: `Failed to pull: ${result.stderr}` });
             }
             return Effect.void;
           }),
@@ -41,7 +41,7 @@ export const GitLiveLayer = Layer.effect(
         shell.exec("git", ["rev-parse", "HEAD"], { cwd: repositoryPath }).pipe(
           Effect.flatMap((result) => {
             if (result.exitCode !== 0) {
-              return gitError(`Failed to get current commit SHA: ${result.stderr}`);
+              return new GitError({ message: `Failed to get current commit SHA: ${result.stderr}` });
             }
             return Effect.succeed(result.stdout.trim());
           }),
@@ -50,7 +50,7 @@ export const GitLiveLayer = Layer.effect(
         shell.exec("git", ["rev-parse", "--abbrev-ref", "HEAD"], { cwd: repositoryPath }).pipe(
           Effect.flatMap((result) => {
             if (result.exitCode !== 0) {
-              return gitError(`Failed to get current branch: ${result.stderr}`);
+              return new GitError({ message: `Failed to get current branch: ${result.stderr}` });
             }
             return Effect.succeed(result.stdout.trim());
           }),
@@ -59,7 +59,7 @@ export const GitLiveLayer = Layer.effect(
         shell.exec("git", ["remote", "get-url", remoteName], { cwd: repositoryPath }).pipe(
           Effect.flatMap((result) => {
             if (result.exitCode !== 0) {
-              return gitError(`Failed to get remote URL: ${result.stderr}`);
+              return new GitError({ message: `Failed to get remote URL: ${result.stderr}` });
             }
             return Effect.succeed(result.stdout.trim());
           }),

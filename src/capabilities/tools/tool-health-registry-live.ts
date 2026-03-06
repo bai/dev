@@ -2,7 +2,7 @@ import { Effect, Layer } from "effect";
 
 import { ToolHealthRegistry, type ToolHealthRegistryService } from "~/capabilities/tools/tool-health-registry-port";
 import { BuiltToolRegistry, type BuiltToolRegistryService } from "~/capabilities/tools/tool-registry-live";
-import { healthCheckError, type HealthCheckError } from "~/core/errors";
+import { HealthCheckError } from "~/core/errors";
 
 /**
  * Effect Layer for dependency injection
@@ -20,7 +20,7 @@ export const ToolHealthRegistryLiveLayer = Layer.effect(
           const checker = toolCheckers.get(toolName);
 
           if (!checker) {
-            return yield* healthCheckError(`Unknown tool: ${toolName}`, toolName);
+            return yield* new HealthCheckError({ message: `Unknown tool: ${toolName}`, tool: toolName });
           }
 
           return yield* checker();

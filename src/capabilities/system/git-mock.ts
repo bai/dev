@@ -1,7 +1,7 @@
 import { Effect } from "effect";
 
 import type { GitService } from "~/capabilities/system/git-port";
-import { gitError } from "~/core/errors";
+import { GitError } from "~/core/errors";
 import type { Repository } from "~/core/models";
 
 interface GitMockOverrides {
@@ -68,7 +68,7 @@ export class GitMock implements GitService {
     }
 
     if (this.failingPullRepositories.has(repositoryPath)) {
-      return gitError("pull failed");
+      return new GitError({ message: "pull failed" });
     }
 
     return Effect.void;
@@ -106,7 +106,7 @@ export class GitMock implements GitService {
     }
 
     if (this.currentBranch === null) {
-      return gitError("not a git repository");
+      return new GitError({ message: "not a git repository" });
     }
 
     return Effect.succeed(this.currentBranch);
@@ -120,7 +120,7 @@ export class GitMock implements GitService {
     }
 
     if (this.remoteUrl === null) {
-      return gitError("remote origin not found");
+      return new GitError({ message: "remote origin not found" });
     }
 
     return Effect.succeed(this.remoteUrl);

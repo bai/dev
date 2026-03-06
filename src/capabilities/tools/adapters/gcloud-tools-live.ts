@@ -12,7 +12,7 @@ import {
   ensureMinimumVersionOrUpgrade,
 } from "~/capabilities/tools/adapters/versioned-tools-live";
 import { type HealthCheckResult } from "~/capabilities/tools/health-check-port";
-import { unknownError, type ExternalToolError, type HealthCheckError, type ShellExecutionError, type UnknownError } from "~/core/errors";
+import { type ExternalToolError, type HealthCheckError, type ShellExecutionError, UnknownError } from "~/core/errors";
 import { EnvironmentPaths } from "~/core/runtime/path-service";
 
 export const GCLOUD_MIN_VERSION = "552.0.0";
@@ -86,9 +86,15 @@ export class GcloudTools extends Effect.Service<GcloudToolsService>()("GcloudToo
         const exists = yield* filesystem.exists(gcloudConfigDir);
         if (!exists) {
           yield* Effect.logInfo("   📂 Creating gcloud config directory...");
-          yield* filesystem
-            .mkdir(gcloudConfigDir, true)
-            .pipe(Effect.mapError((error) => unknownError(`Failed to create gcloud config directory: ${error}`)));
+          yield* filesystem.mkdir(gcloudConfigDir, true).pipe(
+            Effect.mapError(
+              (error) =>
+                new UnknownError({
+                  message: `Failed to create gcloud config directory: ${error}`,
+                  details: `Failed to create gcloud config directory: ${error}`,
+                }),
+            ),
+          );
         }
 
         yield* Effect.logInfo("   ✅ Google Cloud config ready");

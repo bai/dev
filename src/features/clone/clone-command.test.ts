@@ -9,7 +9,7 @@ import { FileSystem } from "~/capabilities/system/file-system-port";
 import { GitMock } from "~/capabilities/system/git-mock";
 import { Git } from "~/capabilities/system/git-port";
 import { ShellIntegration, type ShellIntegrationService } from "~/capabilities/workspace/shell-integration-service";
-import { unknownError } from "~/core/errors";
+import { UnknownError } from "~/core/errors";
 import type { GitProvider, Repository } from "~/core/models";
 import { WorkspacePaths, type WorkspacePathsService } from "~/core/runtime/path-service";
 import { makeWorkspacePathsMock } from "~/core/runtime/path-service-mock";
@@ -187,7 +187,10 @@ describe("clone-command", () => {
       Effect.gen(function* () {
         class FailingRepoProvider extends MockRepoProvider {
           resolveRepository(_name: string, _org?: string): Effect.Effect<Repository, never, never> {
-            return unknownError("Failed to resolve repository") as unknown as Effect.Effect<Repository, never, never>;
+            return new UnknownError({
+              message: "Failed to resolve repository",
+              details: "Failed to resolve repository",
+            }) as unknown as Effect.Effect<Repository, never, never>;
           }
         }
 

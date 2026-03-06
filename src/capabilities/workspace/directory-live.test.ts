@@ -5,7 +5,7 @@ import { describe, expect } from "vitest";
 import { FileSystem, type FileSystemService } from "~/capabilities/system/file-system-port";
 import { DirectoryLiveLayer } from "~/capabilities/workspace/directory-live";
 import { Directory } from "~/capabilities/workspace/directory-port";
-import { fileSystemError } from "~/core/errors";
+import { FileSystemError } from "~/core/errors";
 import { WorkspacePaths, type WorkspacePathsService } from "~/core/runtime/path-service";
 
 const makeWorkspacePaths = (baseSearchPath = "/home/user/dev"): WorkspacePathsService => ({
@@ -88,7 +88,7 @@ describe("directory-live", () => {
         const workspacePaths = makeWorkspacePaths();
         const fileSystem = makeFileSystem({
           exists: () => Effect.succeed(false),
-          mkdir: () => Effect.fail(fileSystemError("Permission denied", "/home/user/dev")),
+          mkdir: () => Effect.fail(new FileSystemError({ message: "Permission denied", path: "/home/user/dev" })),
         });
 
         const directory = yield* makeDirectory(fileSystem, workspacePaths);
@@ -163,7 +163,7 @@ describe("directory-live", () => {
         const workspacePaths = makeWorkspacePaths();
         const fileSystem = makeFileSystem({
           exists: () => Effect.succeed(true),
-          findDirectoriesGlob: () => Effect.fail(fileSystemError("Glob search failed", "/home/user/dev")),
+          findDirectoriesGlob: () => Effect.fail(new FileSystemError({ message: "Glob search failed", path: "/home/user/dev" })),
         });
 
         const directory = yield* makeDirectory(fileSystem, workspacePaths);

@@ -1,7 +1,7 @@
 import { Effect } from "effect";
 
 import type { ShellService, SpawnResult } from "~/capabilities/system/shell-port";
-import { shellExecutionError } from "~/core/errors";
+import { ShellExecutionError } from "~/core/errors";
 
 export class ShellMock implements ShellService {
   public readonly execCalls: Array<{
@@ -47,7 +47,7 @@ export class ShellMock implements ShellService {
     const key = this.key(command, args);
 
     if (this.execFailures.has(key)) {
-      return Effect.fail(shellExecutionError(command, args, "Command execution failed")) as never;
+      return Effect.fail(new ShellExecutionError({ command, args, message: "Command execution failed" })) as never;
     }
 
     const response = this.execResponses.get(key);

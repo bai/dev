@@ -7,22 +7,6 @@ export { TracingError } from "~/core/observability/tracing-port";
 
 const defaultProgramExitCode = 1;
 
-const formatUnknownDetails = (value: unknown): string => {
-  if (typeof value === "string") {
-    return value;
-  }
-
-  if (value instanceof Error && value.message.length > 0) {
-    return value.message;
-  }
-
-  try {
-    return JSON.stringify(value);
-  } catch {
-    return String(value);
-  }
-};
-
 export class ConfigError extends Schema.TaggedError<ConfigError>()("ConfigError", {
   message: Schema.String,
 }) {
@@ -149,25 +133,3 @@ export type DevError =
   | CliUsageError
   | TracingError
   | UnknownError;
-
-// Helper constructors
-export const configError = (message: string) => new ConfigError({ message });
-export const gitError = (message: string) => new GitError({ message });
-export const networkError = (message: string) => new NetworkError({ message });
-export const authError = (message: string) => new AuthError({ message });
-export const unknownError = (details: unknown, options?: { message?: string }) =>
-  new UnknownError({ message: options?.message ?? formatUnknownDetails(details), details });
-export const externalToolError = (message: string, options?: { tool?: string; toolExitCode?: number; stderr?: string }) =>
-  new ExternalToolError({ message, ...options });
-export const fileSystemError = (message: string, path?: string) => new FileSystemError({ message, path });
-export const statusCheckError = (message: string, failedComponents: string[]) => new StatusCheckError({ message, failedComponents });
-export const healthCheckError = (message: string, tool?: string) => new HealthCheckError({ message, tool });
-export const shellExecutionError = (
-  command: string,
-  args: readonly string[],
-  message: string,
-  options?: { cwd?: string; underlyingError?: unknown },
-) => new ShellExecutionError({ command, args, message, ...options });
-export const dockerServiceError = (message: string, options?: { service?: string; serviceExitCode?: number; stderr?: string }) =>
-  new DockerServiceError({ message, ...options });
-export const cliUsageError = (message: string, validationTag: string) => new CliUsageError({ message, validationTag });

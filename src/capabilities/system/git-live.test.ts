@@ -6,7 +6,7 @@ import { GitLiveLayer } from "~/capabilities/system/git-live";
 import { Git, type GitService } from "~/capabilities/system/git-port";
 import { ShellMock } from "~/capabilities/system/shell-mock";
 import { Shell, type SpawnResult } from "~/capabilities/system/shell-port";
-import { gitError } from "~/core/errors";
+import { GitError } from "~/core/errors";
 import type { Repository } from "~/core/models";
 
 class MockShell extends ShellMock {
@@ -75,7 +75,7 @@ describe("git-live", () => {
 
         const git = yield* makeGit(mockShell);
         const result = yield* Effect.flip(git.cloneRepositoryToPath(repository, "/tmp/test-repo"));
-        expect(result).toEqual(gitError("Failed to clone repository: fatal: repository not found"));
+        expect(result).toEqual(new GitError({ message: "Failed to clone repository: fatal: repository not found" }));
       }),
     );
   });
@@ -105,7 +105,7 @@ describe("git-live", () => {
 
         const git = yield* makeGit(mockShell);
         const result = yield* Effect.flip(git.pullLatestChanges("/tmp/test-repo"));
-        expect(result).toEqual(gitError("Failed to pull: fatal: not a git repository"));
+        expect(result).toEqual(new GitError({ message: "Failed to pull: fatal: not a git repository" }));
       }),
     );
   });
@@ -189,7 +189,7 @@ describe("git-live", () => {
 
         const git = yield* makeGit(mockShell);
         const result = yield* Effect.flip(git.getCurrentCommitSha());
-        expect(result).toEqual(gitError("Failed to get current commit SHA: fatal: ambiguous argument 'HEAD'"));
+        expect(result).toEqual(new GitError({ message: "Failed to get current commit SHA: fatal: ambiguous argument 'HEAD'" }));
       }),
     );
   });
@@ -219,7 +219,7 @@ describe("git-live", () => {
 
         const git = yield* makeGit(mockShell);
         const result = yield* Effect.flip(git.getCurrentBranch("/tmp/test-repo"));
-        expect(result).toEqual(gitError("Failed to get current branch: fatal: not a git repository"));
+        expect(result).toEqual(new GitError({ message: "Failed to get current branch: fatal: not a git repository" }));
       }),
     );
   });
@@ -249,7 +249,7 @@ describe("git-live", () => {
 
         const git = yield* makeGit(mockShell);
         const result = yield* Effect.flip(git.getRemoteUrl("/tmp/test-repo", "origin"));
-        expect(result).toEqual(gitError("Failed to get remote URL: "));
+        expect(result).toEqual(new GitError({ message: "Failed to get remote URL: " }));
       }),
     );
   });

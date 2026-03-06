@@ -7,7 +7,7 @@ import {
   type DockerServicesService,
   type ServiceName,
 } from "~/capabilities/services/docker-services-port";
-import { dockerServiceError, type DockerServiceError, type ShellExecutionError } from "~/core/errors";
+import { DockerServiceError, type ShellExecutionError } from "~/core/errors";
 
 export interface ServicesHandlerConfig {
   readonly services: readonly string[];
@@ -36,7 +36,7 @@ export const withDocker = <A, E, R>(
     const isAvailable = yield* dockerServices.isDockerAvailable();
 
     if (!isAvailable) {
-      return yield* dockerServiceError("Docker is not available. Please ensure Docker is installed and running.");
+      return yield* new DockerServiceError({ message: "Docker is not available. Please ensure Docker is installed and running." });
     }
 
     return yield* handler(dockerServices);

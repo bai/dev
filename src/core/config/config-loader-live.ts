@@ -4,7 +4,7 @@ import { FileSystem, type FileSystemService } from "~/capabilities/system/file-s
 import { Network, type NetworkService } from "~/capabilities/system/network-port";
 import { ConfigLoader, type ConfigLoaderService } from "~/core/config/config-loader-port";
 import { configSchema, type Config } from "~/core/config/config-schema";
-import { configError, type ConfigError, type FileSystemError, type NetworkError, type UnknownError } from "~/core/errors";
+import { ConfigError, type FileSystemError, type NetworkError, type UnknownError } from "~/core/errors";
 import { annotateErrorTypeOnFailure } from "~/core/observability/error-type";
 import { StatePaths } from "~/core/runtime/path-service";
 
@@ -21,7 +21,7 @@ export const ConfigLoaderLiveLayer = Layer.effect(
           const rawConfig = Bun.JSONC.parse(content);
           return configSchema.parse(rawConfig);
         },
-        catch: (error) => configError(`Invalid ${source}: ${error}`),
+        catch: (error) => new ConfigError({ message: `Invalid ${source}: ${error}` }),
       });
 
     const save = (config: Config): Effect.Effect<void, FileSystemError | UnknownError> =>
@@ -50,7 +50,7 @@ export const ConfigLoaderLiveLayer = Layer.effect(
           return network.get(currentConfig.configUrl).pipe(
             Effect.flatMap((response) => {
               if (response.status !== 200) {
-                return configError(`Failed to fetch remote config: ${response.status} ${response.statusText}`);
+                return new ConfigError({ message: `Failed to fetch remote config: ${response.status} ${response.statusText}` });
               }
 
               return parse(response.body, "remote config").pipe(

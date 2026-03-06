@@ -11,7 +11,7 @@ import { Database } from "~/capabilities/persistence/database-port";
 import type { DrizzleDatabase } from "~/capabilities/persistence/drizzle-types";
 import { FileSystemMock } from "~/capabilities/system/file-system-mock";
 import { FileSystem } from "~/capabilities/system/file-system-port";
-import { configError } from "~/core/errors";
+import { ConfigError } from "~/core/errors";
 import { InstallPaths, StatePaths } from "~/core/runtime/path-service";
 import { makeInstallPathsMock, makeStatePathsMock } from "~/core/runtime/path-service-mock";
 
@@ -55,7 +55,7 @@ describe("database-live", () => {
       const { sqlite } = createSqliteMock();
       const drizzleDb = {} as DrizzleDatabase;
       const database = yield* makeTestDatabase(sqlite, drizzleDb, "/tmp/migrations");
-      const taggedError = configError("query failed");
+      const taggedError = new ConfigError({ message: "query failed" });
 
       const error = yield* Effect.flip(database.query(() => Effect.fail(taggedError)));
 
@@ -127,7 +127,7 @@ describe("database-live", () => {
       const sqlite = new BunSQLiteDatabase(":memory:");
       const drizzleDb: DrizzleDatabase = drizzle(sqlite);
       const database = yield* makeTestDatabase(sqlite, drizzleDb, "/tmp/migrations");
-      const taggedFailure = configError("force rollback");
+      const taggedFailure = new ConfigError({ message: "force rollback" });
 
       yield* Effect.sync(() => {
         sqlite.exec("create table tx_probe (id integer primary key, value text not null)");

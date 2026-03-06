@@ -13,7 +13,7 @@ import { isFullUrl, RepositoryService } from "~/capabilities/repositories/reposi
 import { FileSystem } from "~/capabilities/system/file-system-port";
 import { Git } from "~/capabilities/system/git-port";
 import { ShellIntegration } from "~/capabilities/workspace/shell-integration-service";
-import { unknownError } from "~/core/errors";
+import { UnknownError } from "~/core/errors";
 import { WorkspacePaths } from "~/core/runtime/path-service";
 
 // Define the repository argument as required
@@ -55,7 +55,7 @@ export const cloneCommand = Command.make("clone", { repo }, ({ repo }) =>
       const shellIntegration = yield* ShellIntegration;
 
       if (!repo) {
-        return yield* unknownError("Repository name is required");
+        return yield* new UnknownError({ message: "Repository name is required", details: "Repository name is required" });
       }
 
       const repository = yield* isFullUrl(repo)
@@ -73,7 +73,7 @@ export const cloneCommand = Command.make("clone", { repo }, ({ repo }) =>
             const repoNameFinal = repoName || orgOrRepo;
 
             if (!repoNameFinal) {
-              return yield* unknownError("Invalid repository name format");
+              return yield* new UnknownError({ message: "Invalid repository name format", details: "Invalid repository name format" });
             }
 
             yield* Effect.logInfo(`Resolving repository: ${org ? `${org}/${repoNameFinal}` : repoNameFinal}`);

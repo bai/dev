@@ -6,7 +6,7 @@ import { CommandRegistry } from "~/bootstrap/command-registry-port";
 import { InteractiveSelector } from "~/capabilities/system/interactive-selector-port";
 import { Directory } from "~/capabilities/workspace/directory-port";
 import { ShellIntegration, type ShellIntegrationService } from "~/capabilities/workspace/shell-integration-service";
-import { unknownError, type DevError } from "~/core/errors";
+import { UnknownError, type DevError } from "~/core/errors";
 import { filter } from "~/features/cd/matching";
 
 // Define the folder name argument as optional
@@ -48,7 +48,10 @@ export const cdCommand = Command.make("cd", { folderName }, ({ folderName }) =>
 export function handleDirectCd(folderName: string): Effect.Effect<void, DevError, Directory | ShellIntegrationService> {
   return Effect.gen(function* () {
     if (!folderName || folderName.trim() === "") {
-      return yield* unknownError("Folder name for 'cd' command cannot be empty.");
+      return yield* new UnknownError({
+        message: "Folder name for 'cd' command cannot be empty.",
+        details: "Folder name for 'cd' command cannot be empty.",
+      });
     }
 
     // Use DirectoryService to get directories
@@ -74,7 +77,7 @@ export function handleDirectCd(folderName: string): Effect.Effect<void, DevError
 
     // Nothing found or no directories
     yield* Effect.logError(`Folder '${folderName}' not found`);
-    return yield* unknownError(`Folder '${folderName}' not found`);
+    return yield* new UnknownError({ message: `Folder '${folderName}' not found`, details: `Folder '${folderName}' not found` });
   }).pipe(Effect.withSpan("cd.handle_direct"));
 }
 

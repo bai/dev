@@ -4,7 +4,7 @@ import { Effect, Layer } from "effect";
 import { Database, type DatabaseService } from "~/capabilities/persistence/database-port";
 import type { DrizzleDatabase } from "~/capabilities/persistence/drizzle-types";
 import { InstallIdentity, type InstallIdentityService } from "~/capabilities/persistence/install-identity-port";
-import { configError } from "~/core/errors";
+import { ConfigError } from "~/core/errors";
 
 import { installMetadata } from "../../../drizzle/schema";
 
@@ -18,7 +18,7 @@ const selectInstallMetadataRow = (db: DrizzleDatabase) =>
         .from(installMetadata)
         .where(eq(installMetadata.key, INSTALL_METADATA_KEY))
         .limit(1),
-    catch: (error) => configError(`Failed to query install metadata: ${error}`),
+    catch: (error) => new ConfigError({ message: `Failed to query install metadata: ${error}` }),
   });
 
 const insertInstallMetadataRow = (db: DrizzleDatabase, installId: string) =>
@@ -32,7 +32,7 @@ const insertInstallMetadataRow = (db: DrizzleDatabase, installId: string) =>
           created_at: new Date(),
         })
         .onConflictDoNothing({ target: installMetadata.key }),
-    catch: (error) => configError(`Failed to insert install identity: ${error}`),
+    catch: (error) => new ConfigError({ message: `Failed to insert install identity: ${error}` }),
   });
 
 export const InstallIdentityLiveLayer = Layer.effect(
@@ -53,7 +53,7 @@ export const InstallIdentityLiveLayer = Layer.effect(
             const persistedRows = yield* selectInstallMetadataRow(db);
             const persistedInstallId = persistedRows[0]?.installId;
             if (!persistedInstallId) {
-              return yield* Effect.fail(configError("Install identity row was not found after insert"));
+              return yield* Effect.fail(new ConfigError({ message: "Install identity row was not found after insert" }));
             }
             return persistedInstallId;
           }),

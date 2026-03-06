@@ -18,11 +18,9 @@ import { afterEach, describe, expect, vi } from "vitest";
 import { FileSystem, type FileSystemService } from "~/capabilities/system/file-system-port";
 import { NetworkLiveLayer } from "~/capabilities/system/network-live";
 import { Network } from "~/capabilities/system/network-port";
-import { fileSystemError } from "~/core/errors";
+import { FileSystemError } from "~/core/errors";
 
-const createMockFileSystem = (
-  writeBehavior?: (path: string, content: string) => Effect.Effect<void, ReturnType<typeof fileSystemError>, never>,
-) => {
+const createMockFileSystem = (writeBehavior?: (path: string, content: string) => Effect.Effect<void, FileSystemError, never>) => {
   const writes: Array<{ path: string; content: string }> = [];
 
   const fileSystem: FileSystemService = {
@@ -149,7 +147,7 @@ describe("network-live", () => {
         }),
       );
 
-      const mock = createMockFileSystem(() => Effect.fail(fileSystemError("disk full", "/tmp/out.txt")));
+      const mock = createMockFileSystem(() => Effect.fail(new FileSystemError({ message: "disk full", path: "/tmp/out.txt" })));
       const network = yield* makeNetwork(mock.fileSystem);
       const result = yield* Effect.exit(network.downloadFile("https://example.com/file", "/tmp/out.txt"));
 

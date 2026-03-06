@@ -4,19 +4,19 @@ import {
   CliUsageError,
   ConfigError,
   ExternalToolError,
+  FileSystemError,
   GitError,
+  HealthCheckError,
+  NetworkError,
+  ShellExecutionError,
+  StatusCheckError,
   UnknownError,
-  cliUsageError,
-  configError,
-  externalToolError,
-  gitError,
-  unknownError,
 } from "~/core/errors";
 
 describe("errors", () => {
-  describe("class-based messages", () => {
+  describe("direct constructors", () => {
     it("uses message as the primary error text for string-based domain errors", () => {
-      const error = configError("Configuration file not found");
+      const error = new ConfigError({ message: "Configuration file not found" });
 
       expect(error).toBeInstanceOf(Error);
       expect(error.message).toBe("Configuration file not found");
@@ -24,34 +24,25 @@ describe("errors", () => {
     });
 
     it("preserves tag and message for GitError", () => {
-      const error = gitError("Git operation failed");
+      const error = new GitError({ message: "Git operation failed" });
 
       expect(error._tag).toBe("GitError");
       expect(error.message).toBe("Git operation failed");
       expect(error.exitCode).toBe(1);
     });
 
-    it("formats UnknownError from non-string details while preserving the details payload", () => {
-      const details = { complex: "object" };
-      const error = unknownError(details);
+    it("supports UnknownError details with an explicit message", () => {
+      const error = new UnknownError({ message: "Fallback failed", details: { complex: "object" } });
 
       expect(error._tag).toBe("UnknownError");
-      expect(error.message).toBe('{"complex":"object"}');
-      expect(error.details).toEqual(details);
+      expect(error.message).toBe("Fallback failed");
+      expect(error.details).toEqual({ complex: "object" });
       expect(error.exitCode).toBe(1);
     });
 
-    it("allows UnknownError callers to override the displayed message", () => {
-      const error = unknownError({ complex: "object" }, { message: "Fallback failed" });
-
-      expect(error.message).toBe("Fallback failed");
-      expect(error.details).toEqual({ complex: "object" });
-    });
-  });
-
-  describe("structured payload fields", () => {
     it("keeps tool exit metadata separate from the program exit code", () => {
-      const error = externalToolError("bun install failed", {
+      const error = new ExternalToolError({
+        message: "bun install failed",
         tool: "bun",
         toolExitCode: 7,
         stderr: "install failed",
@@ -65,20 +56,12 @@ describe("errors", () => {
     });
 
     it("maps CLI parser failures to an app-owned error type", () => {
-      const error = cliUsageError("Missing required argument", "MissingValue");
+      const error = new CliUsageError({ message: "Missing required argument", validationTag: "MissingValue" });
 
       expect(error).toBeInstanceOf(CliUsageError);
       expect(error.message).toBe("Missing required argument");
       expect(error.validationTag).toBe("MissingValue");
       expect(error.exitCode).toBe(1);
-    });
-  });
-
-  describe("direct constructors", () => {
-    it("supports direct Schema.TaggedError construction with the new message field", () => {
-      const error = new ConfigError({ message: "Test config error" });
-
-      expect(error.message).toBe("Test config error");
     });
 
     it("supports direct UnknownError construction with explicit details", () => {
@@ -88,10 +71,23 @@ describe("errors", () => {
       expect(error.details).toEqual({ complex: "object" });
     });
 
-    it("supports direct GitError construction with the new message field", () => {
-      const error = new GitError({ message: "Git operation failed" });
+    it("supports structured constructor payloads on the remaining error classes", () => {
+      const fileSystemError = new FileSystemError({ message: "read failed", path: "/tmp/file" });
+      const networkError = new NetworkError({ message: "network down" });
+      const healthCheckError = new HealthCheckError({ message: "git failed", tool: "git" });
+      const statusCheckError = new StatusCheckError({ message: "bad status", failedComponents: ["git"] });
+      const shellExecutionError = new ShellExecutionError({
+        command: "git",
+        args: ["status"],
+        message: "spawn failed",
+        cwd: "/tmp/repo",
+      });
 
-      expect(error.message).toBe("Git operation failed");
+      expect(fileSystemError.path).toBe("/tmp/file");
+      expect(networkError.message).toBe("network down");
+      expect(healthCheckError.tool).toBe("git");
+      expect(statusCheckError.failedComponents).toEqual(["git"]);
+      expect(shellExecutionError.command).toBe("git");
     });
   });
 });

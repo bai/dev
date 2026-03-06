@@ -1,7 +1,7 @@
 import { Effect } from "effect";
 
 import type { MiseService, MiseInfo } from "~/capabilities/tools/mise-port";
-import { shellExecutionError } from "~/core/errors";
+import { ShellExecutionError } from "~/core/errors";
 
 interface MiseMockOverrides {
   readonly checkInstallation?: MiseService["checkInstallation"];
@@ -55,7 +55,7 @@ export class MiseMock implements MiseService {
     }
 
     if (!this.installed) {
-      return Effect.fail(shellExecutionError("mise", ["--version"], "not installed"));
+      return Effect.fail(new ShellExecutionError({ command: "mise", args: ["--version"], message: "not installed" }));
     }
 
     return Effect.succeed(this.info);

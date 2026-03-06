@@ -8,7 +8,7 @@ import { Effect, Exit, Layer } from "effect";
 import { Database, type DatabaseService } from "~/capabilities/persistence/database-port";
 import type { DrizzleDatabase } from "~/capabilities/persistence/drizzle-types";
 import { FileSystem } from "~/capabilities/system/file-system-port";
-import { configError, unknownError, type ConfigError, type UnknownError } from "~/core/errors";
+import { ConfigError, UnknownError } from "~/core/errors";
 import { InstallPaths, StatePaths } from "~/core/runtime/path-service";
 
 // Extended interface for internal use with close method
@@ -35,7 +35,7 @@ export const createDatabaseService = (
             if (error && typeof error === "object" && "_tag" in error) {
               return error as E;
             }
-            return unknownError(`Database query failed: ${error}`);
+            return new UnknownError({ message: `Database query failed: ${error}`, details: `Database query failed: ${error}` });
           }),
         );
       }),
@@ -48,7 +48,11 @@ export const createDatabaseService = (
           yield* Effect.logDebug("Starting database transaction");
           yield* Effect.try({
             try: () => sqlite.exec("BEGIN"),
-            catch: (error) => unknownError(`Failed to begin database transaction: ${error}`),
+            catch: (error) =>
+              new UnknownError({
+                message: `Failed to begin database transaction: ${error}`,
+                details: `Failed to begin database transaction: ${error}`,
+              }),
           });
 
           const transactionResult = yield* restore(fn(drizzleDb)).pipe(
@@ -56,7 +60,10 @@ export const createDatabaseService = (
               if (error && typeof error === "object" && "_tag" in error) {
                 return error as E;
               }
-              return unknownError(`Database transaction failed: ${error}`);
+              return new UnknownError({
+                message: `Database transaction failed: ${error}`,
+                details: `Database transaction failed: ${error}`,
+              });
             }),
             Effect.exit,
           );
@@ -64,14 +71,22 @@ export const createDatabaseService = (
           if (Exit.isSuccess(transactionResult)) {
             yield* Effect.try({
               try: () => sqlite.exec("COMMIT"),
-              catch: (error) => unknownError(`Failed to commit database transaction: ${error}`),
+              catch: (error) =>
+                new UnknownError({
+                  message: `Failed to commit database transaction: ${error}`,
+                  details: `Failed to commit database transaction: ${error}`,
+                }),
             });
             return transactionResult.value;
           }
 
           const rollbackResult = yield* Effect.try({
             try: () => sqlite.exec("ROLLBACK"),
-            catch: (error) => unknownError(`Failed to rollback database transaction: ${error}`),
+            catch: (error) =>
+              new UnknownError({
+                message: `Failed to rollback database transaction: ${error}`,
+                details: `Failed to rollback database transaction: ${error}`,
+              }),
           }).pipe(Effect.exit);
 
           if (Exit.isFailure(rollbackResult)) {
@@ -91,7 +106,7 @@ export const createDatabaseService = (
         yield* Effect.logDebug(`Running database migrations from ${migrationsPath}`);
         yield* Effect.try({
           try: () => migrate(drizzleDb, { migrationsFolder: migrationsPath }),
-          catch: (error) => configError(`Failed to run migrations: ${error}`),
+          catch: (error) => new ConfigError({ message: `Failed to run migrations: ${error}` }),
         });
         yield* Effect.logDebug("Database migrations completed");
       }),
@@ -127,7 +142,7 @@ const createDatabase = Effect.gen(function* () {
   const dbPath = statePaths.dbPath;
 
   if (installPaths.installMode !== "repo") {
-    return yield* configError("Standalone binary distribution is not supported yet");
+    return yield* new ConfigError({ message: "Standalone binary distribution is not supported yet" });
   }
 
   // Ensure directory exists
@@ -145,7 +160,7 @@ const createDatabase = Effect.gen(function* () {
       db.run("PRAGMA wal_checkpoint(PASSIVE)");
       return db;
     },
-    catch: (error) => configError(`Failed to open database at ${dbPath}: ${error}`),
+    catch: (error) => new ConfigError({ message: `Failed to open database at ${dbPath}: ${error}` }),
   });
 
   const drizzleDb = drizzle(sqlite);

@@ -12,17 +12,7 @@ import { Mise } from "~/capabilities/tools/mise-port";
 import { ToolManagement, type ToolManager } from "~/capabilities/tools/tool-management-port";
 import { type ConfigLoaderService, ConfigLoader } from "~/core/config/config-loader-port";
 import { configSchema, type Config } from "~/core/config/config-schema";
-import {
-  configError,
-  type ExternalToolError,
-  externalToolError,
-  type FileSystemError,
-  type ShellExecutionError,
-  shellExecutionError,
-  unknownError,
-  type UnknownError,
-  type DevError,
-} from "~/core/errors";
+import { ConfigError, ExternalToolError, type FileSystemError, ShellExecutionError, UnknownError, type DevError } from "~/core/errors";
 import { InstallPaths, StatePaths, type InstallPathsService, type StatePathsService } from "~/core/runtime/path-service";
 
 // No options needed for upgrade command
@@ -43,7 +33,11 @@ const tryAcquireInstallLock = (lockPath: string): Effect.Effect<boolean, Unknown
         throw error;
       }
     },
-    catch: (error) => unknownError(`Failed to acquire install lock at ${lockPath}: ${error}`),
+    catch: (error) =>
+      new UnknownError({
+        message: `Failed to acquire install lock at ${lockPath}: ${error}`,
+        details: `Failed to acquire install lock at ${lockPath}: ${error}`,
+      }),
   });
 
 const waitForInstallLock = (lockPath: string, remainingAttempts = 80): Effect.Effect<string, UnknownError> =>
@@ -55,7 +49,10 @@ const waitForInstallLock = (lockPath: string, remainingAttempts = 80): Effect.Ef
     }
 
     if (remainingAttempts <= 0) {
-      return yield* unknownError(`Timed out waiting for install lock at ${lockPath}`);
+      return yield* new UnknownError({
+        message: `Timed out waiting for install lock at ${lockPath}`,
+        details: `Timed out waiting for install lock at ${lockPath}`,
+      });
     }
 
     yield* Effect.sleep("250 millis");
@@ -65,7 +62,11 @@ const waitForInstallLock = (lockPath: string, remainingAttempts = 80): Effect.Ef
 const releaseInstallLock = (lockPath: string): Effect.Effect<void, UnknownError> =>
   Effect.tryPromise({
     try: () => fs.rm(lockPath, { recursive: true, force: true }),
-    catch: (error) => unknownError(`Failed to release install lock at ${lockPath}: ${error}`),
+    catch: (error) =>
+      new UnknownError({
+        message: `Failed to release install lock at ${lockPath}: ${error}`,
+        details: `Failed to release install lock at ${lockPath}: ${error}`,
+      }),
   });
 
 const withInstallLock = <A, E, R>(
@@ -168,13 +169,12 @@ export function selfUpdateCli(installPaths: InstallPathsService): Effect.Effect<
         yield* shell.exec("bun", ["install"], { cwd: installPaths.installDir }).pipe(
           Effect.flatMap((result) => {
             if (result.exitCode !== 0) {
-              return Effect.fail(
-                externalToolError("Failed to install CLI dependencies", {
-                  tool: "bun",
-                  toolExitCode: result.exitCode,
-                  stderr: result.stderr,
-                }),
-              );
+              return new ExternalToolError({
+                message: "Failed to install CLI dependencies",
+                tool: "bun",
+                toolExitCode: result.exitCode,
+                stderr: result.stderr,
+              });
             }
             return Effect.succeed(result);
           }),
@@ -238,14 +238,14 @@ export function ensureCorrectConfigUrl(
     const fileSystem = yield* FileSystem;
 
     if (installPaths.installMode !== "repo") {
-      return yield* configError("Standalone binary distribution is not supported yet");
+      return yield* new ConfigError({ message: "Standalone binary distribution is not supported yet" });
     }
 
     const projectConfigContent = yield* fileSystem.readFile(path.join(installPaths.installDir, "config.json"));
     const projectConfig = yield* configLoader.parse(projectConfigContent, "project config.json");
 
     if (!projectConfig.configUrl) {
-      return yield* configError("No configUrl found in project config.json");
+      return yield* new ConfigError({ message: "No configUrl found in project config.json" });
     }
 
     // Step 2: Read the current local config
@@ -267,7 +267,12 @@ export function ensureCorrectConfigUrl(
       const updatedConfigContent = JSON.stringify(updatedConfig, null, 2);
       yield* fileSystem
         .writeFile(localConfigPath, updatedConfigContent)
-        .pipe(Effect.mapError((error) => unknownError(`Failed to update local config: ${error}`)));
+        .pipe(
+          Effect.mapError(
+            (error) =>
+              new UnknownError({ message: `Failed to update local config: ${error}`, details: `Failed to update local config: ${error}` }),
+          ),
+        );
 
       yield* Effect.logDebug("✅ Local config URL updated");
     } else {
@@ -288,7 +293,13 @@ function setupMiseGlobalConfiguration(config: Config): Effect.Effect<void, DevEr
     if (config.miseGlobalConfig) {
       yield* Effect.logDebug(`📝 Found mise global config with ${Object.keys(config.miseGlobalConfig.tools || {}).length} tools`);
 
-      yield* misePort.setupGlobalConfig().pipe(Effect.mapError((error) => unknownError(`Mise config setup failed: ${error}`)));
+      yield* misePort
+        .setupGlobalConfig()
+        .pipe(
+          Effect.mapError(
+            (error) => new UnknownError({ message: `Mise config setup failed: ${error}`, details: `Mise config setup failed: ${error}` }),
+          ),
+        );
 
       yield* Effect.logInfo("✅ Mise global configuration updated successfully");
     } else {
@@ -348,18 +359,25 @@ const prefixToolManagerError = <E extends ExternalToolError | ShellExecutionErro
   Effect.mapError((error: E): E => {
     switch (error._tag) {
       case "ExternalToolError":
-        return externalToolError(`${toolName} ${action} failed: ${error.message}`, {
+        return new ExternalToolError({
+          message: `${toolName} ${action} failed: ${error.message}`,
           tool: error.tool,
           toolExitCode: error.toolExitCode,
           stderr: error.stderr,
         }) as E;
       case "ShellExecutionError":
-        return shellExecutionError(error.command, error.args, `${toolName} ${action} failed: ${error.message}`, {
+        return new ShellExecutionError({
+          command: error.command,
+          args: error.args,
+          message: `${toolName} ${action} failed: ${error.message}`,
           cwd: error.cwd,
           underlyingError: error.underlyingError,
         }) as E;
       case "UnknownError":
-        return unknownError(error.details, { message: `${toolName} ${action} failed: ${error.message}` }) as E;
+        return new UnknownError({
+          message: `${toolName} ${action} failed: ${error.message}`,
+          details: error.details,
+        }) as E;
     }
   });
 

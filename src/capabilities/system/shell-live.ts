@@ -2,7 +2,7 @@ import { spawn } from "bun";
 import { Effect, Layer } from "effect";
 
 import { Shell, type ShellService, type SpawnResult } from "~/capabilities/system/shell-port";
-import { shellExecutionError, type ShellExecutionError } from "~/core/errors";
+import { ShellExecutionError } from "~/core/errors";
 import { annotateErrorTypeOnFailure } from "~/core/observability/error-type";
 
 const createShellSpanAttributes = (command: string, args: string[], cwd?: string): Record<string, string | number> => ({
@@ -32,7 +32,8 @@ const exec = (command: string, args: string[] = [], options: { cwd?: string } = 
         stderr: stderr.trim(),
       };
     },
-    catch: (error) => shellExecutionError(command, args, `Failed to execute command`, { cwd: options.cwd, underlyingError: error }),
+    catch: (error) =>
+      new ShellExecutionError({ command, args, message: "Failed to execute command", cwd: options.cwd, underlyingError: error }),
   }).pipe(
     Effect.tap((result) => Effect.annotateCurrentSpan("shell.exit_code", result.exitCode)),
     annotateErrorTypeOnFailure,
@@ -56,7 +57,10 @@ const execInteractive = (
       return await proc.exited;
     },
     catch: (error) =>
-      shellExecutionError(command, args, `Failed to execute interactive command`, {
+      new ShellExecutionError({
+        command,
+        args,
+        message: "Failed to execute interactive command",
         cwd: options.cwd,
         underlyingError: error,
       }),

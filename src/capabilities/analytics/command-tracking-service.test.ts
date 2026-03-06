@@ -4,7 +4,7 @@ import { describe, expect } from "vitest";
 
 import { makeCommandTracker } from "~/capabilities/analytics/command-tracking-service";
 import { RunStoreMock } from "~/capabilities/persistence/run-store-mock";
-import { ConfigError, UnknownError, configError, unknownError } from "~/core/errors";
+import { ConfigError, UnknownError } from "~/core/errors";
 import type { CommandRun } from "~/core/models";
 import type { RuntimeContextService } from "~/core/runtime/runtime-context-port";
 import type { VersionService } from "~/core/runtime/version-port";
@@ -86,13 +86,13 @@ describe("command-tracking-service", () => {
     Effect.gen(function* () {
       const configFailingStore = new RunStoreMock({
         overrides: {
-          completeIncompleteRuns: () => configError("db unavailable"),
+          completeIncompleteRuns: () => new ConfigError({ message: "db unavailable" }),
         },
       });
 
       const unknownFailingStore = new RunStoreMock({
         overrides: {
-          completeIncompleteRuns: () => unknownError("unknown db error"),
+          completeIncompleteRuns: () => new UnknownError({ message: "unknown db error", details: "unknown db error" }),
         },
       });
 
@@ -113,7 +113,7 @@ describe("command-tracking-service", () => {
     Effect.gen(function* () {
       const failingStore = new RunStoreMock({
         overrides: {
-          record: () => configError("write failed"),
+          record: () => new ConfigError({ message: "write failed" }),
         },
       });
 
@@ -144,7 +144,7 @@ describe("command-tracking-service", () => {
     Effect.gen(function* () {
       const failingStore = new RunStoreMock({
         overrides: {
-          complete: () => unknownError("db crashed"),
+          complete: () => new UnknownError({ message: "db crashed", details: "db crashed" }),
         },
       });
 

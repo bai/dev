@@ -11,7 +11,7 @@ import { Git } from "~/capabilities/system/git-port";
 import type { HealthCheckService } from "~/capabilities/tools/health-check-port";
 import { HealthCheck } from "~/capabilities/tools/health-check-port";
 import type { HealthCheckResult } from "~/capabilities/tools/health-check-port";
-import { HealthCheckError, dockerServiceError, gitError, healthCheckError } from "~/core/errors";
+import { DockerServiceError, HealthCheckError } from "~/core/errors";
 import type { CommandRun } from "~/core/models";
 import { RuntimeContext } from "~/core/runtime/runtime-context-port";
 import { statusCommand } from "~/features/status/status-command";
@@ -189,7 +189,7 @@ describe("status-command", () => {
       const gitContext = createGit(null, null);
 
       const failingHealthCheck: HealthCheckService = {
-        runHealthChecks: () => healthCheckError("registry unavailable"),
+        runHealthChecks: () => new HealthCheckError({ message: "registry unavailable" }),
       };
 
       const layer = Layer.mergeAll(
@@ -247,7 +247,7 @@ describe("status-command", () => {
       });
       const dockerServices: DockerServicesService = {
         ...createDockerServices(true),
-        status: () => dockerServiceError("compose status failed"),
+        status: () => new DockerServiceError({ message: "compose status failed" }),
       };
 
       const layer = Layer.mergeAll(
