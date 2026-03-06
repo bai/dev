@@ -5,7 +5,7 @@ import { describe, expect, it as vitestIt } from "vitest";
 import type { Config } from "./config-schema";
 import type { GitProviderType } from "./models";
 import { PathServiceTag, type PathService } from "./path-service";
-import { isFullUrl, makeRepositoryService, RepositoryLive } from "./repository-service";
+import { isFullUrl, makeRepositoryService } from "./repository-service";
 
 describe("repository-service", () => {
   // Mock PathService implementation
@@ -175,7 +175,7 @@ describe("repository-service", () => {
   describe("expandToFullGitUrl", () => {
     it.effect("returns full URL unchanged", () =>
       Effect.gen(function* () {
-        const result = yield* RepositoryLive.expandToFullGitUrl("https://github.com/myorg/myrepo", "default-org");
+        const result = yield* createRepositoryService().expandToFullGitUrl("https://github.com/myorg/myrepo", "default-org");
 
         expect(result).toBe("https://github.com/myorg/myrepo");
       }),
@@ -183,7 +183,7 @@ describe("repository-service", () => {
 
     it.effect("returns SSH URL unchanged", () =>
       Effect.gen(function* () {
-        const result = yield* RepositoryLive.expandToFullGitUrl("git@github.com:myorg/myrepo.git", "default-org");
+        const result = yield* createRepositoryService().expandToFullGitUrl("git@github.com:myorg/myrepo.git", "default-org");
 
         expect(result).toBe("git@github.com:myorg/myrepo.git");
       }),
@@ -191,7 +191,7 @@ describe("repository-service", () => {
 
     it.effect("expands repo name with default org", () =>
       Effect.gen(function* () {
-        const result = yield* RepositoryLive.expandToFullGitUrl("myrepo", "default-org");
+        const result = yield* createRepositoryService().expandToFullGitUrl("myrepo", "default-org");
 
         expect(result).toBe("https://github.com/default-org/myrepo");
       }),
@@ -199,7 +199,7 @@ describe("repository-service", () => {
 
     it.effect("expands org/repo format", () =>
       Effect.gen(function* () {
-        const result = yield* RepositoryLive.expandToFullGitUrl("myorg/myrepo", "default-org");
+        const result = yield* createRepositoryService().expandToFullGitUrl("myorg/myrepo", "default-org");
 
         expect(result).toBe("https://github.com/myorg/myrepo");
       }),
@@ -207,7 +207,7 @@ describe("repository-service", () => {
 
     it.effect("uses forced GitHub provider", () =>
       Effect.gen(function* () {
-        const result = yield* RepositoryLive.expandToFullGitUrl("myorg/myrepo", "default-org", undefined, "github");
+        const result = yield* createRepositoryService().expandToFullGitUrl("myorg/myrepo", "default-org", undefined, "github");
 
         expect(result).toBe("https://github.com/myorg/myrepo");
       }),
@@ -215,7 +215,7 @@ describe("repository-service", () => {
 
     it.effect("uses forced GitLab provider", () =>
       Effect.gen(function* () {
-        const result = yield* RepositoryLive.expandToFullGitUrl("myorg/myrepo", "default-org", undefined, "gitlab");
+        const result = yield* createRepositoryService().expandToFullGitUrl("myorg/myrepo", "default-org", undefined, "gitlab");
 
         expect(result).toBe("https://gitlab.com/myorg/myrepo");
       }),
@@ -228,7 +228,7 @@ describe("repository-service", () => {
           "github-org": "github",
         };
 
-        const result = yield* RepositoryLive.expandToFullGitUrl("gitlab-org/myrepo", "default-org", orgToProvider);
+        const result = yield* createRepositoryService().expandToFullGitUrl("gitlab-org/myrepo", "default-org", orgToProvider);
 
         expect(result).toBe("https://gitlab.com/gitlab-org/myrepo");
       }),
@@ -240,7 +240,7 @@ describe("repository-service", () => {
           "Default-Org": "gitlab",
         };
 
-        const result = yield* RepositoryLive.expandToFullGitUrl("myrepo", "default-org", orgToProvider);
+        const result = yield* createRepositoryService().expandToFullGitUrl("myrepo", "default-org", orgToProvider);
 
         expect(result).toBe("https://gitlab.com/default-org/myrepo");
       }),
@@ -252,7 +252,7 @@ describe("repository-service", () => {
           "default-org": "gitlab",
         };
 
-        const result = yield* RepositoryLive.expandToFullGitUrl("other-org/myrepo", "default-org", orgToProvider);
+        const result = yield* createRepositoryService().expandToFullGitUrl("other-org/myrepo", "default-org", orgToProvider);
 
         // Should use GitHub (default) since other-org is not in the mapping
         expect(result).toBe("https://github.com/other-org/myrepo");
@@ -265,7 +265,7 @@ describe("repository-service", () => {
           myorg: "gitlab",
         };
 
-        const result = yield* RepositoryLive.expandToFullGitUrl("myorg/myrepo", "default-org", orgToProvider, "github");
+        const result = yield* createRepositoryService().expandToFullGitUrl("myorg/myrepo", "default-org", orgToProvider, "github");
 
         expect(result).toBe("https://github.com/myorg/myrepo");
       }),
@@ -273,7 +273,7 @@ describe("repository-service", () => {
 
     it.effect("handles repository names with special characters", () =>
       Effect.gen(function* () {
-        const result = yield* RepositoryLive.expandToFullGitUrl("my-org/my-repo_2.0", "default-org");
+        const result = yield* createRepositoryService().expandToFullGitUrl("my-org/my-repo_2.0", "default-org");
 
         expect(result).toBe("https://github.com/my-org/my-repo_2.0");
       }),
@@ -281,7 +281,7 @@ describe("repository-service", () => {
 
     it.effect("preserves repository name casing when expanding URLs", () =>
       Effect.gen(function* () {
-        const result = yield* RepositoryLive.expandToFullGitUrl("myorg/MyRepo", "default-org");
+        const result = yield* createRepositoryService().expandToFullGitUrl("myorg/MyRepo", "default-org");
 
         expect(result).toBe("https://github.com/myorg/MyRepo");
       }),
@@ -294,7 +294,7 @@ describe("repository-service", () => {
         };
 
         // When cloning bai/config (bai is not in orgToProvider)
-        const result = yield* RepositoryLive.expandToFullGitUrl("bai/config", "acmesoftware", orgToProvider);
+        const result = yield* createRepositoryService().expandToFullGitUrl("bai/config", "acmesoftware", orgToProvider);
 
         // Should use GitHub, not GitLab
         expect(result).toBe("https://github.com/bai/config");
@@ -307,7 +307,7 @@ describe("repository-service", () => {
           AcmeSoftware: "gitlab",
         };
 
-        const result = yield* RepositoryLive.expandToFullGitUrl("acmesoftware/myrepo", "default-org", orgToProvider);
+        const result = yield* createRepositoryService().expandToFullGitUrl("acmesoftware/myrepo", "default-org", orgToProvider);
 
         expect(result).toBe("https://gitlab.com/acmesoftware/myrepo");
       }),
@@ -319,7 +319,7 @@ describe("repository-service", () => {
           acmesoftware: "gitlab",
         };
 
-        const result = yield* RepositoryLive.expandToFullGitUrl("AcMeSoftware/myrepo", "default-org", orgToProvider);
+        const result = yield* createRepositoryService().expandToFullGitUrl("AcMeSoftware/myrepo", "default-org", orgToProvider);
 
         expect(result).toBe("https://gitlab.com/AcMeSoftware/myrepo");
       }),
@@ -331,7 +331,7 @@ describe("repository-service", () => {
           acmesoftware: "gitlab",
         };
 
-        const result = yield* RepositoryLive.expandToFullGitUrl("myrepo", "AcmeSoftware", orgToProvider);
+        const result = yield* createRepositoryService().expandToFullGitUrl("myrepo", "AcmeSoftware", orgToProvider);
 
         expect(result).toBe("https://gitlab.com/AcmeSoftware/myrepo");
       }),
@@ -341,7 +341,7 @@ describe("repository-service", () => {
   describe("parseFullUrlToRepository", () => {
     it.effect("parses full HTTP URL into repository model", () =>
       Effect.gen(function* () {
-        const result = yield* RepositoryLive.parseFullUrlToRepository("http://github.com/myorg/myrepo.git");
+        const result = yield* createRepositoryService().parseFullUrlToRepository("http://github.com/myorg/myrepo.git");
 
         expect(result).toEqual({
           name: "myrepo",
@@ -357,7 +357,7 @@ describe("repository-service", () => {
 
     it.effect("parses full HTTPS URL into repository model", () =>
       Effect.gen(function* () {
-        const result = yield* RepositoryLive.parseFullUrlToRepository("https://github.com/myorg/myrepo.git");
+        const result = yield* createRepositoryService().parseFullUrlToRepository("https://github.com/myorg/myrepo.git");
 
         expect(result).toEqual({
           name: "myrepo",
@@ -373,7 +373,7 @@ describe("repository-service", () => {
 
     it.effect("parses full git:// URL into repository model", () =>
       Effect.gen(function* () {
-        const result = yield* RepositoryLive.parseFullUrlToRepository("git://github.com/myorg/myrepo.git");
+        const result = yield* createRepositoryService().parseFullUrlToRepository("git://github.com/myorg/myrepo.git");
 
         expect(result).toEqual({
           name: "myrepo",
@@ -389,7 +389,7 @@ describe("repository-service", () => {
 
     it.effect("parses full git+ssh:// URL into repository model", () =>
       Effect.gen(function* () {
-        const result = yield* RepositoryLive.parseFullUrlToRepository("git+ssh://git@github.com/myorg/myrepo.git");
+        const result = yield* createRepositoryService().parseFullUrlToRepository("git+ssh://git@github.com/myorg/myrepo.git");
 
         expect(result).toEqual({
           name: "myrepo",
@@ -405,7 +405,7 @@ describe("repository-service", () => {
 
     it.effect("parses full ssh:// URL into repository model", () =>
       Effect.gen(function* () {
-        const result = yield* RepositoryLive.parseFullUrlToRepository("ssh://git@github.com/myorg/myrepo.git");
+        const result = yield* createRepositoryService().parseFullUrlToRepository("ssh://git@github.com/myorg/myrepo.git");
 
         expect(result).toEqual({
           name: "myrepo",
@@ -421,7 +421,7 @@ describe("repository-service", () => {
 
     it.effect("parses full SSH URL into repository model", () =>
       Effect.gen(function* () {
-        const result = yield* RepositoryLive.parseFullUrlToRepository("git@gitlab.com:mygroup/myproject.git");
+        const result = yield* createRepositoryService().parseFullUrlToRepository("git@gitlab.com:mygroup/myproject.git");
 
         expect(result).toEqual({
           name: "myproject",
@@ -437,7 +437,7 @@ describe("repository-service", () => {
 
     it.effect("fails for invalid URL format", () =>
       Effect.gen(function* () {
-        const result = yield* Effect.exit(RepositoryLive.parseFullUrlToRepository("not-a-valid-url"));
+        const result = yield* Effect.exit(createRepositoryService().parseFullUrlToRepository("not-a-valid-url"));
 
         expect(Exit.isFailure(result)).toBe(true);
       }),

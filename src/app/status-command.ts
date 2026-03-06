@@ -3,7 +3,7 @@ import { Effect } from "effect";
 
 import { CommandRegistryTag, type RegisteredCommand } from "../domain/command-registry-port";
 import { DockerServicesTag, type ServiceStatus } from "../domain/docker-services-port";
-import { statusCheckError } from "../domain/errors";
+import { extractErrorMessage, statusCheckError } from "../domain/errors";
 import { GitTag } from "../domain/git-port";
 import { HealthCheckTag } from "../domain/health-check-port";
 import type { EnvironmentInfo, GitInfo } from "../domain/models";
@@ -192,7 +192,25 @@ const showDockerServicesStatus: Effect.Effect<void, never, DockerServicesTag> = 
     return;
   }
 
-  const statuses = yield* dockerServices.status().pipe(Effect.orElseSucceed(() => [] as readonly ServiceStatus[]));
+  const statuses = yield* dockerServices.status().pipe(
+    Effect.catchTags({
+      DockerServiceError: (error) =>
+        Effect.gen(function* () {
+          yield* Effect.logWarning(`🐳 Docker Services: Unable to determine status: ${extractErrorMessage(error)}`);
+          return null;
+        }),
+      ShellExecutionError: (error) =>
+        Effect.gen(function* () {
+          yield* Effect.logWarning(`🐳 Docker Services: Unable to determine status: ${extractErrorMessage(error)}`);
+          return null;
+        }),
+    }),
+  );
+
+  if (statuses === null) {
+    yield* Effect.logInfo("");
+    return;
+  }
 
   if (statuses.length === 0) {
     yield* Effect.logInfo("🐳 Docker Services: No services configured");

@@ -3,37 +3,54 @@ import path from "path";
 import { describe, expect, it } from "vitest";
 
 import { configSchema } from "./config-schema";
-import { createPathService, DEFAULT_HOME_DIR, resolveUserPath } from "./path-service";
+import { createPathService, resolveUserPath, type PathServiceRuntime } from "./path-service";
+
+const runtime: PathServiceRuntime = {
+  homeDir: "/tmp/home",
+  xdgConfigHome: "/tmp/home/.config",
+  xdgDataHome: "/tmp/home/.local/share",
+  xdgCacheHome: "/tmp/home/.cache",
+  cwd: "/tmp/workspace",
+};
 
 describe("path-service", () => {
   it("resolveUserPath expands tilde-prefixed paths", () => {
-    expect(resolveUserPath("~/src", "/tmp/home")).toBe("/tmp/home/src");
-    expect(resolveUserPath("~", "/tmp/home")).toBe("/tmp/home");
+    expect(resolveUserPath("~/src", runtime)).toBe("/tmp/home/src");
+    expect(resolveUserPath("~", runtime)).toBe("/tmp/home");
   });
 
   it("resolveUserPath resolves relative and absolute paths", () => {
-    expect(resolveUserPath("relative/path", "/tmp/home")).toBe(path.resolve("relative/path"));
-    expect(resolveUserPath("/tmp/absolute", "/tmp/home")).toBe("/tmp/absolute");
+    expect(resolveUserPath("relative/path", runtime)).toBe(path.resolve("/tmp/workspace", "relative/path"));
+    expect(resolveUserPath("/tmp/absolute", runtime)).toBe("/tmp/absolute");
   });
 
   it("createPathService uses default base search path when none is provided", () => {
-    const pathService = createPathService();
+    const pathService = createPathService(runtime);
 
-    expect(pathService.baseSearchPath).toBe(path.join(DEFAULT_HOME_DIR, "src"));
+    expect(pathService.baseSearchPath).toBe(path.join(runtime.homeDir, "src"));
   });
 
   it("createPathService resolves provided base search path", () => {
-    const pathService = createPathService("~/work");
+    const pathService = createPathService(runtime, "~/work");
 
-    expect(pathService.baseSearchPath).toBe(path.join(DEFAULT_HOME_DIR, "work"));
+    expect(pathService.baseSearchPath).toBe(path.join(runtime.homeDir, "work"));
   });
 
   it("getBasePath resolves baseSearchPath from config", () => {
-    const pathService = createPathService();
+    const pathService = createPathService(runtime);
     const config = configSchema.parse({
       baseSearchPath: "~/projects",
     });
 
-    expect(pathService.getBasePath(config)).toBe(path.join(DEFAULT_HOME_DIR, "projects"));
+    expect(pathService.getBasePath(config)).toBe(path.join(runtime.homeDir, "projects"));
+  });
+
+  it("getBasePath resolves relative baseSearchPath from the explicit runtime cwd", () => {
+    const pathService = createPathService(runtime);
+    const config = configSchema.parse({
+      baseSearchPath: "projects",
+    });
+
+    expect(pathService.getBasePath(config)).toBe(path.join(runtime.cwd, "projects"));
   });
 });

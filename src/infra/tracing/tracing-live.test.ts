@@ -12,7 +12,6 @@ import type { Git } from "../../domain/git-port";
 import { GitTag } from "../../domain/git-port";
 import type { InstallIdentity } from "../../domain/install-identity-port";
 import { InstallIdentityTag } from "../../domain/install-identity-port";
-import { PathLive, PathServiceTag } from "../../domain/path-service";
 import { TracingTag } from "../../domain/tracing-port";
 import type { Version } from "../../domain/version-port";
 import { VersionTag } from "../../domain/version-port";
@@ -52,7 +51,6 @@ const loadSdkConfig = (config: ReturnType<typeof configSchema.parse>) =>
     Effect.provideService(VersionTag, mockVersion),
     Effect.provideService(InstallIdentityTag, mockInstallIdentity),
     Effect.provideService(GitTag, mockGit),
-    Effect.provideService(PathServiceTag, PathLive),
   );
 
 describe("tracing-live", () => {

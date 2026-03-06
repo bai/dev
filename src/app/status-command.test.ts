@@ -1,10 +1,10 @@
 import { it } from "@effect/vitest";
-import { Cause, Effect, Exit, Layer, Option } from "effect";
+import { Cause, Effect, Exit, Layer, Logger, Option } from "effect";
 import { describe, expect } from "vitest";
 
 import type { DockerServices, ServiceName, ServiceStatus } from "../domain/docker-services-port";
 import { DockerServicesTag } from "../domain/docker-services-port";
-import { HealthCheckError, gitError, healthCheckError } from "../domain/errors";
+import { HealthCheckError, dockerServiceError, gitError, healthCheckError } from "../domain/errors";
 import type { Git } from "../domain/git-port";
 import { GitTag } from "../domain/git-port";
 import type { HealthCheck } from "../domain/health-check-port";
@@ -254,6 +254,45 @@ describe("status-command", () => {
 
       const result = yield* Effect.exit(statusCommand.handler({}).pipe(Effect.provide(layer)));
       expect(Exit.isFailure(result)).toBe(true);
+    }),
+  );
+
+  it.effect("logs docker status failures instead of reporting no services configured", () =>
+    Effect.gen(function* () {
+      const gitContext = createGit("main", "https://github.com/acme/repo.git");
+      const loggedMessages: string[] = [];
+      const logger = Logger.make(({ message }) => {
+        loggedMessages.push(String(message));
+      });
+      const dockerServices: DockerServices = {
+        ...createDockerServices(true),
+        status: () => dockerServiceError("compose status failed"),
+      };
+
+      const layer = Layer.mergeAll(
+        Layer.succeed(GitTag, gitContext.git),
+        Layer.succeed(DockerServicesTag, dockerServices),
+        Layer.succeed(RunStoreTag, createRunStore()),
+        runtimeContextLayer,
+        Layer.succeed(
+          HealthCheckTag,
+          createHealthCheck([
+            {
+              toolName: "git",
+              version: "2.60.1",
+              status: "ok",
+              checkedAt: new Date(),
+            },
+          ]),
+        ),
+        Logger.replace(Logger.defaultLogger, logger),
+      );
+
+      const result = yield* Effect.exit(statusCommand.handler({}).pipe(Effect.provide(layer)));
+
+      expect(Exit.isSuccess(result)).toBe(true);
+      expect(loggedMessages).toContain("🐳 Docker Services: Unable to determine status: compose status failed");
+      expect(loggedMessages).not.toContain("🐳 Docker Services: No services configured");
     }),
   );
 });

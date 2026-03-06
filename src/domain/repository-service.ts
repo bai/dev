@@ -5,7 +5,7 @@ import { Context, Effect, Layer } from "effect";
 import { configError, type ConfigError } from "./errors";
 import type { GitProviderType, Repository } from "./models";
 import { resolveRepositoryInput } from "./org-provider-utils";
-import { PathLive, PathServiceTag, type PathService } from "./path-service";
+import { PathServiceTag, type PathService } from "./path-service";
 
 /**
  * Repository service for handling repository URL parsing and expansion
@@ -122,8 +122,6 @@ export const makeRepositoryService = (pathService: PathService): RepositoryServi
     expandToFullGitUrl,
   };
 };
-
-export const RepositoryLive: RepositoryService = makeRepositoryService(PathLive);
 
 // Service tag for Effect Context system
 export class RepositoryServiceTag extends Context.Tag("RepositoryService")<RepositoryServiceTag, RepositoryService>() {}

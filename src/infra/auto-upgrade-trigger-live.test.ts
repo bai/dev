@@ -3,7 +3,7 @@ import { Cause, Effect, Exit, Option } from "effect";
 import { afterEach, describe, expect } from "vitest";
 
 import { UnknownError } from "../domain/errors";
-import { makeAutoUpgradeTriggerLive } from "./auto-upgrade-trigger-live";
+import { makeAutoUpgradeTriggerLive, resolveAutoUpgradeInvocation } from "./auto-upgrade-trigger-live";
 
 const withArgv = <A, E, R>(argv: string[], effect: Effect.Effect<A, E, R>): Effect.Effect<A, E, R> =>
   Effect.acquireUseRelease(
@@ -47,13 +47,17 @@ describe("auto-upgrade-trigger-live", () => {
 
       yield* withArgv(["bun", "src/index.ts", "status"], trigger.trigger());
 
-      expect(spawnArgs).toEqual(["bun", "src/index.ts", "upgrade"]);
+      expect(spawnArgs).toEqual([process.execPath, "src/index.ts", "upgrade"]);
       expect(spawnOptions?.detached).toBe(true);
       expect(spawnOptions?.cwd).toBe(process.cwd());
       expect(spawnOptions?.env?.DEV_AUTO_UPGRADE).toBe("1");
       expect(unrefCalled).toBe(true);
     }),
   );
+
+  it("resolves compiled binary invocations to the executable path", () => {
+    expect(resolveAutoUpgradeInvocation(["bun", "/$bunfs/root/dev", "status"], "/tmp/dist/dev")).toEqual(["/tmp/dist/dev", "upgrade"]);
+  });
 
   it.effect("fails with UnknownError when CLI invocation cannot be determined", () =>
     Effect.gen(function* () {

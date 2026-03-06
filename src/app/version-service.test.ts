@@ -4,8 +4,9 @@ import { describe, expect, vi } from "vitest";
 
 import { gitError } from "../domain/errors";
 import { GitTag, type Git } from "../domain/git-port";
-import { createPathService, PathServiceTag } from "../domain/path-service";
+import { PathServiceTag } from "../domain/path-service";
 import { VersionTag } from "../domain/version-port";
+import { makePathServiceMock } from "../infra/path-service-mock";
 import { VersionLiveLayer } from "./version-service";
 
 const createGitMock = (getCurrentCommitShaImpl: Git["getCurrentCommitSha"]): Git => ({
@@ -17,14 +18,14 @@ const createGitMock = (getCurrentCommitShaImpl: Git["getCurrentCommitSha"]): Git
   getRemoteUrl: () => Effect.succeed("git@github.com:acme/dev.git"),
 });
 
-const makeVersionLayer = (git: Git, pathService = createPathService("/tmp/src")) =>
+const makeVersionLayer = (git: Git, pathService = makePathServiceMock({ baseSearchPath: "/tmp/src", devDir: "/tmp/home/.dev" })) =>
   Layer.provide(VersionLiveLayer, Layer.mergeAll(Layer.succeed(GitTag, git), Layer.succeed(PathServiceTag, pathService)));
 
 describe("version-service", () => {
   it.effect("returns current commit sha from Git", () => {
     const getCurrentCommitSha = vi.fn(() => Effect.succeed("abc123"));
     const gitMock = createGitMock(getCurrentCommitSha);
-    const pathService = createPathService("/tmp/src");
+    const pathService = makePathServiceMock({ baseSearchPath: "/tmp/src", devDir: "/tmp/home/.dev" });
 
     return Effect.gen(function* () {
       const version = yield* VersionTag;
@@ -38,7 +39,7 @@ describe("version-service", () => {
   it.effect("falls back to 'unknown' when Git commit lookup fails", () => {
     const getCurrentCommitSha = vi.fn(() => gitError("git unavailable"));
     const gitMock = createGitMock(getCurrentCommitSha);
-    const pathService = createPathService("/tmp/src");
+    const pathService = makePathServiceMock({ baseSearchPath: "/tmp/src", devDir: "/tmp/home/.dev" });
 
     return Effect.gen(function* () {
       const version = yield* VersionTag;

@@ -3,18 +3,35 @@ import { Effect, Layer } from "effect";
 import { AutoUpgradeTriggerTag, type AutoUpgradeTrigger } from "../domain/auto-upgrade-trigger-port";
 import { unknownError, type UnknownError } from "../domain/errors";
 
+export const resolveAutoUpgradeInvocation = (argv: readonly string[], execPath: string): readonly [string, ...string[]] | null => {
+  const scriptPath = argv[1];
+
+  if (!execPath) {
+    return null;
+  }
+
+  if (!scriptPath) {
+    return null;
+  }
+
+  if (scriptPath === execPath || scriptPath.startsWith("/$bunfs/")) {
+    return [execPath, "upgrade"];
+  }
+
+  return [execPath, scriptPath, "upgrade"];
+};
+
 const trigger = (): Effect.Effect<void, UnknownError> =>
   Effect.gen(function* () {
-    const command = process.argv[0];
-    const scriptPath = process.argv[1];
+    const invocation = resolveAutoUpgradeInvocation(process.argv, process.execPath);
 
-    if (!command || !scriptPath) {
+    if (!invocation) {
       return yield* unknownError("Cannot determine CLI command invocation for auto-upgrade");
     }
 
     yield* Effect.try({
       try: () => {
-        const processHandle = Bun.spawn([command, scriptPath, "upgrade"], {
+        const processHandle = Bun.spawn([...invocation], {
           cwd: process.cwd(),
           stdin: "ignore",
           stdout: "ignore",

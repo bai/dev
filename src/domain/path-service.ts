@@ -1,21 +1,20 @@
-import os from "os";
 import path from "path";
 
-import { Context, Layer } from "effect";
+import { Context } from "effect";
 
 import type { Config } from "./config-schema";
 
-// Pure constants - no side effects
-export const DEFAULT_HOME_DIR = os.homedir();
-const DEFAULT_BASE_SEARCH_DIR = "src";
+export const DEFAULT_BASE_SEARCH_DIR = "src";
 const DEFAULT_DEV_DIR = ".dev";
 
-// XDG Base Directory Specification compliant paths
-export const XDG_CONFIG_HOME = process.env.XDG_CONFIG_HOME || path.join(DEFAULT_HOME_DIR, ".config");
-export const XDG_DATA_HOME = process.env.XDG_DATA_HOME || path.join(DEFAULT_HOME_DIR, ".local", "share");
-export const XDG_CACHE_HOME = process.env.XDG_CACHE_HOME || path.join(DEFAULT_HOME_DIR, ".cache");
+export interface PathServiceRuntime {
+  readonly homeDir: string;
+  readonly xdgConfigHome: string;
+  readonly xdgDataHome: string;
+  readonly xdgCacheHome: string;
+  readonly cwd: string;
+}
 
-// Path service interface - pure domain logic for path handling
 export interface PathService {
   readonly homeDir: string;
   readonly baseSearchPath: string;
@@ -28,45 +27,34 @@ export interface PathService {
   getBasePath(config: Config): string;
 }
 
-// Individual functions for each method
-const getBasePath = (config: Config): string => {
-  return resolveUserPath(config.baseSearchPath ?? path.join(DEFAULT_HOME_DIR, DEFAULT_BASE_SEARCH_DIR));
-};
-
-export const resolveUserPath = (filePath: string, homeDir: string = DEFAULT_HOME_DIR): string => {
+export const resolveUserPath = (filePath: string, runtime: Pick<PathServiceRuntime, "homeDir" | "cwd">): string => {
   if (filePath.startsWith("~/")) {
-    return path.join(homeDir, filePath.slice(2));
+    return path.join(runtime.homeDir, filePath.slice(2));
   }
   if (filePath === "~") {
-    return homeDir;
+    return runtime.homeDir;
   }
-  return path.resolve(filePath);
+  return path.resolve(runtime.cwd, filePath);
 };
 
-// Factory function to create PathService with dynamic baseSearchPath
-export const createPathService = (baseSearchPath?: string): PathService => {
+const getBasePath = (config: Config, runtime: PathServiceRuntime): string =>
+  resolveUserPath(config.baseSearchPath ?? path.join(runtime.homeDir, DEFAULT_BASE_SEARCH_DIR), runtime);
+
+export const createPathService = (runtime: PathServiceRuntime, baseSearchPath?: string): PathService => {
   const resolvedBaseSearchPath =
-    baseSearchPath === undefined ? path.join(DEFAULT_HOME_DIR, DEFAULT_BASE_SEARCH_DIR) : resolveUserPath(baseSearchPath);
+    baseSearchPath === undefined ? path.join(runtime.homeDir, DEFAULT_BASE_SEARCH_DIR) : resolveUserPath(baseSearchPath, runtime);
 
   return {
-    homeDir: DEFAULT_HOME_DIR,
-    devDir: path.join(DEFAULT_HOME_DIR, DEFAULT_DEV_DIR),
-    configDir: path.join(XDG_CONFIG_HOME, "dev"),
-    configPath: path.join(XDG_CONFIG_HOME, "dev", "config.json"),
-    dataDir: path.join(XDG_DATA_HOME, "dev"),
-    dbPath: path.join(XDG_DATA_HOME, "dev", "dev.db"),
-    cacheDir: path.join(XDG_CACHE_HOME, "dev"),
+    homeDir: runtime.homeDir,
+    devDir: path.join(runtime.homeDir, DEFAULT_DEV_DIR),
+    configDir: path.join(runtime.xdgConfigHome, "dev"),
+    configPath: path.join(runtime.xdgConfigHome, "dev", "config.json"),
+    dataDir: path.join(runtime.xdgDataHome, "dev"),
+    dbPath: path.join(runtime.xdgDataHome, "dev", "dev.db"),
+    cacheDir: path.join(runtime.xdgCacheHome, "dev"),
     baseSearchPath: resolvedBaseSearchPath,
-    getBasePath,
+    getBasePath: (config) => getBasePath(config, runtime),
   };
 };
 
-// Plain object implementation (default)
-export const PathLive: PathService = createPathService();
-
-// Service tag for Effect Context system
 export class PathServiceTag extends Context.Tag("PathService")<PathServiceTag, PathService>() {}
-
-// Layer factory that provides PathService with dynamic baseSearchPath
-export const createPathServiceLiveLayer = (baseSearchPath?: string) =>
-  Layer.succeed(PathServiceTag, baseSearchPath === undefined ? PathLive : createPathService(baseSearchPath));

@@ -8,7 +8,6 @@ import { ConfigLoaderTag } from "./domain/config-loader-port";
 import { type Config } from "./domain/config-schema";
 import { DirectoryTag } from "./domain/directory-port";
 import type { ServiceName } from "./domain/docker-services-port";
-import { createPathService, createPathServiceLiveLayer } from "./domain/path-service";
 import { RepositoryServiceLiveLayer } from "./domain/repository-service";
 import { AutoUpgradeTriggerLiveLayer } from "./infra/auto-upgrade-trigger-live";
 import { CommandRegistryLiveLayer } from "./infra/command-registry-live";
@@ -25,6 +24,7 @@ import { KeychainLiveLayer } from "./infra/keychain-live";
 import { MiseLiveLayer } from "./infra/mise-live";
 import { MultiRepoProviderLiveLayer } from "./infra/multi-repo-provider-live";
 import { NetworkLiveLayer } from "./infra/network-live";
+import { createPathServiceLive, createPathServiceLiveLayer } from "./infra/path-service-live";
 import { RunStoreLiveLayer } from "./infra/run-store-live";
 import { RuntimeContextLiveLayer } from "./infra/runtime-context-live";
 import { ShellLiveLayer } from "./infra/shell-live";
@@ -50,7 +50,7 @@ export const loadConfiguration = (options: SetupOptions = {}) =>
   Effect.gen(function* () {
     yield* Effect.logDebug("🔧 Loading configuration...");
 
-    const defaults = createPathService();
+    const defaults = createPathServiceLive();
     const configPath = options.configPath ?? defaults.configPath;
     const bootstrapDependencies = Layer.mergeAll(FileSystemLiveLayer, Layer.provide(NetworkLiveLayer, FileSystemLiveLayer));
 
@@ -71,7 +71,7 @@ export const loadConfiguration = (options: SetupOptions = {}) =>
  */
 export const buildAppLayer = (config: Config, options: SetupOptions = {}) => {
   // Extract configuration values
-  const defaults = createPathService();
+  const defaults = createPathServiceLive();
   const configPath = options.configPath ?? defaults.configPath;
   const defaultOrg = config.defaultOrg;
   const baseSearchPath = defaults.getBasePath(config);
@@ -179,7 +179,7 @@ export const setupApplication = (options: SetupOptions = {}) =>
     // Load configuration
     yield* Effect.logDebug("🔧 Setting up application...");
     const config = yield* loadConfiguration(options);
-    const defaults = createPathService();
+    const defaults = createPathServiceLive();
 
     // Build layers
     yield* Effect.logDebug("🔨 Building application layers...");
