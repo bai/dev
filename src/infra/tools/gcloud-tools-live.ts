@@ -13,6 +13,8 @@ import { FileSystemTag, type FileSystem } from "../../domain/file-system-port";
 import { type HealthCheckResult } from "../../domain/health-check-port";
 import { PathServiceTag, type PathService } from "../../domain/path-service";
 import { ShellTag, type Shell } from "../../domain/shell-port";
+import { FileSystemLiveLayer } from "../file-system-live";
+import { ShellLiveLayer } from "../shell-live";
 import { buildMinimumVersionHealthCheck, checkVersionAgainstMinimum, ensureMinimumVersionOrUpgrade } from "./versioned-tools-live";
 
 export const GCLOUD_MIN_VERSION = "552.0.0";
@@ -134,6 +136,7 @@ export const makeGcloudToolsLive = (shell: Shell, filesystem: FileSystem, pathSe
 };
 
 export class GcloudToolsTag extends Effect.Service<GcloudTools>()("GcloudTools", {
+  dependencies: [ShellLiveLayer, FileSystemLiveLayer],
   effect: Effect.gen(function* () {
     const shell = yield* ShellTag;
     const filesystem = yield* FileSystemTag;

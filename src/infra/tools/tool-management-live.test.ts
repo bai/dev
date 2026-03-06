@@ -16,7 +16,7 @@ import { GitToolsTag } from "./git-tools-live";
 import type { MiseTools } from "./mise-tools-live";
 import { MiseToolsTag } from "./mise-tools-live";
 import { ToolManagementLiveLayer } from "./tool-management-live";
-import { BuiltToolRegistryLiveLayer } from "./tool-registry-live";
+import { BuiltToolRegistryTag } from "./tool-registry-live";
 
 const createVersionedToolMock = (version: string, isValid: boolean) => ({
   getCurrentVersion: vi.fn(() => Effect.succeed(version)),
@@ -63,7 +63,7 @@ const createFixtures = () => {
     Layer.succeed(FzfToolsTag, fzfTools),
     Layer.succeed(GcloudToolsTag, gcloudTools),
   );
-  const builtToolRegistryLayer = Layer.provide(BuiltToolRegistryLiveLayer, dependencies);
+  const builtToolRegistryLayer = Layer.provide(BuiltToolRegistryTag.DefaultWithoutDependencies, dependencies);
 
   return {
     bunTools,

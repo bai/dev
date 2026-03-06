@@ -3,12 +3,12 @@ import { Effect } from "effect";
 import { type HealthCheckError } from "../../domain/errors";
 import { type HealthCheckResult } from "../../domain/health-check-port";
 import { type ManagedTool, type ToolManager } from "../../domain/tool-management-port";
-import { BunToolsTag, type BunTools } from "./bun-tools-live";
-import { DockerToolsTag, type DockerTools } from "./docker-tools-live";
-import { FzfToolsTag, type FzfTools } from "./fzf-tools-live";
-import { GcloudToolsTag, type GcloudTools } from "./gcloud-tools-live";
-import { GitToolsTag, type GitTools } from "./git-tools-live";
-import { MiseToolsTag, type MiseTools } from "./mise-tools-live";
+import { BunToolsLiveLayer, BunToolsTag, type BunTools } from "./bun-tools-live";
+import { DockerToolsLiveLayer, DockerToolsTag, type DockerTools } from "./docker-tools-live";
+import { FzfToolsLiveLayer, FzfToolsTag, type FzfTools } from "./fzf-tools-live";
+import { GcloudToolsLiveLayer, GcloudToolsTag, type GcloudTools } from "./gcloud-tools-live";
+import { GitToolsLiveLayer, GitToolsTag, type GitTools } from "./git-tools-live";
+import { MiseToolsLiveLayer, MiseToolsTag, type MiseTools } from "./mise-tools-live";
 
 export interface ToolRegistryDependencies {
   readonly bunTools: BunTools;
@@ -123,6 +123,7 @@ export const createToolRegistry = (dependencies: ToolRegistryDependencies): Buil
 };
 
 export class BuiltToolRegistryTag extends Effect.Service<BuiltToolRegistry>()("BuiltToolRegistry", {
+  dependencies: [BunToolsLiveLayer, DockerToolsLiveLayer, FzfToolsLiveLayer, GcloudToolsLiveLayer, GitToolsLiveLayer, MiseToolsLiveLayer],
   effect: Effect.gen(function* () {
     const bunTools = yield* BunToolsTag;
     const dockerTools = yield* DockerToolsTag;

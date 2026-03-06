@@ -5,6 +5,7 @@ import { type HealthCheckResult } from "../../domain/health-check-port";
 import { MiseTag, type Mise } from "../../domain/mise-port";
 import { ShellTag, type Shell } from "../../domain/shell-port";
 import { compareVersions } from "../../domain/version-utils";
+import { ShellLiveLayer } from "../shell-live";
 import { buildMinimumVersionHealthCheck, checkVersionAgainstMinimum, ensureMinimumVersionOrUpgrade } from "./versioned-tools-live";
 
 export const MISE_MIN_VERSION = "2026.1.5";
@@ -137,6 +138,7 @@ export const makeMiseToolsLive = (shell: Shell, mise: Mise): MiseTools => {
 };
 
 export class MiseToolsTag extends Effect.Service<MiseTools>()("MiseTools", {
+  dependencies: [ShellLiveLayer],
   effect: Effect.gen(function* () {
     const shell = yield* ShellTag;
     const mise = yield* MiseTag;

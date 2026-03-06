@@ -9,7 +9,15 @@ import { annotateErrorTypeOnFailure } from "./tracing/error-type";
 
 // Factory function that creates ConfigLoader with dependencies
 export const makeConfigLoaderLive = (fileSystem: FileSystem, network: Network, configPath: string): ConfigLoader => {
-  // Individual functions implementing the service methods
+  const parse = (content: string, source = "config"): Effect.Effect<Config, ConfigError> =>
+    Effect.try({
+      try: () => {
+        const rawConfig = Bun.JSONC.parse(content);
+        return configSchema.parse(rawConfig);
+      },
+      catch: (error) => configError(`Invalid ${source}: ${error}`),
+    });
+
   const load = (): Effect.Effect<Config, ConfigError | FileSystemError | UnknownError> =>
     fileSystem.exists(configPath).pipe(
       Effect.flatMap((exists) => {
@@ -17,17 +25,7 @@ export const makeConfigLoaderLive = (fileSystem: FileSystem, network: Network, c
           const newConfig = configSchema.parse({});
           return save(newConfig).pipe(Effect.map(() => newConfig));
         }
-        return fileSystem.readFile(configPath).pipe(
-          Effect.flatMap((content) =>
-            Effect.try({
-              try: () => {
-                const rawConfig = Bun.JSONC.parse(content);
-                return configSchema.parse(rawConfig);
-              },
-              catch: (error) => configError(`Invalid config file: ${error}`),
-            }),
-          ),
-        );
+        return fileSystem.readFile(configPath).pipe(Effect.flatMap((content) => parse(content, "config file")));
       }),
       annotateErrorTypeOnFailure,
       Effect.withSpan("config.load", { attributes: { "config.path": configPath } }),
@@ -49,13 +47,9 @@ export const makeConfigLoaderLive = (fileSystem: FileSystem, network: Network, c
               return configError(`Failed to fetch remote config: ${response.status} ${response.statusText}`);
             }
 
-            return Effect.try({
-              try: () => {
-                const remoteConfig = Bun.JSONC.parse(response.body);
-                return configSchema.parse(remoteConfig);
-              },
-              catch: (error) => configError(`Invalid remote config: ${error}`),
-            }).pipe(Effect.flatMap((validatedConfig) => save(validatedConfig).pipe(Effect.map(() => validatedConfig))));
+            return parse(response.body, "remote config").pipe(
+              Effect.flatMap((validatedConfig) => save(validatedConfig).pipe(Effect.map(() => validatedConfig))),
+            );
           }),
         );
       }),
@@ -64,6 +58,7 @@ export const makeConfigLoaderLive = (fileSystem: FileSystem, network: Network, c
     );
 
   return {
+    parse,
     load,
     save,
     refresh,

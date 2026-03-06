@@ -4,6 +4,7 @@ import { beforeEach, describe, expect } from "vitest";
 
 import type { ConfigLoader } from "../domain/config-loader-port";
 import { configSchema } from "../domain/config-schema";
+import { configError } from "../domain/errors";
 import type { FileSystem } from "../domain/file-system-port";
 import { makeMiseLive } from "./mise-live";
 import { makePathServiceMock } from "./path-service-mock";
@@ -44,6 +45,11 @@ const mockFileSystem = {
 } satisfies FileSystem;
 
 const mockConfigLoader: ConfigLoader = {
+  parse: (content, source = "config") =>
+    Effect.try({
+      try: () => configSchema.parse(Bun.JSONC.parse(content)),
+      catch: (error) => configError(`Invalid ${source}: ${error}`),
+    }),
   load: () =>
     Effect.succeed(
       configSchema.parse({

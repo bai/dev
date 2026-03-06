@@ -1,6 +1,6 @@
 import path from "path";
 
-import { Effect } from "effect";
+import { Effect, Layer } from "effect";
 
 import { configError, type ConfigError, type FileSystemError, type UnknownError } from "../domain/errors";
 import { FileSystemTag, type FileSystem } from "../domain/file-system-port";
@@ -46,6 +46,7 @@ const makeShellIntegration = (pathService: PathService, fileSystem: FileSystem):
 });
 
 export class ShellIntegrationTag extends Effect.Service<ShellIntegration>()("ShellIntegration", {
+  dependencies: [Layer.service(PathServiceTag), Layer.service(FileSystemTag)],
   effect: Effect.gen(function* () {
     const pathService = yield* PathServiceTag;
     const fileSystem = yield* FileSystemTag;

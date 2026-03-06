@@ -8,6 +8,7 @@ import { afterEach, describe, expect, vi } from "vitest";
 import type { ConfigLoader } from "../../domain/config-loader-port";
 import { ConfigLoaderTag } from "../../domain/config-loader-port";
 import { configSchema } from "../../domain/config-schema";
+import { configError } from "../../domain/errors";
 import { GitTag } from "../../domain/git-port";
 import type { InstallIdentity } from "../../domain/install-identity-port";
 import { InstallIdentityTag } from "../../domain/install-identity-port";
@@ -33,6 +34,11 @@ const mockInstallIdentity: InstallIdentity = {
 };
 
 const makeConfigLoader = (config: ReturnType<typeof configSchema.parse>): ConfigLoader => ({
+  parse: (content, source = "config") =>
+    Effect.try({
+      try: () => configSchema.parse(Bun.JSONC.parse(content)),
+      catch: (error) => configError(`Invalid ${source}: ${error}`),
+    }),
   load: () => Effect.succeed(config),
   save: () => Effect.void,
   refresh: () => Effect.succeed(config),

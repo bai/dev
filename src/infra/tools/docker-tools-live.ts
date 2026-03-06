@@ -4,6 +4,7 @@ import { healthCheckError, type HealthCheckError } from "../../domain/errors";
 import type { HealthCheckResult } from "../../domain/health-check-port";
 import { ShellTag, type Shell } from "../../domain/shell-port";
 import { compareVersions } from "../../domain/version-utils";
+import { ShellLiveLayer } from "../shell-live";
 
 export const DOCKER_MIN_VERSION = "29.1.3";
 
@@ -102,6 +103,7 @@ export const makeDockerToolsLive = (shell: Shell): DockerTools => {
 };
 
 export class DockerToolsTag extends Effect.Service<DockerTools>()("DockerTools", {
+  dependencies: [ShellLiveLayer],
   effect: Effect.gen(function* () {
     const shell = yield* ShellTag;
     return makeDockerToolsLive(shell);

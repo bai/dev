@@ -3,6 +3,7 @@ import { Effect } from "effect";
 import { type ExternalToolError, type HealthCheckError, type ShellExecutionError } from "../../domain/errors";
 import { type HealthCheckResult } from "../../domain/health-check-port";
 import { ShellTag, type Shell } from "../../domain/shell-port";
+import { ShellLiveLayer } from "../shell-live";
 import { buildMinimumVersionHealthCheck, checkVersionAgainstMinimum, ensureMinimumVersionOrUpgrade } from "./versioned-tools-live";
 
 export const GIT_MIN_VERSION = "2.52.0";
@@ -84,6 +85,7 @@ export const makeGitToolsLive = (shell: Shell): GitTools => {
 };
 
 export class GitToolsTag extends Effect.Service<GitTools>()("GitTools", {
+  dependencies: [ShellLiveLayer],
   effect: Effect.gen(function* () {
     const shell = yield* ShellTag;
     return makeGitToolsLive(shell);

@@ -18,7 +18,7 @@ import { GitToolsTag } from "./git-tools-live";
 import type { MiseTools } from "./mise-tools-live";
 import { MiseToolsTag } from "./mise-tools-live";
 import { makeToolHealthRegistryLive, ToolHealthRegistryLiveLayer } from "./tool-health-registry-live";
-import { BuiltToolRegistryLiveLayer, createToolRegistry } from "./tool-registry-live";
+import { BuiltToolRegistryTag, createToolRegistry } from "./tool-registry-live";
 
 const createResult = (toolName: string, status: "ok" | "warning" | "fail"): HealthCheckResult => ({
   toolName,
@@ -68,7 +68,7 @@ const createFixtures = () => {
     Layer.succeed(GcloudToolsTag, gcloudTools),
     Layer.succeed(DockerToolsTag, dockerTools),
   );
-  const builtToolRegistryLayer = Layer.provide(BuiltToolRegistryLiveLayer, toolLayer);
+  const builtToolRegistryLayer = Layer.provide(BuiltToolRegistryTag.DefaultWithoutDependencies, toolLayer);
   const layer = Layer.provide(ToolHealthRegistryLiveLayer, builtToolRegistryLayer);
 
   const registry = makeToolHealthRegistryLive(createToolRegistry(toolDependencies));

@@ -28,12 +28,6 @@ import { createPathServiceLive, createPathServiceLiveLayer } from "./infra/path-
 import { RunStoreLiveLayer } from "./infra/run-store-live";
 import { RuntimeContextLiveLayer } from "./infra/runtime-context-live";
 import { ShellLiveLayer } from "./infra/shell-live";
-import { BunToolsLiveLayer } from "./infra/tools/bun-tools-live";
-import { DockerToolsLiveLayer } from "./infra/tools/docker-tools-live";
-import { FzfToolsLiveLayer } from "./infra/tools/fzf-tools-live";
-import { GcloudToolsLiveLayer } from "./infra/tools/gcloud-tools-live";
-import { GitToolsLiveLayer } from "./infra/tools/git-tools-live";
-import { MiseToolsLiveLayer } from "./infra/tools/mise-tools-live";
 import { ToolHealthRegistryLiveLayer } from "./infra/tools/tool-health-registry-live";
 import { ToolManagementLiveLayer } from "./infra/tools/tool-management-live";
 import { BuiltToolRegistryLiveLayer } from "./infra/tools/tool-registry-live";
@@ -108,22 +102,14 @@ export const buildAppLayer = (config: Config, options: SetupOptions = {}) => {
   const toolDependencies = Layer.mergeAll(baseServices, configLoaderLayer);
   const miseLiveProvided = Layer.provide(MiseLiveLayer, toolDependencies);
 
-  const toolLayers = Layer.mergeAll(
-    miseLiveProvided,
-    Layer.provide(KeychainLiveLayer, baseServices),
-    Layer.provide(FzfToolsLiveLayer, baseServices),
-    Layer.provide(BunToolsLiveLayer, baseServices),
-    Layer.provide(DockerToolsLiveLayer, baseServices),
-    Layer.provide(GitToolsLiveLayer, baseServices),
-    Layer.provide(MiseToolsLiveLayer, Layer.mergeAll(baseServices, miseLiveProvided)),
-    Layer.provide(GcloudToolsLiveLayer, baseServices),
-    InteractiveSelectorLiveLayer,
-  );
+  const toolLayers = Layer.mergeAll(miseLiveProvided, Layer.provide(KeychainLiveLayer, baseServices), InteractiveSelectorLiveLayer);
 
   // Shared registry + tool management services
-  const builtToolRegistryLayer = Layer.provide(BuiltToolRegistryLiveLayer, toolLayers);
-  const toolManagementLayer = Layer.provide(ToolManagementLiveLayer, builtToolRegistryLayer);
-  const toolHealthRegistryLayer = Layer.provide(ToolHealthRegistryLiveLayer, builtToolRegistryLayer);
+  const builtToolRegistryLayer = Layer.provide(BuiltToolRegistryLiveLayer, Layer.mergeAll(baseServices, miseLiveProvided));
+  const toolRegistryServicesLayer = Layer.provide(
+    Layer.mergeAll(ToolManagementLiveLayer, ToolHealthRegistryLiveLayer),
+    builtToolRegistryLayer,
+  );
 
   // Repository provider
   const repoProviderLayer = MultiRepoProviderLiveLayer(defaultOrg, defaultProvider, orgToProvider);
@@ -145,9 +131,7 @@ export const buildAppLayer = (config: Config, options: SetupOptions = {}) => {
     repositoryServiceLayer,
     configLoaderLayer,
     toolLayers,
-    builtToolRegistryLayer,
-    toolManagementLayer,
-    toolHealthRegistryLayer,
+    toolRegistryServicesLayer,
     repoProviderLayer,
     dockerServicesLayer,
     versionLayer,
@@ -156,15 +140,11 @@ export const buildAppLayer = (config: Config, options: SetupOptions = {}) => {
 
   // Database-dependent services
   const runStoreLayer = Layer.provide(RunStoreLiveLayer, Layer.mergeAll(databaseLayer, baseServices));
-  const healthCheckLayer = Layer.provide(HealthCheckLiveLayer, Layer.mergeAll(databaseLayer, toolHealthRegistryLayer));
-  const appServiceDependencies = Layer.mergeAll(infraLayer, runStoreLayer);
-
+  const healthCheckLayer = Layer.provide(HealthCheckLiveLayer, Layer.mergeAll(databaseLayer, toolRegistryServicesLayer));
   // Final application services
-  const appServices = Layer.mergeAll(
-    Layer.provide(ShellIntegrationLiveLayer, appServiceDependencies),
-    Layer.provide(UpdateCheckerLiveLayer, appServiceDependencies),
-    Layer.provide(CommandTrackerLiveLayer, appServiceDependencies),
-    CommandRegistryLiveLayer,
+  const appServices = Layer.provide(
+    Layer.mergeAll(ShellIntegrationLiveLayer, UpdateCheckerLiveLayer, CommandTrackerLiveLayer, CommandRegistryLiveLayer),
+    Layer.mergeAll(infraLayer, runStoreLayer),
   );
 
   // Combine everything

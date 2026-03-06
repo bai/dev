@@ -3,6 +3,7 @@ import { Effect } from "effect";
 import { type ExternalToolError, type HealthCheckError, type ShellExecutionError } from "../../domain/errors";
 import { type HealthCheckResult } from "../../domain/health-check-port";
 import { ShellTag, type Shell } from "../../domain/shell-port";
+import { ShellLiveLayer } from "../shell-live";
 import { buildMinimumVersionHealthCheck, checkVersionAgainstMinimum, ensureMinimumVersionOrUpgrade } from "./versioned-tools-live";
 
 export const BUN_MIN_VERSION = "1.3.6";
@@ -86,6 +87,7 @@ export const makeBunToolsLive = (shell: Shell): BunTools => {
 };
 
 export class BunToolsTag extends Effect.Service<BunTools>()("BunTools", {
+  dependencies: [ShellLiveLayer],
   effect: Effect.gen(function* () {
     const shell = yield* ShellTag;
     return makeBunToolsLive(shell);

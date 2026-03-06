@@ -2,9 +2,19 @@ import { Command } from "@effect/cli";
 import { Effect } from "effect";
 
 import { CommandRegistryTag, type RegisteredCommand } from "../domain/command-registry-port";
-import { ConfigLoaderTag } from "../domain/config-loader-port";
+import { type ConfigLoader, ConfigLoaderTag } from "../domain/config-loader-port";
 import { configSchema, type Config } from "../domain/config-schema";
-import { unknownError, type DevError } from "../domain/errors";
+import {
+  configError,
+  type ExternalToolError,
+  externalToolError,
+  extractErrorMessage,
+  type ShellExecutionError,
+  shellExecutionError,
+  unknownError,
+  type UnknownError,
+  type DevError,
+} from "../domain/errors";
 import { FileSystemTag } from "../domain/file-system-port";
 import { GitTag } from "../domain/git-port";
 import { MiseTag } from "../domain/mise-port";
@@ -47,7 +57,7 @@ export const upgradeCommand = Command.make("upgrade", {}, () =>
 
     // Step 4: Ensure local config has correct remote URL, then refresh from remote
     yield* Effect.logInfo("🔄 Updating local config with correct remote URL...");
-    yield* ensureCorrectConfigUrl(pathService).pipe(Effect.withSpan("config.ensure_url"));
+    yield* ensureCorrectConfigUrl(pathService, configLoader).pipe(Effect.withSpan("config.ensure_url"));
     yield* Effect.logInfo("🔄 Refreshing dev configuration from remote...");
     const refreshedConfig = yield* configLoader.refresh().pipe(Effect.withSpan("config.refresh"));
     yield* Effect.logInfo("✅ Configuration refreshed successfully");
@@ -66,7 +76,7 @@ export const upgradeCommand = Command.make("upgrade", {}, () =>
 /**
  * Self-update the CLI repository
  */
-function selfUpdateCli(pathService: PathService): Effect.Effect<void, DevError, GitTag | ShellTag> {
+export function selfUpdateCli(pathService: PathService): Effect.Effect<void, DevError, GitTag | ShellTag> {
   return Effect.gen(function* () {
     yield* Effect.logInfo("🔄 Self-updating CLI repository...");
 
@@ -83,33 +93,24 @@ function selfUpdateCli(pathService: PathService): Effect.Effect<void, DevError, 
     }
 
     // Pull latest changes
-    yield* git.pullLatestChanges(pathService.devDir).pipe(
-      Effect.tap(() => Effect.logInfo("✅ CLI repository updated successfully")),
-      Effect.catchAll((error) =>
-        Effect.gen(function* () {
-          yield* Effect.logWarning(`⚠️  Failed to pull latest changes: ${error.reason || error.message || "Unknown error"}`);
-          yield* Effect.logInfo("📝 Continuing with the rest of the upgrade process...");
-        }),
-      ),
-    );
+    yield* git.pullLatestChanges(pathService.devDir).pipe(Effect.tap(() => Effect.logInfo("✅ CLI repository updated successfully")));
 
     // Run bun install to update dependencies
     yield* Effect.logInfo("📦 Installing/updating dependencies...");
     yield* shell.exec("bun", ["install"], { cwd: pathService.devDir }).pipe(
-      Effect.mapError((error) => unknownError(`Failed to install dependencies: ${error.message}`)),
       Effect.flatMap((result) => {
         if (result.exitCode !== 0) {
-          return unknownError(`bun install failed with exit code ${result.exitCode}: ${result.stderr}`);
+          return Effect.fail(
+            externalToolError("Failed to install CLI dependencies", {
+              tool: "bun",
+              exitCode: result.exitCode,
+              stderr: result.stderr,
+            }),
+          );
         }
         return Effect.succeed(result);
       }),
       Effect.tap(() => Effect.logInfo("✅ Dependencies updated successfully")),
-      Effect.catchAll((error) =>
-        Effect.gen(function* () {
-          yield* Effect.logWarning(`⚠️  Failed to install dependencies: ${error.reason || error.message || "Unknown error"}`);
-          yield* Effect.logInfo("📝 Continuing with the rest of the upgrade process...");
-        }),
-      ),
     );
   });
 }
@@ -157,7 +158,7 @@ function ensureShellIntegration(pathService: PathService): Effect.Effect<void, D
  * Ensure local config has the correct configUrl from project config
  * This updates only the configUrl field so that configLoader.refresh() works correctly
  */
-export function ensureCorrectConfigUrl(pathService: PathService): Effect.Effect<void, DevError, FileSystemTag> {
+export function ensureCorrectConfigUrl(pathService: PathService, configLoader: ConfigLoader): Effect.Effect<void, DevError, FileSystemTag> {
   return Effect.gen(function* () {
     const fileSystem = yield* FileSystemTag;
 
@@ -166,17 +167,14 @@ export function ensureCorrectConfigUrl(pathService: PathService): Effect.Effect<
     const projectConfigExists = yield* fileSystem.exists(projectConfigPath);
 
     if (!projectConfigExists) {
-      return yield* unknownError("Project config.json not found. Cannot determine source of truth config URL.");
+      return yield* configError("Project config.json not found. Cannot determine source of truth config URL.");
     }
 
     const projectConfigContent = yield* fileSystem.readFile(projectConfigPath);
-    const projectConfig = yield* Effect.try({
-      try: () => configSchema.parse(Bun.JSONC.parse(projectConfigContent)),
-      catch: (error) => unknownError(`Invalid project config.json: ${error}`),
-    });
+    const projectConfig = yield* configLoader.parse(projectConfigContent, "project config.json");
 
     if (!projectConfig.configUrl) {
-      return yield* unknownError("No configUrl found in project config.json");
+      return yield* configError("No configUrl found in project config.json");
     }
 
     // Step 2: Read the current local config
@@ -184,14 +182,7 @@ export function ensureCorrectConfigUrl(pathService: PathService): Effect.Effect<
     const localConfigExists = yield* fileSystem.exists(localConfigPath);
 
     const localConfig = localConfigExists
-      ? yield* fileSystem.readFile(localConfigPath).pipe(
-          Effect.flatMap((content) =>
-            Effect.try({
-              try: () => configSchema.parse(Bun.JSONC.parse(content)),
-              catch: (error) => unknownError(`Invalid local config.json: ${error}`),
-            }),
-          ),
-        )
+      ? yield* fileSystem.readFile(localConfigPath).pipe(Effect.flatMap((content) => configLoader.parse(content, "local config.json")))
       : configSchema.parse({
           configUrl: projectConfig.configUrl,
           defaultOrg: projectConfig.defaultOrg || "default",
@@ -239,25 +230,16 @@ function setupMiseGlobalConfiguration(config: Config): Effect.Effect<void, DevEr
 /**
  * Upgrade essential tools
  */
-function upgradeEssentialTools(): Effect.Effect<void, DevError, ToolManagementTag> {
+export function upgradeEssentialTools(): Effect.Effect<void, DevError, ToolManagementTag> {
   return Effect.gen(function* () {
     yield* Effect.logInfo("🛠️ Checking essential tools...");
 
     const toolManagement = yield* ToolManagementTag;
     const essentialTools = toolManagement.listEssentialTools();
 
-    // Check and potentially upgrade tools in parallel
-    const toolChecks = yield* Effect.all(
-      essentialTools.map((tool) => Effect.either(checkTool(tool.displayName, tool.manager))),
-      { concurrency: "unbounded" },
-    );
-
-    // Log results
-    for (const result of toolChecks) {
-      if (result._tag === "Left") {
-        yield* Effect.logWarning(`⚠️ Tool check failed: ${result.left}`);
-      }
-    }
+    yield* Effect.forEach(essentialTools, (tool) => checkTool(tool.displayName, tool.manager).pipe(Effect.withSpan("tools.upgrade_one")), {
+      discard: true,
+    });
 
     yield* Effect.logInfo("✅ Essential tools checked");
   });
@@ -269,10 +251,9 @@ function upgradeEssentialTools(): Effect.Effect<void, DevError, ToolManagementTa
 export function checkTool(toolName: string, toolManager: ToolManager): Effect.Effect<void, DevError> {
   return Effect.gen(function* () {
     yield* Effect.annotateCurrentSpan("tool.name", toolName);
-    const { isValid, currentVersion } = yield* toolManager.checkVersion().pipe(
-      Effect.mapError((error) => unknownError(`${toolName} version check failed: ${error}`)),
-      Effect.withSpan("tools.check_version"),
-    );
+    const { isValid, currentVersion } = yield* toolManager
+      .checkVersion()
+      .pipe(prefixToolManagerError(toolName, "version check"), Effect.withSpan("tools.check_version"));
 
     yield* Effect.annotateCurrentSpan("tool.version.valid", isValid.toString());
     if (currentVersion) {
@@ -284,15 +265,32 @@ export function checkTool(toolName: string, toolManager: ToolManager): Effect.Ef
       yield* Effect.logInfo(`✅ ${toolName} ${currentVersion} is up to date`);
     } else if (currentVersion) {
       yield* Effect.logInfo(`📦 Upgrading ${toolName} from ${currentVersion}...`);
-      yield* toolManager.ensureVersionOrUpgrade().pipe(Effect.mapError((error) => unknownError(`${toolName} upgrade failed: ${error}`)));
+      yield* toolManager.ensureVersionOrUpgrade().pipe(prefixToolManagerError(toolName, "upgrade"));
     } else {
       yield* Effect.logInfo(`📦 Installing ${toolName}...`);
-      yield* toolManager
-        .ensureVersionOrUpgrade()
-        .pipe(Effect.mapError((error) => unknownError(`${toolName} installation failed: ${error}`)));
+      yield* toolManager.ensureVersionOrUpgrade().pipe(prefixToolManagerError(toolName, "installation"));
     }
   });
 }
+
+const prefixToolManagerError = <E extends ExternalToolError | ShellExecutionError | UnknownError>(toolName: string, action: string) =>
+  Effect.mapError((error: E): E => {
+    switch (error._tag) {
+      case "ExternalToolError":
+        return externalToolError(`${toolName} ${action} failed: ${error.message}`, {
+          tool: error.tool,
+          exitCode: error.exitCode,
+          stderr: error.stderr,
+        }) as E;
+      case "ShellExecutionError":
+        return shellExecutionError(error.command, error.args, `${toolName} ${action} failed: ${error.reason}`, {
+          cwd: error.cwd,
+          underlyingError: error.underlyingError,
+        }) as E;
+      case "UnknownError":
+        return unknownError(`${toolName} ${action} failed: ${extractErrorMessage(error.reason)}`) as E;
+    }
+  });
 
 /**
  * Show success message and usage examples

@@ -3,6 +3,7 @@ import { Effect } from "effect";
 import { type ExternalToolError, type HealthCheckError, type ShellExecutionError } from "../../domain/errors";
 import { type HealthCheckResult } from "../../domain/health-check-port";
 import { ShellTag, type Shell } from "../../domain/shell-port";
+import { ShellLiveLayer } from "../shell-live";
 import { buildMinimumVersionHealthCheck, checkVersionAgainstMinimum, ensureMinimumVersionOrUpgrade } from "./versioned-tools-live";
 
 export const FZF_MIN_VERSION = "0.67.0";
@@ -84,6 +85,7 @@ export const makeFzfToolsLive = (shell: Shell): FzfTools => {
 };
 
 export class FzfToolsTag extends Effect.Service<FzfTools>()("FzfTools", {
+  dependencies: [ShellLiveLayer],
   effect: Effect.gen(function* () {
     const shell = yield* ShellTag;
     return makeFzfToolsLive(shell);

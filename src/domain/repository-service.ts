@@ -1,6 +1,6 @@
 import path from "path";
 
-import { Effect } from "effect";
+import { Effect, Layer } from "effect";
 
 import { configError, type ConfigError } from "./errors";
 import type { GitProviderType, Repository } from "./models";
@@ -124,6 +124,7 @@ export const makeRepositoryService = (pathService: PathService): RepositoryServi
 };
 
 export class RepositoryServiceTag extends Effect.Service<RepositoryService>()("RepositoryService", {
+  dependencies: [Layer.service(PathServiceTag)],
   effect: Effect.gen(function* () {
     const pathService = yield* PathServiceTag;
     return makeRepositoryService(pathService);
