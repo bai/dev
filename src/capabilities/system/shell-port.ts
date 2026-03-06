@@ -8,21 +8,24 @@ export interface SpawnResult {
   stderr: string;
 }
 
-export interface Shell {
-  /**
-   * Execute a command and return the result
-   */
-  exec(command: string, args?: string[], options?: { cwd?: string }): Effect.Effect<SpawnResult, ShellExecutionError>;
+export class ShellTag extends Effect.Tag("Shell")<
+  ShellTag,
+  {
+    /**
+     * Execute a command and return the result
+     */
+    exec(command: string, args?: string[], options?: { cwd?: string }): Effect.Effect<SpawnResult, ShellExecutionError>;
 
-  /**
-   * Execute a command interactively (inherit stdio)
-   */
-  execInteractive(command: string, args?: string[], options?: { cwd?: string }): Effect.Effect<number, ShellExecutionError>;
+    /**
+     * Execute a command interactively (inherit stdio)
+     */
+    execInteractive(command: string, args?: string[], options?: { cwd?: string }): Effect.Effect<number, ShellExecutionError>;
 
-  /**
-   * Set the current working directory of the running process
-   */
-  setProcessCwd(path: string): Effect.Effect<void>;
-}
+    /**
+     * Set the current working directory of the running process
+     */
+    setProcessCwd(path: string): Effect.Effect<void>;
+  }
+>() {}
 
-export class ShellTag extends Effect.Tag("Shell")<ShellTag, Shell>() {}
+export type Shell = (typeof ShellTag)["Service"];

@@ -12,10 +12,13 @@ export interface CommandInfo {
   readonly displayHelp: () => Effect.Effect<void, never, never>;
 }
 
-export interface CommandRegistry {
-  register(info: CommandInfo): Effect.Effect<void, never, never>;
-  getByName(name: string): Effect.Effect<CommandInfo | undefined, never, never>;
-  getCommands(): Effect.Effect<ReadonlyArray<RegisteredCommand>, never, never>;
-}
+export class CommandRegistryTag extends Effect.Tag("CommandRegistry")<
+  CommandRegistryTag,
+  {
+    register(info: CommandInfo): Effect.Effect<void, never, never>;
+    getByName(name: string): Effect.Effect<CommandInfo | undefined, never, never>;
+    getCommands(): Effect.Effect<ReadonlyArray<RegisteredCommand>, never, never>;
+  }
+>() {}
 
-export class CommandRegistryTag extends Effect.Tag("CommandRegistry")<CommandRegistryTag, CommandRegistry>() {}
+export type CommandRegistry = (typeof CommandRegistryTag)["Service"];

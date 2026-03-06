@@ -13,21 +13,31 @@ export interface HostPathsRuntime {
   readonly cwd: string;
 }
 
-export interface HostPaths {
-  readonly homeDir: string;
-  readonly cwd: string;
-  readonly devDir: string;
-  readonly configDir: string;
-  readonly configPath: string;
-  readonly dataDir: string;
-  readonly dbPath: string;
-  readonly cacheDir: string;
-  resolveUserPath(filePath: string): string;
-}
+export class HostPathsTag extends Effect.Tag("HostPaths")<
+  HostPathsTag,
+  {
+    readonly homeDir: string;
+    readonly cwd: string;
+    readonly devDir: string;
+    readonly configDir: string;
+    readonly configPath: string;
+    readonly dataDir: string;
+    readonly dbPath: string;
+    readonly cacheDir: string;
+    resolveUserPath(filePath: string): string;
+  }
+>() {}
 
-export interface WorkspacePaths {
-  readonly baseSearchPath: string;
-}
+export type HostPaths = (typeof HostPathsTag)["Service"];
+
+export class WorkspacePathsTag extends Effect.Tag("WorkspacePaths")<
+  WorkspacePathsTag,
+  {
+    readonly baseSearchPath: string;
+  }
+>() {}
+
+export type WorkspacePaths = (typeof WorkspacePathsTag)["Service"];
 
 export const resolveUserPath = (filePath: string, runtime: Pick<HostPathsRuntime, "homeDir" | "cwd">): string => {
   if (filePath.startsWith("~/")) {
@@ -63,7 +73,3 @@ export const createWorkspacePaths = (
 ): WorkspacePaths => ({
   baseSearchPath: hostPaths.resolveUserPath(baseSearchPath ?? path.join(hostPaths.homeDir, DEFAULT_BASE_SEARCH_DIR)),
 });
-
-export class HostPathsTag extends Effect.Tag("HostPaths")<HostPathsTag, HostPaths>() {}
-
-export class WorkspacePathsTag extends Effect.Tag("WorkspacePaths")<WorkspacePathsTag, WorkspacePaths>() {}

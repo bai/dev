@@ -30,10 +30,13 @@ export interface ManagedTool {
 /**
  * Tool management port that provides access to individual tool managers
  */
-export interface ToolManagement {
-  readonly tools: Readonly<Record<string, ToolManager>>;
-  readonly listTools: () => readonly ManagedTool[];
-  readonly listEssentialTools: () => readonly ManagedTool[];
-}
+export class ToolManagementTag extends Effect.Tag("ToolManagement")<
+  ToolManagementTag,
+  {
+    readonly tools: Readonly<Record<string, ToolManager>>;
+    readonly listTools: () => readonly ManagedTool[];
+    readonly listEssentialTools: () => readonly ManagedTool[];
+  }
+>() {}
 
-export class ToolManagementTag extends Effect.Tag("ToolManagement")<ToolManagementTag, ToolManagement>() {}
+export type ToolManagement = (typeof ToolManagementTag)["Service"];

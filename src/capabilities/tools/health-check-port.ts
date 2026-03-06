@@ -11,12 +11,15 @@ export interface HealthCheckResult {
   readonly checkedAt: Date;
 }
 
-export interface HealthCheck {
-  /**
-   * Run health checks immediately and return results
-   * Used by `dev status` command
-   */
-  runHealthChecks(): Effect.Effect<readonly HealthCheckResult[], HealthCheckError>;
-}
+export class HealthCheckTag extends Effect.Tag("HealthCheck")<
+  HealthCheckTag,
+  {
+    /**
+     * Run health checks immediately and return results
+     * Used by `dev status` command
+     */
+    runHealthChecks(): Effect.Effect<readonly HealthCheckResult[], HealthCheckError>;
+  }
+>() {}
 
-export class HealthCheckTag extends Effect.Tag("HealthCheck")<HealthCheckTag, HealthCheck>() {}
+export type HealthCheck = (typeof HealthCheckTag)["Service"];

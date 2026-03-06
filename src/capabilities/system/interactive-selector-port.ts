@@ -6,12 +6,15 @@ import type { UnknownError } from "~/core/errors";
  * Domain port for interactive selection functionality
  * This abstracts the specific implementation (fzf, inquirer, etc.)
  */
-export interface InteractiveSelector {
-  /**
-   * Present a list of choices to the user for interactive selection
-   * Returns the selected choice, or null if the user cancels
-   */
-  selectFromList(choices: string[]): Effect.Effect<string | null, UnknownError>;
-}
+export class InteractiveSelectorTag extends Effect.Tag("InteractiveSelector")<
+  InteractiveSelectorTag,
+  {
+    /**
+     * Present a list of choices to the user for interactive selection
+     * Returns the selected choice, or null if the user cancels
+     */
+    selectFromList(choices: string[]): Effect.Effect<string | null, UnknownError>;
+  }
+>() {}
 
-export class InteractiveSelectorTag extends Effect.Tag("InteractiveSelector")<InteractiveSelectorTag, InteractiveSelector>() {}
+export type InteractiveSelector = (typeof InteractiveSelectorTag)["Service"];

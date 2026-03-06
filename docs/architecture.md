@@ -197,21 +197,26 @@ Tests compose only the layers they need (e.g. swap `FileSystemLive` for an in-me
 
 ## 5 · Effect-TS Patterns & Functional Services
 
-Idiomatic Effect focuses on *values* – no classes, no `this`, no hidden state [[see todo-no-classes.md]].
+Idiomatic Effect in this repo uses **class-based declarations** for tags and owned services, but keeps implementations as plain object literals and closures. Avoid `this`, hidden mutable state, and `makeXLive` factory boilerplate when the layer can define the service inline.
 
 ### 5.1 Service Declaration
 
 ```ts
 // src/capabilities/system/git-port.ts
-export interface Git {
-  clone: (repo: Repository, dest: string) => Effect.Effect<void, GitError>;
-  currentCommitSha: (cwd?: string) => Effect.Effect<string, GitError>;
-}
+export class GitTag extends Effect.Tag("Git")<
+  GitTag,
+  {
+    cloneRepositoryToPath(repo: Repository, dest: string): Effect.Effect<void, GitError>;
+    getCurrentCommitSha(cwd?: string): Effect.Effect<string, GitError>;
+  }
+>() {}
 
-export class GitTag extends Effect.Tag("Git")<GitTag, Git>() {}
+export type Git = (typeof GitTag)["Service"];
 ```
 
-### 5.2 Functional Adapter (Factory)
+Abstract ports use `Effect.Tag`. Concrete services that own construction and dependencies use `Effect.Service`.
+
+### 5.2 Inline Adapter Layer
 
 ```ts
 // src/capabilities/system/git-live.ts
@@ -219,26 +224,24 @@ import { Effect, Layer } from "effect";
 import { Git, GitTag } from "~/capabilities/system/git-port";
 import { ShellTag } from "~/capabilities/system/shell-port";
 
-const makeGitLive = (shell: Shell): Git => ({
-  clone: (repo, dest) =>
-    shell.exec("git", ["clone", repo.cloneUrl, dest]),
-
-  currentCommitSha: (cwd) =>
-    shell.exec("git", ["rev-parse", "HEAD"], { cwd }).pipe(
-      Effect.map((r) => r.stdout.trim())
-    ),
-});
-
 export const GitLiveLayer = Layer.effect(
   GitTag,
   Effect.gen(function* () {
     const shell = yield* ShellTag;
-    return makeGitLive(shell);
+    return {
+      cloneRepositoryToPath: (repo, dest) =>
+        shell.exec("git", ["clone", repo.cloneUrl, dest]),
+
+      getCurrentCommitSha: (cwd) =>
+        shell.exec("git", ["rev-parse", "HEAD"], { cwd }).pipe(
+          Effect.map((result) => result.stdout.trim())
+        ),
+    } satisfies Git;
   })
 );
 ```
 
-No `class`, just a *factory* that returns a plain object implementing `Git`.
+The declaration is class-based, but the implementation remains a plain object that closes over dependencies.
 
 ### 5.3 Composing Effects
 
@@ -290,20 +293,23 @@ export const exitCode = (e: DevError): number => ({
 
 ## 7 · Ports & Adapters (Domain Interfaces)
 
-Each port is a pure TypeScript *interface* + an `Effect.Tag`.
+Each abstract port is a class-based `Effect.Tag` with the service shape declared inline.
 
 ```ts
 // src/capabilities/system/file-system-port.ts
-export interface FileSystem {
-  exists: (path: string) => Effect.Effect<boolean, FileSystemError>;
-  readFile: (path: string) => Effect.Effect<string, FileSystemError>;
-  writeFile: (path: string, content: string) => Effect.Effect<void, FileSystemError>;
-}
+export class FileSystemTag extends Effect.Tag("FileSystem")<
+  FileSystemTag,
+  {
+    exists(path: string): Effect.Effect<boolean, FileSystemError>;
+    readFile(path: string): Effect.Effect<string, FileSystemError>;
+    writeFile(path: string, content: string): Effect.Effect<void, FileSystemError>;
+  }
+>() {}
 
-export class FileSystemTag extends Effect.Tag("FileSystem")<FileSystemTag, FileSystem>() {}
+export type FileSystem = (typeof FileSystemTag)["Service"];
 ```
 
-Adapters live in `src/core/` and `src/capabilities/` and are wired together from `src/bootstrap/wiring.ts` via **Effect Layers**.
+Concrete implementations live in `src/core/` and `src/capabilities/` and are wired together only from `src/bootstrap/wiring.ts` via **Effect Layers**.
 
 ---
 
@@ -440,31 +446,34 @@ The repository keeps integration-style tests co-located under `src/` (e.g. comma
 
 ```ts
 // 1. Extend error types
-export interface CacheError extends DevError { _tag: "CacheError" }
+export class CacheError extends Schema.TaggedError<CacheError>()("CacheError", {
+  reason: Schema.String,
+}) {}
 
 // 2. Domain port
-export interface Cache {
-  get: (key: string) => Effect.Effect<string | null, CacheError>;
-  set: (key: string, value: string, ttl?: number) => Effect.Effect<void, CacheError>;
-}
-export class CacheTag extends Effect.Tag("Cache")<CacheTag, Cache>() {}
+export class CacheTag extends Effect.Tag("Cache")<
+  CacheTag,
+  {
+    get(key: string): Effect.Effect<string | null, CacheError>;
+    set(key: string, value: string, ttl?: number): Effect.Effect<void, CacheError>;
+  }
+>() {}
 
-// 3. Functional adapter factory
-const makeRedisCache = (client: RedisClient): Cache => ({
-  get: (k) => Effect.promise(() => client.get(k)),
-  set: (k, v, ttl) => Effect.promise(() => client.set(k, v, "EX", ttl ?? 60)),
-});
+export type Cache = (typeof CacheTag)["Service"];
 
 export const CacheLayer = Layer.effect(
   CacheTag,
   Effect.gen(function* () {
     const client = createRedisClient();
-    return makeRedisCache(client);
+    return {
+      get: (key) => Effect.promise(() => client.get(key)),
+      set: (key, value, ttl) => Effect.promise(() => client.set(key, value, "EX", ttl ?? 60)),
+    } satisfies Cache;
   })
 );
 ```
 
-That's it — the system remains *pure*, *composable* and *idiomatically Effect-TS*.
+That keeps the declaration small, the implementation local to the layer, and the wiring isolated to `src/bootstrap/wiring.ts`.
 
 ### Adding a New Tool or Repository Integration
 

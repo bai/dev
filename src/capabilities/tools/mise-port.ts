@@ -7,36 +7,39 @@ export interface MiseInfo {
   runtimeVersions: Record<string, string>;
 }
 
-export interface Mise {
-  /**
-   * Check if mise is installed and get version info
-   */
-  checkInstallation(): Effect.Effect<MiseInfo, ShellExecutionError>;
+export class MiseTag extends Effect.Tag("Mise")<
+  MiseTag,
+  {
+    /**
+     * Check if mise is installed and get version info
+     */
+    checkInstallation(): Effect.Effect<MiseInfo, ShellExecutionError>;
 
-  /**
-   * Install mise if not present
-   */
-  install(): Effect.Effect<void, ShellExecutionError>;
+    /**
+     * Install mise if not present
+     */
+    install(): Effect.Effect<void, ShellExecutionError>;
 
-  /**
-   * Run mise install in the current directory
-   */
-  installTools(cwd?: string): Effect.Effect<void, ShellExecutionError>;
+    /**
+     * Run mise install in the current directory
+     */
+    installTools(cwd?: string): Effect.Effect<void, ShellExecutionError>;
 
-  /**
-   * Run a task using mise
-   */
-  runTask(taskName: string, args?: readonly string[], cwd?: string): Effect.Effect<void, ShellExecutionError>;
+    /**
+     * Run a task using mise
+     */
+    runTask(taskName: string, args?: readonly string[], cwd?: string): Effect.Effect<void, ShellExecutionError>;
 
-  /**
-   * Get available tasks
-   */
-  getTasks(cwd?: string): Effect.Effect<string[], ShellExecutionError>;
+    /**
+     * Get available tasks
+     */
+    getTasks(cwd?: string): Effect.Effect<string[], ShellExecutionError>;
 
-  /**
-   * Setup mise global configuration from current config
-   */
-  setupGlobalConfig(): Effect.Effect<void, UnknownError>;
-}
+    /**
+     * Setup mise global configuration from current config
+     */
+    setupGlobalConfig(): Effect.Effect<void, UnknownError>;
+  }
+>() {}
 
-export class MiseTag extends Effect.Tag("Mise")<MiseTag, Mise>() {}
+export type Mise = (typeof MiseTag)["Service"];

@@ -17,15 +17,21 @@ export interface ServiceStatus {
   readonly uptime?: string;
 }
 
-export interface DockerServices {
-  up(services?: readonly ServiceName[]): Effect.Effect<void, DockerServiceError | ShellExecutionError>;
-  down(services?: readonly ServiceName[]): Effect.Effect<void, DockerServiceError | ShellExecutionError>;
-  restart(services?: readonly ServiceName[]): Effect.Effect<void, DockerServiceError | ShellExecutionError>;
-  status(): Effect.Effect<readonly ServiceStatus[], DockerServiceError | ShellExecutionError>;
-  logs(service?: ServiceName, options?: { follow?: boolean; tail?: number }): Effect.Effect<void, DockerServiceError | ShellExecutionError>;
-  reset(): Effect.Effect<void, DockerServiceError | ShellExecutionError>;
-  isDockerAvailable(): Effect.Effect<boolean, never>;
-  performHealthCheck(): Effect.Effect<HealthCheckResult, never>;
-}
+export class DockerServicesTag extends Effect.Tag("DockerServices")<
+  DockerServicesTag,
+  {
+    up(services?: readonly ServiceName[]): Effect.Effect<void, DockerServiceError | ShellExecutionError>;
+    down(services?: readonly ServiceName[]): Effect.Effect<void, DockerServiceError | ShellExecutionError>;
+    restart(services?: readonly ServiceName[]): Effect.Effect<void, DockerServiceError | ShellExecutionError>;
+    status(): Effect.Effect<readonly ServiceStatus[], DockerServiceError | ShellExecutionError>;
+    logs(
+      service?: ServiceName,
+      options?: { follow?: boolean; tail?: number },
+    ): Effect.Effect<void, DockerServiceError | ShellExecutionError>;
+    reset(): Effect.Effect<void, DockerServiceError | ShellExecutionError>;
+    isDockerAvailable(): Effect.Effect<boolean, never>;
+    performHealthCheck(): Effect.Effect<HealthCheckResult, never>;
+  }
+>() {}
 
-export class DockerServicesTag extends Effect.Tag("DockerServices")<DockerServicesTag, DockerServices>() {}
+export type DockerServices = (typeof DockerServicesTag)["Service"];
