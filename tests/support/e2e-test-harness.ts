@@ -460,11 +460,7 @@ export const readCommandLog = async (fixture: E2eFixture): Promise<string> => {
 };
 
 export const readCdTargets = async (fixture: E2eFixture): Promise<string[]> => {
-  const candidateDirectories = [
-    path.join(fixture.dataHome, "dev"),
-    path.join(fixture.homeDir, ".local", "share", "dev"),
-    path.join(os.homedir(), ".local", "share", "dev"),
-  ];
+  const candidateDirectories = [path.join(fixture.dataHome, "dev"), path.join(fixture.homeDir, ".local", "share", "dev")];
 
   const targets: string[] = [];
 
