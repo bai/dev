@@ -2,7 +2,7 @@ import { Args, Command } from "@effect/cli";
 import { ATTR_FILE_PATH } from "@opentelemetry/semantic-conventions/incubating";
 import { Effect } from "effect";
 
-import { CommandRegistryTag, type RegisteredCommand } from "~/bootstrap/command-registry-port";
+import { CommandRegistryTag } from "~/bootstrap/command-registry-port";
 import { InteractiveSelectorTag } from "~/capabilities/system/interactive-selector-port";
 import { DirectoryTag } from "~/capabilities/workspace/directory-port";
 import { ShellIntegrationTag, type ShellIntegration } from "~/capabilities/workspace/shell-integration-service";
@@ -110,7 +110,7 @@ export const registerCdCommand: Effect.Effect<void, never, CommandRegistryTag> =
   const registry = yield* CommandRegistryTag;
   yield* registry.register({
     name: "cd",
-    command: cdCommand as RegisteredCommand,
+    command: cdCommand,
     displayHelp,
   });
 });

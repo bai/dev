@@ -1,3 +1,4 @@
+import { ValidationError } from "@effect/cli";
 import { NodeSdk } from "@effect/opentelemetry";
 import { BunRuntime } from "@effect/platform-bun";
 import { ATTR_SERVICE_NAMESPACE } from "@opentelemetry/semantic-conventions";
@@ -7,22 +8,16 @@ import { registerAllCommands, runCli } from "~/bootstrap/cli-router";
 import { CommandRegistryTag } from "~/bootstrap/command-registry-port";
 import { setupApplication } from "~/bootstrap/wiring";
 import { CommandTrackerTag } from "~/capabilities/analytics/command-tracking-service";
-import { exitCode, extractErrorMessage, isDevError, type DevError } from "~/core/errors";
+import { extractErrorMessage, type DevError } from "~/core/errors";
 import { TracingTag } from "~/core/observability/tracing-port";
 import { VersionTag } from "~/core/runtime/version-port";
 import { UpdateCheckerTag } from "~/features/upgrade/update-check-service";
 
-export const handleProgramError = (error: unknown): Effect.Effect<number, never, never> =>
-  Effect.gen(function* () {
-    // Try to handle as DevError first
-    if (isDevError(error)) {
-      yield* Effect.logError(`❌ ${error._tag}: ${extractErrorMessage(error)}`);
-      return exitCode(error);
-    }
+export type ProgramError = DevError | ValidationError.ValidationError;
 
-    // Handle unknown errors
-    const errorMessage = extractErrorMessage(error);
-    yield* Effect.logError(`❌ Unknown error: ${errorMessage}`);
+export const handleProgramError = (error: ProgramError): Effect.Effect<number, never, never> =>
+  Effect.gen(function* () {
+    yield* Effect.logError(`❌ ${error._tag}: ${extractErrorMessage(error)}`);
     return 1;
   });
 
@@ -102,7 +97,7 @@ export const program = Effect.scoped(
     yield* Effect.logDebug("✅ CLI execution completed");
     return commandExitCode;
   }).pipe(Effect.withSpan("cli.main")),
-).pipe(Effect.catchAll(handleProgramError), Effect.catchAllCause(handleProgramCause)) as Effect.Effect<number, never, never>;
+).pipe(Effect.catchAll(handleProgramError), Effect.catchAllCause(handleProgramCause));
 
 // Create the main program with tracing
 export const mainProgram = Effect.gen(function* () {
@@ -139,7 +134,7 @@ export const mainProgram = Effect.gen(function* () {
 
   // Run the program with tracing
   return yield* program.pipe(Effect.provide(Layer.mergeAll(TracingLive, appLayer)));
-}).pipe(Effect.scoped);
+}).pipe(Effect.scoped, Effect.catchAll(handleProgramError), Effect.catchAllCause(handleProgramCause));
 
 // Run the program with BunRuntime
 export const runMainProgram = () =>

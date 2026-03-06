@@ -1,4 +1,4 @@
-import { Schema, absurd } from "effect";
+import { Schema } from "effect";
 
 import type { TracingError } from "~/core/observability/tracing-port";
 
@@ -77,60 +77,6 @@ export type DevError =
   | DockerServiceError
   | TracingError
   | UnknownError;
-
-const devErrorTags = new Set<DevError["_tag"]>([
-  "ConfigError",
-  "GitError",
-  "NetworkError",
-  "AuthError",
-  "ExternalToolError",
-  "FileSystemError",
-  "StatusCheckError",
-  "HealthCheckError",
-  "ShellExecutionError",
-  "DockerServiceError",
-  "TracingError",
-  "UnknownError",
-]);
-
-export const isDevError = (error: unknown): error is DevError =>
-  typeof error === "object" &&
-  error !== null &&
-  "_tag" in error &&
-  typeof error._tag === "string" &&
-  devErrorTags.has(error._tag as DevError["_tag"]);
-
-// Exit code mapping
-export const exitCode = (error: DevError): number => {
-  switch (error._tag) {
-    case "ConfigError":
-      return 2;
-    case "GitError":
-      return 3;
-    case "NetworkError":
-      return 4;
-    case "AuthError":
-      return 5;
-    case "ExternalToolError":
-      return 6;
-    case "FileSystemError":
-      return 7;
-    case "StatusCheckError":
-      return 3;
-    case "UnknownError":
-      return 1;
-    case "HealthCheckError":
-      return 8;
-    case "ShellExecutionError":
-      return 9;
-    case "DockerServiceError":
-      return 11;
-    case "TracingError":
-      return 12;
-    default:
-      return absurd(error);
-  }
-};
 
 // Helper constructors
 export const configError = (reason: string) => new ConfigError({ reason });

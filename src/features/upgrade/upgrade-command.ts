@@ -1,7 +1,7 @@
 import { Command } from "@effect/cli";
 import { Effect } from "effect";
 
-import { CommandRegistryTag, type RegisteredCommand } from "~/bootstrap/command-registry-port";
+import { CommandRegistryTag } from "~/bootstrap/command-registry-port";
 import { FileSystemTag } from "~/capabilities/system/file-system-port";
 import { GitTag } from "~/capabilities/system/git-port";
 import { ShellTag } from "~/capabilities/system/shell-port";
@@ -327,7 +327,7 @@ export const registerUpgradeCommand: Effect.Effect<void, never, CommandRegistryT
   const registry = yield* CommandRegistryTag;
   yield* registry.register({
     name: "upgrade",
-    command: upgradeCommand as RegisteredCommand,
+    command: upgradeCommand,
     displayHelp,
   });
 });

@@ -4,12 +4,12 @@ import { Effect } from "effect";
 import { describe, expect } from "vitest";
 
 import { CommandRegistryLiveLayer } from "~/bootstrap/command-registry-live";
-import type { CommandInfo, RegisteredCommand } from "~/bootstrap/command-registry-port";
+import type { CommandInfo } from "~/bootstrap/command-registry-port";
 import { CommandRegistryTag } from "~/bootstrap/command-registry-port";
 
 const makeCommandInfo = (name: string): CommandInfo => ({
   name,
-  command: Command.make(name, {}, () => Effect.void) as RegisteredCommand,
+  command: Command.make(name, {}, () => Effect.void),
   displayHelp: () => Effect.void,
 });
 

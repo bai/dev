@@ -46,7 +46,7 @@ describe("up command e2e", () => {
           },
         });
 
-        expect(result.exitCode).toBe(9);
+        expect(result.exitCode).toBe(1);
         expect(`${result.stdout}\n${result.stderr}`).toContain("Failed to install tools");
       }),
     20_000,

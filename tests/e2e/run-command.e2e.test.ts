@@ -56,7 +56,7 @@ describe("run command e2e", () => {
             DEV_E2E_MISE_RUN_FAIL: "1",
           },
         });
-        expect(result.exitCode).toBe(9);
+        expect(result.exitCode).toBe(1);
         expect(`${result.stdout}\n${result.stderr}`).toContain("Task 'build' failed");
       }),
     20_000,

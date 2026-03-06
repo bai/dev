@@ -1,8 +1,9 @@
-import { Command } from "@effect/cli";
+import { Command, ValidationError } from "@effect/cli";
 import { Effect } from "effect";
 import * as Arr from "effect/Array";
 
-import { type CommandRegistry, type CommandRegistryTag } from "~/bootstrap/command-registry-port";
+import { type CommandRegistry, type CommandRegistryTag, type RegisteredCommand } from "~/bootstrap/command-registry-port";
+import type { DevError } from "~/core/errors";
 import { registerCdCommand } from "~/features/cd/cd-command";
 import { registerCloneCommand } from "~/features/clone/clone-command";
 import { registerRunCommand } from "~/features/run/run-command";
@@ -11,8 +12,6 @@ import { registerStatusCommand } from "~/features/status/status-command";
 import { registerSyncCommand } from "~/features/sync/sync-command";
 import { registerUpCommand } from "~/features/up/up-command";
 import { registerUpgradeCommand } from "~/features/upgrade/upgrade-command";
-
-type CliCommand = Command.Command<string, unknown, unknown, unknown>;
 
 export const displayMainHelp = (): Effect.Effect<void, never, never> =>
   Effect.gen(function* () {
@@ -78,9 +77,9 @@ export const checkAndDisplayHelp = (args: readonly string[], registry: CommandRe
     return true;
   });
 
-export const createMainCommand = (registry: CommandRegistry) =>
+export const createMainCommand = (registry: CommandRegistry): Effect.Effect<RegisteredCommand, never, never> =>
   Effect.gen(function* () {
-    const commands = (yield* registry.getCommands()) as ReadonlyArray<CliCommand>;
+    const commands = yield* registry.getCommands();
     const baseCommand = Command.make("dev", {}, () => Effect.logInfo("Use --help to see available commands"));
 
     if (!Arr.isNonEmptyReadonlyArray(commands)) {
@@ -98,7 +97,7 @@ export const runCli = (
     version: string;
     description?: string;
   },
-): Effect.Effect<void, unknown, unknown> =>
+): Effect.Effect<void, DevError | ValidationError.ValidationError, unknown> =>
   Effect.scoped(
     Effect.gen(function* () {
       yield* Effect.addFinalizer(() =>
@@ -118,7 +117,7 @@ export const runCli = (
       }
 
       const mainCommand = yield* createMainCommand(registry);
-      const cli = Command.run(mainCommand as Command.Command<string, unknown, unknown, unknown>, {
+      const cli = Command.run(mainCommand, {
         name: metadata.name,
         version: metadata.version,
       });

@@ -129,7 +129,7 @@ describe("services command e2e", () => {
             DEV_E2E_DOCKER_INFO_FAIL: "1",
           },
         });
-        expect(result.exitCode).toBe(11);
+        expect(result.exitCode).toBe(1);
         expect(`${result.stdout}\n${result.stderr}`).toContain("Docker is not available");
       }),
     20_000,

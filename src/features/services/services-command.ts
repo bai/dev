@@ -1,7 +1,7 @@
 import { Args, Command, Options } from "@effect/cli";
 import { Effect } from "effect";
 
-import { CommandRegistryTag, type RegisteredCommand } from "~/bootstrap/command-registry-port";
+import { CommandRegistryTag } from "~/bootstrap/command-registry-port";
 import {
   handleDown,
   handleLogs,
@@ -76,7 +76,7 @@ export const registerServicesCommand: Effect.Effect<void, never, CommandRegistry
   const registry = yield* CommandRegistryTag;
   yield* registry.register({
     name: "services",
-    command: servicesCommand as RegisteredCommand,
+    command: servicesCommand,
     displayHelp,
   });
 });

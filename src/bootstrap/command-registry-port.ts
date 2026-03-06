@@ -1,10 +1,14 @@
+import { Command } from "@effect/cli";
 import { Effect } from "effect";
 
+import type { DevError } from "~/core/errors";
+
 /**
- * Opaque command object stored by the registry.
- * Concrete CLI command types are interpreted at the composition root.
+ * CLI commands registered with the application.
+ * The registry preserves the shared domain error channel to keep the app boundary typed.
+ * Command payload and requirement types remain erased because each command has a different shape.
  */
-export type RegisteredCommand = unknown;
+export type RegisteredCommand = Command.Command<any, any, DevError, any>;
 
 export interface CommandInfo {
   readonly name: string;

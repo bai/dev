@@ -7,7 +7,7 @@ import {
 } from "@opentelemetry/semantic-conventions/incubating";
 import { Effect } from "effect";
 
-import { CommandRegistryTag, type RegisteredCommand } from "~/bootstrap/command-registry-port";
+import { CommandRegistryTag } from "~/bootstrap/command-registry-port";
 import { RepoProviderTag } from "~/capabilities/repositories/repo-provider-port";
 import { isFullUrl, RepositoryServiceTag } from "~/capabilities/repositories/repository-service";
 import { FileSystemTag } from "~/capabilities/system/file-system-port";
@@ -124,7 +124,7 @@ export const registerCloneCommand: Effect.Effect<void, never, CommandRegistryTag
   const registry = yield* CommandRegistryTag;
   yield* registry.register({
     name: "clone",
-    command: cloneCommand as RegisteredCommand,
+    command: cloneCommand,
     displayHelp,
   });
 });

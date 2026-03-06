@@ -1,10 +1,10 @@
-import { Command } from "@effect/cli";
+import { Command, HelpDoc, ValidationError } from "@effect/cli";
 import { it } from "@effect/vitest";
 import { Effect } from "effect";
 import { describe, expect, vi } from "vitest";
 
 import { checkAndDisplayHelp, createMainCommand } from "~/bootstrap/cli-router";
-import type { CommandInfo, CommandRegistry, RegisteredCommand } from "~/bootstrap/command-registry-port";
+import type { CommandInfo, CommandRegistry } from "~/bootstrap/command-registry-port";
 import { configError } from "~/core/errors";
 import { handleProgramError } from "~/index";
 
@@ -16,7 +16,7 @@ const makeRegistry = (commandInfos: ReadonlyArray<CommandInfo>): CommandRegistry
 
 const makeCommandInfo = (name: string, displayHelp?: () => Effect.Effect<void, never, never>): CommandInfo => ({
   name,
-  command: Command.make(name, {}, () => Effect.void) as RegisteredCommand,
+  command: Command.make(name, {}, () => Effect.void),
   displayHelp: displayHelp ?? (() => Effect.void),
 });
 
@@ -71,23 +71,16 @@ describe("index", () => {
     }),
   );
 
-  it.effect("handleProgramError maps DevError to domain exit code", () =>
+  it.effect("handleProgramError maps DevError to exit code 1", () =>
     Effect.gen(function* () {
       const code = yield* handleProgramError(configError("invalid config"));
-      expect(code).toBe(2);
-    }),
-  );
-
-  it.effect("handleProgramError maps unknown errors to exit code 1", () =>
-    Effect.gen(function* () {
-      const code = yield* handleProgramError(new Error("boom"));
       expect(code).toBe(1);
     }),
   );
 
-  it.effect("handleProgramError treats non-domain tagged errors as unknown errors", () =>
+  it.effect("handleProgramError maps CLI validation errors to exit code 1", () =>
     Effect.gen(function* () {
-      const code = yield* handleProgramError({ _tag: "InvalidArgument", message: "boom" });
+      const code = yield* handleProgramError(ValidationError.invalidArgument(HelpDoc.p("boom")));
       expect(code).toBe(1);
     }),
   );

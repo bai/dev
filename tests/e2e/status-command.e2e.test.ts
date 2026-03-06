@@ -47,7 +47,7 @@ describe("status command e2e", () => {
             DEV_E2E_GCLOUD_MISSING: "1",
           },
         });
-        expect(result.exitCode).toBe(3);
+        expect(result.exitCode).toBe(1);
         expect(`${result.stdout}\n${result.stderr}`).toContain("gcloud");
       }),
     20_000,

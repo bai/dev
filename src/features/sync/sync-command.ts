@@ -3,7 +3,7 @@ import path from "path";
 import { Command } from "@effect/cli";
 import { Effect } from "effect";
 
-import { CommandRegistryTag, type RegisteredCommand } from "~/bootstrap/command-registry-port";
+import { CommandRegistryTag } from "~/bootstrap/command-registry-port";
 import { GitTag } from "~/capabilities/system/git-port";
 import { DirectoryTag } from "~/capabilities/workspace/directory-port";
 import { extractErrorMessage } from "~/core/errors";
@@ -96,7 +96,7 @@ export const registerSyncCommand: Effect.Effect<void, never, CommandRegistryTag>
   const registry = yield* CommandRegistryTag;
   yield* registry.register({
     name: "sync",
-    command: syncCommand as RegisteredCommand,
+    command: syncCommand,
     displayHelp,
   });
 });

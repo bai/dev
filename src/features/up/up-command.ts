@@ -2,7 +2,7 @@ import { Command } from "@effect/cli";
 import { ATTR_PROCESS_WORKING_DIRECTORY } from "@opentelemetry/semantic-conventions/incubating";
 import { Effect } from "effect";
 
-import { CommandRegistryTag, type RegisteredCommand } from "~/bootstrap/command-registry-port";
+import { CommandRegistryTag } from "~/bootstrap/command-registry-port";
 import { FileSystemTag } from "~/capabilities/system/file-system-port";
 import { MiseTag } from "~/capabilities/tools/mise-port";
 
@@ -60,7 +60,7 @@ export const registerUpCommand: Effect.Effect<void, never, CommandRegistryTag> =
   const registry = yield* CommandRegistryTag;
   yield* registry.register({
     name: "up",
-    command: upCommand as RegisteredCommand,
+    command: upCommand,
     displayHelp,
   });
 });
