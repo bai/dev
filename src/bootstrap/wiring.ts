@@ -44,87 +44,26 @@ const buildBootstrapLayer = (options: SetupOptions) => {
   return Layer.provide(ConfigLoaderLiveLayer, Layer.mergeAll(FileSystemLiveLayer, networkLayer, hostPathsLayer));
 };
 
-const buildContextLayers = (config: Config, options: SetupOptions) => {
+const buildContextLayer = (config: Config, options: SetupOptions) => {
   const hostPathsLayer = createHostPathsLiveLayer(options.configPath);
   const appConfigLayer = Layer.succeed(AppConfigTag, config);
   const workspacePathsLayer = Layer.provide(WorkspacePathsLiveLayer, Layer.mergeAll(hostPathsLayer, appConfigLayer));
-  const runtimeLayer = Layer.mergeAll(
+
+  return Layer.mergeAll(
+    hostPathsLayer,
+    appConfigLayer,
     FileSystemLiveLayer,
     ShellLiveLayer,
     AutoUpgradeTriggerLiveLayer,
     RuntimeContextLiveLayer,
-    hostPathsLayer,
-    appConfigLayer,
     workspacePathsLayer,
   );
-  return {
-    hostPathsLayer,
-    appConfigLayer,
-    workspacePathsLayer,
-    runtimeLayer,
-  };
 };
 
-const buildInfrastructureLayers = (context: ReturnType<typeof buildContextLayers>) => {
-  const networkLayer = Layer.provide(NetworkLiveLayer, FileSystemLiveLayer);
-  const gitLayer = Layer.provide(GitLiveLayer, ShellLiveLayer);
-  const keychainLayer = Layer.provide(KeychainLiveLayer, ShellLiveLayer);
-  const directoryLayer = Layer.provide(DirectoryLiveLayer, Layer.mergeAll(FileSystemLiveLayer, context.workspacePathsLayer));
-  const databaseLayer = Layer.provide(DatabaseLiveLayer, Layer.mergeAll(FileSystemLiveLayer, context.hostPathsLayer));
-  const configLoaderLayer = Layer.provide(ConfigLoaderLiveLayer, Layer.mergeAll(FileSystemLiveLayer, networkLayer, context.hostPathsLayer));
-  const repositoryServiceLayer = Layer.provide(RepositoryServiceLiveLayer, context.workspacePathsLayer);
-  const repoProviderLayer = Layer.provide(RepoProviderLiveLayer, context.appConfigLayer);
-  const dockerServicesLayer = Layer.provide(DockerServicesLiveLayer, Layer.mergeAll(context.runtimeLayer));
-  const installIdentityLayer = Layer.provide(InstallIdentityLiveLayer, databaseLayer);
-  const versionLayer = Layer.provide(VersionLiveLayer, Layer.mergeAll(gitLayer, context.hostPathsLayer));
-  const runStoreLayer = Layer.provide(RunStoreLiveLayer, databaseLayer);
-
-  return {
-    networkLayer,
-    gitLayer,
-    keychainLayer,
-    directoryLayer,
-    databaseLayer,
-    configLoaderLayer,
-    repositoryServiceLayer,
-    repoProviderLayer,
-    dockerServicesLayer,
-    installIdentityLayer,
-    versionLayer,
-    runStoreLayer,
-  };
-};
-
-const buildToolingLayers = (
-  context: ReturnType<typeof buildContextLayers>,
-  infrastructure: ReturnType<typeof buildInfrastructureLayers>,
-) => {
-  const miseLayer = Layer.provide(MiseLiveLayer, Layer.mergeAll(context.runtimeLayer, infrastructure.configLoaderLayer));
-  const builtToolRegistryLayer = Layer.provide(
-    BuiltToolRegistryLiveLayer,
-    Layer.mergeAll(context.runtimeLayer, infrastructure.configLoaderLayer, miseLayer),
-  );
-  const toolRegistryServicesLayer = Layer.provide(
-    Layer.mergeAll(ToolManagementLiveLayer, ToolHealthRegistryLiveLayer),
-    builtToolRegistryLayer,
-  );
-  const healthCheckLayer = Layer.provide(HealthCheckLiveLayer, Layer.mergeAll(infrastructure.databaseLayer, toolRegistryServicesLayer));
-  const tracingLayer = Layer.provide(
-    TracingLiveLayer,
-    Layer.mergeAll(
-      context.runtimeLayer,
-      infrastructure.configLoaderLayer,
-      infrastructure.versionLayer,
-      infrastructure.installIdentityLayer,
-    ),
-  );
-
-  return {
-    miseLayer,
-    toolRegistryServicesLayer,
-    healthCheckLayer,
-    tracingLayer,
-  };
+const buildDirectorySetupLayer = (config: Config, options: SetupOptions) => {
+  const contextLayer = buildContextLayer(config, options);
+  const directoryLayer = Layer.provide(DirectoryLiveLayer, contextLayer);
+  return Layer.mergeAll(contextLayer, directoryLayer);
 };
 
 /**
@@ -149,36 +88,42 @@ export const loadConfiguration = (options: SetupOptions = {}) =>
  * Build the complete application layer
  */
 export const buildAppLayer = (config: Config, options: SetupOptions = {}) => {
-  const context = buildContextLayers(config, options);
-  const infrastructure = buildInfrastructureLayers(context);
-  const tooling = buildToolingLayers(context, infrastructure);
-  const appServicesLayer = Layer.provide(
-    Layer.mergeAll(ShellIntegrationLiveLayer, UpdateCheckerLiveLayer, CommandTrackerLiveLayer),
-    Layer.mergeAll(context.runtimeLayer, infrastructure.versionLayer, infrastructure.runStoreLayer),
-  );
-
-  return Layer.mergeAll(
-    context.runtimeLayer,
-    infrastructure.networkLayer,
-    infrastructure.gitLayer,
-    infrastructure.keychainLayer,
-    infrastructure.directoryLayer,
-    infrastructure.databaseLayer,
-    infrastructure.configLoaderLayer,
-    infrastructure.repositoryServiceLayer,
-    infrastructure.repoProviderLayer,
-    infrastructure.dockerServicesLayer,
-    infrastructure.installIdentityLayer,
-    infrastructure.versionLayer,
-    infrastructure.runStoreLayer,
-    tooling.miseLayer,
-    tooling.toolRegistryServicesLayer,
-    tooling.healthCheckLayer,
-    tooling.tracingLayer,
+  const contextLayer = buildContextLayer(config, options);
+  const platformLayer = Layer.mergeAll(
+    Layer.provide(NetworkLiveLayer, contextLayer),
+    Layer.provide(GitLiveLayer, contextLayer),
+    Layer.provide(KeychainLiveLayer, contextLayer),
+    Layer.provide(DirectoryLiveLayer, contextLayer),
+    Layer.provide(DatabaseLiveLayer, contextLayer),
+    Layer.provide(RepoProviderLiveLayer, contextLayer),
+    Layer.provide(RepositoryServiceLiveLayer, contextLayer),
+    Layer.provide(DockerServicesLiveLayer, contextLayer),
     InteractiveSelectorLiveLayer,
     CommandRegistryLiveLayer,
-    appServicesLayer,
+    Layer.provide(ShellIntegrationLiveLayer, contextLayer),
   );
+  const platformDependencies = Layer.mergeAll(contextLayer, platformLayer);
+  const supportLayer = Layer.mergeAll(
+    Layer.provide(ConfigLoaderLiveLayer, platformDependencies),
+    Layer.provide(VersionLiveLayer, platformDependencies),
+    Layer.provide(RunStoreLiveLayer, platformDependencies),
+    Layer.provide(InstallIdentityLiveLayer, platformDependencies),
+  );
+  const supportDependencies = Layer.mergeAll(platformDependencies, supportLayer);
+  const miseLayer = Layer.provide(MiseLiveLayer, supportDependencies);
+  const toolRegistryDependencies = Layer.mergeAll(supportDependencies, miseLayer);
+  const toolRegistryLayer = Layer.provide(BuiltToolRegistryLiveLayer, toolRegistryDependencies);
+  const appServicesLayer = Layer.mergeAll(
+    Layer.provide(ToolManagementLiveLayer, toolRegistryLayer),
+    Layer.provide(ToolHealthRegistryLiveLayer, toolRegistryLayer),
+    Layer.provide(TracingLiveLayer, supportDependencies),
+    Layer.provide(UpdateCheckerLiveLayer, supportDependencies),
+    Layer.provide(CommandTrackerLiveLayer, supportDependencies),
+  );
+  const healthCheckDependencies = Layer.mergeAll(platformDependencies, toolRegistryLayer, appServicesLayer);
+  const healthCheckLayer = Layer.provide(HealthCheckLiveLayer, healthCheckDependencies);
+
+  return Layer.mergeAll(contextLayer, platformLayer, supportLayer, miseLayer, toolRegistryLayer, appServicesLayer, healthCheckLayer);
 };
 
 /**
@@ -193,9 +138,7 @@ export const setupApplication = (options: SetupOptions = {}) =>
     // Build layers
     yield* Effect.logDebug("🔨 Building application layers...");
     const appLayer = buildAppLayer(config, options);
-    const context = buildContextLayers(config, options);
-    const setupInfrastructure = buildInfrastructureLayers(context);
-    const directorySetupLayer = Layer.mergeAll(context.workspacePathsLayer, setupInfrastructure.directoryLayer);
+    const directorySetupLayer = buildDirectorySetupLayer(config, options);
 
     yield* Effect.logDebug(`✅ Application ready (org: ${config.defaultOrg})`);
 
