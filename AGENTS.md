@@ -24,7 +24,7 @@ This CLI tool follows hexagonal architecture principles with dependency injectio
 **Two-Stage Dynamic Wiring**:
 
 1. **Stage 1**: Load configuration via `loadConfiguration()` (self-contained with bootstrap dependencies)
-2. **Stage 2**: Build dynamic layers using runtime configuration values via `buildAppLayer()`
+2. **Stage 2**: Build dynamic layers in `src/bootstrap/wiring.ts` using the loaded configuration services
 
 **Effect-TS Patterns**:
 
@@ -32,26 +32,36 @@ This CLI tool follows hexagonal architecture principles with dependency injectio
 - Implements proper resource management with `Effect.addFinalizer`
 - Uses `BunRuntime.runMain` for the application entry point
 
-**Domain-Driven Design**:
+**Repository Structure**:
 
-- **Domain layer** (`src/domain/`): Core business logic, ports (interfaces), and models
-- **Infrastructure layer** (`src/infra/`): Concrete implementations of domain ports
-- **Application layer** (`src/app/`): Commands and application services
-- **Composition root** (`src/wiring.ts`): Dynamic configuration loading and layer building
+- **Bootstrap** (`src/bootstrap/`): CLI routing and composition root
+- **Core** (`src/core/`): Cross-cutting config, runtime, models, errors, and observability
+- **Capabilities** (`src/capabilities/`): Reusable subsystems and their ports/adapters
+- **Features** (`src/features/`): Vertical command slices
+- **Composition root** (`src/bootstrap/wiring.ts`): The only place that wires live layers together
 
 ### Key Components
 
-- **Command Structure**: Built using `@effect/cli`. Added to the main command in `src/index.ts`.
+- **Command Structure**: Built using `@effect/cli`. Commands live in `src/features/` and are registered in `src/bootstrap/cli-router.ts`.
 - **Health Check System**: Implements synchronous health monitoring (on-demand via `dev status`), stores results in DB, tracks tools (git, fzf, mise, gcloud, bun).
 - **Configuration Management**: Dynamic configuration loading from remote URLs, support for mise configuration (global and per-repo).
 
 ### File Structure Patterns
 
-- **Commands**: `src/app/*-command.ts`
-- **Services**: `src/app/*-service.ts`
-- **Ports**: `src/domain/*-port.ts`
-- **Infrastructure**: `src/infra/*-live.ts` (adapter families use subdirectories: `src/infra/tools/`, `src/infra/tracing/`)
-- **Wiring**: `src/wiring.ts`
+- **Commands**: `src/features/<feature>/*-command.ts`
+- **Feature Services**: `src/features/<feature>/*-service.ts`
+- **Ports**: `src/core/**/*-port.ts` and `src/capabilities/**/*-port.ts`
+- **Adapters**: `src/core/**/*-live.ts` and `src/capabilities/**/*-live.ts`
+- **Adapter Families**: `src/core/**/adapters/` and `src/capabilities/**/adapters/`
+- **CLI Routing**: `src/bootstrap/cli-router.ts`
+- **Wiring**: `src/bootstrap/wiring.ts`
+
+### Agent Guardrails
+
+- New commands go in `src/features/` and must be registered in `src/bootstrap/cli-router.ts`.
+- New tool or repository integrations go in the `adapters/` subdirectory of the relevant capability.
+- Never import `*-live.ts` files inside `features/` or `core/`. Only `src/bootstrap/wiring.ts` is allowed to wire live layers.
+- Treat any existing exceptions as legacy and do not copy the pattern into new code.
 
 ### Development Workflow
 
@@ -59,7 +69,7 @@ This CLI tool follows hexagonal architecture principles with dependency injectio
 2. New features should follow the Effect-TS patterns established
 3. Database changes require running `bun run db:generate` for migrations
 4. Health checks should be implemented for any new tools or dependencies
-5. Commands should be added to the main command in `src/index.ts`
+5. New commands should be added under `src/features/` and registered in `src/bootstrap/cli-router.ts`
 
 ## Style Guide
 

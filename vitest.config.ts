@@ -4,6 +4,11 @@ import { loadEnv } from "vite";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
+  resolve: {
+    alias: {
+      "~": path.resolve(__dirname, "src"),
+    },
+  },
   test: {
     reporters: ["verbose"],
     globals: false,

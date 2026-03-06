@@ -100,52 +100,63 @@ Infra →  Domain
 
 ```text
 src/
-├── domain/        # 🏛️ Pure business logic (flat structure)
-│   ├── models.ts
+├── bootstrap/     # ⚙️ Composition root and CLI routing
+│   ├── wiring.ts
+│   ├── cli-router.ts
+│   ├── command-registry-port.ts
+│   └── command-registry-live.ts
+│
+├── core/          # 🧱 Cross-cutting runtime, config, and observability
 │   ├── errors.ts
-│   ├── matching.ts
-│   ├── drizzle-types.ts
-│   ├── config-schema.ts    # Configuration schema and types
-│   ├── config-loader-port.ts # Configuration loader interface
-│   ├── *-port.ts      # Domain interfaces (e.g., git-port.ts, database-port.ts)
-│   └── *-service.ts   # Domain services (e.g., repository-service.ts, health-check-service.ts)
+│   ├── models.ts
+│   ├── config/
+│   │   ├── config-schema.ts
+│   │   ├── config-loader-port.ts
+│   │   ├── config-loader-live.ts
+│   │   └── app-config-port.ts
+│   ├── runtime/
+│   │   ├── path-service.ts
+│   │   ├── path-service-live.ts
+│   │   ├── path-service-mock.ts
+│   │   ├── runtime-context-port.ts
+│   │   ├── runtime-context-live.ts
+│   │   ├── version-port.ts
+│   │   └── version-service.ts
+│   └── observability/
+│       ├── tracing-port.ts
+│       ├── tracing-live.ts
+│       ├── tracing-exporter-types.ts
+│       ├── tracing-exporter-registry-live.ts
+│       └── adapters/
+│           └── axiom-tracing-exporter-live.ts
 │
-├── app/           # 🔄 Use-cases (flat structure)
-│   ├── *-command.ts   # Command implementations (e.g., clone-command.ts, cd-command.ts)
-│   └── *-service.ts   # Application services (e.g., command-tracking-service.ts, version-service.ts)
+├── capabilities/  # 🔌 Reusable domain capabilities and adapters
+│   ├── system/
+│   ├── repositories/
+│   │   └── adapters/
+│   ├── workspace/
+│   ├── services/
+│   ├── tools/
+│   │   └── adapters/
+│   ├── persistence/
+│   └── analytics/
 │
-├── infra/         # 🔌 Adapters (-live suffix; adapter families use subdirectories)
-│   ├── config-loader-live.ts
-│   ├── database-live.ts
-│   ├── run-store-live.ts
-│   ├── directory-live.ts
-│   ├── file-system-live.ts
-│   ├── git-live.ts
-│   ├── health-check-live.ts
-│   ├── install-identity-live.ts
-│   ├── keychain-live.ts
-│   ├── mise-live.ts
-│   ├── network-live.ts
-│   ├── github-provider-live.ts
-│   ├── fzf-selector-live.ts
-│   ├── shell-live.ts
-│   ├── tools/                            # Tool adapter family
-│   │   ├── *-tools-live.ts               #   Individual tool adapters (bun, git, mise, fzf, gcloud, docker)
-│   │   ├── tool-management-live.ts       #   Upgrade/version registry
-│   │   └── tool-health-registry-live.ts  #   Health check registry
-│   └── tracing/                          # Tracing adapter family
-│       ├── tracing-live.ts               #   Orchestrator (implements Tracing port)
-│       ├── tracing-exporter-types.ts     #   Exporter factory interface
-│       ├── tracing-exporter-registry-live.ts  #   Mode-to-factory registry
-│       └── axiom-tracing-exporter-live.ts     #   Axiom OTLP exporter
+├── features/      # 🔄 Vertical command slices
+│   ├── cd/
+│   ├── clone/
+│   ├── run/
+│   ├── services/
+│   ├── status/
+│   ├── sync/
+│   ├── up/
+│   └── upgrade/
 │
-├── wiring.ts      # ⚙️ Composition root - configuration loading and layer composition
-└── index.ts       # 🚀 Entry point with main command definition
+└── index.ts       # 🚀 Entry point
 ```
 
 ### 4.1 Adapter Family Subdirectories
 
-Single-adapter ports use flat files in `src/infra/` (e.g., `database-live.ts`, `shell-live.ts`).  When an adapter family has **3+ implementations** or is designed for **plugin-like extensibility**, it gets a subdirectory within `src/infra/`.  Subdirectories are purely organizational — they don't create new architectural layers.  The dependency rule (arrows pointing inward) governs layers, not directories within a layer.
+Single-adapter capabilities can stay flat inside their capability folder (for example `src/capabilities/persistence/database-live.ts` or `src/capabilities/system/shell-live.ts`). When a capability has **3+ implementations** or is designed for **plugin-like extensibility**, it gets an `adapters/` subdirectory (for example `src/capabilities/tools/adapters/` or `src/capabilities/repositories/adapters/`).
 
 Each adapter-family subdirectory contains:
 
@@ -156,14 +167,23 @@ Each adapter-family subdirectory contains:
 
 ### 4.2 Layer Isolation Rules
 
-| Layer         | Can Import From                 | Must **NOT** Import From |
-| ------------- | ------------------------------- | ------------------------ |
-| **Domain**    | Effect, other domain modules    | App, Infra, CLI          |
-| **App**       | Domain, Effect                  | Infra, CLI               |
-| **Infra**     | Domain, Effect, external libs   | App, CLI                 |
-| **Root**      | Every layer                     | —                        |
+| Layer              | Can Import From                        | Must **NOT** Import From |
+| ------------------ | -------------------------------------- | ------------------------ |
+| **Core**           | Effect, external libs                  | Features                 |
+| **Capabilities**   | Core, Effect, external libs            | Features                 |
+| **Features**       | Core, Capabilities, Effect             | Bootstrap internals      |
+| **Bootstrap/Root** | Every layer                            | —                        |
 
-### 4.3 Layer Definitions
+### 4.3 AI Agent Guardrails
+
+Agents extending this CLI should follow these repo-specific rules:
+
+* New commands go in `src/features/` and must be registered in `src/bootstrap/cli-router.ts`.
+* New tool or repository integrations go in the `adapters/` subdirectory of the relevant capability.
+* Never import `*-live.ts` files inside `features/` or `core/`. Only `src/bootstrap/wiring.ts` is allowed to wire live layers.
+* Treat any existing exceptions as legacy. Do not repeat them in new code.
+
+### 4.4 Layer Definitions
 
 | Layer         | Services Included                                                      |
 | ------------- | ---------------------------------------------------------------------- |
@@ -182,7 +202,7 @@ Idiomatic Effect focuses on *values* – no classes, no `this`, no hidden state 
 ### 5.1 Service Declaration
 
 ```ts
-// src/domain/git-port.ts
+// src/capabilities/system/git-port.ts
 export interface Git {
   clone: (repo: Repository, dest: string) => Effect.Effect<void, GitError>;
   currentCommitSha: (cwd?: string) => Effect.Effect<string, GitError>;
@@ -194,10 +214,10 @@ export class GitTag extends Effect.Tag("Git")<GitTag, Git>() {}
 ### 5.2 Functional Adapter (Factory)
 
 ```ts
-// src/infra/git-live.ts
+// src/capabilities/system/git-live.ts
 import { Effect, Layer } from "effect";
-import { Git, GitTag } from "../domain/git-port";
-import { ShellTag } from "../domain/shell-port";
+import { Git, GitTag } from "~/capabilities/system/git-port";
+import { ShellTag } from "~/capabilities/system/shell-port";
 
 const makeGitLive = (shell: Shell): Git => ({
   clone: (repo, dest) =>
@@ -273,7 +293,7 @@ export const exitCode = (e: DevError): number => ({
 Each port is a pure TypeScript *interface* + an `Effect.Tag`.
 
 ```ts
-// src/domain/file-system-port.ts
+// src/capabilities/system/file-system-port.ts
 export interface FileSystem {
   exists: (path: string) => Effect.Effect<boolean, FileSystemError>;
   readFile: (path: string) => Effect.Effect<string, FileSystemError>;
@@ -283,7 +303,7 @@ export interface FileSystem {
 export class FileSystemTag extends Effect.Tag("FileSystem")<FileSystemTag, FileSystem>() {}
 ```
 
-Adapters live in `src/infra/` (flat structure) and are wired in the composition root via **Effect Layers**.
+Adapters live in `src/core/` and `src/capabilities/` and are wired together from `src/bootstrap/wiring.ts` via **Effect Layers**.
 
 ---
 
@@ -313,12 +333,14 @@ A tiny adapter (`RunStoreLive`) inserts a row *before* command execution and fin
 
 ## 9 · Configuration Handling
 
-`ConfigLoader` reads `~/.config/dev/config.json` (following XDG Base Directory Specification), validates via a Zod schema (`configSchema`), then provides the resulting object via an `Effect.Tag` so that any Effect can simply `yield* ConfigLoaderTag`.
+`ConfigLoader` reads `~/.config/dev/config.json` (following XDG Base Directory Specification) and validates via a Zod schema (`configSchema`). The composition root performs this bootstrap step once, then re-exposes the loaded `Config` plus the derived host/workspace path services (`AppConfigTag`, `HostPathsTag`, `WorkspacePathsTag`) so config-aware adapters can depend on services instead of constructor arguments.
+
+`ConfigLoaderTag` remains the port for reading, saving, and refreshing config from disk and remote sources after startup.
 
 The `Config` type is inferred from the Zod schema, ensuring the type always matches what parsing actually produces (with defaults applied).
 
 ```ts
-// src/domain/config-schema.ts
+// src/core/config/config-schema.ts
 export const configSchema = z.object({
   configUrl: z.url().default("https://..."),
   defaultOrg: z.string().default("acmesoftware"),
@@ -391,7 +413,7 @@ const telemetryConfigSchema = z
 Place pure unit tests beside the code they test:
 
 ```text
-src/app/
+src/features/clone/
   ├ clone-command.ts
   └ clone-command.test.ts
 ```
@@ -410,8 +432,9 @@ The repository keeps integration-style tests co-located under `src/` (e.g. comma
 
 1. **Define / reuse domain models & ports**.
 2. **Implement functional adapter(s)** if new infrastructure is needed.
-3. **Write the command** using @effect/cli Command.make with Effect generators.
-4. **Wire** the command by exporting `register<CommandName>Command` from `src/app/*-command.ts` and adding it to `registerAllCommands` in `src/index.ts` (the main command is built dynamically from the command registry).
+3. **Write the command** inside `src/features/<feature>/` using @effect/cli `Command.make` with Effect generators.
+4. **Wire** the command by exporting `register<CommandName>Command` from `src/features/<feature>/*-command.ts` and adding it to `registerAllCommands` in `src/bootstrap/cli-router.ts`.
+5. **Do not import live layers** into the feature. If the command needs a new adapter, add the port in `src/core/` or `src/capabilities/`, add the live implementation there, and wire it only from `src/bootstrap/wiring.ts`.
 
 ### Adding a New Infrastructure Adapter (Example: Redis Cache)
 
@@ -443,6 +466,13 @@ export const CacheLayer = Layer.effect(
 
 That's it — the system remains *pure*, *composable* and *idiomatically Effect-TS*.
 
+### Adding a New Tool or Repository Integration
+
+1. **Keep the port or registry at the capability root** (`src/capabilities/tools/` or `src/capabilities/repositories/`).
+2. **Add the concrete integration** under the relevant `adapters/` subdirectory.
+3. **Update the capability registry/live layer** in that capability.
+4. **Wire the new live layer only from** `src/bootstrap/wiring.ts`.
+
 ### Adding a New Tracing Exporter
 
 Tracing exporters follow a plugin-like pattern with compile-time completeness enforcement. The type derivation chain flows from the Zod schema:
@@ -456,7 +486,7 @@ configSchema (Zod discriminated union on "mode")
 
 To add a new remote exporter (e.g. Honeycomb):
 
-1. **Add the config variant** to the Zod discriminated union in `src/domain/config-schema.ts`:
+1. **Add the config variant** to the Zod discriminated union in `src/core/config/config-schema.ts`:
 
 ```ts
 const telemetryHoneycombSchema = z.object({
@@ -479,11 +509,11 @@ const telemetryConfigSchema = z
   .default({ mode: "disabled" });
 ```
 
-At this point TypeScript will report an error on `tracing-exporter-registry-live.ts` because `TracingExporterFactoryMap` requires every `RemoteTelemetryMode` to have a corresponding factory entry.
+At this point TypeScript will report an error on `src/core/observability/tracing-exporter-registry-live.ts` because `TracingExporterFactoryMap` requires every `RemoteTelemetryMode` to have a corresponding factory entry.
 
-2. **Create the exporter adapter** at `src/infra/honeycomb-tracing-exporter-live.ts` implementing `TracingExporterFactory<"honeycomb">`.
+2. **Create the exporter adapter** at `src/core/observability/adapters/honeycomb-tracing-exporter-live.ts` implementing `TracingExporterFactory<"honeycomb">`.
 
-3. **Register** the factory in `src/infra/tracing-exporter-registry-live.ts`:
+3. **Register** the factory in `src/core/observability/tracing-exporter-registry-live.ts`:
 
 ```ts
 export const tracingExporterFactories = {

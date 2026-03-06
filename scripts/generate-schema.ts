@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 import * as z from "zod";
 
-import { configSchema } from "../src/domain/config-schema";
+import { configSchema } from "../src/core/config/config-schema";
 
 const file = process.argv[2] ?? "config.schema.json";
 

@@ -3,9 +3,10 @@ import { it } from "@effect/vitest";
 import { Effect } from "effect";
 import { describe, expect, vi } from "vitest";
 
-import type { CommandInfo, CommandRegistry, RegisteredCommand } from "./domain/command-registry-port";
-import { configError } from "./domain/errors";
-import { checkAndDisplayHelp, createMainCommand, handleProgramError } from "./index";
+import { checkAndDisplayHelp, createMainCommand } from "~/bootstrap/cli-router";
+import type { CommandInfo, CommandRegistry, RegisteredCommand } from "~/bootstrap/command-registry-port";
+import { configError } from "~/core/errors";
+import { handleProgramError } from "~/index";
 
 const makeRegistry = (commandInfos: ReadonlyArray<CommandInfo>): CommandRegistry => ({
   register: () => Effect.void,

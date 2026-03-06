@@ -1,0 +1,102 @@
+import path from "path";
+
+import { Command } from "@effect/cli";
+import { Effect } from "effect";
+
+import { CommandRegistryTag, type RegisteredCommand } from "~/bootstrap/command-registry-port";
+import { GitTag } from "~/capabilities/system/git-port";
+import { DirectoryTag } from "~/capabilities/workspace/directory-port";
+import { extractErrorMessage } from "~/core/errors";
+import { WorkspacePathsTag } from "~/core/runtime/path-service";
+
+/**
+ * Display help for the sync command
+ */
+export const displayHelp = (): Effect.Effect<void, never, never> =>
+  Effect.gen(function* () {
+    yield* Effect.logInfo("Update all repositories in your workspace\n");
+
+    yield* Effect.logInfo("USAGE");
+    yield* Effect.logInfo("  dev sync\n");
+
+    yield* Effect.logInfo("EXAMPLES");
+    yield* Effect.logInfo("  dev sync                   # Pull changes for all repositories\n");
+  });
+
+/**
+ * Sync command implementation
+ */
+export const syncCommand = Command.make("sync", {}, () =>
+  Effect.gen(function* () {
+    const directoryService = yield* DirectoryTag;
+    const git = yield* GitTag;
+    const workspacePaths = yield* WorkspacePathsTag;
+
+    yield* Effect.logInfo("Scanning for repositories...");
+
+    // Find all directories
+    const directories = yield* directoryService.findDirs().pipe(Effect.withSpan("sync.find_dirs"));
+
+    if (directories.length === 0) {
+      yield* Effect.logInfo("No repositories found to sync.");
+      return;
+    }
+
+    yield* Effect.logInfo(`Found ${directories.length} repositories. Starting sync...`);
+
+    // Process repositories in parallel with limited concurrency
+    const syncResults = yield* Effect.forEach(
+      directories,
+      (dir) =>
+        Effect.gen(function* () {
+          const absolutePath = path.join(workspacePaths.baseSearchPath, dir);
+
+          yield* Effect.logDebug(`Checking ${dir}...`);
+
+          // Verify it's a git repository
+          const isGit = yield* git.isGitRepository(absolutePath);
+
+          if (!isGit) {
+            yield* Effect.logDebug(`Skipping ${dir} (not a git repository)`);
+            return "skipped" as const;
+          }
+
+          // Pull changes
+          return yield* git.pullLatestChanges(absolutePath).pipe(
+            Effect.as("success" as const),
+            Effect.tap(() => Effect.logInfo(`✅ Synced ${dir}`)),
+            Effect.catchTags({
+              GitError: (error) => {
+                return Effect.logError(`❌ Failed to sync ${dir}: ${extractErrorMessage(error.reason)}`).pipe(Effect.as("failed" as const));
+              },
+              ShellExecutionError: (error) => {
+                return Effect.logError(`❌ Failed to sync ${dir}: ${extractErrorMessage(error.reason)}`).pipe(Effect.as("failed" as const));
+              },
+            }),
+          );
+        }).pipe(Effect.withSpan("sync.repo", { attributes: { repo: dir } })),
+      { concurrency: 5 }, // reasonable concurrency limit
+    ).pipe(Effect.withSpan("sync.process_all"));
+
+    const successCount = syncResults.filter((result) => result === "success").length;
+    const failureCount = syncResults.filter((result) => result === "failed").length;
+
+    yield* Effect.logInfo("\nSync complete!");
+    yield* Effect.logInfo(`Success: ${successCount}`);
+    if (failureCount > 0) {
+      yield* Effect.logInfo(`Failed: ${failureCount}`);
+    }
+  }).pipe(Effect.withSpan("sync.execute")),
+);
+
+/**
+ * Register the sync command with the command registry
+ */
+export const registerSyncCommand: Effect.Effect<void, never, CommandRegistryTag> = Effect.gen(function* () {
+  const registry = yield* CommandRegistryTag;
+  yield* registry.register({
+    name: "sync",
+    command: syncCommand as RegisteredCommand,
+    displayHelp,
+  });
+});
