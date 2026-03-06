@@ -51,6 +51,27 @@ describe("upgrade command e2e", () => {
   );
 
   it(
+    "runs 'upgrade' and continues when git pull fails during self-update",
+    async () =>
+      withFixture(async (fixture) => {
+        const result = await runCli(fixture, ["upgrade"], {
+          envOverrides: {
+            DEV_E2E_GIT_PULL_FAIL: "1",
+          },
+        });
+
+        expect(result.exitCode).toBe(0);
+        expect(result.stdout).toContain("Upgrade completed successfully");
+
+        const commandLog = await readCommandLog(fixture);
+        expect(commandLog).toContain("git pull");
+        expect(commandLog).toContain("bun install");
+        expect(commandLog).toContain("mise version --json");
+      }),
+    20_000,
+  );
+
+  it(
     "fails 'upgrade' when remote config is invalid and preserves local config",
     async () =>
       withFixture(async (fixture) => {

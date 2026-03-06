@@ -14,7 +14,6 @@ import {
   type ExternalToolError,
   externalToolError,
   extractErrorMessage,
-  type GitError,
   type ShellExecutionError,
   shellExecutionError,
   unknownError,
@@ -97,9 +96,7 @@ export function selfUpdateCli(hostPaths: HostPaths): Effect.Effect<void, DevErro
     yield* git.pullLatestChanges(hostPaths.devDir).pipe(
       Effect.tap(() => Effect.logInfo("✅ CLI repository updated successfully")),
       Effect.catchTag("GitError", (error) =>
-        isGitPullBlockedByUnstagedChanges(error)
-          ? Effect.logWarning("⚠️  CLI repository has unstaged changes; skipping git pull and continuing upgrade")
-          : Effect.fail(error),
+        Effect.logWarning(`⚠️  Git pull failed during self-update; continuing upgrade: ${extractErrorMessage(error)}`),
       ),
     );
 
@@ -122,9 +119,6 @@ export function selfUpdateCli(hostPaths: HostPaths): Effect.Effect<void, DevErro
     );
   });
 }
-
-const isGitPullBlockedByUnstagedChanges = (error: GitError): boolean =>
-  error.reason.includes("cannot pull with rebase: You have unstaged changes") && error.reason.includes("Please commit or stash them");
 
 /**
  * Ensure necessary directories exist

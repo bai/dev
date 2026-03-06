@@ -240,7 +240,7 @@ describe("upgrade-command", () => {
     }),
   );
 
-  it.effect("selfUpdateCli still fails on other git pull errors", () =>
+  it.effect("selfUpdateCli continues on other git pull GitErrors and still runs bun install", () =>
     Effect.gen(function* () {
       const tempDir = path.join(os.tmpdir(), `upgrade-self-update-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
       const hostPaths = makeHostPathsMock({
@@ -258,11 +258,40 @@ describe("upgrade-command", () => {
       });
       const shell = new ShellMock();
 
+      yield* selfUpdateCli(hostPaths).pipe(Effect.provideService(GitTag, git), Effect.provideService(ShellTag, shell));
+
+      expect(git.pullCalls).toEqual([tempDir]);
+      expect(shell.execCalls).toContainEqual({
+        command: "bun",
+        args: ["install"],
+        options: { cwd: tempDir },
+      });
+    }),
+  );
+
+  it.effect("selfUpdateCli still fails when git command execution itself fails", () =>
+    Effect.gen(function* () {
+      const tempDir = path.join(os.tmpdir(), `upgrade-self-update-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+      const hostPaths = makeHostPathsMock({
+        homeDir: tempDir,
+        devDir: tempDir,
+        configDir: path.join(tempDir, ".config", "dev"),
+        dataDir: path.join(tempDir, ".local", "share", "dev"),
+        cacheDir: path.join(tempDir, ".cache", "dev"),
+      });
+      const git = new GitMock({
+        gitRepositories: [tempDir],
+        overrides: {
+          pullLatestChanges: () => shellExecutionError("git", ["pull"], "spawn failed", { cwd: tempDir }),
+        },
+      });
+      const shell = new ShellMock();
+
       const error = yield* Effect.flip(
         selfUpdateCli(hostPaths).pipe(Effect.provideService(GitTag, git), Effect.provideService(ShellTag, shell)),
       );
 
-      expect(error._tag).toBe("GitError");
+      expect(error._tag).toBe("ShellExecutionError");
       expect(shell.execCalls).toEqual([]);
     }),
   );
