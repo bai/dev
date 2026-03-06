@@ -6,7 +6,6 @@ import { Effect } from "effect";
 import { CommandRegistryTag } from "~/bootstrap/command-registry-port";
 import { GitTag } from "~/capabilities/system/git-port";
 import { DirectoryTag } from "~/capabilities/workspace/directory-port";
-import { extractErrorMessage } from "~/core/errors";
 import { WorkspacePathsTag } from "~/core/runtime/path-service";
 
 /**
@@ -66,12 +65,9 @@ export const syncCommand = Command.make("sync", {}, () =>
             Effect.as("success" as const),
             Effect.tap(() => Effect.logInfo(`✅ Synced ${dir}`)),
             Effect.catchTags({
-              GitError: (error) => {
-                return Effect.logError(`❌ Failed to sync ${dir}: ${extractErrorMessage(error.reason)}`).pipe(Effect.as("failed" as const));
-              },
-              ShellExecutionError: (error) => {
-                return Effect.logError(`❌ Failed to sync ${dir}: ${extractErrorMessage(error.reason)}`).pipe(Effect.as("failed" as const));
-              },
+              GitError: (error) => Effect.logError(`❌ Failed to sync ${dir}: ${error.message}`).pipe(Effect.as("failed" as const)),
+              ShellExecutionError: (error) =>
+                Effect.logError(`❌ Failed to sync ${dir}: ${error.message}`).pipe(Effect.as("failed" as const)),
             }),
           );
         }).pipe(Effect.withSpan("sync.repo", { attributes: { repo: dir } })),

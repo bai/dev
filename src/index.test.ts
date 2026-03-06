@@ -1,11 +1,11 @@
-import { Command, HelpDoc, ValidationError } from "@effect/cli";
+import { Command } from "@effect/cli";
 import { it } from "@effect/vitest";
 import { Effect } from "effect";
 import { describe, expect, vi } from "vitest";
 
 import { checkAndDisplayHelp, createMainCommand } from "~/bootstrap/cli-router";
 import type { CommandInfo, CommandRegistry } from "~/bootstrap/command-registry-port";
-import { configError } from "~/core/errors";
+import { cliUsageError, configError } from "~/core/errors";
 import { handleProgramError } from "~/index";
 
 const makeRegistry = (commandInfos: ReadonlyArray<CommandInfo>): CommandRegistry => ({
@@ -78,9 +78,9 @@ describe("index", () => {
     }),
   );
 
-  it.effect("handleProgramError maps CLI validation errors to exit code 1", () =>
+  it.effect("handleProgramError maps CLI usage errors to exit code 1", () =>
     Effect.gen(function* () {
-      const code = yield* handleProgramError(ValidationError.invalidArgument(HelpDoc.p("boom")));
+      const code = yield* handleProgramError(cliUsageError("boom", "InvalidArgument"));
       expect(code).toBe(1);
     }),
   );

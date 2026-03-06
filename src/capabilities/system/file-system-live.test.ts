@@ -91,7 +91,7 @@ describe("file-system-live", () => {
 
         const result = yield* Effect.flip(fileSystem.readFile(filePath));
         expect(result._tag).toBe("FileSystemError");
-        expect(result.reason).toContain("Failed to read file");
+        expect(result.message).toContain("Failed to read file");
         if (result._tag === "FileSystemError") {
           expect(result.path).toBe(filePath);
         }

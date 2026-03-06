@@ -58,8 +58,8 @@ export const makeCommandTracker = (runStore: RunStore, version: Version, runtime
       yield* runStore.completeIncompleteRuns().pipe(
         Effect.tap(() => Effect.logDebug("✅ Command tracking shutdown complete")),
         Effect.catchTags({
-          ConfigError: (error) => Effect.logDebug(`Command tracking shutdown skipped (database unavailable): ${error.reason}`),
-          UnknownError: (error) => Effect.logDebug(`Command tracking shutdown skipped (database unavailable): ${String(error.reason)}`),
+          ConfigError: (error) => Effect.logDebug(`Command tracking shutdown skipped (database unavailable): ${error.message}`),
+          UnknownError: (error) => Effect.logDebug(`Command tracking shutdown skipped (database unavailable): ${error.message}`),
         }),
       );
     });

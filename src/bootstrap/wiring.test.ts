@@ -56,7 +56,7 @@ describe("wiring", () => {
       const error = yield* Effect.flip(loadConfiguration({ configPath }));
 
       expect(error._tag).toBe("ConfigError");
-      expect(error.reason).toContain("Invalid config file");
+      expect(error.message).toContain("Invalid config file");
     }),
   );
 

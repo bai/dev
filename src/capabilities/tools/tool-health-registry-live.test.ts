@@ -123,7 +123,7 @@ describe("tool-health-registry-live", () => {
 
       expect(error._tag).toBe("HealthCheckError");
       expect(error.tool).toBe("not-registered");
-      expect(error.reason).toContain("Unknown tool");
+      expect(error.message).toContain("Unknown tool");
     }),
   );
 
@@ -167,7 +167,7 @@ describe("tool-health-registry-live", () => {
 
       expect(error._tag).toBe("HealthCheckError");
       expect(error.tool).toBe("git");
-      expect(error.reason).toContain("git health check failed");
+      expect(error.message).toContain("git health check failed");
     }),
   );
 

@@ -80,8 +80,8 @@ describe("docker-services-live", () => {
 
       expect(error).toMatchObject({
         _tag: "DockerServiceError",
-        reason: "Failed to get service status",
-        exitCode: 1,
+        message: "Failed to get service status",
+        serviceExitCode: 1,
         stderr: "compose ps failed",
       });
     }),

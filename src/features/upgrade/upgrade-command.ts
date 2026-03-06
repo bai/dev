@@ -13,7 +13,6 @@ import {
   configError,
   type ExternalToolError,
   externalToolError,
-  extractErrorMessage,
   type ShellExecutionError,
   shellExecutionError,
   unknownError,
@@ -96,7 +95,7 @@ export function selfUpdateCli(hostPaths: HostPaths): Effect.Effect<void, DevErro
     yield* git.pullLatestChanges(hostPaths.devDir).pipe(
       Effect.tap(() => Effect.logInfo("✅ CLI repository updated successfully")),
       Effect.catchTag("GitError", (error) =>
-        Effect.logWarning(`⚠️  Git pull failed during self-update; continuing upgrade: ${extractErrorMessage(error)}`),
+        Effect.logWarning(`⚠️  Git pull failed during self-update; continuing upgrade: ${error.message}`),
       ),
     );
 
@@ -108,7 +107,7 @@ export function selfUpdateCli(hostPaths: HostPaths): Effect.Effect<void, DevErro
           return Effect.fail(
             externalToolError("Failed to install CLI dependencies", {
               tool: "bun",
-              exitCode: result.exitCode,
+              toolExitCode: result.exitCode,
               stderr: result.stderr,
             }),
           );
@@ -284,16 +283,16 @@ const prefixToolManagerError = <E extends ExternalToolError | ShellExecutionErro
       case "ExternalToolError":
         return externalToolError(`${toolName} ${action} failed: ${error.message}`, {
           tool: error.tool,
-          exitCode: error.exitCode,
+          toolExitCode: error.toolExitCode,
           stderr: error.stderr,
         }) as E;
       case "ShellExecutionError":
-        return shellExecutionError(error.command, error.args, `${toolName} ${action} failed: ${error.reason}`, {
+        return shellExecutionError(error.command, error.args, `${toolName} ${action} failed: ${error.message}`, {
           cwd: error.cwd,
           underlyingError: error.underlyingError,
         }) as E;
       case "UnknownError":
-        return unknownError(`${toolName} ${action} failed: ${extractErrorMessage(error.reason)}`) as E;
+        return unknownError(error.details, { message: `${toolName} ${action} failed: ${error.message}` }) as E;
     }
   });
 

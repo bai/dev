@@ -64,7 +64,7 @@ export const ensureMinimumVersionOrUpgrade = (
       }
       return yield* externalToolError(`Failed to update ${context.toolId}`, {
         tool: context.toolId,
-        exitCode: 1,
+        toolExitCode: 1,
         stderr: `Required version: ${context.minVersion}, Current: ${versionCheck.currentVersion}`,
       });
     }
@@ -77,7 +77,7 @@ export const ensureMinimumVersionOrUpgrade = (
       }
       return yield* externalToolError(`${context.displayName} upgrade failed`, {
         tool: context.toolId,
-        exitCode: 1,
+        toolExitCode: 1,
         stderr: `Required: ${context.minVersion}, Got: ${versionCheckAfterUpgrade.currentVersion}`,
       });
     }

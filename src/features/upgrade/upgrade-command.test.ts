@@ -153,7 +153,7 @@ describe("upgrade-command", () => {
         if (result._tag === "Left") {
           expect(result.left._tag).toBe("ConfigError");
           if (result.left._tag === "ConfigError") {
-            expect(String(result.left.reason)).toContain("Invalid project config.json");
+            expect(result.left.message).toContain("Invalid project config.json");
           }
         }
 
@@ -175,7 +175,7 @@ describe("upgrade-command", () => {
 
       expect(error._tag).toBe("ShellExecutionError");
       if (error._tag === "ShellExecutionError") {
-        expect(error.reason).toContain("Bun version check failed");
+        expect(error.message).toContain("Bun version check failed");
       }
     }),
   );
@@ -205,7 +205,7 @@ describe("upgrade-command", () => {
       expect(error._tag).toBe("ExternalToolError");
       if (error._tag === "ExternalToolError") {
         expect(error.tool).toBe("bun");
-        expect(error.exitCode).toBe(1);
+        expect(error.toolExitCode).toBe(1);
       }
     }),
   );

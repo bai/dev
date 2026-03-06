@@ -1,4 +1,4 @@
-import { Command } from "@effect/cli";
+import { type Command } from "@effect/cli";
 import { Effect } from "effect";
 
 import type { DevError } from "~/core/errors";

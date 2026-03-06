@@ -159,7 +159,7 @@ describe("network-live", () => {
         expect(Option.isSome(failure)).toBe(true);
         if (Option.isSome(failure)) {
           expect(failure.value._tag).toBe("NetworkError");
-          expect(String((failure.value as { readonly reason: string }).reason)).toContain("Failed to write file");
+          expect(failure.value.message).toContain("Failed to write file");
         }
       }
     }),

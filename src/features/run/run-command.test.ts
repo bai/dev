@@ -111,7 +111,7 @@ describe("run-command", () => {
       const expectedError = new ShellExecutionError({
         command: "mise",
         args: ["run", "failing-task"],
-        reason: "Task failed",
+        message: "Task failed",
       });
 
       const { mise, state } = makeMise({

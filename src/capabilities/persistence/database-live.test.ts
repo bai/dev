@@ -15,8 +15,8 @@ import { configError } from "~/core/errors";
 import { HostPathsTag } from "~/core/runtime/path-service";
 import { makeHostPathsMock } from "~/core/runtime/path-service-mock";
 
-const isTaggedError = (error: unknown): error is { readonly _tag: string; readonly reason?: unknown } =>
-  typeof error === "object" && error !== null && "_tag" in error;
+const isTaggedError = (error: unknown): error is { readonly _tag: string; readonly message: string } =>
+  typeof error === "object" && error !== null && "_tag" in error && "message" in error && typeof error.message === "string";
 
 const createSqliteMock = () => {
   const exec = vi.fn();
@@ -74,7 +74,7 @@ describe("database-live", () => {
       expect(isTaggedError(error)).toBe(true);
       if (isTaggedError(error)) {
         expect(error._tag).toBe("UnknownError");
-        expect(String(error.reason)).toContain("Database query failed");
+        expect(error.message).toContain("Database query failed");
       }
     }),
   );
@@ -90,7 +90,7 @@ describe("database-live", () => {
       expect(isTaggedError(error)).toBe(true);
       if (isTaggedError(error)) {
         expect(error._tag).toBe("UnknownError");
-        expect(String(error.reason)).toContain("Database transaction failed");
+        expect(error.message).toContain("Database transaction failed");
       }
     }),
   );
@@ -265,7 +265,7 @@ describe("database-live", () => {
       const error = yield* Effect.flip(database.migrate());
 
       expect(error._tag).toBe("ConfigError");
-      expect(error.reason).toContain("Failed to run migrations");
+      expect(error.message).toContain("Failed to run migrations");
 
       yield* database.close();
     }),

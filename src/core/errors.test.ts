@@ -1,194 +1,97 @@
 import { describe, expect, it } from "vitest";
 
-import { ConfigError, extractErrorMessage, GitError, UnknownError } from "~/core/errors";
+import {
+  CliUsageError,
+  ConfigError,
+  ExternalToolError,
+  GitError,
+  UnknownError,
+  cliUsageError,
+  configError,
+  externalToolError,
+  gitError,
+  unknownError,
+} from "~/core/errors";
 
 describe("errors", () => {
-  describe("extractErrorMessage", () => {
-    it("extracts message from standard Error objects", () => {
-      const error = new Error("Standard error message");
-      const result = extractErrorMessage(error);
+  describe("class-based messages", () => {
+    it("uses message as the primary error text for string-based domain errors", () => {
+      const error = configError("Configuration file not found");
 
-      expect(result).toBe("Standard error message");
+      expect(error).toBeInstanceOf(Error);
+      expect(error.message).toBe("Configuration file not found");
+      expect(error.exitCode).toBe(1);
     });
 
-    it("extracts message from objects with message property", () => {
-      const error = { message: "Custom error message" };
-      const result = extractErrorMessage(error);
+    it("preserves tag and message for GitError", () => {
+      const error = gitError("Git operation failed");
 
-      expect(result).toBe("Custom error message");
+      expect(error._tag).toBe("GitError");
+      expect(error.message).toBe("Git operation failed");
+      expect(error.exitCode).toBe(1);
     });
 
-    it("extracts message from Effect CLI error structure", () => {
-      const error = {
-        _tag: "InvalidValue",
-        error: {
-          _tag: "Paragraph",
-          value: {
-            _tag: "Text",
-            value: "Received unknown argument: 'decrypt'",
-          },
-        },
-      };
-      const result = extractErrorMessage(error);
+    it("formats UnknownError from non-string details while preserving the details payload", () => {
+      const details = { complex: "object" };
+      const error = unknownError(details);
 
-      expect(result).toBe("Received unknown argument: 'decrypt'");
+      expect(error._tag).toBe("UnknownError");
+      expect(error.message).toBe('{"complex":"object"}');
+      expect(error.details).toEqual(details);
+      expect(error.exitCode).toBe(1);
     });
 
-    it("handles nested CLI error with complex structure", () => {
-      const error = {
-        _tag: "ValidationError",
-        error: {
-          _tag: "Paragraph",
-          value: {
-            _tag: "Text",
-            value: "Invalid command syntax",
-          },
-        },
-      };
-      const result = extractErrorMessage(error);
+    it("allows UnknownError callers to override the displayed message", () => {
+      const error = unknownError({ complex: "object" }, { message: "Fallback failed" });
 
-      expect(result).toBe("Invalid command syntax");
-    });
-
-    it("falls back to JSON.stringify for unknown object structures", () => {
-      const error = {
-        _tag: "CustomError",
-        details: "Some details",
-        code: 42,
-      };
-      const result = extractErrorMessage(error);
-
-      expect(result).toBe('{"_tag":"CustomError","details":"Some details","code":42}');
-    });
-
-    it("handles primitive values", () => {
-      expect(extractErrorMessage("string error")).toBe("string error");
-      expect(extractErrorMessage(404)).toBe("404");
-      expect(extractErrorMessage(true)).toBe("true");
-      expect(extractErrorMessage(null)).toBe("null");
-      expect(extractErrorMessage(undefined)).toBe("undefined");
-    });
-
-    it("extracts reason from Effect-TS domain errors", () => {
-      const configError = new ConfigError({ reason: "Configuration file not found" });
-      const result = extractErrorMessage(configError);
-
-      expect(result).toBe("Configuration file not found");
-    });
-
-    it("handles objects with non-string message property", () => {
-      const error = { message: 123 };
-      const result = extractErrorMessage(error);
-
-      expect(result).toBe("123");
-    });
-
-    it("handles objects with null message property", () => {
-      const error = { message: null };
-      const result = extractErrorMessage(error);
-
-      expect(result).toBe("null");
-    });
-
-    it("handles incomplete CLI error structure", () => {
-      const error = {
-        _tag: "InvalidValue",
-        error: {
-          _tag: "Paragraph",
-          // Missing value property
-        },
-      };
-      const result = extractErrorMessage(error);
-
-      expect(result).toContain("InvalidValue");
-    });
-
-    it("handles CLI error with missing nested value", () => {
-      const error = {
-        _tag: "InvalidValue",
-        error: {
-          _tag: "Paragraph",
-          value: {
-            _tag: "Text",
-            // Missing value property
-          },
-        },
-      };
-      const result = extractErrorMessage(error);
-
-      expect(result).toContain("InvalidValue");
-    });
-
-    it("handles empty objects", () => {
-      const result = extractErrorMessage({});
-
-      expect(result).toBe("{}");
-    });
-
-    it("handles arrays", () => {
-      const result = extractErrorMessage(["error1", "error2"]);
-
-      expect(result).toBe('["error1","error2"]');
-    });
-
-    it("handles circular references safely", () => {
-      const error: any = { _tag: "CircularError" };
-      error.self = error;
-
-      // JSON.stringify will throw for circular references, but our function catches this
-      const result = extractErrorMessage(error);
-      expect(typeof result).toBe("string");
-      expect(result.length).toBeGreaterThan(0);
-    });
-
-    it("prioritizes message property over CLI error structure", () => {
-      const error = {
-        message: "Direct message",
-        _tag: "InvalidValue",
-        error: {
-          _tag: "Paragraph",
-          value: {
-            _tag: "Text",
-            value: "Nested message",
-          },
-        },
-      };
-      const result = extractErrorMessage(error);
-
-      expect(result).toBe("Direct message");
-    });
-
-    it("handles Error objects with additional properties", () => {
-      const error = new Error("Base message");
-      (error as any).code = "ERR_CUSTOM";
-      (error as any).details = "Additional details";
-
-      const result = extractErrorMessage(error);
-
-      expect(result).toBe("Base message");
+      expect(error.message).toBe("Fallback failed");
+      expect(error.details).toEqual({ complex: "object" });
     });
   });
 
-  describe("domain error constructors", () => {
-    it("creates ConfigError with correct structure", () => {
-      const error = new ConfigError({ reason: "Test config error" });
+  describe("structured payload fields", () => {
+    it("keeps tool exit metadata separate from the program exit code", () => {
+      const error = externalToolError("bun install failed", {
+        tool: "bun",
+        toolExitCode: 7,
+        stderr: "install failed",
+      });
 
-      expect(error._tag).toBe("ConfigError");
-      expect(error.reason).toBe("Test config error");
+      expect(error).toBeInstanceOf(ExternalToolError);
+      expect(error.message).toBe("bun install failed");
+      expect(error.tool).toBe("bun");
+      expect(error.toolExitCode).toBe(7);
+      expect(error.exitCode).toBe(1);
     });
 
-    it("creates GitError with correct structure", () => {
-      const error = new GitError({ reason: "Git operation failed" });
+    it("maps CLI parser failures to an app-owned error type", () => {
+      const error = cliUsageError("Missing required argument", "MissingValue");
 
-      expect(error._tag).toBe("GitError");
-      expect(error.reason).toBe("Git operation failed");
+      expect(error).toBeInstanceOf(CliUsageError);
+      expect(error.message).toBe("Missing required argument");
+      expect(error.validationTag).toBe("MissingValue");
+      expect(error.exitCode).toBe(1);
+    });
+  });
+
+  describe("direct constructors", () => {
+    it("supports direct Schema.TaggedError construction with the new message field", () => {
+      const error = new ConfigError({ message: "Test config error" });
+
+      expect(error.message).toBe("Test config error");
     });
 
-    it("creates UnknownError with any reason type", () => {
-      const error = new UnknownError({ reason: { complex: "object" } });
+    it("supports direct UnknownError construction with explicit details", () => {
+      const error = new UnknownError({ message: "Unknown failure", details: { complex: "object" } });
 
-      expect(error._tag).toBe("UnknownError");
-      expect(error.reason).toEqual({ complex: "object" });
+      expect(error.message).toBe("Unknown failure");
+      expect(error.details).toEqual({ complex: "object" });
+    });
+
+    it("supports direct GitError construction with the new message field", () => {
+      const error = new GitError({ message: "Git operation failed" });
+
+      expect(error.message).toBe("Git operation failed");
     });
   });
 });

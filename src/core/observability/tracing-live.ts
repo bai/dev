@@ -37,7 +37,7 @@ export const TracingLiveLayer = Layer.effect(
           const runtimeServiceInstanceId = yield* Effect.sync(() => Bun.randomUUIDv7());
           const appConfig = yield* configLoader
             .load()
-            .pipe(Effect.catchAll((error) => new TracingError({ reason: `Failed to load config: ${error._tag}` })));
+            .pipe(Effect.catchAll((error) => Effect.fail(new TracingError({ message: `Failed to load config: ${error._tag}` }))));
           const telemetryConfig = appConfig.telemetry;
 
           const version = yield* versionService.getVersion().pipe(
@@ -46,7 +46,7 @@ export const TracingLiveLayer = Layer.effect(
           );
           const installId = yield* installIdentityService
             .getOrCreateInstallId()
-            .pipe(Effect.catchAll((error) => new TracingError({ reason: `Failed to get install identity: ${error._tag}` })));
+            .pipe(Effect.catchAll((error) => Effect.fail(new TracingError({ message: `Failed to get install identity: ${error._tag}` }))));
 
           const spanProcessor = yield* Effect.gen(function* () {
             if (telemetryConfig.mode === "console") {

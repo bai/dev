@@ -40,15 +40,13 @@ export const makeUpdateChecker = (
           yield* Effect.logInfo("🔄 [dev] Starting automatic background upgrade...");
           yield* triggerAutoUpgrade().pipe(
             Effect.tap(() => Effect.logInfo("✅ [dev] Auto-upgrade started in background.")),
-            Effect.catchTag("UnknownError", (error) =>
-              Effect.logWarning(`⚠️  [dev] Failed to auto-start upgrade: ${String(error.reason)}`),
-            ),
+            Effect.catchTag("UnknownError", (error) => Effect.logWarning(`⚠️  [dev] Failed to auto-start upgrade: ${error.message}`)),
           );
         }
       }
     }).pipe(
       Effect.catchTags({
-        UnknownError: (error) => Effect.logInfo(`WARN: ⚠️  Warning: ${String(error.reason)}`),
+        UnknownError: (error) => Effect.logInfo(`WARN: ⚠️  Warning: ${error.message}`),
         ConfigError: () => Effect.logInfo("WARN: ⚠️  Warning: Could not check last run timestamp"),
       }),
     );

@@ -148,7 +148,7 @@ const createDockerServices = (enabledServices: readonly ServiceName[] = DOCKER_S
         if (result.exitCode !== 0) {
           yield* Effect.annotateCurrentSpan("docker.compose.failed", true);
           return yield* dockerServiceError(errorMessage, {
-            exitCode: result.exitCode,
+            serviceExitCode: result.exitCode,
             stderr: result.stderr,
           });
         }
@@ -324,7 +324,7 @@ const createDockerServices = (enabledServices: readonly ServiceName[] = DOCKER_S
           if (exitCode !== 0 && exitCode !== 130) {
             // 130 is SIGINT (Ctrl+C)
             return yield* dockerServiceError("Failed to get logs", {
-              exitCode,
+              serviceExitCode: exitCode,
             });
           }
         }),
@@ -352,7 +352,7 @@ const createDockerServices = (enabledServices: readonly ServiceName[] = DOCKER_S
             .pipe(annotateErrorTypeOnFailure, Effect.withSpan("filesystem.remove_file"));
           if (rmResult.exitCode !== 0) {
             return yield* dockerServiceError("Failed to remove compose file", {
-              exitCode: rmResult.exitCode,
+              serviceExitCode: rmResult.exitCode,
               stderr: rmResult.stderr,
             });
           }

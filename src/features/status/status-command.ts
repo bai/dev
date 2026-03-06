@@ -6,7 +6,7 @@ import { RunStoreTag } from "~/capabilities/persistence/run-store-port";
 import { DockerServicesTag, type ServiceStatus } from "~/capabilities/services/docker-services-port";
 import { GitTag } from "~/capabilities/system/git-port";
 import { HealthCheckTag } from "~/capabilities/tools/health-check-port";
-import { extractErrorMessage, statusCheckError } from "~/core/errors";
+import { statusCheckError } from "~/core/errors";
 import type { EnvironmentInfo, GitInfo } from "~/core/models";
 import { RuntimeContextTag } from "~/core/runtime/runtime-context-port";
 
@@ -133,13 +133,13 @@ const getHealthCheckResults: Effect.Effect<readonly StatusItem[], never, HealthC
     ),
     Effect.catchTag("HealthCheckError", (error) =>
       Effect.gen(function* () {
-        const reason = error.reason.trim().length > 0 ? error.reason : "Health check execution failed";
-        yield* Effect.logError(`Health check failed: ${reason}`);
+        const message = error.message.trim().length > 0 ? error.message : "Health check execution failed";
+        yield* Effect.logError(`Health check failed: ${message}`);
         return [
           {
             tool: "health-check-runtime",
             status: "fail",
-            notes: reason,
+            notes: message,
           } satisfies StatusItem,
         ] as const;
       }),
@@ -196,12 +196,12 @@ const showDockerServicesStatus: Effect.Effect<void, never, DockerServicesTag> = 
     Effect.catchTags({
       DockerServiceError: (error) =>
         Effect.gen(function* () {
-          yield* Effect.logWarning(`🐳 Docker Services: Unable to determine status: ${extractErrorMessage(error)}`);
+          yield* Effect.logWarning(`🐳 Docker Services: Unable to determine status: ${error.message}`);
           return null;
         }),
       ShellExecutionError: (error) =>
         Effect.gen(function* () {
-          yield* Effect.logWarning(`🐳 Docker Services: Unable to determine status: ${extractErrorMessage(error)}`);
+          yield* Effect.logWarning(`🐳 Docker Services: Unable to determine status: ${error.message}`);
           return null;
         }),
     }),

@@ -5,63 +5,134 @@ import type { TracingError } from "~/core/observability/tracing-port";
 // Re-export TracingError for convenience
 export { TracingError } from "~/core/observability/tracing-port";
 
-// Tagged error classes for Effect.ts
+const defaultProgramExitCode = 1;
+
+const formatUnknownDetails = (value: unknown): string => {
+  if (typeof value === "string") {
+    return value;
+  }
+
+  if (value instanceof Error && value.message.length > 0) {
+    return value.message;
+  }
+
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return String(value);
+  }
+};
+
 export class ConfigError extends Schema.TaggedError<ConfigError>()("ConfigError", {
-  reason: Schema.String,
-}) {}
+  message: Schema.String,
+}) {
+  get exitCode(): number {
+    return defaultProgramExitCode;
+  }
+}
 
 export class GitError extends Schema.TaggedError<GitError>()("GitError", {
-  reason: Schema.String,
-}) {}
+  message: Schema.String,
+}) {
+  get exitCode(): number {
+    return defaultProgramExitCode;
+  }
+}
 
 export class NetworkError extends Schema.TaggedError<NetworkError>()("NetworkError", {
-  reason: Schema.String,
-}) {}
+  message: Schema.String,
+}) {
+  get exitCode(): number {
+    return defaultProgramExitCode;
+  }
+}
 
 export class AuthError extends Schema.TaggedError<AuthError>()("AuthError", {
-  reason: Schema.String,
-}) {}
+  message: Schema.String,
+}) {
+  get exitCode(): number {
+    return defaultProgramExitCode;
+  }
+}
 
 export class UnknownError extends Schema.TaggedError<UnknownError>()("UnknownError", {
-  reason: Schema.Unknown,
-}) {}
+  message: Schema.String,
+  details: Schema.optional(Schema.Unknown),
+}) {
+  get exitCode(): number {
+    return defaultProgramExitCode;
+  }
+}
 
 export class ExternalToolError extends Schema.TaggedError<ExternalToolError>()("ExternalToolError", {
   message: Schema.String,
   tool: Schema.optional(Schema.String),
-  exitCode: Schema.optional(Schema.Number),
+  toolExitCode: Schema.optional(Schema.Number),
   stderr: Schema.optional(Schema.String),
-}) {}
+}) {
+  get exitCode(): number {
+    return defaultProgramExitCode;
+  }
+}
 
 export class FileSystemError extends Schema.TaggedError<FileSystemError>()("FileSystemError", {
-  reason: Schema.String,
+  message: Schema.String,
   path: Schema.optional(Schema.String),
-}) {}
+}) {
+  get exitCode(): number {
+    return defaultProgramExitCode;
+  }
+}
 
 export class StatusCheckError extends Schema.TaggedError<StatusCheckError>()("StatusCheckError", {
-  reason: Schema.String,
+  message: Schema.String,
   failedComponents: Schema.Array(Schema.String),
-}) {}
+}) {
+  get exitCode(): number {
+    return defaultProgramExitCode;
+  }
+}
 
 export class HealthCheckError extends Schema.TaggedError<HealthCheckError>()("HealthCheckError", {
-  reason: Schema.String,
+  message: Schema.String,
   tool: Schema.optional(Schema.String),
-}) {}
+}) {
+  get exitCode(): number {
+    return defaultProgramExitCode;
+  }
+}
 
 export class ShellExecutionError extends Schema.TaggedError<ShellExecutionError>()("ShellExecutionError", {
   command: Schema.String,
   args: Schema.Array(Schema.String),
-  reason: Schema.String,
+  message: Schema.String,
   cwd: Schema.optional(Schema.String),
   underlyingError: Schema.optional(Schema.Unknown),
-}) {}
+}) {
+  get exitCode(): number {
+    return defaultProgramExitCode;
+  }
+}
 
 export class DockerServiceError extends Schema.TaggedError<DockerServiceError>()("DockerServiceError", {
-  reason: Schema.String,
+  message: Schema.String,
   service: Schema.optional(Schema.String),
-  exitCode: Schema.optional(Schema.Number),
+  serviceExitCode: Schema.optional(Schema.Number),
   stderr: Schema.optional(Schema.String),
-}) {}
+}) {
+  get exitCode(): number {
+    return defaultProgramExitCode;
+  }
+}
+
+export class CliUsageError extends Schema.TaggedError<CliUsageError>()("CliUsageError", {
+  message: Schema.String,
+  validationTag: Schema.String,
+}) {
+  get exitCode(): number {
+    return defaultProgramExitCode;
+  }
+}
 
 // Union type for all domain errors
 export type DevError =
@@ -75,80 +146,28 @@ export type DevError =
   | HealthCheckError
   | ShellExecutionError
   | DockerServiceError
+  | CliUsageError
   | TracingError
   | UnknownError;
 
 // Helper constructors
-export const configError = (reason: string) => new ConfigError({ reason });
-export const gitError = (reason: string) => new GitError({ reason });
-export const networkError = (reason: string) => new NetworkError({ reason });
-export const authError = (reason: string) => new AuthError({ reason });
-export const unknownError = (reason: unknown) => new UnknownError({ reason });
-export const externalToolError = (message: string, options?: { tool?: string; exitCode?: number; stderr?: string }) =>
+export const configError = (message: string) => new ConfigError({ message });
+export const gitError = (message: string) => new GitError({ message });
+export const networkError = (message: string) => new NetworkError({ message });
+export const authError = (message: string) => new AuthError({ message });
+export const unknownError = (details: unknown, options?: { message?: string }) =>
+  new UnknownError({ message: options?.message ?? formatUnknownDetails(details), details });
+export const externalToolError = (message: string, options?: { tool?: string; toolExitCode?: number; stderr?: string }) =>
   new ExternalToolError({ message, ...options });
-export const fileSystemError = (reason: string, path?: string) => new FileSystemError({ reason, path });
-export const statusCheckError = (reason: string, failedComponents: string[]) => new StatusCheckError({ reason, failedComponents });
-export const healthCheckError = (reason: string, tool?: string) => new HealthCheckError({ reason, tool });
+export const fileSystemError = (message: string, path?: string) => new FileSystemError({ message, path });
+export const statusCheckError = (message: string, failedComponents: string[]) => new StatusCheckError({ message, failedComponents });
+export const healthCheckError = (message: string, tool?: string) => new HealthCheckError({ message, tool });
 export const shellExecutionError = (
   command: string,
   args: readonly string[],
-  reason: string,
+  message: string,
   options?: { cwd?: string; underlyingError?: unknown },
-) => new ShellExecutionError({ command, args, reason, ...options });
-export const dockerServiceError = (reason: string, options?: { service?: string; exitCode?: number; stderr?: string }) =>
-  new DockerServiceError({ reason, ...options });
-
-/**
- * Extracts a human-readable error message from various error types
- * @param error - The error to extract message from
- * @returns Human-readable error message string
- */
-export const extractErrorMessage = (error: unknown): string => {
-  if (error instanceof Error) {
-    if ("reason" in error && typeof error.reason === "string" && error.reason.length > 0) {
-      return error.reason;
-    }
-
-    // Check if it's an Effect-TS tagged error with empty message
-    if (error.message === "" && error && typeof error === "object" && "_tag" in error) {
-      // Handle Effect domain errors that extend Error but have empty message
-      try {
-        return JSON.stringify(error);
-      } catch {
-        return String(error);
-      }
-    }
-    return error.message;
-  }
-
-  if (error && typeof error === "object") {
-    if ("reason" in error && typeof error.reason === "string" && error.reason.length > 0) {
-      return error.reason;
-    }
-
-    if ("message" in error) {
-      return String(error.message);
-    }
-
-    // Handle Effect CLI errors with nested structure
-    if (
-      "error" in error &&
-      error.error &&
-      typeof error.error === "object" &&
-      "value" in error.error &&
-      error.error.value &&
-      typeof error.error.value === "object" &&
-      "value" in error.error.value
-    ) {
-      return String(error.error.value.value);
-    }
-
-    try {
-      return JSON.stringify(error);
-    } catch {
-      return String(error);
-    }
-  }
-
-  return String(error);
-};
+) => new ShellExecutionError({ command, args, message, ...options });
+export const dockerServiceError = (message: string, options?: { service?: string; serviceExitCode?: number; stderr?: string }) =>
+  new DockerServiceError({ message, ...options });
+export const cliUsageError = (message: string, validationTag: string) => new CliUsageError({ message, validationTag });

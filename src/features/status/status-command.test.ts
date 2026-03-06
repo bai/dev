@@ -220,7 +220,7 @@ describe("status-command", () => {
 
   it.effect("keeps HealthCheckError tagged type when raised directly by service", () =>
     Effect.gen(function* () {
-      const failure = new HealthCheckError({ reason: "boom" });
+      const failure = new HealthCheckError({ message: "boom" });
       const failingHealthCheck: HealthCheck = {
         runHealthChecks: () => Effect.fail(failure),
       };

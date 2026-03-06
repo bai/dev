@@ -96,7 +96,7 @@ describe("directory-live", () => {
 
         expect(error).toMatchObject({
           _tag: "FileSystemError",
-          reason: "Permission denied",
+          message: "Permission denied",
           path: "/home/user/dev",
         });
       }),
@@ -171,7 +171,7 @@ describe("directory-live", () => {
 
         expect(error).toMatchObject({
           _tag: "FileSystemError",
-          reason: "Glob search failed",
+          message: "Glob search failed",
           path: "/home/user/dev",
         });
       }),

@@ -1,4 +1,3 @@
-import { ValidationError } from "@effect/cli";
 import { NodeSdk } from "@effect/opentelemetry";
 import { BunRuntime } from "@effect/platform-bun";
 import { ATTR_SERVICE_NAMESPACE } from "@opentelemetry/semantic-conventions";
@@ -8,17 +7,17 @@ import { registerAllCommands, runCli } from "~/bootstrap/cli-router";
 import { CommandRegistryTag } from "~/bootstrap/command-registry-port";
 import { setupApplication } from "~/bootstrap/wiring";
 import { CommandTrackerTag } from "~/capabilities/analytics/command-tracking-service";
-import { extractErrorMessage, type DevError } from "~/core/errors";
+import type { DevError } from "~/core/errors";
 import { TracingTag } from "~/core/observability/tracing-port";
 import { VersionTag } from "~/core/runtime/version-port";
 import { UpdateCheckerTag } from "~/features/upgrade/update-check-service";
 
-export type ProgramError = DevError | ValidationError.ValidationError;
+export type ProgramError = DevError;
 
 export const handleProgramError = (error: ProgramError): Effect.Effect<number, never, never> =>
   Effect.gen(function* () {
-    yield* Effect.logError(`❌ ${error._tag}: ${extractErrorMessage(error)}`);
-    return 1;
+    yield* Effect.logError(`❌ ${error._tag}: ${error.message}`);
+    return error.exitCode;
   });
 
 export const handleProgramCause = (cause: Cause.Cause<unknown>): Effect.Effect<number, never, never> =>
@@ -113,8 +112,7 @@ export const mainProgram = Effect.gen(function* () {
     Effect.provide(appLayer),
     Effect.catchAll((error) =>
       Effect.gen(function* () {
-        const errorMessage = extractErrorMessage(error);
-        yield* Effect.logWarning(`Failed to initialize tracing configuration, using defaults: ${errorMessage}`);
+        yield* Effect.logWarning(`Failed to initialize tracing configuration, using defaults: ${error.message}`);
         return {
           resource: {
             serviceName: "cli",

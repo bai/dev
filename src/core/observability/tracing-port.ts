@@ -5,8 +5,12 @@ import { Effect, Schema } from "effect";
  * Error types for tracing
  */
 export class TracingError extends Schema.TaggedError<TracingError>()("TracingError", {
-  reason: Schema.String,
-}) {}
+  message: Schema.String,
+}) {
+  get exitCode(): number {
+    return 1;
+  }
+}
 
 /**
  * Port for OpenTelemetry telemetry configuration (tracing)

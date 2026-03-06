@@ -206,9 +206,9 @@ describe("health-check-live", () => {
         const failure = Cause.failureOption(result.cause);
         expect(Option.isSome(failure)).toBe(true);
         if (Option.isSome(failure)) {
-          const error = failure.value as { readonly _tag: string; readonly reason: string };
+          const error = failure.value as { readonly _tag: string; readonly message: string };
           expect(error._tag).toBe("HealthCheckError");
-          expect(String(error.reason)).toContain("Database operation failed");
+          expect(error.message).toContain("Database operation failed");
         }
       }
     }),

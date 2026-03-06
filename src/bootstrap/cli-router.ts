@@ -1,9 +1,9 @@
-import { Command, ValidationError } from "@effect/cli";
+import { Command, HelpDoc, ValidationError } from "@effect/cli";
 import { Effect } from "effect";
 import * as Arr from "effect/Array";
 
 import { type CommandRegistry, type CommandRegistryTag, type RegisteredCommand } from "~/bootstrap/command-registry-port";
-import type { DevError } from "~/core/errors";
+import { cliUsageError, type DevError } from "~/core/errors";
 import { registerCdCommand } from "~/features/cd/cd-command";
 import { registerCloneCommand } from "~/features/clone/clone-command";
 import { registerRunCommand } from "~/features/run/run-command";
@@ -97,7 +97,7 @@ export const runCli = (
     version: string;
     description?: string;
   },
-): Effect.Effect<void, DevError | ValidationError.ValidationError, unknown> =>
+): Effect.Effect<void, DevError, unknown> =>
   Effect.scoped(
     Effect.gen(function* () {
       yield* Effect.addFinalizer(() =>
@@ -122,7 +122,11 @@ export const runCli = (
         version: metadata.version,
       });
 
-      yield* cli(process.argv);
+      yield* cli(process.argv).pipe(
+        Effect.mapError((error) =>
+          ValidationError.isValidationError(error) ? cliUsageError(HelpDoc.toAnsiText(error.error).trim(), error._tag) : error,
+        ),
+      );
       yield* Effect.logDebug("✅ CLI execution completed successfully");
     }),
   );

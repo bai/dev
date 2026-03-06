@@ -95,9 +95,9 @@ export const NetworkLiveLayer = Layer.effect(
             Effect.mapError((error) => {
               switch (error._tag) {
                 case "FileSystemError":
-                  return networkError(`Failed to write file: ${error.reason}`);
+                  return networkError(`Failed to write file: ${error.message}`);
                 case "UnknownError":
-                  return networkError(`Failed to write file: ${String(error.reason)}`);
+                  return networkError(`Failed to write file: ${error.message}`);
                 default:
                   return networkError(`Failed to write file: ${error}`);
               }
