@@ -12,7 +12,6 @@ import { AutoUpgradeTriggerLiveLayer } from "~/capabilities/system/auto-upgrade-
 import { FileSystemLiveLayer } from "~/capabilities/system/file-system-live";
 import { InteractiveSelectorLiveLayer } from "~/capabilities/system/fzf-selector-live";
 import { GitLiveLayer } from "~/capabilities/system/git-live";
-import { KeychainLiveLayer } from "~/capabilities/system/keychain-live";
 import { NetworkLiveLayer } from "~/capabilities/system/network-live";
 import { ShellLiveLayer } from "~/capabilities/system/shell-live";
 import { HealthCheckLiveLayer } from "~/capabilities/tools/health-check-live";
@@ -97,7 +96,6 @@ const buildAppLayerFromContext = (baseLayer: ReturnType<typeof buildContextLayer
   const platformLayer = Layer.mergeAll(
     NetworkLiveLayer,
     GitLiveLayer,
-    KeychainLiveLayer,
     DirectoryLiveLayer,
     DatabaseLiveLayer,
     RepoProviderLiveLayer,

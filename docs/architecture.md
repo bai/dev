@@ -187,7 +187,7 @@ Agents extending this CLI should follow these repo-specific rules:
 
 | Layer         | Services Included                                                      |
 | ------------- | ---------------------------------------------------------------------- |
-| **InfraLive** | FileSystem, RepoProvider, Mise, Shell, Keychain, Network, **RunStore** |
+| **InfraLive** | FileSystem, RepoProvider, Mise, Shell, Network, **RunStore** |
 | **AppLive**   | Commands, Services **+ InfraLive**                                     |
 | **CliLive**   | Console, Telemetry *(optional)* **+ AppLive**                          |
 
@@ -269,7 +269,6 @@ export type DevError =
   | { _tag: "ConfigError";   reason: string }
   | { _tag: "GitError";      reason: string }
   | { _tag: "NetworkError";  reason: string }
-  | { _tag: "AuthError";     reason: string }
   | { _tag: "ExternalToolError"; message: string; tool?: string; stderr?: string }
   | { _tag: "FileSystemError"; reason: string; path?: string }
   | { _tag: "StatusCheckError"; reason: string; failedComponents: string[] }
@@ -279,7 +278,6 @@ export const exitCode = (e: DevError): number => ({
   ConfigError:      2,
   GitError:         3,
   NetworkError:     4,
-  AuthError:        5,
   ExternalToolError: 6,
   FileSystemError:  7,
   StatusCheckError: 3,

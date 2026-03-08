@@ -31,14 +31,6 @@ export class NetworkError extends Schema.TaggedError<NetworkError>()("NetworkErr
   }
 }
 
-export class AuthError extends Schema.TaggedError<AuthError>()("AuthError", {
-  message: Schema.String,
-}) {
-  get exitCode(): number {
-    return defaultProgramExitCode;
-  }
-}
-
 export class UnknownError extends Schema.TaggedError<UnknownError>()("UnknownError", {
   message: Schema.String,
   details: Schema.optional(Schema.Unknown),
@@ -123,7 +115,6 @@ export type DevError =
   | ConfigError
   | GitError
   | NetworkError
-  | AuthError
   | ExternalToolError
   | FileSystemError
   | StatusCheckError
