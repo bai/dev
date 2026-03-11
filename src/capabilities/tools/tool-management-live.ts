@@ -10,13 +10,10 @@ export const ToolManagementLiveLayer = Layer.effect(
   ToolManagement,
   Effect.gen(function* () {
     const toolRegistry = yield* BuiltToolRegistry;
-    const tools = toolRegistry.managedTools.reduce<Record<string, ToolManager>>(
-      (allTools, tool) => ({
-        ...allTools,
-        [tool.id]: tool.manager,
-      }),
-      {},
-    );
+    const tools = Object.fromEntries(toolRegistry.managedTools.map((tool) => [tool.id, tool.manager] as const)) as Record<
+      string,
+      ToolManager
+    >;
 
     return {
       tools,

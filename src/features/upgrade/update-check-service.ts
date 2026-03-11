@@ -30,25 +30,24 @@ export const makeUpdateChecker = (
       }
 
       const commandName = runtimeContext.getArgv()[2] || "help";
+      if (commandName === "upgrade") {
+        return;
+      }
 
-      // Check if we should auto-upgrade (only if not running upgrade command)
-      if (commandName !== "upgrade") {
-        const recentRuns = yield* runStore.getRecentRuns(100); // Get recent runs to search
+      const recentRuns = yield* runStore.getRecentRuns(100); // Get recent runs to search
 
-        // Find the most recent upgrade command
-        const lastUpgradeRun = recentRuns.find((run) => run.commandName === "upgrade");
+      // Find the most recent upgrade command
+      const lastUpgradeRun = recentRuns.find((run) => run.commandName === "upgrade");
 
-        const currentTime = yield* Clock.currentTimeMillis;
-        const shouldUpdate =
-          !lastUpgradeRun || (lastUpgradeRun && currentTime - lastUpgradeRun.startedAt.getTime() > Duration.toMillis(upgradeFrequency));
+      const currentTime = yield* Clock.currentTimeMillis;
+      const shouldUpdate = !lastUpgradeRun || currentTime - lastUpgradeRun.startedAt.getTime() > Duration.toMillis(upgradeFrequency);
 
-        if (shouldUpdate) {
-          yield* Effect.logInfo("🔄 [dev] Starting automatic background upgrade...");
-          yield* triggerAutoUpgrade().pipe(
-            Effect.tap(() => Effect.logInfo("✅ [dev] Auto-upgrade started in background.")),
-            Effect.catchTag("UnknownError", (error) => Effect.logWarning(`⚠️  [dev] Failed to auto-start upgrade: ${error.message}`)),
-          );
-        }
+      if (shouldUpdate) {
+        yield* Effect.logInfo("🔄 [dev] Starting automatic background upgrade...");
+        yield* triggerAutoUpgrade().pipe(
+          Effect.tap(() => Effect.logInfo("✅ [dev] Auto-upgrade started in background.")),
+          Effect.catchTag("UnknownError", (error) => Effect.logWarning(`⚠️  [dev] Failed to auto-start upgrade: ${error.message}`)),
+        );
       }
     }).pipe(
       Effect.catchTags({
