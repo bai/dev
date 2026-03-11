@@ -2,6 +2,8 @@ import { it } from "@effect/vitest";
 import { Cause, Effect, Exit, Layer, Logger, Option } from "effect";
 import { describe, expect } from "vitest";
 
+import type { InstallIdentityService } from "~/capabilities/persistence/install-identity-port";
+import { InstallIdentity } from "~/capabilities/persistence/install-identity-port";
 import { RunStoreMock } from "~/capabilities/persistence/run-store-mock";
 import { RunStore } from "~/capabilities/persistence/run-store-port";
 import type { DockerServicesService, ServiceName, ServiceStatus } from "~/capabilities/services/docker-services-port";
@@ -49,6 +51,10 @@ const createHealthCheck = (results: readonly HealthCheckResult[]): HealthCheckSe
   runHealthChecks: () => Effect.succeed(results),
 });
 
+const createInstallIdentity = (installId = "install-id"): InstallIdentityService => ({
+  getOrCreateInstallId: () => Effect.succeed(installId),
+});
+
 const createRunStore = (runs: readonly CommandRun[] = []) => new RunStoreMock({ runs });
 
 const runtimeContextLayer = Layer.succeed(RuntimeContext, {
@@ -64,6 +70,7 @@ describe("status-command", () => {
       const layer = Layer.mergeAll(
         Layer.succeed(Git, gitContext.git),
         Layer.succeed(DockerServices, createDockerServices(false)),
+        Layer.succeed(InstallIdentity, createInstallIdentity()),
         Layer.succeed(RunStore, createRunStore()),
         runtimeContextLayer,
         Layer.succeed(
@@ -94,6 +101,7 @@ describe("status-command", () => {
       const layer = Layer.mergeAll(
         Layer.succeed(Git, gitContext.git),
         Layer.succeed(DockerServices, createDockerServices(false)),
+        Layer.succeed(InstallIdentity, createInstallIdentity()),
         Layer.succeed(RunStore, createRunStore()),
         runtimeContextLayer,
         Layer.succeed(
@@ -122,6 +130,7 @@ describe("status-command", () => {
       const layer = Layer.mergeAll(
         Layer.succeed(Git, gitContext.git),
         Layer.succeed(DockerServices, createDockerServices(false)),
+        Layer.succeed(InstallIdentity, createInstallIdentity()),
         Layer.succeed(RunStore, createRunStore()),
         runtimeContextLayer,
         Layer.succeed(
@@ -151,6 +160,7 @@ describe("status-command", () => {
       const layer = Layer.mergeAll(
         Layer.succeed(Git, gitContext.git),
         Layer.succeed(DockerServices, createDockerServices(false)),
+        Layer.succeed(InstallIdentity, createInstallIdentity()),
         Layer.succeed(RunStore, createRunStore()),
         runtimeContextLayer,
         Layer.succeed(
@@ -195,6 +205,7 @@ describe("status-command", () => {
       const layer = Layer.mergeAll(
         Layer.succeed(Git, gitContext.git),
         Layer.succeed(DockerServices, createDockerServices(false)),
+        Layer.succeed(InstallIdentity, createInstallIdentity()),
         Layer.succeed(RunStore, createRunStore()),
         runtimeContextLayer,
         Layer.succeed(HealthCheck, failingHealthCheck),
@@ -228,6 +239,7 @@ describe("status-command", () => {
       const layer = Layer.mergeAll(
         Layer.succeed(Git, createGit("main", "https://github.com/acme/repo.git").git),
         Layer.succeed(DockerServices, createDockerServices(false)),
+        Layer.succeed(InstallIdentity, createInstallIdentity()),
         Layer.succeed(RunStore, createRunStore()),
         runtimeContextLayer,
         Layer.succeed(HealthCheck, failingHealthCheck),
@@ -253,6 +265,7 @@ describe("status-command", () => {
       const layer = Layer.mergeAll(
         Layer.succeed(Git, gitContext.git),
         Layer.succeed(DockerServices, dockerServices),
+        Layer.succeed(InstallIdentity, createInstallIdentity()),
         Layer.succeed(RunStore, createRunStore()),
         runtimeContextLayer,
         Layer.succeed(
@@ -274,6 +287,43 @@ describe("status-command", () => {
       expect(Exit.isSuccess(result)).toBe(true);
       expect(loggedMessages).toContain("🐳 Docker Services: Unable to determine status: compose status failed");
       expect(loggedMessages).not.toContain("🐳 Docker Services: No services configured");
+    }),
+  );
+
+  it.effect("prints installation id immediately after the last upgraded line", () =>
+    Effect.gen(function* () {
+      const gitContext = createGit("main", "https://github.com/acme/repo.git");
+      const loggedMessages: string[] = [];
+      const logger = Logger.make(({ message }) => {
+        loggedMessages.push(String(message));
+      });
+
+      const layer = Layer.mergeAll(
+        Layer.succeed(Git, gitContext.git),
+        Layer.succeed(DockerServices, createDockerServices(false)),
+        Layer.succeed(InstallIdentity, createInstallIdentity("install-123")),
+        Layer.succeed(RunStore, createRunStore()),
+        runtimeContextLayer,
+        Layer.succeed(
+          HealthCheck,
+          createHealthCheck([
+            {
+              toolName: "git",
+              version: "2.60.1",
+              status: "ok",
+              checkedAt: new Date(),
+            },
+          ]),
+        ),
+        Logger.replace(Logger.defaultLogger, logger),
+      );
+
+      const result = yield* Effect.exit(statusCommand.handler({}).pipe(Effect.provide(layer)));
+
+      expect(Exit.isSuccess(result)).toBe(true);
+      const lastUpgradedLineIndex = loggedMessages.findIndex((message) => message.startsWith("⬆️ Last Upgraded:"));
+      expect(lastUpgradedLineIndex).toBeGreaterThanOrEqual(0);
+      expect(loggedMessages[lastUpgradedLineIndex + 1]).toBe("🆔 Installation ID: install-123");
     }),
   );
 });

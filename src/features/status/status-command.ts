@@ -2,6 +2,7 @@ import { Command } from "@effect/cli";
 import { Effect } from "effect";
 
 import { CommandRegistry } from "~/bootstrap/command-registry-port";
+import { InstallIdentity } from "~/capabilities/persistence/install-identity-port";
 import { RunStore } from "~/capabilities/persistence/run-store-port";
 import { DockerServices, type ServiceStatus } from "~/capabilities/services/docker-services-port";
 import { Git } from "~/capabilities/system/git-port";
@@ -262,16 +263,28 @@ const getLastUpgradeTimestamp = (): Effect.Effect<Date | null, never, RunStore> 
     return lastUpgradeRun ? lastUpgradeRun.startedAt : null;
   });
 
-const showLastUpgradedStatus: Effect.Effect<void, never, RunStore> = Effect.gen(function* () {
+const getInstallationId = (): Effect.Effect<string, never, InstallIdentity> =>
+  Effect.gen(function* () {
+    const installIdentity = yield* InstallIdentity;
+    return yield* installIdentity.getOrCreateInstallId().pipe(
+      Effect.tapError((error) => Effect.logDebug(`Install identity unavailable for status output: ${error.message}`)),
+      Effect.orElseSucceed(() => "Unavailable"),
+    );
+  });
+
+const showLastUpgradedStatus: Effect.Effect<void, never, RunStore | InstallIdentity> = Effect.gen(function* () {
   const lastUpgradeTimestamp = yield* getLastUpgradeTimestamp();
+  const installationId = yield* getInstallationId();
 
   if (lastUpgradeTimestamp === null) {
     yield* Effect.logInfo("⬆️ Last Upgraded: Never");
+    yield* Effect.logInfo(`🆔 Installation ID: ${installationId}`);
     yield* Effect.logInfo("");
     return;
   }
 
   yield* Effect.logInfo(`⬆️ Last Upgraded: ${formatUpgradeTimestamp(lastUpgradeTimestamp)}`);
+  yield* Effect.logInfo(`🆔 Installation ID: ${installationId}`);
   yield* Effect.logInfo("");
 });
 
