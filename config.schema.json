@@ -166,7 +166,7 @@
       }
     },
     "miseGlobalConfig": {
-      "description": "Mise configuration applied globally (~/.config/mise)",
+      "description": "Mise configuration applied globally ($XDG_CONFIG_HOME/mise)",
       "type": "object",
       "properties": {
         "min_version": {
