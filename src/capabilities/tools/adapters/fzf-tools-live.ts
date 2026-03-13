@@ -55,6 +55,9 @@ export class FzfTools extends Effect.Service<FzfToolsService>()("FzfTools", {
         }
 
         yield* Effect.logError(`❌ Fzf update failed with exit code: ${result.exitCode}`);
+        if (result.stderr) {
+          yield* Effect.logError(`   stderr: ${result.stderr}`);
+        }
         return false;
       });
 

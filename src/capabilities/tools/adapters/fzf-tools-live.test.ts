@@ -1,5 +1,5 @@
 import { it } from "@effect/vitest";
-import { Effect, Layer } from "effect";
+import { Effect, Layer, Logger } from "effect";
 import { describe, expect } from "vitest";
 
 import { ShellMock } from "~/capabilities/system/shell-mock";
@@ -71,6 +71,28 @@ describe("fzf-tools-live", () => {
       const upgraded = yield* fzfTools.performUpgrade();
 
       expect(upgraded).toBe(false);
+    }),
+  );
+
+  it.effect("logs stderr when fzf upgrade via mise fails", () =>
+    Effect.gen(function* () {
+      const shell = new ShellMock();
+      const loggedMessages: string[] = [];
+      const logger = Logger.make(({ message }) => {
+        loggedMessages.push(String(message));
+      });
+      shell.setExecResponse("mise", ["install", "fzf@latest"], {
+        exitCode: 1,
+        stdout: "",
+        stderr: "simulated mise install failure",
+      });
+
+      const fzfTools = yield* makeFzfTools(shell);
+      const upgraded = yield* fzfTools.performUpgrade().pipe(Effect.provide(Logger.replace(Logger.defaultLogger, logger)));
+
+      expect(upgraded).toBe(false);
+      expect(loggedMessages).toContain("❌ Fzf update failed with exit code: 1");
+      expect(loggedMessages).toContain("   stderr: simulated mise install failure");
     }),
   );
 

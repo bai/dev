@@ -92,6 +92,9 @@ export class MiseTools extends Effect.Service<MiseToolsService>()("MiseTools", {
         }
 
         yield* Effect.logError(`❌ Mise update failed with exit code: ${result.exitCode}`);
+        if (result.stderr) {
+          yield* Effect.logError(`   stderr: ${result.stderr}`);
+        }
         return false;
       });
 

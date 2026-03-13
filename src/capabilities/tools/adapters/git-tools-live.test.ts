@@ -88,9 +88,7 @@ describe("git-tools-live", () => {
       });
 
       const gitTools = yield* makeGitTools(shell);
-      const upgraded = yield* gitTools.performUpgrade().pipe(
-        Effect.provide(Logger.replace(Logger.defaultLogger, logger)),
-      );
+      const upgraded = yield* gitTools.performUpgrade().pipe(Effect.provide(Logger.replace(Logger.defaultLogger, logger)));
 
       expect(upgraded).toBe(false);
       expect(loggedMessages).toContain("❌ Git update failed with exit code: 1");
