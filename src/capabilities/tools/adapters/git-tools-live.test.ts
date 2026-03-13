@@ -1,5 +1,5 @@
 import { it } from "@effect/vitest";
-import { Effect, Layer } from "effect";
+import { Effect, Layer, Logger } from "effect";
 import { describe, expect } from "vitest";
 
 import { ShellMock } from "~/capabilities/system/shell-mock";
@@ -71,6 +71,30 @@ describe("git-tools-live", () => {
       const upgraded = yield* gitTools.performUpgrade();
 
       expect(upgraded).toBe(false);
+    }),
+  );
+
+  it.effect("logs stderr when git upgrade via mise fails", () =>
+    Effect.gen(function* () {
+      const shell = new ShellMock();
+      const loggedMessages: string[] = [];
+      const logger = Logger.make(({ message }) => {
+        loggedMessages.push(String(message));
+      });
+      shell.setExecResponse("mise", ["install", "git@latest"], {
+        exitCode: 1,
+        stdout: "",
+        stderr: "simulated mise install failure",
+      });
+
+      const gitTools = yield* makeGitTools(shell);
+      const upgraded = yield* gitTools.performUpgrade().pipe(
+        Effect.provide(Logger.replace(Logger.defaultLogger, logger)),
+      );
+
+      expect(upgraded).toBe(false);
+      expect(loggedMessages).toContain("❌ Git update failed with exit code: 1");
+      expect(loggedMessages).toContain("   stderr: simulated mise install failure");
     }),
   );
 

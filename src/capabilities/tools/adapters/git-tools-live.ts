@@ -54,7 +54,10 @@ export class GitTools extends Effect.Service<GitToolsService>()("GitTools", {
           return true;
         }
 
-        yield* Effect.logInfo(`❌ Git update failed with exit code: ${result.exitCode}`);
+        yield* Effect.logError(`❌ Git update failed with exit code: ${result.exitCode}`);
+        if (result.stderr) {
+          yield* Effect.logError(`   stderr: ${result.stderr}`);
+        }
         return false;
       });
 
