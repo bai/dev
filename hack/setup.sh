@@ -102,6 +102,5 @@ echo "   ✅ Shell configuration reloaded"
 # Dependencies
 echo ""
 echo "📚 Installing project dependencies..."
-cd "$HOME/.dev"
-bun install
+bun install --cwd "$HOME/.dev"
 echo "   ✅ Dependencies installed"
