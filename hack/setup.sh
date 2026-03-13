@@ -60,7 +60,7 @@ if [ ! -d "$HOME/.dev/.git" ]; then
   git clone https://github.com/bai/dev "$HOME/.dev"
   echo "   ✅ Repository cloned"
 else
-  (cd "$HOME/.dev" && git pull 2>/dev/null) || true
+  git -C "$HOME/.dev" pull 2>/dev/null || true
   echo "   ✅ Repository updated"
 fi
 
