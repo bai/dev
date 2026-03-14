@@ -166,7 +166,7 @@ export const MiseLiveLayer = Layer.effect(
 
             const tomlContent = yield* Effect.try({
               try: () => stringify(config.miseGlobalConfig as Parameters<typeof stringify>[0]),
-              catch: (error) => new UnknownError({ message: `Failed to serialize mise config: ${error}`, details: error }),
+              catch: (error) => new UnknownError({ message: `Failed to serialize mise global config: ${error}`, details: error }),
             });
 
             yield* fileSystem.writeFile(miseConfigFile, tomlContent).pipe(

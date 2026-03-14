@@ -55,17 +55,6 @@ const baseConfig = {
   telemetry: { mode: "disabled" } as const,
 };
 
-const makeConfigLoaderWithMiseGlobalConfig = (miseGlobalConfig: unknown): ConfigLoaderService => ({
-  ...mockConfigLoader,
-  load: () =>
-    Effect.succeed(
-      configSchema.parse({
-        ...baseConfig,
-        miseGlobalConfig,
-      }),
-    ),
-});
-
 const mockConfigLoader: ConfigLoaderService = {
   parse: (content, source = "config") =>
     Effect.try({
@@ -96,6 +85,17 @@ const mockConfigLoader: ConfigLoaderService = {
       }),
     ),
 };
+
+const makeConfigLoaderWithMiseGlobalConfig = (miseGlobalConfig: unknown): ConfigLoaderService => ({
+  ...mockConfigLoader,
+  load: () =>
+    Effect.succeed(
+      configSchema.parse({
+        ...baseConfig,
+        miseGlobalConfig,
+      }),
+    ),
+});
 
 const mockEnvironmentPaths = makeEnvironmentPathsMock({
   homeDir: "/home/user",
