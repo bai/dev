@@ -11,8 +11,22 @@ interface VersionedToolContext {
   readonly getCurrentVersion: () => Effect.Effect<string | null, ShellExecutionError>;
   readonly getBinaryPath?: () => Effect.Effect<string | undefined, never>;
   readonly performUpgrade: () => Effect.Effect<boolean, ShellExecutionError>;
-  readonly manualUpgradeHint?: string;
+  readonly manualUpgradeHint?: string | (() => Effect.Effect<string | undefined, never>);
 }
+
+const resolveManualUpgradeHint = (
+  manualUpgradeHint: VersionedToolContext["manualUpgradeHint"],
+): Effect.Effect<string | undefined, never> => {
+  if (!manualUpgradeHint) {
+    return Effect.succeed(undefined);
+  }
+
+  if (typeof manualUpgradeHint === "string") {
+    return Effect.succeed(manualUpgradeHint);
+  }
+
+  return manualUpgradeHint();
+};
 
 export const checkVersionAgainstMinimum = (
   context: Pick<VersionedToolContext, "minVersion" | "getCurrentVersion">,
@@ -53,8 +67,9 @@ export const ensureMinimumVersionOrUpgrade = (
     const updateSuccess = yield* context.performUpgrade();
     if (!updateSuccess) {
       yield* Effect.logError(`❌ Failed to update ${context.toolId} to required version`);
-      if (context.manualUpgradeHint) {
-        yield* Effect.logError(`💡 ${context.manualUpgradeHint}`);
+      const manualUpgradeHint = yield* resolveManualUpgradeHint(context.manualUpgradeHint);
+      if (manualUpgradeHint) {
+        yield* Effect.logError(`💡 ${manualUpgradeHint}`);
       }
       return yield* new ExternalToolError({
         message: `Failed to update ${context.toolId}`,

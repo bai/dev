@@ -2,6 +2,7 @@ import { Effect } from "effect";
 
 import { ShellLiveLayer } from "~/capabilities/system/shell-live";
 import { Shell } from "~/capabilities/system/shell-port";
+import { resolveActiveToolUpgradeStrategy } from "~/capabilities/tools/adapters/active-tool-upgrade-strategy";
 import {
   buildMinimumVersionHealthCheck,
   checkVersionAgainstMinimum,
@@ -24,6 +25,12 @@ export class GitTools extends Effect.Service<GitToolsService>()("GitTools", {
   dependencies: [ShellLiveLayer],
   effect: Effect.gen(function* () {
     const shell = yield* Shell;
+    const resolveUpgradeStrategy = () =>
+      resolveActiveToolUpgradeStrategy(shell, {
+        toolId: "git",
+        brewFormula: "git",
+        miseTool: "git",
+      });
     const getBinaryPath = (): Effect.Effect<string | undefined, never> =>
       shell.exec("which", ["git"]).pipe(
         Effect.map((result) => (result.exitCode === 0 && result.stdout ? result.stdout.trim() : undefined)),
@@ -45,12 +52,22 @@ export class GitTools extends Effect.Service<GitToolsService>()("GitTools", {
 
     const performUpgrade = (): Effect.Effect<boolean, ShellExecutionError> =>
       Effect.gen(function* () {
-        yield* Effect.logInfo("🔄 Updating git via mise...");
+        const upgradeStrategy = yield* resolveUpgradeStrategy();
+        if (upgradeStrategy.binaryPath) {
+          yield* Effect.logInfo(`   Active git binary: ${upgradeStrategy.binaryPath}`);
+        }
 
-        const result = yield* shell.exec("mise", ["install", "git@latest"]);
+        if (!upgradeStrategy.command || !upgradeStrategy.managerDisplayName) {
+          yield* Effect.logError("❌ Unable to determine how to update git from the active PATH entry");
+          return false;
+        }
+
+        yield* Effect.logInfo(`🔄 Updating git via ${upgradeStrategy.managerDisplayName}...`);
+
+        const result = yield* shell.exec(upgradeStrategy.command, [...upgradeStrategy.args]);
 
         if (result.exitCode === 0) {
-          yield* Effect.logInfo("✅ Git updated successfully via mise");
+          yield* Effect.logInfo(`✅ Git updated successfully via ${upgradeStrategy.managerDisplayName}`);
           return true;
         }
 
@@ -72,7 +89,7 @@ export class GitTools extends Effect.Service<GitToolsService>()("GitTools", {
           minVersion: GIT_MIN_VERSION,
           getCurrentVersion,
           performUpgrade,
-          manualUpgradeHint: "Try manually installing git via mise: mise install git@latest",
+          manualUpgradeHint: () => resolveUpgradeStrategy().pipe(Effect.map((upgradeStrategy) => upgradeStrategy.manualUpgradeHint)),
         }),
       performHealthCheck: () =>
         buildMinimumVersionHealthCheck({

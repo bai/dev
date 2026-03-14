@@ -27,6 +27,15 @@ interface ToolRegistryEntry {
 }
 
 export const toolRegistryEntries = {
+  mise: {
+    displayName: "Mise",
+    essential: true,
+    createManager: ({ miseTools }) => miseTools,
+    createHealthChecker:
+      ({ miseTools }) =>
+      () =>
+        miseTools.performHealthCheck(),
+  },
   bun: {
     displayName: "Bun",
     essential: true,
@@ -44,15 +53,6 @@ export const toolRegistryEntries = {
       ({ gitTools }) =>
       () =>
         gitTools.performHealthCheck(),
-  },
-  mise: {
-    displayName: "Mise",
-    essential: true,
-    createManager: ({ miseTools }) => miseTools,
-    createHealthChecker:
-      ({ miseTools }) =>
-      () =>
-        miseTools.performHealthCheck(),
   },
   fzf: {
     displayName: "Fzf",

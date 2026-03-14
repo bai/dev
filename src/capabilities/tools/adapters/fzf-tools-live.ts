@@ -2,6 +2,7 @@ import { Effect } from "effect";
 
 import { ShellLiveLayer } from "~/capabilities/system/shell-live";
 import { Shell } from "~/capabilities/system/shell-port";
+import { resolveActiveToolUpgradeStrategy } from "~/capabilities/tools/adapters/active-tool-upgrade-strategy";
 import {
   buildMinimumVersionHealthCheck,
   checkVersionAgainstMinimum,
@@ -24,6 +25,12 @@ export class FzfTools extends Effect.Service<FzfToolsService>()("FzfTools", {
   dependencies: [ShellLiveLayer],
   effect: Effect.gen(function* () {
     const shell = yield* Shell;
+    const resolveUpgradeStrategy = () =>
+      resolveActiveToolUpgradeStrategy(shell, {
+        toolId: "fzf",
+        brewFormula: "fzf",
+        miseTool: "fzf",
+      });
     const getBinaryPath = (): Effect.Effect<string | undefined, never> =>
       shell.exec("which", ["fzf"]).pipe(
         Effect.map((result) => (result.exitCode === 0 && result.stdout ? result.stdout.trim() : undefined)),
@@ -45,12 +52,22 @@ export class FzfTools extends Effect.Service<FzfToolsService>()("FzfTools", {
 
     const performUpgrade = (): Effect.Effect<boolean, ShellExecutionError> =>
       Effect.gen(function* () {
-        yield* Effect.logInfo("🔄 Updating fzf via mise...");
+        const upgradeStrategy = yield* resolveUpgradeStrategy();
+        if (upgradeStrategy.binaryPath) {
+          yield* Effect.logInfo(`   Active fzf binary: ${upgradeStrategy.binaryPath}`);
+        }
 
-        const result = yield* shell.exec("mise", ["install", "fzf@latest"]);
+        if (!upgradeStrategy.command || !upgradeStrategy.managerDisplayName) {
+          yield* Effect.logError("❌ Unable to determine how to update fzf from the active PATH entry");
+          return false;
+        }
+
+        yield* Effect.logInfo(`🔄 Updating fzf via ${upgradeStrategy.managerDisplayName}...`);
+
+        const result = yield* shell.exec(upgradeStrategy.command, [...upgradeStrategy.args]);
 
         if (result.exitCode === 0) {
-          yield* Effect.logInfo("✅ Fzf updated successfully via mise");
+          yield* Effect.logInfo(`✅ Fzf updated successfully via ${upgradeStrategy.managerDisplayName}`);
           return true;
         }
 
@@ -72,7 +89,7 @@ export class FzfTools extends Effect.Service<FzfToolsService>()("FzfTools", {
           minVersion: FZF_MIN_VERSION,
           getCurrentVersion,
           performUpgrade,
-          manualUpgradeHint: "Try manually installing fzf via mise: mise install fzf@latest",
+          manualUpgradeHint: () => resolveUpgradeStrategy().pipe(Effect.map((upgradeStrategy) => upgradeStrategy.manualUpgradeHint)),
         }),
       performHealthCheck: () =>
         buildMinimumVersionHealthCheck({

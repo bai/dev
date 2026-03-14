@@ -160,7 +160,7 @@ describe("tool-management-live", () => {
 
       const essentialToolIds = toolManagement.listEssentialTools().map((tool) => tool.id);
 
-      expect(essentialToolIds).toEqual(["bun", "git", "mise", "fzf", "gcloud"]);
+      expect(essentialToolIds).toEqual(["mise", "bun", "git", "fzf", "gcloud"]);
     }),
   );
 });
