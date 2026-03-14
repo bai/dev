@@ -290,8 +290,8 @@ function setupMiseGlobalConfiguration(config: Config): Effect.Effect<void, DevEr
 
     const misePort = yield* Mise;
 
-    if (config.miseGlobalConfig) {
-      yield* Effect.logDebug(`📝 Found mise global config with ${Object.keys(config.miseGlobalConfig.tools || {}).length} tools`);
+    if (config.miseGlobalConfig !== undefined) {
+      yield* Effect.logDebug("📝 Found mise global config");
 
       yield* misePort
         .setupGlobalConfig()

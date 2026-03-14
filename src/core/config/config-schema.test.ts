@@ -9,6 +9,16 @@ describe("config-schema", () => {
     expect(config.telemetry.mode).toBe("disabled");
   });
 
+  it("accepts opaque mise config values at runtime", () => {
+    const config = configSchema.parse({
+      miseGlobalConfig: "opaque-value",
+      miseRepoConfig: null,
+    });
+
+    expect(config.miseGlobalConfig).toBe("opaque-value");
+    expect(config.miseRepoConfig).toBeNull();
+  });
+
   it("accepts telemetry mode axiom", () => {
     const result = configSchema.safeParse({
       telemetry: {

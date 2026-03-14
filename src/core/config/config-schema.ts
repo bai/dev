@@ -5,40 +5,7 @@ import type { GitProviderType, LogLevel } from "~/core/models";
 // Log level schema
 const logLevelSchema: z.ZodType<LogLevel> = z.enum(["debug", "info", "warning", "error", "fatal"]);
 
-// Mise configuration schema (matching domain types)
-const miseConfigSchema = z.object({
-  min_version: z.string().optional().describe("Minimum required mise version"),
-  env: z
-    .record(z.string(), z.string())
-    .and(
-      z.object({
-        _: z
-          .object({
-            path: z.array(z.string()).optional().describe("Additional PATH entries"),
-            file: z.array(z.string()).optional().describe("Environment files to load"),
-          })
-          .optional()
-          .describe("Special environment configuration"),
-      }),
-    )
-    .optional()
-    .describe("Environment variables to set"),
-  tools: z
-    .record(z.string(), z.string().or(z.array(z.string())))
-    .optional()
-    .describe("Tool versions to install (e.g., node: 'lts', python: ['3.11', '3.12'])"),
-  settings: z
-    .object({
-      idiomatic_version_file_enable_tools: z
-        .array(z.string())
-        .optional()
-        .describe("Tools that use idiomatic version files (.nvmrc, .python-version)"),
-      trusted_config_paths: z.array(z.string()).optional().describe("Paths to trust for mise configuration"),
-      experimental: z.boolean().optional().describe("Enable experimental mise features"),
-    })
-    .optional()
-    .describe("Mise settings"),
-});
+const miseConfigSchema = z.unknown();
 
 const gitProviderSchema: z.ZodType<GitProviderType> = z.enum(["github", "gitlab"]);
 

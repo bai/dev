@@ -10,6 +10,15 @@ import { ConfigLoader } from "~/core/config/config-loader-port";
 import { ShellExecutionError, UnknownError } from "~/core/errors";
 import { EnvironmentPaths } from "~/core/runtime/path-service";
 
+const isPlainObject = (value: unknown): value is Record<string, unknown> => {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return false;
+  }
+
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
+};
+
 export const MiseLiveLayer = Layer.effect(
   Mise,
   Effect.gen(function* () {
@@ -145,8 +154,20 @@ export const MiseLiveLayer = Layer.effect(
             }),
           );
 
-          if (config.miseGlobalConfig) {
-            const tomlContent = stringify(config.miseGlobalConfig as Parameters<typeof stringify>[0]);
+          if (config.miseGlobalConfig !== undefined) {
+            if (!isPlainObject(config.miseGlobalConfig)) {
+              yield* Effect.fail(
+                new UnknownError({
+                  message: "Invalid mise global config: expected a plain object",
+                  details: config.miseGlobalConfig,
+                }),
+              );
+            }
+
+            const tomlContent = yield* Effect.try({
+              try: () => stringify(config.miseGlobalConfig as Parameters<typeof stringify>[0]),
+              catch: (error) => new UnknownError({ message: `Failed to serialize mise config: ${error}`, details: error }),
+            });
 
             yield* fileSystem.writeFile(miseConfigFile, tomlContent).pipe(
               Effect.mapError((error) => {

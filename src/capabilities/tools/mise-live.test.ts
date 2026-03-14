@@ -49,6 +49,23 @@ const mockFileSystem = {
   findDirectoriesGlob: (_basePath, _pattern) => Effect.succeed([]),
 } satisfies FileSystemService;
 
+const baseConfig = {
+  configUrl: "https://example.com/config.json",
+  defaultOrg: "test-org",
+  telemetry: { mode: "disabled" } as const,
+};
+
+const makeConfigLoaderWithMiseGlobalConfig = (miseGlobalConfig: unknown): ConfigLoaderService => ({
+  ...mockConfigLoader,
+  load: () =>
+    Effect.succeed(
+      configSchema.parse({
+        ...baseConfig,
+        miseGlobalConfig,
+      }),
+    ),
+});
+
 const mockConfigLoader: ConfigLoaderService = {
   parse: (content, source = "config") =>
     Effect.try({
@@ -58,9 +75,7 @@ const mockConfigLoader: ConfigLoaderService = {
   load: () =>
     Effect.succeed(
       configSchema.parse({
-        configUrl: "https://example.com/config.json",
-        defaultOrg: "test-org",
-        telemetry: { mode: "disabled" },
+        ...baseConfig,
         miseGlobalConfig: {
           settings: {
             experimental: true,
@@ -72,9 +87,7 @@ const mockConfigLoader: ConfigLoaderService = {
   refresh: () =>
     Effect.succeed(
       configSchema.parse({
-        configUrl: "https://example.com/config.json",
-        defaultOrg: "test-org",
-        telemetry: { mode: "disabled" },
+        ...baseConfig,
         miseGlobalConfig: {
           settings: {
             experimental: true,
@@ -319,6 +332,25 @@ describe("mise-live", () => {
 
       expect(mkdirCalls).toHaveLength(0);
       expect(writeFileCalls[0]?.path).toBe("/xdg/config/mise/config.toml");
+    }),
+  );
+
+  it.effect("setupGlobalConfig rejects invalid non-object mise config values", () =>
+    Effect.gen(function* () {
+      const invalidConfigs = ["bad", 42, true, null, [], new Date("2024-01-01T00:00:00.000Z")];
+
+      for (const invalidConfig of invalidConfigs) {
+        const mise = yield* makeMise({
+          configLoader: makeConfigLoaderWithMiseGlobalConfig(invalidConfig),
+        });
+
+        const result = yield* Effect.either(mise.setupGlobalConfig());
+
+        expect(result._tag).toBe("Left");
+        if (result._tag === "Left") {
+          expect(result.left.message).toBe("Invalid mise global config: expected a plain object");
+        }
+      }
     }),
   );
 });

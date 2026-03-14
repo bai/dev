@@ -4,6 +4,35 @@ import * as z from "zod";
 import { configSchema } from "../src/core/config/config-schema";
 
 const file = process.argv[2] ?? "config.schema.json";
+const miseSchemaRef = "https://mise.jdx.dev/schema/mise.json";
+
+type JsonObject = Record<string, unknown>;
+type JsonSchemaDocument = JsonObject & {
+  allowComments?: boolean;
+  allowTrailingCommas?: boolean;
+  properties?: JsonObject;
+};
+
+const isJsonObject = (value: unknown): value is JsonObject => typeof value === "object" && value !== null && !Array.isArray(value);
+
+const getJsonObject = (value: unknown, message: string): JsonObject => {
+  if (!isJsonObject(value)) {
+    throw new Error(message);
+  }
+
+  return value;
+};
+
+const replaceMiseConfigProperty = (schema: JsonSchemaDocument, propertyName: "miseGlobalConfig" | "miseRepoConfig"): void => {
+  const properties = getJsonObject(schema.properties, "Generated config schema must contain object properties");
+  const currentProperty = getJsonObject(properties[propertyName], `Generated config schema is missing '${propertyName}'`);
+  const description = typeof currentProperty.description === "string" ? currentProperty.description : undefined;
+
+  properties[propertyName] = {
+    ...(description ? { description } : {}),
+    allOf: [{ $ref: miseSchemaRef }],
+  };
+};
 
 const result = z.toJSONSchema(configSchema, {
   io: "input", // Generate input shape (treats optional().default() as not required)
@@ -24,10 +53,10 @@ const result = z.toJSONSchema(configSchema, {
       schema.description = [schema.description || "", `default: \`${schema.default}\``].filter(Boolean).join("\n\n").trim();
     }
   },
-}) as Record<string, unknown> & {
-  allowComments?: boolean;
-  allowTrailingCommas?: boolean;
-};
+}) as JsonSchemaDocument;
+
+replaceMiseConfigProperty(result, "miseGlobalConfig");
+replaceMiseConfigProperty(result, "miseRepoConfig");
 
 // Used for JSON LSPs since config supports JSONC
 result.allowComments = true;
