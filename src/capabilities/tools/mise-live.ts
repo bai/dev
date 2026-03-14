@@ -10,14 +10,15 @@ import { ConfigLoader } from "~/core/config/config-loader-port";
 import { ShellExecutionError, UnknownError } from "~/core/errors";
 import { EnvironmentPaths } from "~/core/runtime/path-service";
 
-const isPlainObject = (value: unknown): value is Record<string, unknown> => {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    return false;
-  }
-
-  const prototype = Object.getPrototypeOf(value);
-  return prototype === Object.prototype || prototype === null;
-};
+const renderMiseConfig = (configKind: "global" | "repo", config: unknown): Effect.Effect<string, UnknownError> =>
+  Effect.try({
+    try: () => stringify(config as Parameters<typeof stringify>[0]),
+    catch: (error) =>
+      new UnknownError({
+        message: `Failed to render mise ${configKind} config; leaving existing config unchanged: ${error}`,
+        details: error,
+      }),
+  });
 
 export const MiseLiveLayer = Layer.effect(
   Mise,
@@ -135,19 +136,6 @@ export const MiseLiveLayer = Layer.effect(
           const miseConfigDir = path.join(xdgConfigHome, "mise");
           const miseConfigFile = path.join(miseConfigDir, "config.toml");
 
-          const configDirExists = yield* fileSystem.exists(miseConfigDir);
-          if (!configDirExists) {
-            yield* Effect.logDebug("   📂 Creating mise config directory...");
-            yield* fileSystem.mkdir(miseConfigDir, true).pipe(
-              Effect.mapError((error) => {
-                return new UnknownError({
-                  message: `Failed to create mise config directory: ${error}`,
-                  details: `Failed to create mise config directory: ${error}`,
-                });
-              }),
-            );
-          }
-
           const config = yield* configLoader.load().pipe(
             Effect.mapError((error) => {
               return new UnknownError({ message: `Failed to load config: ${error}`, details: `Failed to load config: ${error}` });
@@ -155,19 +143,20 @@ export const MiseLiveLayer = Layer.effect(
           );
 
           if (config.miseGlobalConfig !== undefined) {
-            if (!isPlainObject(config.miseGlobalConfig)) {
-              yield* Effect.fail(
-                new UnknownError({
-                  message: "Invalid mise global config: expected a plain object",
-                  details: config.miseGlobalConfig,
+            const tomlContent = yield* renderMiseConfig("global", config.miseGlobalConfig);
+
+            const configDirExists = yield* fileSystem.exists(miseConfigDir);
+            if (!configDirExists) {
+              yield* Effect.logDebug("   📂 Creating mise config directory...");
+              yield* fileSystem.mkdir(miseConfigDir, true).pipe(
+                Effect.mapError((error) => {
+                  return new UnknownError({
+                    message: `Failed to create mise config directory: ${error}`,
+                    details: `Failed to create mise config directory: ${error}`,
+                  });
                 }),
               );
             }
-
-            const tomlContent = yield* Effect.try({
-              try: () => stringify(config.miseGlobalConfig as Parameters<typeof stringify>[0]),
-              catch: (error) => new UnknownError({ message: `Failed to serialize mise global config: ${error}`, details: error }),
-            });
 
             yield* fileSystem.writeFile(miseConfigFile, tomlContent).pipe(
               Effect.mapError((error) => {

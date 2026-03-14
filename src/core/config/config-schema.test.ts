@@ -9,7 +9,7 @@ describe("config-schema", () => {
     expect(config.telemetry.mode).toBe("disabled");
   });
 
-  it("accepts opaque mise config values at runtime", () => {
+  it("keeps mise config opaque at runtime because config.schema.json delegates validation to mise", () => {
     const config = configSchema.parse({
       miseGlobalConfig: "opaque-value",
       miseRepoConfig: null,

@@ -335,12 +335,31 @@ describe("mise-live", () => {
     }),
   );
 
-  it.effect("setupGlobalConfig rejects invalid non-object mise config values", () =>
+  it.effect("setupGlobalConfig preserves the existing config when rendering invalid mise config values fails", () =>
     Effect.gen(function* () {
       const invalidConfigs = ["bad", 42, true, null, [], new Date("2024-01-01T00:00:00.000Z")];
 
       for (const invalidConfig of invalidConfigs) {
+        const existsCalls: string[] = [];
+        const mkdirCalls: Array<{ path: string; recursive?: boolean }> = [];
+        const writeFileCalls: Array<{ path: string; content: string }> = [];
+        const trackingFileSystem: FileSystemService = {
+          ...mockFileSystem,
+          exists: (p) => {
+            existsCalls.push(p);
+            return Effect.succeed(true);
+          },
+          mkdir: (p, recursive) => {
+            mkdirCalls.push({ path: p, recursive });
+            return Effect.void;
+          },
+          writeFile: (p, content) => {
+            writeFileCalls.push({ path: p, content });
+            return Effect.void;
+          },
+        };
         const mise = yield* makeMise({
+          fileSystem: trackingFileSystem,
           configLoader: makeConfigLoaderWithMiseGlobalConfig(invalidConfig),
         });
 
@@ -348,8 +367,11 @@ describe("mise-live", () => {
 
         expect(result._tag).toBe("Left");
         if (result._tag === "Left") {
-          expect(result.left.message).toBe("Invalid mise global config: expected a plain object");
+          expect(result.left.message).toContain("Failed to render mise global config; leaving existing config unchanged:");
         }
+        expect(existsCalls).toHaveLength(0);
+        expect(mkdirCalls).toHaveLength(0);
+        expect(writeFileCalls).toHaveLength(0);
       }
     }),
   );

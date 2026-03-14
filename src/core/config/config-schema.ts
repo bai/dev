@@ -5,6 +5,9 @@ import type { GitProviderType, LogLevel } from "~/core/models";
 // Log level schema
 const logLevelSchema: z.ZodType<LogLevel> = z.enum(["debug", "info", "warning", "error", "fatal"]);
 
+// Runtime keeps mise config payloads opaque. `config.schema.json` rewrites these
+// properties to the external mise schema for editor validation, and rendering
+// adapters must fail without overwriting existing config files.
 const miseConfigSchema = z.unknown();
 
 const gitProviderSchema: z.ZodType<GitProviderType> = z.enum(["github", "gitlab"]);
