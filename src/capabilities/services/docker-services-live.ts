@@ -18,9 +18,9 @@ import { annotateErrorTypeOnFailure } from "~/core/observability/error-type";
 import { StatePaths } from "~/core/runtime/path-service";
 
 const SERVICE_PORTS: Record<ServiceName, number> = {
-  postgres17: 55432,
-  postgres18: 55433,
-  valkey: 56379,
+  postgres17: 16131,
+  postgres18: 16132,
+  valkey: 16178,
 };
 
 const COMPOSE_FILE_CONTENT = `name: dev-services
