@@ -46,6 +46,21 @@ export const GitLiveLayer = Layer.effect(
             return Effect.succeed(result.stdout.trim());
           }),
         ),
+      getCurrentCommitVersionInfo: (repositoryPath?: string) =>
+        shell.exec("git", ["show", "-s", "--format=%cd%n%h", "--date=format:%Y%m%d%H%M%S", "HEAD"], { cwd: repositoryPath }).pipe(
+          Effect.flatMap((result) => {
+            if (result.exitCode !== 0) {
+              return new GitError({ message: `Failed to get current commit version info: ${result.stderr}` });
+            }
+
+            const [timestamp, shortSha] = result.stdout.trim().split("\n");
+            if (!timestamp || !shortSha) {
+              return new GitError({ message: "Failed to parse current commit version info" });
+            }
+
+            return Effect.succeed({ timestamp, shortSha });
+          }),
+        ),
       getCurrentBranch: (repositoryPath: string): Effect.Effect<string, GitError | ShellExecutionError> =>
         shell.exec("git", ["rev-parse", "--abbrev-ref", "HEAD"], { cwd: repositoryPath }).pipe(
           Effect.flatMap((result) => {

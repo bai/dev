@@ -10,9 +10,17 @@ export const makeVersionLive = (gitPort: GitService, installPaths: InstallPathsS
       ? gitPort.getCurrentCommitSha(installPaths.installDir).pipe(Effect.orElseSucceed(() => "unknown"))
       : Effect.succeed("unknown");
 
+  const getVersion = () =>
+    installPaths.installMode === "repo"
+      ? gitPort.getCurrentCommitVersionInfo(installPaths.installDir).pipe(
+          Effect.map((info) => `${info.timestamp}-${info.shortSha}`),
+          Effect.orElseSucceed(() => "unknown"),
+        )
+      : Effect.succeed("unknown");
+
   return {
     getCurrentGitCommitSha,
-    getVersion: getCurrentGitCommitSha,
+    getVersion,
   };
 };
 

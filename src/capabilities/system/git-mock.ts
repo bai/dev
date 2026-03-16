@@ -1,6 +1,6 @@
 import { Effect } from "effect";
 
-import type { GitService } from "~/capabilities/system/git-port";
+import type { GitCommitVersionInfo, GitService } from "~/capabilities/system/git-port";
 import { GitError } from "~/core/errors";
 import type { Repository } from "~/core/models";
 
@@ -9,6 +9,7 @@ interface GitMockOverrides {
   readonly pullLatestChanges?: GitService["pullLatestChanges"];
   readonly isGitRepository?: GitService["isGitRepository"];
   readonly getCurrentCommitSha?: GitService["getCurrentCommitSha"];
+  readonly getCurrentCommitVersionInfo?: GitService["getCurrentCommitVersionInfo"];
   readonly getCurrentBranch?: GitService["getCurrentBranch"];
   readonly getRemoteUrl?: GitService["getRemoteUrl"];
 }
@@ -18,6 +19,7 @@ interface GitMockOptions {
   readonly failingPullRepositories?: Iterable<string>;
   readonly defaultIsGitRepository?: boolean;
   readonly currentCommitSha?: string;
+  readonly currentCommitVersionInfo?: GitCommitVersionInfo;
   readonly currentBranch?: string | null;
   readonly remoteUrl?: string | null;
   readonly overrides?: GitMockOverrides;
@@ -28,6 +30,7 @@ export class GitMock implements GitService {
   public readonly pullCalls: string[] = [];
   public readonly isGitRepositoryCalls: string[] = [];
   public readonly getCurrentCommitShaCalls: Array<string | undefined> = [];
+  public readonly getCurrentCommitVersionInfoCalls: Array<string | undefined> = [];
   public readonly getCurrentBranchCalls: string[] = [];
   public readonly getRemoteUrlCalls: string[] = [];
 
@@ -35,6 +38,7 @@ export class GitMock implements GitService {
   public readonly failingPullRepositories: Set<string>;
   public readonly defaultIsGitRepository: boolean;
   public currentCommitSha: string;
+  public currentCommitVersionInfo: GitCommitVersionInfo;
   public currentBranch: string | null;
   public remoteUrl: string | null;
 
@@ -45,6 +49,10 @@ export class GitMock implements GitService {
     this.failingPullRepositories = new Set(options.failingPullRepositories);
     this.defaultIsGitRepository = options.defaultIsGitRepository ?? true;
     this.currentCommitSha = options.currentCommitSha ?? "deadbeef";
+    this.currentCommitVersionInfo = options.currentCommitVersionInfo ?? {
+      shortSha: this.currentCommitSha.slice(0, 7),
+      timestamp: "19700101000000",
+    };
     this.currentBranch = options.currentBranch ?? "main";
     this.remoteUrl = options.remoteUrl ?? "https://github.com/org/repo.git";
     this.overrides = options.overrides ?? {};
@@ -96,6 +104,16 @@ export class GitMock implements GitService {
     }
 
     return Effect.succeed(this.currentCommitSha);
+  }
+
+  getCurrentCommitVersionInfo(repositoryPath?: string) {
+    this.getCurrentCommitVersionInfoCalls.push(repositoryPath);
+
+    if (this.overrides.getCurrentCommitVersionInfo) {
+      return this.overrides.getCurrentCommitVersionInfo(repositoryPath);
+    }
+
+    return Effect.succeed(this.currentCommitVersionInfo);
   }
 
   getCurrentBranch(repositoryPath: string) {

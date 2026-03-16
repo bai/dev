@@ -194,6 +194,39 @@ describe("git-live", () => {
     );
   });
 
+  describe("getCurrentCommitVersionInfo", () => {
+    it.effect("gets current commit timestamp and short sha successfully", () =>
+      Effect.gen(function* () {
+        mockShell.setResponse("git", ["show", "-s", "--format=%cd%n%h", "--date=format:%Y%m%d%H%M%S", "HEAD"], {
+          exitCode: 0,
+          stdout: "20260316112233\nabc123d\n",
+          stderr: "",
+        });
+
+        const git = yield* makeGit(mockShell);
+        const result = yield* git.getCurrentCommitVersionInfo("/tmp/test-repo");
+        expect(result).toEqual({
+          shortSha: "abc123d",
+          timestamp: "20260316112233",
+        });
+      }),
+    );
+
+    it.effect("fails when commit version info cannot be parsed", () =>
+      Effect.gen(function* () {
+        mockShell.setResponse("git", ["show", "-s", "--format=%cd%n%h", "--date=format:%Y%m%d%H%M%S", "HEAD"], {
+          exitCode: 0,
+          stdout: "20260316112233\n",
+          stderr: "",
+        });
+
+        const git = yield* makeGit(mockShell);
+        const result = yield* Effect.flip(git.getCurrentCommitVersionInfo("/tmp/test-repo"));
+        expect(result).toEqual(new GitError({ message: "Failed to parse current commit version info" }));
+      }),
+    );
+  });
+
   describe("getCurrentBranch", () => {
     it.effect("gets current branch successfully", () =>
       Effect.gen(function* () {

@@ -3,6 +3,11 @@ import { Effect } from "effect";
 import type { GitError, ShellExecutionError } from "~/core/errors";
 import type { Repository } from "~/core/models";
 
+export interface GitCommitVersionInfo {
+  readonly shortSha: string;
+  readonly timestamp: string;
+}
+
 export class Git extends Effect.Tag("Git")<
   Git,
   {
@@ -25,6 +30,11 @@ export class Git extends Effect.Tag("Git")<
      * Get the current git commit SHA
      */
     getCurrentCommitSha(repositoryPath?: string): Effect.Effect<string, GitError | ShellExecutionError>;
+
+    /**
+     * Get the current git commit timestamp and short SHA
+     */
+    getCurrentCommitVersionInfo(repositoryPath?: string): Effect.Effect<GitCommitVersionInfo, GitError | ShellExecutionError>;
 
     /**
      * Get the current branch name of a repository
