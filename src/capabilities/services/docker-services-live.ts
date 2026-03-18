@@ -3,7 +3,6 @@ import path from "path";
 import { Clock, Effect, Layer } from "effect";
 
 import {
-  DOCKER_SERVICE_NAMES,
   DockerServices,
   type DockerServicesService,
   type ServiceName,
@@ -13,24 +12,39 @@ import { FileSystem } from "~/capabilities/system/file-system-port";
 import { Shell } from "~/capabilities/system/shell-port";
 import type { HealthCheckResult } from "~/capabilities/tools/health-check-port";
 import { AppConfig } from "~/core/config/app-config-port";
+import type { Config } from "~/core/config/config-schema";
 import { DockerServiceError, type ShellExecutionError } from "~/core/errors";
 import { annotateErrorTypeOnFailure } from "~/core/observability/error-type";
 import { StatePaths } from "~/core/runtime/path-service";
 
-const SERVICE_PORTS: Record<ServiceName, number> = {
+const DEFAULT_SERVICE_PORTS: Record<ServiceName, number> = {
   postgres17: 55432,
   postgres18: 55433,
   valkey: 56379,
 };
 
-const COMPOSE_FILE_CONTENT = `name: dev-services
+type ServicesConfig = Config["services"];
+
+const INTERNAL_SERVICE_PORTS: Record<ServiceName, number> = {
+  postgres17: 5432,
+  postgres18: 5432,
+  valkey: 6379,
+};
+
+const resolveServicePorts = (services: ServicesConfig | undefined): Record<ServiceName, number> => ({
+  postgres17: services?.postgres17?.port ?? DEFAULT_SERVICE_PORTS.postgres17,
+  postgres18: services?.postgres18?.port ?? DEFAULT_SERVICE_PORTS.postgres18,
+  valkey: services?.valkey?.port ?? DEFAULT_SERVICE_PORTS.valkey,
+});
+
+const renderComposeFile = (servicePorts: Record<ServiceName, number>) => `name: dev-services
 
 services:
   postgres17:
     image: docker.io/library/postgres:17.9
     container_name: dev-postgres17
     ports:
-      - "55432:5432"
+      - "${servicePorts.postgres17}:${INTERNAL_SERVICE_PORTS.postgres17}"
     environment:
       POSTGRES_USER: dev
       POSTGRES_PASSWORD: dev
@@ -48,7 +62,7 @@ services:
     image: docker.io/library/postgres:18.3
     container_name: dev-postgres18
     ports:
-      - "55433:5432"
+      - "${servicePorts.postgres18}:${INTERNAL_SERVICE_PORTS.postgres18}"
     environment:
       POSTGRES_USER: dev
       POSTGRES_PASSWORD: dev
@@ -66,7 +80,7 @@ services:
     image: docker.io/valkey/valkey:9.0
     container_name: dev-valkey
     ports:
-      - "56379:6379"
+      - "${servicePorts.valkey}:${INTERNAL_SERVICE_PORTS.valkey}"
     volumes:
       - dev-valkey-data:/data
     healthcheck:
@@ -92,11 +106,13 @@ interface DockerPsJson {
 const getEnabledServices = (services: Partial<Record<ServiceName, unknown>> | undefined): readonly ServiceName[] =>
   services ? (Object.keys(services).filter((name) => services[name as ServiceName] !== undefined) as ServiceName[]) : [];
 
-const createDockerServices = (enabledServices: readonly ServiceName[] = DOCKER_SERVICE_NAMES) =>
+const createDockerServices = (services: ServicesConfig = {}) =>
   Effect.gen(function* () {
     const shell = yield* Shell;
     const fs = yield* FileSystem;
     const statePaths = yield* StatePaths;
+    const enabledServices = getEnabledServices(services);
+    const servicePorts = resolveServicePorts(services);
     const getComposeFilePath = (): string => {
       return path.join(statePaths.dockerDir, "docker-compose.yml");
     };
@@ -109,21 +125,30 @@ const createDockerServices = (enabledServices: readonly ServiceName[] = DOCKER_S
       Effect.gen(function* () {
         const composeFilePath = getComposeFilePath();
         const composeDir = getComposeDir();
+        const composeFileContent = renderComposeFile(servicePorts);
 
-        const exists = yield* fs.exists(composeFilePath);
-        if (exists) {
-          return;
+        const composeFileExists = yield* fs.exists(composeFilePath);
+        if (composeFileExists) {
+          const currentComposeFileContent = yield* fs
+            .readFile(composeFilePath)
+            .pipe(Effect.mapError(() => new DockerServiceError({ message: "Failed to read docker-compose.yml" })));
+
+          if (currentComposeFileContent === composeFileContent) {
+            return;
+          }
+        }
+
+        if (!composeFileExists) {
+          yield* fs
+            .mkdir(composeDir, true)
+            .pipe(Effect.mapError(() => new DockerServiceError({ message: "Failed to create docker compose directory" })));
         }
 
         yield* fs
-          .mkdir(composeDir, true)
-          .pipe(Effect.mapError(() => new DockerServiceError({ message: "Failed to create docker compose directory" })));
-
-        yield* fs
-          .writeFile(composeFilePath, COMPOSE_FILE_CONTENT)
+          .writeFile(composeFilePath, composeFileContent)
           .pipe(Effect.mapError(() => new DockerServiceError({ message: "Failed to write docker-compose.yml" })));
 
-        yield* Effect.logDebug(`Created docker-compose.yml at ${composeFilePath}`);
+        yield* Effect.logDebug(`${composeFileExists ? "Updated" : "Created"} docker-compose.yml at ${composeFilePath}`);
       });
 
     const runCompose = (
@@ -261,7 +286,7 @@ const createDockerServices = (enabledServices: readonly ServiceName[] = DOCKER_S
               (name): ServiceStatus => ({
                 name,
                 state: "not_created",
-                port: SERVICE_PORTS[name],
+                port: servicePorts[name],
               }),
             );
           }
@@ -287,7 +312,7 @@ const createDockerServices = (enabledServices: readonly ServiceName[] = DOCKER_S
               return {
                 name,
                 state: "not_created",
-                port: SERVICE_PORTS[name],
+                port: servicePorts[name],
               };
             }
 
@@ -295,7 +320,7 @@ const createDockerServices = (enabledServices: readonly ServiceName[] = DOCKER_S
               name,
               state: parseServiceState(containerInfo.State),
               health: parseHealthStatus(containerInfo.Health),
-              port: SERVICE_PORTS[name],
+              port: servicePorts[name],
               uptime: parseUptime(containerInfo.Status),
             };
           });
@@ -397,7 +422,7 @@ const createDockerServices = (enabledServices: readonly ServiceName[] = DOCKER_S
                   (name): ServiceStatus => ({
                     name,
                     state: "not_created",
-                    port: SERVICE_PORTS[name],
+                    port: servicePorts[name],
                   }),
                 ),
               ),
@@ -439,13 +464,13 @@ const createDockerServices = (enabledServices: readonly ServiceName[] = DOCKER_S
     return dockerServices;
   });
 
-export const createDockerServicesLiveLayer = (enabledServices?: readonly ServiceName[]) =>
-  Layer.effect(DockerServices, createDockerServices(enabledServices));
+export const createDockerServicesLiveLayer = (services: ServicesConfig = {}) =>
+  Layer.effect(DockerServices, createDockerServices(services));
 
 export const DockerServicesLiveLayer = Layer.effect(
   DockerServices,
   Effect.gen(function* () {
     const config = yield* AppConfig;
-    return yield* createDockerServices(getEnabledServices(config.services));
+    return yield* createDockerServices(config.services);
   }),
 );

@@ -189,19 +189,40 @@
         "postgres17": {
           "description": "PostgreSQL 17 database service",
           "type": "object",
-          "properties": {},
+          "properties": {
+            "port": {
+              "description": "Local host port to expose the service on",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 65535
+            }
+          },
           "additionalProperties": {}
         },
         "postgres18": {
           "description": "PostgreSQL 18 database service",
           "type": "object",
-          "properties": {},
+          "properties": {
+            "port": {
+              "description": "Local host port to expose the service on",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 65535
+            }
+          },
           "additionalProperties": {}
         },
         "valkey": {
           "description": "Valkey (Redis-compatible) cache service",
           "type": "object",
-          "properties": {},
+          "properties": {
+            "port": {
+              "description": "Local host port to expose the service on",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 65535
+            }
+          },
           "additionalProperties": {}
         }
       },

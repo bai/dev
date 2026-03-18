@@ -10,10 +10,11 @@ import { FileSystemMock } from "~/capabilities/system/file-system-mock";
 import { FileSystem } from "~/capabilities/system/file-system-port";
 import { ShellMock } from "~/capabilities/system/shell-mock";
 import { Shell } from "~/capabilities/system/shell-port";
+import type { Config } from "~/core/config/config-schema";
 import { StatePaths } from "~/core/runtime/path-service";
 import { makeStatePathsMock } from "~/core/runtime/path-service-mock";
 
-const makeSubject = () => {
+const makeSubject = (services?: Config["services"]) => {
   const shell = new ShellMock();
   const fileSystem = new FileSystemMock();
   const statePaths = makeStatePathsMock({
@@ -26,7 +27,7 @@ const makeSubject = () => {
   }).pipe(
     Effect.provide(
       Layer.provide(
-        createDockerServicesLiveLayer(),
+        createDockerServicesLiveLayer(services),
         Layer.mergeAll(Layer.succeed(Shell, shell), Layer.succeed(FileSystem, fileSystem), Layer.succeed(StatePaths, statePaths)),
       ),
     ),
@@ -59,6 +60,49 @@ describe("docker-services-live", () => {
       expect(fileSystem.writeFileCalls[0]?.path).toBe(composeFilePath);
       expect(fileSystem.writeFileCalls[0]?.content).toContain("name: dev-services");
       expect(shell.execCalls[0]?.args).toEqual(["compose", "-f", composeFilePath, "up", "-d", "postgres17"]);
+    }),
+  );
+
+  it.effect("renders configured ports into the compose file when custom ports are enabled", () =>
+    Effect.gen(function* () {
+      const { shell, fileSystem, dockerServices, composeFilePath } = makeSubject({
+        postgres17: { port: 65432 },
+        valkey: { port: 56380 },
+      });
+
+      shell.setExecResponse("docker", ["compose", "-f", composeFilePath, "up", "-d", "postgres17", "valkey"], {
+        exitCode: 0,
+        stdout: "",
+        stderr: "",
+      });
+
+      const service = yield* dockerServices;
+      yield* service.up();
+
+      expect(fileSystem.writeFileCalls[0]?.content).toContain('"65432:5432"');
+      expect(fileSystem.writeFileCalls[0]?.content).toContain('"56380:6379"');
+    }),
+  );
+
+  it.effect("rewrites the compose file when the desired port mapping changes", () =>
+    Effect.gen(function* () {
+      const { shell, fileSystem, dockerServices, composeFilePath } = makeSubject({
+        postgres17: { port: 65432 },
+      });
+
+      fileSystem.existingPaths.add(composeFilePath);
+      fileSystem.readFileContents.set(composeFilePath, "stale compose file");
+      shell.setExecResponse("docker", ["compose", "-f", composeFilePath, "up", "-d", "postgres17"], {
+        exitCode: 0,
+        stdout: "",
+        stderr: "",
+      });
+
+      const service = yield* dockerServices;
+      yield* service.up(["postgres17"]);
+
+      expect(fileSystem.writeFileCalls).toHaveLength(1);
+      expect(fileSystem.writeFileCalls[0]?.content).toContain('"65432:5432"');
     }),
   );
 

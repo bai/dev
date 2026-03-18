@@ -34,6 +34,34 @@ describe("services command e2e", () => {
   );
 
   it(
+    "uses configured service ports from config.json when generating docker compose",
+    async () =>
+      withFixture(async (fixture) => {
+        const localConfig = JSON.parse(await fs.readFile(fixture.configPath, "utf8")) as {
+          services?: Record<string, { port?: number }>;
+        };
+        const updatedConfig = {
+          ...localConfig,
+          services: {
+            postgres17: { port: 65432 },
+            valkey: { port: 56380 },
+          },
+        };
+
+        await fs.writeFile(fixture.configPath, JSON.stringify(updatedConfig, null, 2), "utf8");
+
+        const result = await runCli(fixture, ["services", "up"]);
+        expect(result.exitCode).toBe(0);
+
+        const composePath = path.join(fixture.stateDir, "docker", "docker-compose.yml");
+        const composeContent = await fs.readFile(composePath, "utf8");
+        expect(composeContent).toContain('"65432:5432"');
+        expect(composeContent).toContain('"56380:6379"');
+      }),
+    20_000,
+  );
+
+  it(
     "runs 'services down' for a specific service",
     async () =>
       withFixture(async (fixture) => {

@@ -32,9 +32,12 @@ export const displayHelp = (): Effect.Effect<void, never, never> =>
     yield* Effect.logInfo("  reset                    Reset to pristine state (removes data)\n");
 
     yield* Effect.logInfo("SERVICES");
-    yield* Effect.logInfo("  postgres17               PostgreSQL 17 (port 55432)");
-    yield* Effect.logInfo("  postgres18               PostgreSQL 18 (port 55433)");
-    yield* Effect.logInfo("  valkey                   Valkey/Redis (port 56379)\n");
+    yield* Effect.logInfo("  postgres17               PostgreSQL 17 (default port 55432)");
+    yield* Effect.logInfo("  postgres18               PostgreSQL 18 (default port 55433)");
+    yield* Effect.logInfo("  valkey                   Valkey/Redis (default port 56379)\n");
+
+    yield* Effect.logInfo("CONFIG");
+    yield* Effect.logInfo("  Set services.<name>.port in config.json to override the local host port\n");
 
     yield* Effect.logInfo("EXAMPLES");
     yield* Effect.logInfo("  dev services up                    # Start all services");

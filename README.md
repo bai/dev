@@ -110,6 +110,17 @@ dev services down            # Stop all services
 dev services logs -f         # Follow logs
 ```
 
+Configure enabled services in `config.json`. Set `services.<name>.port` to override the local host port:
+
+```json
+{
+  "services": {
+    "postgres17": { "port": 65432 },
+    "valkey": { "port": 56380 }
+  }
+}
+```
+
 ### Maintenance
 
 ```bash

@@ -40,8 +40,14 @@ const telemetryConfigSchema = z
   .default({ mode: "disabled" })
   .describe("Telemetry mode: 'console' for local output, 'axiom' for Axiom export, 'disabled' to turn off");
 
-// Per-service config (empty for now, reserved for future customization)
-const serviceConfigSchema = z.object({}).passthrough().describe("Service-specific configuration (reserved for future use)");
+const servicePortSchema = z.number().int().min(1).max(65535).optional().describe("Local host port to expose the service on");
+
+const serviceConfigSchema = z
+  .object({
+    port: servicePortSchema,
+  })
+  .passthrough()
+  .describe("Service-specific configuration");
 
 // Services config: keys are enabled services, values are per-service config
 const servicesConfigSchema = z

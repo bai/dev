@@ -34,6 +34,27 @@ describe("config-schema", () => {
     expect(result.success).toBe(true);
   });
 
+  it("accepts per-service port overrides", () => {
+    const result = configSchema.safeParse({
+      services: {
+        postgres17: { port: 65432 },
+        valkey: { port: 56380 },
+      },
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects per-service ports outside the valid TCP port range", () => {
+    const result = configSchema.safeParse({
+      services: {
+        postgres17: { port: 70_000 },
+      },
+    });
+
+    expect(result.success).toBe(false);
+  });
+
   it("rejects telemetry mode axiom when apiKey is missing", () => {
     const result = configSchema.safeParse({
       telemetry: {
